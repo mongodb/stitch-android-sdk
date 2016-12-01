@@ -4,17 +4,20 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.android.volley.NetworkResponse;
-import com.android.volley.ParseError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.JsonRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
@@ -34,7 +37,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+
+import static com.mongodb.baas.sdk.Volley.*;
 
 public class BaaSClient {
     private static final String TAG = "BaaS";
@@ -50,12 +54,35 @@ public class BaaSClient {
     public BaaSClient(final Context context, final String appName, final String baseUrl) {
         _appName = appName;
         _queue = Volley.newRequestQueue(context);
+
         _objMapper = new ObjectMapper();
+        SimpleModule docModule = new SimpleModule("docModule", new Version(1, 0, 0, null));
+        docModule.addSerializer(Document.class, new JsonSerializer<Document>() {
+            @Override
+            public void serialize(
+                    final Document value,
+                    final JsonGenerator jgen,
+                    final SerializerProvider provider
+            ) throws IOException {
+                jgen.writeRawValue(value.toJson());
+            }
+        }); // assuming serializer declares correct class to bind to
+        _objMapper.registerModule(docModule);
+
         _baseUrl = baseUrl;
     }
 
     public BaaSClient(final Context context, final String appName) {
         this(context, appName, DEFAULT_BASE_URL);
+    }
+
+    // TODO(erd): Error if no auth...
+    public Auth getAuth() {
+        return _auth;
+    }
+
+    public boolean isAuthed() {
+        return _auth != null;
     }
 
     public Task<AuthProviderInfo> getAuthProviders() {
@@ -114,6 +141,18 @@ public class BaaSClient {
         return future.getTask();
     }
 
+    public Task<Void> logout() {
+        return executeRequest(Request.Method.DELETE, "auth/logout", 200, null).continueWithTask(new Continuation<Object, Task<Void>>() {
+            @Override
+            public Task<Void> then(@NonNull final Task<Object> task) throws Exception {
+                if (task.isSuccessful()) {
+                    return Tasks.forResult(null);
+                }
+                return Tasks.forException(task.getException());
+            }
+        });
+    }
+
     public Task<Auth> logInWithProvider(AuthProvider authProvider) {
 
         final TaskCompletionSource<Auth> future = new TaskCompletionSource<>();
@@ -160,7 +199,7 @@ public class BaaSClient {
     public Task<Object> executeRequest(
             final int method,
             final String resource,
-            final int expectedStatusCode,
+            final int expectedStatusCode, // TODO(ERD): Use status code for validation
             final String body
     ) {
         final String url = String.format("%s/v1/app/%s/%s", _baseUrl, _appName, resource);
@@ -190,7 +229,12 @@ public class BaaSClient {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while executing pipeline", error);
+                        Log.e(TAG, "Error while executing request", error);
+
+                        if (error.networkResponse == null) {
+                            future.setException(error);
+                            return;
+                        }
 
                         if (!error.networkResponse.headers.get("Content-Type").equals("application/json")) {
 
@@ -231,7 +275,7 @@ public class BaaSClient {
 
         return executeRequest(Request.Method.POST, "pipeline", 200, pipeStr).continueWithTask(new Continuation<Object, Task<List<Object>>>() {
             @Override
-            public Task<List<Object>> then(@NonNull Task<Object> task) throws Exception {
+            public Task<List<Object>> then(@NonNull final Task<Object> task) throws Exception {
                 if (task.isSuccessful()) {
                     return Tasks.forResult((List<Object>) task.getResult());
                 } else {
@@ -240,78 +284,5 @@ public class BaaSClient {
                 }
             }
         });
-    }
-
-    public static class JsonStringRequest extends JsonRequest<String> {
-
-        /**
-         * Creates a new request.
-         * @param method the HTTP method to use
-         * @param url URL to fetch the JSON from
-         * @param jsonRequest What to post with the request
-         * @param listener Listener to receive the JSON response
-         * @param errorListener Error listener, or null to ignore errors.
-         */
-        public JsonStringRequest(int method, String url, String jsonRequest,
-                                 Response.Listener<String> listener, Response.ErrorListener errorListener) {
-            super(method, url, jsonRequest, listener, errorListener);
-        }
-
-        @Override
-        protected Response<String> parseNetworkResponse(NetworkResponse response) {
-            try {
-                return Response.success(
-                        new String(
-                                response.data,
-                                HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET)),
-                        HttpHeaderParser.parseCacheHeaders(response));
-            } catch (UnsupportedEncodingException e) {
-                return Response.error(new ParseError(e));
-            }
-        }
-    }
-
-    public static class AuthedJsonStringRequest extends JsonRequest<String> {
-
-        private final Map<String, String> _headers;
-
-        /**
-         * Creates a new request.
-         * @param method the HTTP method to use
-         * @param url URL to fetch the JSON from
-         * @param jsonRequest What to post with the request
-         * @param headers Headers to set on the request
-         * @param listener Listener to receive the JSON string response
-         * @param errorListener Error listener, or null to ignore errors.
-         */
-        public AuthedJsonStringRequest(
-                int method,
-                String url,
-                String jsonRequest,
-                final Map<String, String> headers,
-                Response.Listener<String> listener,
-                Response.ErrorListener errorListener
-        ) {
-            super(method, url, jsonRequest, listener, errorListener);
-            _headers = headers;
-        }
-
-        @Override
-        public Map<String, String> getHeaders() {
-            return _headers;
-        }
-
-        @Override
-        protected Response<String> parseNetworkResponse(NetworkResponse response) {
-            try {
-                return Response.success(
-                        new String(
-                                response.data,
-                                HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET)),
-                        HttpHeaderParser.parseCacheHeaders(response));
-            } catch (UnsupportedEncodingException e) {
-                return Response.error(new ParseError(e));
-            }
-        }
     }
 }
