@@ -12,6 +12,7 @@ import com.mongodb.baas.sdk.PipelineStage;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +84,28 @@ public class MongoClient {
                     args);
         }
 
+        private List<PipelineStage> makeInsertStage(
+                final List<Document> documents
+        ) {
+            final Map<String, Object> literalArgs = new HashMap<>();
+            literalArgs.put("items", documents);
+
+            final Map<String, Object> insertArgs = new HashMap<>();
+            insertArgs.put("database", _database._dbName);
+            insertArgs.put("collection", _collName);
+
+            final List<PipelineStage> pipelineStages = new ArrayList<>();
+            pipelineStages.add(new PipelineStage(
+                    "literal",
+                    literalArgs));
+            pipelineStages.add(new PipelineStage(
+                    "insert",
+                    _database._client._service,
+                    insertArgs));
+
+            return pipelineStages;
+        }
+
         private PipelineStage makeDeleteStage(
                 final Document query,
                 final boolean singleDoc
@@ -129,6 +152,19 @@ public class MongoClient {
                         return Tasks.forResult(null);
                     }
                     Log.d(TAG, "Error updating single document", task.getException());
+                    return Tasks.forException(task.getException());
+                }
+            });
+        }
+
+        public Task<Void> insertOne(final Document document) {
+            return _database._client._baasClient.executePipeline(makeInsertStage(Collections.singletonList(document))).continueWithTask(new Continuation<List<Object>, Task<Void>>() {
+                @Override
+                public Task<Void> then(@NonNull final Task<List<Object>> task) throws Exception {
+                    if (task.isSuccessful()) {
+                        return Tasks.forResult(null);
+                    }
+                    Log.d(TAG, "Error inserting single document", task.getException());
                     return Tasks.forException(task.getException());
                 }
             });

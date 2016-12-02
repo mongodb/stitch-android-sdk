@@ -263,9 +263,7 @@ public class BaaSClient {
         return future.getTask();
     }
 
-    public Task<List<Object>> executePipeline(final PipelineStage... stages) {
-        final List<PipelineStage> pipeline = Arrays.asList(stages);
-
+    public Task<List<Object>> executePipeline(final List<PipelineStage> pipeline) {
         final String pipeStr;
         try {
             pipeStr = _objMapper.writeValueAsString(pipeline);
@@ -284,5 +282,9 @@ public class BaaSClient {
                 }
             }
         });
+    }
+
+    public Task<List<Object>> executePipeline(final PipelineStage... stages) {
+        return executePipeline(Arrays.asList(stages));
     }
 }
