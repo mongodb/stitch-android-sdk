@@ -120,7 +120,6 @@ public class BaasClient {
         final JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.GET,
                 url,
-                null,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(final JSONObject response) {
