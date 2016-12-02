@@ -6,7 +6,7 @@ import android.util.Log;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.mongodb.baas.sdk.BaaSClient;
+import com.mongodb.baas.sdk.BaasClient;
 import com.mongodb.baas.sdk.PipelineStage;
 
 import org.bson.Document;
@@ -20,10 +20,10 @@ import java.util.Map;
 public class MongoClient {
     private static final String TAG = "BaaS-Mongo";
 
-    private final BaaSClient _baasClient;
+    private final BaasClient _baasClient;
     private final String _service;
 
-    public MongoClient(final BaaSClient baasClient, final String service) {
+    public MongoClient(final BaasClient baasClient, final String service) {
         _baasClient = baasClient;
         _service = service;
     }
