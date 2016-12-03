@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -23,6 +22,7 @@ import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
+import com.mongodb.baas.sdk.BaasException.BaasServiceException.ErrorCode;
 import com.mongodb.baas.sdk.auth.Auth;
 import com.mongodb.baas.sdk.auth.AuthProvider;
 import com.mongodb.baas.sdk.auth.AuthProviderInfo;
@@ -42,8 +42,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import static com.mongodb.baas.sdk.BaasException.*;
-import static com.mongodb.baas.sdk.BaasException.BaasErrorCodeException.Code.BAD_SESSION;
-import static com.mongodb.baas.sdk.BaasException.BaasErrorCodeException.Code.UNKNOWN;
 import static com.mongodb.baas.sdk.Volley.*;
 
 public class BaasClient {
@@ -227,26 +225,23 @@ public class BaasClient {
             errorMsg = data;
         }
 
-        if (error.networkResponse.statusCode >= 400 &&  error.networkResponse.statusCode < 500) {
-            return new BaasClientException(errorMsg);
-        }
-        if (error.networkResponse.statusCode >= 500 &&  error.networkResponse.statusCode < 600) {
-            return new BaasServerException(errorMsg);
+        if (error.networkResponse.statusCode >= 400 &&  error.networkResponse.statusCode < 600) {
+            return new BaasServiceException(errorMsg);
         }
 
         return new BaasRequestException(error);
     }
 
-    private BaasRequestException parseErrorCode(final String msg, final int code) {
+    private BaasServiceException parseErrorCode(final String msg, final int code) {
         switch (code) {
             case 100:
             case 101:
             case 102:
             case 103:
             case 104:
-                return new BaasBadSessionException(msg);
+                return new BaasServiceException(msg, ErrorCode.BAD_SESSION);
         }
-        return new BaasErrorCodeException(msg, UNKNOWN);
+        return new BaasServiceException(msg);
     }
 
     private void clearAuth() {
@@ -342,8 +337,8 @@ public class BaasClient {
                     public void onErrorResponse(final VolleyError error) {
                         Log.e(TAG, "Error while executing request", error);
                         final BaasRequestException e = parseRequestError(error);
-                        if (e instanceof BaasErrorCodeException) {
-                            if (((BaasErrorCodeException) e).getErrorCode() == BAD_SESSION) {
+                        if (e instanceof BaasServiceException) {
+                            if (((BaasServiceException) e).getErrorCode() == ErrorCode.BAD_SESSION) {
                                 clearAuth();
                             }
                         }

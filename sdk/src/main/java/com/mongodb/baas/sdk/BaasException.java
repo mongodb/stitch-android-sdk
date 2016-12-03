@@ -38,44 +38,38 @@ public class BaasException extends RuntimeException {
         }
     }
 
-    public static class BaasServerException extends BaasRequestException {
-        public BaasServerException(final Throwable t) {
-            super(t);
-        }
+    public static class BaasServiceException extends BaasClientException {
 
-        public BaasServerException(final String message) {
-            super(message);
-        }
-    }
+        private final ErrorCode _errorCode;
 
-    public static class BaasAuthException extends BaasException {
-        public BaasAuthException(final String message) {
-            super(message);
-        }
-    }
-
-    public static class BaasErrorCodeException extends BaasRequestException {
-
-        private final Code _errorCode;
-
-        public enum Code {
+        public enum ErrorCode {
             BAD_SESSION,
             UNKNOWN
         }
 
-        public BaasErrorCodeException(final String message, final Code errorCode) {
+        public BaasServiceException(final Throwable t) {
+            super(t);
+            _errorCode = ErrorCode.UNKNOWN;
+        }
+
+        public BaasServiceException(final String message) {
+            super(message);
+            _errorCode = ErrorCode.UNKNOWN;;
+        }
+
+        public BaasServiceException(final String message, final ErrorCode errorCode) {
             super(message);
             _errorCode = errorCode;
         }
 
-        public Code getErrorCode() {
+        public ErrorCode getErrorCode() {
             return _errorCode;
         }
     }
 
-    public static class BaasBadSessionException extends BaasErrorCodeException {
-        public BaasBadSessionException(final String message) {
-            super(message, Code.BAD_SESSION);
+    public static class BaasAuthException extends BaasClientException {
+        public BaasAuthException(final String message) {
+            super(message);
         }
     }
 }
