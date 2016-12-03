@@ -53,4 +53,29 @@ public class BaasException extends RuntimeException {
             super(message);
         }
     }
+
+    public static class BaasErrorCodeException extends BaasRequestException {
+
+        private final Code _errorCode;
+
+        public enum Code {
+            BAD_SESSION,
+            UNKNOWN
+        }
+
+        public BaasErrorCodeException(final String message, final Code errorCode) {
+            super(message);
+            _errorCode = errorCode;
+        }
+
+        public Code getErrorCode() {
+            return _errorCode;
+        }
+    }
+
+    public static class BaasBadSessionException extends BaasErrorCodeException {
+        public BaasBadSessionException(final String message) {
+            super(message, Code.BAD_SESSION);
+        }
+    }
 }

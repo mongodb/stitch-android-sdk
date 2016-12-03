@@ -35,12 +35,15 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import static com.mongodb.baas.sdk.BaasException.*;
+import static com.mongodb.baas.sdk.BaasException.BaasErrorCodeException.Code.BAD_SESSION;
+import static com.mongodb.baas.sdk.BaasException.BaasErrorCodeException.Code.UNKNOWN;
 import static com.mongodb.baas.sdk.Volley.*;
 
 public class BaasClient {
@@ -56,6 +59,8 @@ public class BaasClient {
 
     private final SharedPreferences _preferences;
     private Auth _auth;
+
+    private List<AuthListener> _authListeners;
 
     public BaasClient(final Context context, final String appName, final String baseUrl) {
         _appName = appName;
@@ -77,10 +82,32 @@ public class BaasClient {
 
         _baseUrl = baseUrl;
         _preferences = context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
+
+        _authListeners = new ArrayList<>();
     }
 
     public BaasClient(final Context context, final String appName) {
         this(context, appName, DEFAULT_BASE_URL);
+    }
+
+    public void addAuthListener(final AuthListener authListener) {
+        _authListeners.add(authListener);
+    }
+
+    public void removeAuthListener(final AuthListener authListener) {
+        _authListeners.remove(authListener);
+    }
+
+    private void onLogin() {
+        for (final AuthListener listener : _authListeners) {
+            listener.onLogin();
+        }
+    }
+
+    private void onLogout() {
+        for (final AuthListener listener : _authListeners) {
+            listener.onLogout();
+        }
     }
 
     public Auth getAuth() {
@@ -101,6 +128,7 @@ public class BaasClient {
             } catch (final IOException e) {
                 throw new BaasException(e);
             }
+            onLogin();
             return true;
         }
 
@@ -171,38 +199,60 @@ public class BaasClient {
 
     private BaasRequestException parseRequestError(final VolleyError error) {
 
-        if (error.networkResponse != null) {
-            if (error.networkResponse.statusCode >= 400 &&  error.networkResponse.statusCode < 500) {
-                return new BaasClientException(parseErrorMessage(error.networkResponse));
+        if (error.networkResponse == null) {
+            return new BaasRequestException(error);
+        }
+
+        final String data;
+        try {
+            data = new String(
+                    error.networkResponse.data,
+                    HttpHeaderParser.parseCharset(error.networkResponse.headers, "utf-8"));
+        } catch (final UnsupportedEncodingException e) {
+            throw new BaasRequestException(e);
+        }
+
+        final String errorMsg;
+        if (error.networkResponse.headers.containsKey("Content-Type") &&
+                error.networkResponse.headers.get("Content-Type").equals("application/json")) {
+            try {
+                final JSONObject obj = new JSONObject(data);
+                errorMsg = obj.getString("error");
+                final int errorCode = obj.getInt("errorCode");
+                return parseErrorCode(errorMsg, errorCode);
+            } catch (final JSONException e) {
+                throw new BaasRequestException(e);
             }
-            if (error.networkResponse.statusCode >= 500 &&  error.networkResponse.statusCode < 600) {
-                return new BaasServerException(parseErrorMessage(error.networkResponse));
-            }
+        } else {
+            errorMsg = data;
+        }
+
+        if (error.networkResponse.statusCode >= 400 &&  error.networkResponse.statusCode < 500) {
+            return new BaasClientException(errorMsg);
+        }
+        if (error.networkResponse.statusCode >= 500 &&  error.networkResponse.statusCode < 600) {
+            return new BaasServerException(errorMsg);
         }
 
         return new BaasRequestException(error);
     }
 
-    private String parseErrorMessage(final NetworkResponse response) {
-        final String data;
-        try {
-            data = new String(
-                    response.data,
-                    HttpHeaderParser.parseCharset(response.headers, "utf-8"));
-        } catch (final UnsupportedEncodingException e) {
-            throw new BaasRequestException(e);
+    private BaasRequestException parseErrorCode(final String msg, final int code) {
+        switch (code) {
+            case 100:
+            case 101:
+            case 102:
+            case 103:
+            case 104:
+                return new BaasBadSessionException(msg);
         }
+        return new BaasErrorCodeException(msg, UNKNOWN);
+    }
 
-        if (response.headers.containsKey("Content-Type") &&
-                response.headers.get("Content-Type").equals("application/json")) {
-            try {
-                return new JSONObject(data).getString("error");
-            } catch (final JSONException e) {
-                throw new BaasRequestException(e);
-            }
-        }
-
-        return data;
+    private void clearAuth() {
+        _auth = null;
+        _preferences.edit().remove(AUTH_JWT_NAME).apply();
+        onLogout();
     }
 
     public Task<Void> logout() {
@@ -210,8 +260,7 @@ public class BaasClient {
         return executeRequest(Request.Method.DELETE, "auth/logout", null).continueWithTask(new Continuation<Object, Task<Void>>() {
             @Override
             public Task<Void> then(@NonNull final Task<Object> task) throws Exception {
-                _auth = null;
-                _preferences.edit().remove(AUTH_JWT_NAME).apply();
+                clearAuth();
                 if (task.isSuccessful()) {
                     return Tasks.forResult(null);
                 }
@@ -291,6 +340,12 @@ public class BaasClient {
                     @Override
                     public void onErrorResponse(final VolleyError error) {
                         Log.e(TAG, "Error while executing request", error);
+                        final BaasRequestException e = parseRequestError(error);
+                        if (e instanceof BaasErrorCodeException) {
+                            if (((BaasErrorCodeException) e).getErrorCode() == BAD_SESSION) {
+                                clearAuth();
+                            }
+                        }
                         future.setException(parseRequestError(error));
                     }
                 });

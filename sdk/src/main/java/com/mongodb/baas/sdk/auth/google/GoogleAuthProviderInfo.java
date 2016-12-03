@@ -24,6 +24,11 @@ public class GoogleAuthProviderInfo {
     ) {
         _clientId = clientId;
 
+        if (scopes == null) {
+            _scopes = new ArrayList<>();
+            return;
+        }
+
         final List<Scope> gScopes = new ArrayList<>(scopes.size());
         for (final String scope : scopes) {
             gScopes.add(new Scope(scope));
