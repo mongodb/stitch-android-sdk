@@ -104,9 +104,9 @@ public class BaasClient {
         }
     }
 
-    private void onLogout() {
+    private void onLogout(final String lastProvider) {
         for (final AuthListener listener : _authListeners) {
-            listener.onLogout();
+            listener.onLogout(lastProvider);
         }
     }
 
@@ -250,9 +250,10 @@ public class BaasClient {
     }
 
     private void clearAuth() {
+        final String lastProvider = _auth.getProvider();
         _auth = null;
         _preferences.edit().remove(AUTH_JWT_NAME).apply();
-        onLogout();
+        onLogout(lastProvider);
     }
 
     public Task<Void> logout() {
