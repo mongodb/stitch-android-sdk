@@ -27,6 +27,7 @@ import com.mongodb.baas.sdk.auth.Auth;
 import com.mongodb.baas.sdk.auth.AuthProvider;
 import com.mongodb.baas.sdk.auth.AuthProviderInfo;
 import com.mongodb.baas.sdk.auth.facebook.FacebookAuthProviderInfo;
+import com.mongodb.baas.sdk.auth.google.GoogleAuthProviderInfo;
 
 import org.bson.Document;
 import org.json.JSONException;
@@ -137,6 +138,11 @@ public class BaasClient {
                                         final FacebookAuthProviderInfo fbInfo =
                                                 _objMapper.readValue(info.toString(), FacebookAuthProviderInfo.class);
                                         builder.withFacebook(fbInfo);
+                                        break;
+                                    case GoogleAuthProviderInfo.FQ_NAME:
+                                        final GoogleAuthProviderInfo googleInfo =
+                                                _objMapper.readValue(info.toString(), GoogleAuthProviderInfo.class);
+                                        builder.withGoogle(googleInfo);
                                         break;
                                 }
                             } catch (final JSONException | IOException e) {
