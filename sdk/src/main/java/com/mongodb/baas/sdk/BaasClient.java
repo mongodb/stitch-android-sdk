@@ -46,7 +46,8 @@ import static com.mongodb.baas.sdk.Volley.*;
 
 public class BaasClient {
     private static final String TAG = "BaaS";
-    private static final String DEFAULT_BASE_URL = "http://localhost:8080";
+    // TODO: Change to http://baas-dev.10gen.cc
+    private static final String DEFAULT_BASE_URL = "http://baas-dev-elb-1398627251.us-east-1.elb.amazonaws.com";
     private static final String SHARED_PREFERENCES_NAME = "com.mongodb.baas.sdk.SharedPreferences";
     private static final String AUTH_JWT_NAME = "auth_token";
 
@@ -216,8 +217,10 @@ public class BaasClient {
             try {
                 final JSONObject obj = new JSONObject(data);
                 errorMsg = obj.getString("error");
-                final int errorCode = obj.getInt("errorCode");
-                return parseErrorCode(errorMsg, errorCode);
+                if (obj.has("errorCode")) {
+                    final int errorCode = obj.getInt("errorCode");
+                    return parseErrorCode(errorMsg, errorCode);
+                }
             } catch (final JSONException e) {
                 throw new BaasRequestException(e);
             }
