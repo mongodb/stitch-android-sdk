@@ -245,6 +245,9 @@ public class BaasClient {
     }
 
     private void clearAuth() {
+        if (_auth == null) {
+            return;
+        }
         final String lastProvider = _auth.getProvider();
         _auth = null;
         _preferences.edit().remove(AUTH_JWT_NAME).apply();
