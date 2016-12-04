@@ -55,10 +55,15 @@ public class MongoClient {
             _collName = collName;
         }
 
-        private PipelineStage makeFindStage() {
+        private PipelineStage makeFindStage(
+                final Document query,
+                final Document projection
+        ) {
             final Map<String, Object> args = new HashMap<>();
             args.put("database", _database._dbName);
             args.put("collection", _collName);
+            args.put("query", query);
+            args.put("project", projection);
             return new PipelineStage(
                     "find",
                     _database._client._service,
@@ -140,18 +145,43 @@ public class MongoClient {
             });
         }
 
-        public Task<List<Document>> findMany() {
-            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage()));
+        public Task<List<Document>> find(final Document query) {
+            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, null)));
+        }
+
+        public Task<List<Document>> find(final Document query, final Document projection) {
+            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, projection)));
         }
 
         public Task<Void> updateOne(final Document query, final Document update) {
-            return _database._client._baasClient.executePipeline(makeUpdateStage(query, update, false, false)).continueWithTask(new Continuation<List<Object>, Task<Void>>() {
+            return updateOne(query, update, false);
+        }
+
+        public Task<Void> updateOne(final Document query, final Document update, final boolean upsert) {
+            return _database._client._baasClient.executePipeline(makeUpdateStage(query, update, upsert, false)).continueWithTask(new Continuation<List<Object>, Task<Void>>() {
                 @Override
                 public Task<Void> then(@NonNull final Task<List<Object>> task) throws Exception {
                     if (task.isSuccessful()) {
                         return Tasks.forResult(null);
                     }
-                    Log.d(TAG, "Error updating single document", task.getException());
+                    Log.d(TAG, "Error upserting single document", task.getException());
+                    return Tasks.forException(task.getException());
+                }
+            });
+        }
+
+        public Task<Void> updateMany(final Document query, final Document update) {
+            return updateMany(query, update, false);
+        }
+
+        public Task<Void> updateMany(final Document query, final Document update, final boolean upsert) {
+            return _database._client._baasClient.executePipeline(makeUpdateStage(query, update, upsert, true)).continueWithTask(new Continuation<List<Object>, Task<Void>>() {
+                @Override
+                public Task<Void> then(@NonNull final Task<List<Object>> task) throws Exception {
+                    if (task.isSuccessful()) {
+                        return Tasks.forResult(null);
+                    }
+                    Log.d(TAG, "Error updating many documents", task.getException());
                     return Tasks.forException(task.getException());
                 }
             });
@@ -165,6 +195,32 @@ public class MongoClient {
                         return Tasks.forResult(null);
                     }
                     Log.d(TAG, "Error inserting single document", task.getException());
+                    return Tasks.forException(task.getException());
+                }
+            });
+        }
+
+        public Task<Void> insertMany(final List<Document> documents) {
+            return _database._client._baasClient.executePipeline(makeInsertStage(documents)).continueWithTask(new Continuation<List<Object>, Task<Void>>() {
+                @Override
+                public Task<Void> then(@NonNull final Task<List<Object>> task) throws Exception {
+                    if (task.isSuccessful()) {
+                        return Tasks.forResult(null);
+                    }
+                    Log.d(TAG, "Error inserting multiple documents", task.getException());
+                    return Tasks.forException(task.getException());
+                }
+            });
+        }
+
+        public Task<Void> deleteOne(final Document query) {
+            return _database._client._baasClient.executePipeline(makeDeleteStage(query, true)).continueWithTask(new Continuation<List<Object>, Task<Void>>() {
+                @Override
+                public Task<Void> then(@NonNull final Task<List<Object>> task) throws Exception {
+                    if (task.isSuccessful()) {
+                        return Tasks.forResult(null);
+                    }
+                    Log.d(TAG, "Error deleting single document", task.getException());
                     return Tasks.forException(task.getException());
                 }
             });
