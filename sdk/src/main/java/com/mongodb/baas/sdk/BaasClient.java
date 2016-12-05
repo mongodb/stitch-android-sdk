@@ -46,8 +46,7 @@ import static com.mongodb.baas.sdk.Volley.*;
 
 public class BaasClient {
     private static final String TAG = "BaaS";
-    // TODO: Change to http://baas-dev.10gen.cc
-    private static final String DEFAULT_BASE_URL = "http://baas-dev-elb-1398627251.us-east-1.elb.amazonaws.com";
+    private static final String DEFAULT_BASE_URL = "http://baas-dev.10gen.cc";
     private static final String SHARED_PREFERENCES_NAME = "com.mongodb.baas.sdk.SharedPreferences";
     private static final String AUTH_JWT_NAME = "auth_token";
 
