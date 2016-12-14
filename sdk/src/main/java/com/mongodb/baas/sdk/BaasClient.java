@@ -251,9 +251,9 @@ public class BaasClient {
         if (!isAuthed()) {
             return Tasks.forResult(null);
         }
-        return executeRequest(Request.Method.DELETE, "auth", null, false, true).continueWithTask(new Continuation<Object, Task<Void>>() {
+        return executeRequest(Request.Method.DELETE, "auth", null, false, true).continueWithTask(new Continuation<String, Task<Void>>() {
             @Override
-            public Task<Void> then(@NonNull final Task<Object> task) throws Exception {
+            public Task<Void> then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
                     clearAuth();
                     return Tasks.forResult(null);
@@ -311,7 +311,7 @@ public class BaasClient {
         return future.getTask();
     }
 
-    public Task<Object> executeRequest(
+    public Task<String> executeRequest(
             final int method,
             final String resource,
             final String body
@@ -319,7 +319,7 @@ public class BaasClient {
         return executeRequest(method, resource, body, true, false);
     }
 
-    private Task<Object> executeRequest(
+    private Task<String> executeRequest(
             final int method,
             final String resource,
             final String body,
@@ -329,7 +329,7 @@ public class BaasClient {
         ensureAuthed();
         final String url = String.format("%s/v1/app/%s/%s", _baseUrl, _appName, resource);
         final String token = useRefreshToken ? getRefreshToken() : _auth.getAccessToken();
-        final TaskCompletionSource<Object> future = new TaskCompletionSource<>();
+        final TaskCompletionSource<String> future = new TaskCompletionSource<>();
         final AuthedJsonStringRequest request = new AuthedJsonStringRequest(
                 method,
                 url,
@@ -340,8 +340,7 @@ public class BaasClient {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
-                        final Document doc = Document.parse(response);
-                        future.setResult(doc.get("result"));
+                        future.setResult(response);
                     }
                 },
                 new Response.ErrorListener() {
@@ -372,7 +371,7 @@ public class BaasClient {
             final int method,
             final String resource,
             final String body,
-            final TaskCompletionSource<Object> future
+            final TaskCompletionSource<String> future
     ) {
         refreshAccessToken().addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
@@ -383,9 +382,9 @@ public class BaasClient {
                 }
 
                 // Retry one more time
-                executeRequest(method, resource, body, false, false).addOnCompleteListener(new OnCompleteListener<Object>() {
+                executeRequest(method, resource, body, false, false).addOnCompleteListener(new OnCompleteListener<String>() {
                     @Override
-                    public void onComplete(@NonNull Task<Object> task) {
+                    public void onComplete(@NonNull Task<String> task) {
                         if (task.isSuccessful()) {
                             future.setResult(task.getResult());
                             return;
@@ -399,29 +398,23 @@ public class BaasClient {
     }
 
     private Task<Void> refreshAccessToken() {
-
-        ensureAuthed();
-        final String url = String.format("%s/v1/app/%s/auth/newAccessToken", _baseUrl, _appName);
-
-        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
-        final AuthedJsonObjectRequest request = new AuthedJsonObjectRequest(
-                Request.Method.POST,
-                url,
-                "",
-                Collections.singletonMap(
-                        "Authorization",
-                        String.format("Bearer %s", getRefreshToken())),
-                new Response.Listener<JSONObject>() {
+        return executeRequest(Request.Method.POST, "auth/newAccessToken", null, false, true)
+                .continueWithTask(new Continuation<String, Task<Void>>() {
                     @Override
-                    public void onResponse(final JSONObject response) {
+                    public Task<Void> then(@NonNull Task<String> task) throws Exception {
+                        if (!task.isSuccessful()) {
+                            return Tasks.forException(task.getException());
+                        }
 
+                        ;
                         final String newAccessToken;
                         try {
+                            final JSONObject response = new JSONObject(task.getResult());
                             newAccessToken = response.getString("accessToken");
                         } catch (final JSONException e) {
                             Log.e(TAG, "Error parsing access token response", e);
-                            future.setException(new BaasException(e));
-                            return;
+
+                            return Tasks.forException(new BaasException(e));
                         }
 
                         _auth = _auth.withNewAccessToken(newAccessToken);
@@ -431,32 +424,13 @@ public class BaasClient {
                             authJson = _objMapper.writeValueAsString(_auth);
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
-                            future.setException(new BaasException(e));
-                            return;
+                            return Tasks.forException(new BaasException(e));
                         }
 
                         _preferences.edit().putString(AUTH_JWT_NAME, authJson).apply();
-                        future.setResult(null);
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while refreshing access token", error);
-                        final BaasRequestException e = parseRequestError(error);
-                        if (e instanceof BaasServiceException) {
-                            // Our refresh token probably expired
-                            if (((BaasServiceException) e).getErrorCode() == ErrorCode.INVALID_SESSION) {
-                                clearAuth();
-                            }
-                        }
-                        future.setException(e);
+                        return Tasks.forResult(null);
                     }
                 });
-        request.setTag(this);
-        _queue.add(request);
-
-        return future.getTask();
     }
 
     public Task<List<Object>> executePipeline(final List<PipelineStage> pipeline) {
@@ -468,11 +442,12 @@ public class BaasClient {
             return Tasks.forException(e);
         }
 
-        return executeRequest(Request.Method.POST, "pipeline", pipeStr).continueWithTask(new Continuation<Object, Task<List<Object>>>() {
+        return executeRequest(Request.Method.POST, "pipeline", pipeStr).continueWithTask(new Continuation<String, Task<List<Object>>>() {
             @Override
-            public Task<List<Object>> then(@NonNull final Task<Object> task) throws Exception {
+            public Task<List<Object>> then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
-                    return Tasks.forResult((List<Object>) task.getResult());
+                    final Document doc = Document.parse(task.getResult());
+                    return Tasks.forResult((List<Object>) doc.get("result"));
                 } else {
                     Log.e(TAG, "Error while executing pipeline", task.getException());
                     return Tasks.forException(task.getException());
