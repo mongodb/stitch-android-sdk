@@ -9,13 +9,9 @@ import java.util.List;
 import java.util.Map;
 
 public class AuthUser {
-    @JsonProperty("_id")
+
     private final ObjectId _id;
-
-    @JsonProperty("identities")
     private final List<Identity> _identities;
-
-    @JsonProperty("data")
     private final Map<String, Object> _data;
 
     @JsonCreator
@@ -36,10 +32,7 @@ public class AuthUser {
 
     public static class Identity {
 
-        @JsonProperty("id")
         private final String _id;
-
-        @JsonProperty("provider")
         private final String _provider;
 
         @JsonCreator
@@ -55,23 +48,28 @@ public class AuthUser {
             _provider = provider;
         }
 
+        @JsonProperty("id")
         public String getId() {
             return _id;
         }
 
+        @JsonProperty("provider")
         public String getProvider() {
             return _provider;
         }
     }
 
+    @JsonProperty("_id")
     public ObjectId getId() {
         return _id;
     }
 
+    @JsonProperty("identities")
     public List<Identity> getIdentities() {
         return _identities;
     }
 
+    @JsonProperty("data")
     public Map<String, Object> getData() {
         return _data;
     }

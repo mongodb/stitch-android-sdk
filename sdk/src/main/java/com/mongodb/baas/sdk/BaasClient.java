@@ -12,13 +12,9 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.HttpHeaderParser;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
@@ -26,6 +22,7 @@ import com.mongodb.baas.sdk.BaasException.BaasServiceException.ErrorCode;
 import com.mongodb.baas.sdk.auth.Auth;
 import com.mongodb.baas.sdk.auth.AuthProvider;
 import com.mongodb.baas.sdk.auth.AuthProviderInfo;
+import com.mongodb.baas.sdk.auth.RefreshTokenHolder;
 import com.mongodb.baas.sdk.auth.facebook.FacebookAuthProviderInfo;
 import com.mongodb.baas.sdk.auth.google.GoogleAuthProviderInfo;
 
@@ -46,9 +43,10 @@ import static com.mongodb.baas.sdk.Volley.*;
 
 public class BaasClient {
     private static final String TAG = "BaaS";
-    private static final String DEFAULT_BASE_URL = "http://baas-dev.10gen.cc";
+    private static final String DEFAULT_BASE_URL = "https://baas-dev.10gen.cc";
     private static final String SHARED_PREFERENCES_NAME = "com.mongodb.baas.sdk.SharedPreferences";
     private static final String AUTH_JWT_NAME = "auth_token";
+    private static final String AUTH_REFRESH_TOKEN_NAME = "refresh_token";
 
     private final String _baseUrl;
     private final String _appName;
@@ -63,21 +61,7 @@ public class BaasClient {
     public BaasClient(final Context context, final String appName, final String baseUrl) {
         _appName = appName;
         _queue = Volley.newRequestQueue(context);
-
-        _objMapper = new ObjectMapper();
-        SimpleModule docModule = new SimpleModule("docModule", new Version(1, 0, 0, null));
-        docModule.addSerializer(Document.class, new JsonSerializer<Document>() {
-            @Override
-            public void serialize(
-                    final Document value,
-                    final JsonGenerator jgen,
-                    final SerializerProvider provider
-            ) throws IOException {
-                jgen.writeRawValue(value.toJson());
-            }
-        }); // assuming serializer declares correct class to bind to
-        _objMapper.registerModule(docModule);
-
+        _objMapper = CustomObjectMapper.createObjectMapper();
         _baseUrl = baseUrl;
         _preferences = context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
 
@@ -113,6 +97,14 @@ public class BaasClient {
             throw new BaasAuthException("No auth");
         }
         return _auth;
+    }
+
+    private String getRefreshToken() {
+        if (!isAuthed()) {
+            throw new BaasAuthException("No auth");
+        }
+
+        return _preferences.getString(AUTH_REFRESH_TOKEN_NAME, "");
     }
 
     public boolean isAuthed() {
@@ -190,6 +182,7 @@ public class BaasClient {
                         future.setException(parseRequestError(error));
                     }
                 });
+        request.setTag(this);
         _queue.add(request);
 
         return future.getTask();
@@ -217,7 +210,7 @@ public class BaasClient {
                 final JSONObject obj = new JSONObject(data);
                 errorMsg = obj.getString("error");
                 if (obj.has("errorCode")) {
-                    final int errorCode = obj.getInt("errorCode");
+                    final String errorCode = obj.getString("errorCode");
                     return parseErrorCode(errorMsg, errorCode);
                 }
             } catch (final JSONException e) {
@@ -234,14 +227,10 @@ public class BaasClient {
         return new BaasRequestException(error);
     }
 
-    private BaasServiceException parseErrorCode(final String msg, final int code) {
+    private BaasServiceException parseErrorCode(final String msg, final String code) {
         switch (code) {
-            case 100:
-            case 101:
-            case 102:
-            case 103:
-            case 104:
-                return new BaasServiceException(msg, ErrorCode.BAD_SESSION);
+            case "InvalidSession":
+                return new BaasServiceException(msg, ErrorCode.INVALID_SESSION);
         }
         return new BaasServiceException(msg);
     }
@@ -253,16 +242,20 @@ public class BaasClient {
         final String lastProvider = _auth.getProvider();
         _auth = null;
         _preferences.edit().remove(AUTH_JWT_NAME).apply();
+        _preferences.edit().remove(AUTH_REFRESH_TOKEN_NAME).apply();
+        _queue.cancelAll(this);
         onLogout(lastProvider);
     }
 
     public Task<Void> logout() {
-        ensureAuthed();
-        return executeRequest(Request.Method.DELETE, "auth/logout", null).continueWithTask(new Continuation<Object, Task<Void>>() {
+        if (!isAuthed()) {
+            return Tasks.forResult(null);
+        }
+        return executeRequest(Request.Method.DELETE, "auth", null, false, true).continueWithTask(new Continuation<Object, Task<Void>>() {
             @Override
             public Task<Void> then(@NonNull final Task<Object> task) throws Exception {
-                clearAuth();
                 if (task.isSuccessful()) {
+                    clearAuth();
                     return Tasks.forResult(null);
                 }
                 return Tasks.forException(task.getException());
@@ -294,7 +287,10 @@ public class BaasClient {
                     public void onResponse(final String response) {
                         try {
                             _auth = _objMapper.readValue(response, Auth.class);
+                            final RefreshTokenHolder refreshToken =
+                                    _objMapper.readValue(response, RefreshTokenHolder.class);
                             _preferences.edit().putString(AUTH_JWT_NAME, response).apply();
+                            _preferences.edit().putString(AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken()).apply();
                             future.setResult(_auth);
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
@@ -309,6 +305,7 @@ public class BaasClient {
                         future.setException(parseRequestError(error));
                     }
                 });
+        request.setTag(this);
         _queue.add(request);
 
         return future.getTask();
@@ -319,9 +316,19 @@ public class BaasClient {
             final String resource,
             final String body
     ) {
+        return executeRequest(method, resource, body, true, false);
+    }
+
+    private Task<Object> executeRequest(
+            final int method,
+            final String resource,
+            final String body,
+            final boolean refreshOnFailure,
+            final boolean useRefreshToken
+    ) {
         ensureAuthed();
         final String url = String.format("%s/v1/app/%s/%s", _baseUrl, _appName, resource);
-
+        final String token = useRefreshToken ? getRefreshToken() : _auth.getAccessToken();
         final TaskCompletionSource<Object> future = new TaskCompletionSource<>();
         final AuthedJsonStringRequest request = new AuthedJsonStringRequest(
                 method,
@@ -329,7 +336,7 @@ public class BaasClient {
                 body,
                 Collections.singletonMap(
                         "Authorization",
-                        String.format("Bearer %s", _auth.getToken())),
+                        String.format("Bearer %s", token)),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -340,16 +347,113 @@ public class BaasClient {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while executing request", error);
                         final BaasRequestException e = parseRequestError(error);
                         if (e instanceof BaasServiceException) {
-                            if (((BaasServiceException) e).getErrorCode() == ErrorCode.BAD_SESSION) {
+                            if (((BaasServiceException) e).getErrorCode() == ErrorCode.INVALID_SESSION) {
+                                if (!refreshOnFailure) {
+                                    clearAuth();
+                                    future.setException(e);
+                                    return;
+                                }
+                                handleInvalidSession(method, resource, body, future);
+                                return;
+                            }
+                        }
+                        future.setException(e);
+                    }
+                });
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    private void handleInvalidSession(
+            final int method,
+            final String resource,
+            final String body,
+            final TaskCompletionSource<Object> future
+    ) {
+        refreshAccessToken().addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull final Task<Void> task) {
+                if (!task.isSuccessful()) {
+                    future.setException(task.getException());
+                    return;
+                }
+
+                // Retry one more time
+                executeRequest(method, resource, body, false, false).addOnCompleteListener(new OnCompleteListener<Object>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Object> task) {
+                        if (task.isSuccessful()) {
+                            future.setResult(task.getResult());
+                            return;
+                        }
+
+                        future.setException(task.getException());
+                    }
+                });
+            }
+        });
+    }
+
+    private Task<Void> refreshAccessToken() {
+
+        ensureAuthed();
+        final String url = String.format("%s/v1/app/%s/auth/newAccessToken", _baseUrl, _appName);
+
+        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
+        final AuthedJsonObjectRequest request = new AuthedJsonObjectRequest(
+                Request.Method.POST,
+                url,
+                "",
+                Collections.singletonMap(
+                        "Authorization",
+                        String.format("Bearer %s", getRefreshToken())),
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(final JSONObject response) {
+
+                        final String newAccessToken;
+                        try {
+                            newAccessToken = response.getString("accessToken");
+                        } catch (final JSONException e) {
+                            Log.e(TAG, "Error parsing access token response", e);
+                            future.setException(new BaasException(e));
+                            return;
+                        }
+
+                        _auth = _auth.withNewAccessToken(newAccessToken);
+
+                        final String authJson;
+                        try {
+                            authJson = _objMapper.writeValueAsString(_auth);
+                        } catch (final IOException e) {
+                            Log.e(TAG, "Error parsing auth response", e);
+                            future.setException(new BaasException(e));
+                            return;
+                        }
+
+                        _preferences.edit().putString(AUTH_JWT_NAME, authJson).apply();
+                        future.setResult(null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while refreshing access token", error);
+                        final BaasRequestException e = parseRequestError(error);
+                        if (e instanceof BaasServiceException) {
+                            // Our refresh token probably expired
+                            if (((BaasServiceException) e).getErrorCode() == ErrorCode.INVALID_SESSION) {
                                 clearAuth();
                             }
                         }
-                        future.setException(parseRequestError(error));
+                        future.setException(e);
                     }
                 });
+        request.setTag(this);
         _queue.add(request);
 
         return future.getTask();

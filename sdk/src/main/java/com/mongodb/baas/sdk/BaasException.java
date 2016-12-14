@@ -43,7 +43,7 @@ public class BaasException extends RuntimeException {
         private final ErrorCode _errorCode;
 
         public enum ErrorCode {
-            BAD_SESSION,
+            INVALID_SESSION,
             UNKNOWN
         }
 
