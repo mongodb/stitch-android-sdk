@@ -1,6 +1,8 @@
 package com.mongodb.baas.sdk.auth;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.bson.types.ObjectId;
@@ -8,6 +10,7 @@ import org.bson.types.ObjectId;
 import java.util.List;
 import java.util.Map;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AuthUser {
 
     private final ObjectId _id;
