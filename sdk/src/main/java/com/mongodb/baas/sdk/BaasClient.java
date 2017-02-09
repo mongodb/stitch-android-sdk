@@ -23,6 +23,8 @@ import com.mongodb.baas.sdk.auth.Auth;
 import com.mongodb.baas.sdk.auth.AuthProvider;
 import com.mongodb.baas.sdk.auth.AuthProviderInfo;
 import com.mongodb.baas.sdk.auth.RefreshTokenHolder;
+import com.mongodb.baas.sdk.auth.anonymous.AnonymousAuthProvider;
+import com.mongodb.baas.sdk.auth.anonymous.AnonymousAuthProviderInfo;
 import com.mongodb.baas.sdk.auth.facebook.FacebookAuthProviderInfo;
 import com.mongodb.baas.sdk.auth.google.GoogleAuthProviderInfo;
 
@@ -161,6 +163,11 @@ public class BaasClient {
                                         final GoogleAuthProviderInfo googleInfo =
                                                 _objMapper.readValue(info.toString(), GoogleAuthProviderInfo.class);
                                         builder.withGoogle(googleInfo);
+                                        break;
+                                    case AnonymousAuthProviderInfo.FQ_NAME:
+                                        final AnonymousAuthProviderInfo anonInfo =
+                                                _objMapper.readValue(info.toString(), AnonymousAuthProviderInfo.class);
+                                        builder.withAnonymous(anonInfo);
                                         break;
                                 }
                             } catch (final JSONException | IOException e) {
