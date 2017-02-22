@@ -51,7 +51,7 @@ public class BaasClient {
     private static final String AUTH_REFRESH_TOKEN_NAME = "refresh_token";
 
     private final String _baseUrl;
-    private final String _appName;
+    private final String _clientAppID;
     private final RequestQueue _queue;
     private final ObjectMapper _objMapper;
 
@@ -60,8 +60,8 @@ public class BaasClient {
 
     private List<AuthListener> _authListeners;
 
-    public BaasClient(final Context context, final String appName, final String baseUrl) {
-        _appName = appName;
+    public BaasClient(final Context context, final String clientAppID, final String baseUrl) {
+        _clientAppID = clientAppID;
         _queue = Volley.newRequestQueue(context);
         _objMapper = CustomObjectMapper.createObjectMapper();
         _baseUrl = baseUrl;
@@ -70,8 +70,8 @@ public class BaasClient {
         _authListeners = new ArrayList<>();
     }
 
-    public BaasClient(final Context context, final String appName) {
-        this(context, appName, DEFAULT_BASE_URL);
+    public BaasClient(final Context context, final String clientAppID) {
+        this(context, clientAppID, DEFAULT_BASE_URL);
     }
 
     public void addAuthListener(final AuthListener authListener) {
@@ -136,7 +136,7 @@ public class BaasClient {
     public Task<AuthProviderInfo> getAuthProviders() {
 
         final TaskCompletionSource<AuthProviderInfo> future = new TaskCompletionSource<>();
-        final String url = String.format("%s/v1/app/%s/auth", _baseUrl, _appName);
+        final String url = String.format("%s/v1/app/%s/auth", _baseUrl, _clientAppID);
 
         final JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.GET,
@@ -281,7 +281,7 @@ public class BaasClient {
         final String url = String.format(
                 "%s/v1/app/%s/auth/%s/%s",
                 _baseUrl,
-                _appName,
+                _clientAppID,
                 authProvider.getType(),
                 authProvider.getName());
 
@@ -334,7 +334,7 @@ public class BaasClient {
             final boolean useRefreshToken
     ) {
         ensureAuthed();
-        final String url = String.format("%s/v1/app/%s/%s", _baseUrl, _appName, resource);
+        final String url = String.format("%s/v1/app/%s/%s", _baseUrl, _clientAppID, resource);
         final String token = useRefreshToken ? getRefreshToken() : _auth.getAccessToken();
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
         final AuthedJsonStringRequest request = new AuthedJsonStringRequest(
