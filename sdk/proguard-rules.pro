@@ -3,7 +3,7 @@
 -keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod
 
 -keep public class * {
-    public protected *;
+    public protected  private *;
 }
 
 -keepclassmembernames class * {
