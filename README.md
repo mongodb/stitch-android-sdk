@@ -13,29 +13,25 @@
 2. Start a new Android Studio project
 	* Note: The minimum supported API level is 19 (Android 4.4 KitKat)
 	* Starting with an empty activity is ideal
-3. In your project tab, expand Gradle Scripts and open settings.gradle
-4. Include the baas-sdk module by adding the following lines:
-	* The path to the SDK from the BaaS repo is ./clients/android/sdk/sdk
-	* Note: This is a temporary requirement until BaaS is in a remote repository
-
+3. In your build.gradle for your app module, add the following block:
+	
 	```
-	include ':baas-sdk'
-	project(':baas-sdk').projectDir=new File('/Users/user1/go/src/github.com/10gen/baas/clients/android/sdk/sdk')
-	```
-
-5. In your build.gradle for your app module, add the following line to your dependencies block:
-
-	```
-	compile project(path: ':baas-sdk')
+	repositories {
+		maven {
+			url "https://s3.amazonaws.com/baas-clients/android/maven/snapshots"
+		}
+	}
 	```
 
-6. Android Studio will prompt you to sync your changes in your project; hit Sync Now
-
-7. Using BaaS requires internet access so add the following to your app's manifests/AndroidManifest.xml within the manifest element:
+4. Also add the following to your dependencies block:
 
 	```
-	<uses-permission android:name="android.permission.INTERNET" />
+	compile('com.mongodb.baas:baas-sdk:0.1-SNAPSHOT'){
+		changing = true
+	}
 	```
+
+5. Android Studio will prompt you to sync your changes in your project; hit Sync Now
 
 ### Set up an Android Virtual Device
 

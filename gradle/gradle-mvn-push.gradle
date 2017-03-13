@@ -1,0 +1,72 @@
+// Adapted from https://github.com/codepath/android_guides/wiki/Building-your-own-Android-library
+
+apply plugin: 'maven'
+
+def isReleaseBuild() {
+    return POM_VERSION_NAME.contains("SNAPSHOT") == false
+}
+
+def getOutputDir() {
+    if (isReleaseBuild()) {
+        return "${project.buildDir}/releases"
+    } else {
+        return "${project.buildDir}/snapshots"
+    }
+}
+
+def getDestUrl() {
+    if (isReleaseBuild()) {
+        return "s3://${S3_BUCKET}/${S3_DIRECTORY}/maven/releases"
+    } else {
+        return "s3://${S3_BUCKET}/${S3_DIRECTORY}/maven/snapshots"
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+
+            pom {
+                name = POM_NAME
+                packaging = POM_PACKAGING
+                version = POM_VERSION_NAME
+                artifactId = POM_ARTIFACT_ID
+                groupId = POM_GROUP
+            }
+
+            repository(url: "file:///" + getOutputDir())
+        }
+    }
+}
+
+task androidJavadocs(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+}
+
+task androidJavadocsJar(type: Jar) {
+    classifier = 'javadoc'
+    baseName = POM_ARTIFACT_ID
+    from androidJavadocs.destinationDir
+}
+
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    baseName = POM_ARTIFACT_ID
+    from android.sourceSets.main.java.srcDirs
+}
+
+// These will be uploaded but Android Studio does not know how to use them
+artifacts {
+    archives androidSourcesJar
+    archives androidJavadocsJar
+}
+
+
+println 'Output Directory: ' + getOutputDir()
+println 'Destination URL: ' + getDestUrl()
+
+task copyToS3(type: Exec) {
+    commandLine 'aws', 's3', 'cp', '--acl', 'public-read', '--recursive', getOutputDir(), getDestUrl()
+}
+
+copyToS3.dependsOn uploadArchives
