@@ -1,12 +1,13 @@
 // Adapted from https://github.com/codepath/android_guides/wiki/Building-your-own-Android-library
 
 apply plugin: 'maven'
+apply plugin: 'com.vanniktech.android.javadoc'
 
 def isReleaseBuild() {
     return POM_VERSION_NAME.contains("SNAPSHOT") == false
 }
 
-def getOutputDir() {
+def getJarsOutputDir() {
     if (isReleaseBuild()) {
         return "${project.buildDir}/releases"
     } else {
@@ -14,12 +15,21 @@ def getOutputDir() {
     }
 }
 
-def getDestUrl() {
+def getJarsDestUrl() {
     if (isReleaseBuild()) {
         return "s3://${S3_BUCKET}/${S3_DIRECTORY}/maven/releases"
     } else {
         return "s3://${S3_BUCKET}/${S3_DIRECTORY}/maven/snapshots"
     }
+}
+
+
+def getDocsOutputDir() {
+    return "${project.projectDir}/javaDoc/release"
+}
+
+def getDocsDestUrl() {
+    return "s3://${S3_BUCKET}/${S3_DIRECTORY}/docs/${POM_VERSION_NAME}"
 }
 
 uploadArchives {
@@ -34,7 +44,7 @@ uploadArchives {
                 groupId = POM_GROUP
             }
 
-            repository(url: "file:///" + getOutputDir())
+            repository(url: "file:///" + getJarsOutputDir())
         }
     }
 }
@@ -61,12 +71,12 @@ artifacts {
     archives androidJavadocsJar
 }
 
-
-println 'Output Directory: ' + getOutputDir()
-println 'Destination URL: ' + getDestUrl()
-
-task copyToS3(type: Exec) {
-    commandLine 'aws', 's3', 'cp', '--acl', 'public-read', '--recursive', getOutputDir(), getDestUrl()
+task copyJarsToS3(type: Exec) {
+    commandLine 'aws', 's3', 'cp', '--acl', 'public-read', '--recursive', getJarsOutputDir(), getJarsDestUrl()
 }
 
-copyToS3.dependsOn uploadArchives
+copyJarsToS3.dependsOn uploadArchives
+
+task copyDocsToS3(type: Exec) {
+    commandLine 'aws', 's3', 'cp', '--acl', 'public-read', '--recursive', getDocsOutputDir(), getDocsDestUrl()
+}
