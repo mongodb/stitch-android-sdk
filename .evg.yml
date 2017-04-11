@@ -1,0 +1,110 @@
+functions:
+  "fetch_source":
+    - command: git.get_project
+      params:
+        directory: "baas-android-sdk"
+
+  "setup_mongod":
+    - command: shell.exec
+      params:
+        script: |
+          set -v
+          curl --silent ${mongodb_url} | tar xvz
+    - command: shell.exec
+      params:
+        background: true
+        script: |
+          set -v
+          cd mongodb-*
+          echo "starting mongod..."
+          mkdir db_files
+          ./bin/mongod --dbpath ./db_files --port 27017 &
+          echo "waiting for mongod to start up"
+    - command: shell.exec
+      params:
+        script: |
+          set -e
+          cd mongodb-*
+          ./bin/mongo --nodb --eval 'assert.soon(function(x){try{var d = new Mongo("localhost:27017"); return true}catch(e){return false}}, "timed out connecting")'
+          echo "mongod is up."
+
+  "setup_baas":
+    - command: shell.exec
+      params:
+        script: |
+          set -e
+          echo "cloning baas"
+          mkdir -p src/github.com/10gen
+          git clone git@github.com:10gen/baas src/github.com/10gen/baas
+
+          echo "downloading libmongo"
+          wget --quiet "https://s3.amazonaws.com/baas-tools/libmongo.so"
+          chmod +x libmongo.so
+    - command: shell.exec
+      params:
+        background: true
+        script: |
+          export GOPATH=`pwd`
+          export PATH="`pwd`:$PATH"
+          export BAAS_PATH=$GOPATH/src/github.com/10gen/baas
+          cd baas-android-sdk/test/bin
+          echo "running baas"
+          go run $BAAS_PATH/main/main.go --configFile ../conf/test_config.json
+
+tasks:
+  - name: run_tests
+    commands:
+      - func: "fetch_source"
+      - func: "setup_mongod"
+      - func: "setup_baas"
+      - command: shell.exec
+        params:
+          script: |
+            set -e
+            echo "running client tests"
+            cd baas-android-sdk
+            # do stuff here
+
+
+#     - command: s3.put
+#       params:
+#         aws_key: ${sdks_aws_key}
+#         aws_secret: ${sdks_secret_key}
+#         local_file: dist/baas.js
+#         remote_file: js/${task_id}/library/baas.js
+#         bucket: baas-sdks
+#         permissions: public-read
+#         content_type: application/javascript
+#         display_name: BaaS Javascript Library
+#
+#     - command: s3.put
+#       params:
+#         aws_key: ${sdks_aws_key}
+#         aws_secret: ${sdks_secret_key}
+#         local_file: dist/baas.min.js
+#         remote_file: js/${task_id}/library/baas.min.js
+#         bucket: baas-sdks
+#         permissions: public-read
+#         content_type: application/javascript
+#         display_name: BaaS Javascript Library (minified)
+#
+#     - command: s3.put
+#       params:
+#         aws_key: ${sdks_aws_key}
+#         aws_secret: ${sdks_secret_key}
+#         local_file: baas-1.0.0.tgz
+#         remote_file: js/${task_id}/npm/baas-1.0.0.tgz
+#         bucket: baas-sdks
+#         permissions: public-read
+#         content_type: application/javascript
+#         display_name: BaaS NPM package
+
+buildvariants:
+- name: linux-64
+  display_name: Linux-64
+  run_on:
+    - baas-linux
+  expansions:
+    mongodb_url: http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.4.1.tgz
+  tasks:
+    - name: run_tests
