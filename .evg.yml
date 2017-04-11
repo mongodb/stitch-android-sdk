@@ -3,15 +3,16 @@ functions:
     - command: git.get_project
       params:
         directory: "baas-android-sdk"
+
   "install_aws_cli":
     - command: shell.exec
-        params:
-          script: |
-            set -e
-            echo "setting up AWS CLI"
-            curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-            unzip awscli-bundle.zip
-            ./awscli-bundle/install -b ~/bin/aws
+      params:
+        script: |
+          set -e
+          echo "setting up AWS CLI"
+          curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+          unzip awscli-bundle.zip
+          ./awscli-bundle/install -b ~/bin/aws
 
 tasks:
   - name: run_tests
