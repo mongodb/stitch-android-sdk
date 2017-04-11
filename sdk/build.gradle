@@ -20,6 +20,9 @@ android {
             consumerProguardFiles 'proguard-rules.pro'
         }
     }
+    lintOptions {
+        disable 'InvalidPackage'
+    }
 }
 
 dependencies {
@@ -30,7 +33,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
 
     compile 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
-    compile 'com.google.android.gms:play-services-base:10.0.1'
+    compile 'com.google.android.gms:play-services-base:10.2.1'
     compile 'org.mongodb:bson:3.0.4'
 
     // TODO: Using fork with fixes until https://code.google.com/p/android/issues/detail?id=209471 is resolved
