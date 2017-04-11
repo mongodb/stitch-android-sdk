@@ -3,9 +3,18 @@ functions:
     - command: git.get_project
       params:
         directory: "baas-android-sdk"
+  "install_aws_cli":
+    - command: shell.exec
+        params:
+          script: |
+            set -e
+            echo "setting up AWS CLI"
+            curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+            unzip awscli-bundle.zip
+            ./awscli-bundle/install -b ~/bin/aws
 
 tasks:
-  - name: dist
+  - name: run_tests
     commands:
       - func: "fetch_source"
       - command: shell.exec
@@ -14,19 +23,14 @@ tasks:
             set -e
             cd baas-android-sdk
             echo "building SDK"
-            # Expect error from sdk.dir
             ./gradlew build
 
-      - command: shell.exec
-        params:
-          script: |
-            set -e
-            echo "setting up AWS CLI"
-            curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-            unzip awscli-bundle.zip
-            ./awscli-bundle/install -b ~/bin/aws
-            echo "uploading jars"
-
+  - name: dist
+    depends_on:
+      - name: run_tests
+    commands:
+      - func: "fetch_source"
+      - func: "install_aws_cli"
       - command: shell.exec
         params:
           silent: true
@@ -39,12 +43,30 @@ tasks:
             echo "building SDK"
             ./gradlew copyJarsToS3
 
+  - name: docs_dist
+    depends_on:
+      - name: run_tests
+    commands:
+      - func: "fetch_source"
+      - func: "install_aws_cli"
+      - command: shell.exec
+        params:
+          silent: true
+          script: |
+            set -e
+            export PATH=$HOME/bin:$PATH
+            export AWS_ACCESS_KEY_ID=${sdks_aws_key}
+            export AWS_SECRET_ACCESS_KEY=${sdks_aws_secret}
+            cd baas-android-sdk
+            echo "building docs"
+            ./gradlew generateReleaseJavadoc copyDocsToS3
+
 buildvariants:
 - name: linux-64
   display_name: Linux-64
   run_on:
     - baas-linux
-  expansions:
-    mongodb_url: http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.4.1.tgz
   tasks:
+    - name: run_tests
     - name: dist
+    - name: docs_dist
