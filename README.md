@@ -20,6 +20,11 @@
 		maven {
 			url "https://s3.amazonaws.com/baas-sdks/android/maven/snapshots"
 		}
+
+		// TODO: Remove once BSON 3.5.0 is released
+		maven {
+            url "https://oss.sonatype.org/content/repositories/snapshots"
+        }
 	}
 	```
 
