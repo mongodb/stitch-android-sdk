@@ -526,6 +526,10 @@ public class BaasClient {
     }
 
     // Internal Public Methods
+
+    /**
+     * @return The properties for all BaaS clients.
+     */
     public Properties getProperties() {
         return _properties;
     }
