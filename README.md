@@ -18,7 +18,7 @@
 	```
 	repositories {
 		maven {
-			url "https://s3.amazonaws.com/baas-clients/android/maven/snapshots"
+			url "https://s3.amazonaws.com/baas-sdks/android/maven/snapshots"
 		}
 	}
 	```
@@ -26,7 +26,7 @@
 4. Also add the following to your dependencies block:
 
 	```
-	compile('com.mongodb.baas:baas-sdk:0.1-SNAPSHOT'){
+	compile('com.mongodb.baas:android-sdk:0.1.1-SNAPSHOT'){
 		changing = true
 	}
 	```
@@ -38,18 +38,24 @@
 1. In Android Studio, go to Tools, Android, AVD manager
 2. Click Create Virtual Device
 3. Select a device that should run your app (the default is fine)
-4. Select and download a recommended system image of your choie (the latest is fine)
+4. Select and download a recommended system image of your choice (the latest is fine)
 	* x86_64 images are available in the x86 tab
 5. Name your device and hit finish
 
 ### Using the SDK
 
 #### Logging In
-1. To initialize our connection to BaaS, go to your MainAcitvity.java and within your onCreate method, add the following line and replace your-app-id with the app ID you took note of when setting up the application in BaaS:
+1. To initialize our connection to BaaS, go to your **MainActivity.java** and within your *onCreate* method, add the following line and replace your-app-id with the app ID you took note of when setting up the application in BaaS:
 
 	```
 	final BaasClient _client = new BaasClient(this, "your-app-id");
 	```
+	
+	* Note: To create a BaasClient using properties, make sure to set the **appId** property in your **baas.properties** and use the following factory method:
+
+		```
+		final BaasClient _client = BaasClient.fromProperties(this);
+		```
 
 2. This will only instantiate a client but will not make any outgoing connection to BaaS
 3. Since we enabled anonymous log in, let's log in with it; add the following after your new _client:
@@ -108,12 +114,112 @@
         });
     }
 	```
-3. Call _init()_ after logging in and run your app. You should see a messages like:
+3. Call *init()* after logging in and run your app. You should see a messages like:
 
 	```
 	03-12 20:14:15.601 2592-2592/com.mongodb.baas.myapplication D/baas: number of results: 1
 03-12 20:14:15.601 2592-2592/com.mongodb.baas.myapplication D/baas: Hello world!
 	```
 
+#### Set up Push Notifications (GCM)
 
-For more examples of SDK usage, see the todo app example in the examples directory
+##### Set up a GCM provider
+
+1. Create a Firebase Project
+2. Click Add Firebase to your Android app
+3. Skip downloading the config file
+4. Skip adding the Firebase SDK
+5. Click the gear next to overview in your Firebase project and go to Project Settings
+6. Go to Cloud Messaging and take note of your Legacy server key and Sender ID
+7. In BaaS go to the Notifications section and enter in your API Key (legacy server key) and Sender ID
+
+##### Receive Push Notifications in Android
+
+1. In order to listen in on notifications arriving from GCM, we must implement the GCMListenerService
+	1. Create a new class called *MyGCMService* in your app's package and use the following code to start with:
+	
+		```
+		package your.app.package.name;
+	
+		import com.mongodb.baas.android.push.gcm.GCMListenerService;
+		
+		public class GCMService extends GCMListenerService {}
+		``` 
+	2. The included GCMListenerService contains a method called *onPushMessageReceived* that can be overridden to your liking
+	3. Now register the service and a receiver in your **AndroidManifest.xml** to pick up on new messages:
+
+		```
+		<receiver
+		    android:name="com.google.android.gms.gcm.GcmReceiver"
+		    android:exported="true"
+		    <intent-filter>
+		        <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+		        <category android:name="your.app.package.name" />
+		    </intent-filter>
+		</receiver>
+		
+		<service
+		    android:name=".MyGCMService"
+		    android:exported="false" >
+		    <intent-filter>
+		        <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+		    </intent-filter>
+		</service>
+		```
+	4. If you'd like to give the service a chance to process the message before sleeping, add the WAKE_LOCK permission to your manifest:
+
+		```
+		<uses-permission android:name="android.permission.WAKE_LOCK" />
+		```
+	
+2. Once logged in, you can either create a GCM Push Provider by asking BaaS for the provider information or providing it in your **baas.properties**
+3. To create a GCM Push Provider from properties, simply use the provided factory method:
+
+	```
+	final PushClient pushClient = _client.getPush().forProvider(GCMPushProviderInfo.fromProperties());
+	```
+	* Note: This assumed you've set the **push.gcm.senderId** property in your **baas.properties**
+	
+4. To create a GCM Push Provider by asking BaaS, you must use the *getPushProviders* method and ensure a GCM provider exists:
+
+	```
+	_client.getPushProviders().addOnSuccessListener(new OnSuccessListener<AvailablePushProviders>() {
+		@Override
+		public void onSuccess(final AvailablePushProviders availablePushProviders) {
+			if (!availablePushProviders.hasGCM()) {
+				return;
+			}
+			final PushClient pushClient = _client.getPush().forProvider(availablePushProviders.getGCM());
+		}
+	});
+	```
+5. To register for push notifications, use the *register* method:
+
+	```
+	_pushClient.register().addOnCompleteListener(new OnCompleteListener<Void>() {
+		@Override
+		public void onComplete(@NonNull final Task<Void> task) {
+			if (!task.isSuccessful()) {
+				Log.d(TAG, "Registration failed: " + task.getException());
+				return;
+			}
+			Log.d(TAG, "Registration completed");
+		}
+	});
+	```
+6. To deregister from push notifications, use the *deregister* method:
+
+	```
+	_pushClient.deregister().addOnCompleteListener(new OnCompleteListener<Void>() {
+		@Override
+		public void onComplete(@NonNull final Task<Void> task) {
+			if (!task.isSuccessful()) {
+				Log.d(TAG, "Deregistration failed: " + task.getException());
+				return;
+			}
+			Log.d(TAG, "Deregistration completed");
+		}
+	});
+	```
+
+For more examples of SDK usage, see the todo app example in the examples repository

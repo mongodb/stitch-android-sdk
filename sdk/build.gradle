@@ -1,5 +1,8 @@
 apply plugin: 'com.android.library'
-apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
+
+if (rootProject.file('gradle/gradle-mvn-push.gradle').exists()) {
+    apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
+}
 
 android {
     compileSdkVersion 25
@@ -25,6 +28,13 @@ android {
     }
 }
 
+// TODO: Remove once BSON 3.5.0 is released
+repositories {
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots"
+    }
+}
+
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
@@ -34,7 +44,10 @@ dependencies {
 
     compile 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
     compile 'com.google.android.gms:play-services-base:10.2.1'
-    compile 'org.mongodb:bson:3.0.4'
+    compile "com.google.android.gms:play-services-gcm:10.2.1"
+
+    // TODO: Remove SNAPSHOT once BSON 3.5.0 is released
+    compile 'org.mongodb:bson:3.5.0-SNAPSHOT'
 
     // TODO: Using fork with fixes until https://code.google.com/p/android/issues/detail?id=209471 is resolved
     compile 'com.mcxiaoke.volley:library:1.0.19'
