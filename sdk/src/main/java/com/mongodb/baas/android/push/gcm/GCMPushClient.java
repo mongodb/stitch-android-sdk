@@ -8,9 +8,11 @@ import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.gcm.GcmPubSub;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.iid.InstanceID;
 import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.mongodb.baas.android.BaasClient;
@@ -113,6 +115,47 @@ public class GCMPushClient extends PushClient {
                         return deregisterWithServer(instanceId);
                     }
                 });
+    }
+
+    /**
+     * Subscribes the client to a specific topic.
+     *
+     * @return A task that can resolved upon subscribing.
+     */
+    public Task<Void> subscribeToTopic(final String topic) {
+        final GcmPubSub pubSub = GcmPubSub.getInstance(getContext());
+        final String topicKey = String.format("/topics/%s", topic);
+        final InstanceID instanceId = InstanceID.getInstance(getContext());
+
+        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
+
+        getRegistrationToken(instanceId, _senderId).addOnCompleteListener(new OnCompleteListener<String>() {
+            @Override
+            public void onComplete(@NonNull final Task<String> task) {
+                if (!task.isSuccessful()) {
+                    future.setException(task.getException());
+                }
+
+                new AsyncTask<Object, Integer, String>() {
+                    @Override
+                    protected String doInBackground(final Object[] ignored) {
+
+                        try {
+                            pubSub.subscribe(task.getResult(), topicKey, null);
+                        } catch (final IOException e) {
+                            Log.e(TAG, "Error subscribing to " + topicKey, e);
+                            future.setException(e);
+                            return null;
+                        }
+
+                        future.setResult(null);
+                        return null;
+                    }
+                }.execute();
+            }
+        });
+
+        return future.getTask();
     }
 
     /**
