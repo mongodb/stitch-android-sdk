@@ -159,6 +159,47 @@ public class GCMPushClient extends PushClient {
     }
 
     /**
+     * Subscribes the client to a specific topic.
+     *
+     * @return A task that can resolved upon subscribing.
+     */
+    public Task<Void> unsubscribeFromTopic(final String topic) {
+        final GcmPubSub pubSub = GcmPubSub.getInstance(getContext());
+        final String topicKey = String.format("/topics/%s", topic);
+        final InstanceID instanceId = InstanceID.getInstance(getContext());
+
+        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
+
+        getRegistrationToken(instanceId, _senderId).addOnCompleteListener(new OnCompleteListener<String>() {
+            @Override
+            public void onComplete(@NonNull final Task<String> task) {
+                if (!task.isSuccessful()) {
+                    future.setException(task.getException());
+                }
+
+                new AsyncTask<Object, Integer, String>() {
+                    @Override
+                    protected String doInBackground(final Object[] ignored) {
+
+                        try {
+                            pubSub.unsubscribe(task.getResult(), topicKey);
+                        } catch (final IOException e) {
+                            Log.e(TAG, "Error unsubscribing from " + topicKey, e);
+                            future.setException(e);
+                            return null;
+                        }
+
+                        future.setResult(null);
+                        return null;
+                    }
+                }.execute();
+            }
+        });
+
+        return future.getTask();
+    }
+
+    /**
      * Deletes the current registration token.
      *
      * @param instanceId The instance ID which generated the registration token.
