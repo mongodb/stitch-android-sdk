@@ -13,33 +13,36 @@ public enum PushProviderName {
      */
     GCM("gcm");
 
-    private static final Map<String, PushProviderName> serviceNameToProvider = new HashMap<>();
+    private static final Map<String, PushProviderName> typeNameToProvider = new HashMap<>();
 
     static {
-        serviceNameToProvider.put(GCM._serviceName, GCM);
+        typeNameToProvider.put(GCM._typeName, GCM);
     }
 
-    private final String _serviceName;
+    private final String _typeName;
 
-    PushProviderName(final String serviceName) {
-        _serviceName = serviceName;
+    /**
+     * @param typeName The type identifier for the provider.
+     */
+    PushProviderName(final String typeName) {
+        _typeName = typeName;
     }
 
     /**
-     * @param serviceName The service claiming to be a provider.
+     * @param typeName The type claiming to be a provider.
      * @return The mapped provider name.
      */
-    public static PushProviderName fromServiceName(final String serviceName) {
-        if (!serviceNameToProvider.containsKey(serviceName)) {
+    public static PushProviderName fromTypeName(final String typeName) {
+        if (!typeNameToProvider.containsKey(typeName)) {
             throw new IllegalArgumentException("Unknown push provider");
         }
-        return serviceNameToProvider.get(serviceName);
+        return typeNameToProvider.get(typeName);
     }
 
     /**
      * @return The reserved service name associated with this provider.
      */
-    public String getServiceName() {
-        return _serviceName;
+    public String getTypeName() {
+        return _typeName;
     }
 }

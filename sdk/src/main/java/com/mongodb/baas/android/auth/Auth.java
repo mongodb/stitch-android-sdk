@@ -11,29 +11,34 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Auth {
 
     private final String _accessToken;
-    private final User _User;
+    private final User _user;
     private final String _provider;
+    private final String _deviceId;
 
     @JsonCreator
     private Auth(
-            @JsonProperty("accessToken")
+            @JsonProperty(Fields.ACCESS_TOKEN)
             final String accessToken,
 
-            @JsonProperty("user")
+            @JsonProperty(Fields.USER)
             final User user,
 
-            @JsonProperty("provider")
-            final String provider
+            @JsonProperty(Fields.PROVIDER)
+            final String provider,
+
+            @JsonProperty(Fields.DEVICE_ID)
+            final String deviceId
     ) {
         _accessToken = accessToken;
-        _User = user;
+        _user = user;
         _provider = provider;
+        _deviceId = deviceId;
     }
 
     /**
      * @return The current access token for this session.
      */
-    @JsonProperty("accessToken")
+    @JsonProperty(Fields.ACCESS_TOKEN)
     public String getAccessToken() {
         return _accessToken;
     }
@@ -41,17 +46,25 @@ public class Auth {
     /**
      * @return The user this session was created for.
      */
-    @JsonProperty("user")
+    @JsonProperty(Fields.USER)
     public User getUser() {
-        return _User;
+        return _user;
     }
 
     /**
      * @return The provider that authenticated this session.
      */
-    @JsonProperty("provider")
+    @JsonProperty(Fields.PROVIDER)
     public String getProvider() {
         return _provider;
+    }
+
+    /**
+     * @return The user this session was created for.
+     */
+    @JsonProperty(Fields.DEVICE_ID)
+    public String getDeviceId() {
+        return _deviceId;
     }
 
     /**
@@ -59,6 +72,13 @@ public class Auth {
      * @return A new session with a fresh access token.
      */
     public Auth withNewAccessToken(final String newAccessToken) {
-        return new Auth(newAccessToken, _User, _provider);
+        return new Auth(newAccessToken, _user, _provider, _deviceId);
+    }
+
+    private static class Fields {
+        private static final String ACCESS_TOKEN = "accessToken";
+        private static final String USER = "user";
+        private static final String PROVIDER = "provider";
+        private static final String DEVICE_ID = "deviceId";
     }
 }

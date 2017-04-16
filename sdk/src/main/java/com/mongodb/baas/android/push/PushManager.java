@@ -8,9 +8,7 @@ import com.mongodb.baas.android.BaasException;
 import com.mongodb.baas.android.push.gcm.GCMPushClient;
 import com.mongodb.baas.android.push.gcm.GCMPushProviderInfo;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,7 +38,7 @@ public class PushManager implements AuthListener {
      */
     public synchronized PushClient forProvider(final PushProviderInfo info) {
         final PushClient client;
-        switch (info.getName()) {
+        switch (info.getProvider()) {
             case GCM:
                 client = new GCMPushClient(_context, _baasClient, (GCMPushProviderInfo) info);
                 break;
@@ -71,7 +69,7 @@ public class PushManager implements AuthListener {
     public synchronized void onLogout(final String ignored) {
 
         // Create any missing clients from saved data
-        for (final PushProviderInfo info : infoFromPreferences()) {
+        for (final PushProviderInfo info : PushProviderInfo.fromPreferences(_context, _baasClient.getAppId())) {
             this.forProvider(info);
         }
 
@@ -80,25 +78,5 @@ public class PushManager implements AuthListener {
             client.deregister();
         }
         _clients.clear();
-    }
-
-    /**
-     * @return All provider information from providers known to be active at some point.
-     */
-    private List<PushProviderInfo> infoFromPreferences() {
-
-        final List<PushProviderInfo> info = new ArrayList<>();
-
-        for (int i = 0; i < PushProviderName.values().length; i++) {
-            switch (PushProviderName.values()[i]) {
-                case GCM:
-                    info.addAll(GCMPushProviderInfo.fromPreferences(_context, _baasClient.getAppId()));
-                    break;
-                default:
-                    throw new BaasException.BaasClientException("Unknown push provider");
-            }
-        }
-
-        return info;
     }
 }

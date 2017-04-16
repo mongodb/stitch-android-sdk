@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * User represents an authenticated user/
+ * User represents an authenticated user.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
@@ -21,13 +21,13 @@ public class User {
 
     @JsonCreator
     private User(
-            @JsonProperty("_id")
+            @JsonProperty(Fields.ID)
             final ObjectId id,
 
-            @JsonProperty("identities")
+            @JsonProperty(Fields.IDENTITIES)
             final List<Identity> identities,
 
-            @JsonProperty("data")
+            @JsonProperty(Fields.DATA)
             final Map<String, Object> data
     ) {
         _id = id;
@@ -38,7 +38,7 @@ public class User {
     /**
      * @return The Unique ID of this user within BaaS.
      */
-    @JsonProperty("_id")
+    @JsonProperty(Fields.ID)
     public ObjectId getId() {
         return _id;
     }
@@ -46,7 +46,7 @@ public class User {
     /**
      * @return The set of identities that this user is known by.
      */
-    @JsonProperty("identities")
+    @JsonProperty(Fields.IDENTITIES)
     public List<Identity> getIdentities() {
         return _identities;
     }
@@ -54,7 +54,7 @@ public class User {
     /**
      * @return The extra data associated with this user.
      */
-    @JsonProperty("data")
+    @JsonProperty(Fields.DATA)
     public Map<String, Object> getData() {
         return _data;
     }
@@ -70,10 +70,10 @@ public class User {
         @JsonCreator
         public Identity(
 
-                @JsonProperty("id")
+                @JsonProperty(Fields.ID)
                 final String id,
 
-                @JsonProperty("provider")
+                @JsonProperty(Fields.PROVIDER)
                 final String provider
         ) {
             _id = id;
@@ -83,7 +83,7 @@ public class User {
         /**
          * @return The provider specific Unique ID.
          */
-        @JsonProperty("id")
+        @JsonProperty(Fields.ID)
         public String getId() {
             return _id;
         }
@@ -91,9 +91,20 @@ public class User {
         /**
          * @return The provider of this identity.
          */
-        @JsonProperty("provider")
+        @JsonProperty(Fields.PROVIDER)
         public String getProvider() {
             return _provider;
         }
+
+        private static class Fields {
+            private static final String ID = "id";
+            private static final String PROVIDER = "provider";
+        }
+    }
+
+    private static class Fields {
+        private static final String ID = "_id";
+        private static final String IDENTITIES = "identities";
+        private static final String DATA = "data";
     }
 }

@@ -112,4 +112,9 @@ public class PipelineStage {
     public PipelineStage(final String action, final String service, final Map<String, Object> args) {
         this(action, service, args, null);
     }
+
+    public static class LiteralStage {
+        public static final String NAME = "literal";
+        public static final String PARAMETER_ITEMS = "items";
+    }
 }

@@ -1,6 +1,6 @@
 package com.mongodb.baas.android.auth;
 
-import org.json.JSONObject;
+import org.bson.Document;
 
 /**
  * An AuthProvider is responsible for providing the necessary information for a specific
@@ -21,5 +21,5 @@ public interface AuthProvider {
     /**
      * @return The JSON payload containing authentication material.
      */
-    JSONObject getAuthPayload();
+    Document getAuthPayload();
 }

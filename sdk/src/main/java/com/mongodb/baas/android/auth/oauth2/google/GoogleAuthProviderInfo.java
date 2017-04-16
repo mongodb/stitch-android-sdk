@@ -19,10 +19,10 @@ public class GoogleAuthProviderInfo {
     @JsonCreator
     private GoogleAuthProviderInfo(
 
-            @JsonProperty("clientId")
+            @JsonProperty(Fields.CLIENT_ID)
             final String clientId,
 
-            @JsonProperty("metadataFields")
+            @JsonProperty(Fields.METADATA_FIELDS)
             final List<String> scopes
     ) {
         _clientId = clientId;
@@ -45,5 +45,10 @@ public class GoogleAuthProviderInfo {
 
     public List<Scope> getScopes() {
         return _scopes;
+    }
+
+    private static class Fields {
+        private static final String CLIENT_ID = "clientId";
+        private static final String METADATA_FIELDS = "metadataFields";
     }
 }

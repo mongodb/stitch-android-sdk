@@ -1,14 +1,10 @@
 package com.mongodb.baas.android.push;
 
 import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.os.Build;
-import android.util.Log;
+import android.content.SharedPreferences;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.baas.android.BaasClient;
-import com.mongodb.baas.android.BaasException;
 
 import org.bson.Document;
 
@@ -18,11 +14,15 @@ import org.bson.Document;
  */
 public abstract class PushClient {
 
+    static final String TAG = "BaaS-Push";
+
     // Preferences
-    public static final String SHARED_PREFERENCES_NAME = "com.mongodb.baas.sdk.push.SharedPreferences.%s.%s";
-    private static final String TAG = "BaaS-Push";
+    public static final String SHARED_PREFERENCES_NAME = "com.mongodb.baas.sdk.push.SharedPreferences.%s";
+    static final String PREF_CONFIGS = "gcm.configs";
+
     private final BaasClient _baasClient;
     private final Context _context;
+    private final SharedPreferences _globalPreferences;
 
     /**
      * @param context    The Android {@link Context} that this client should be bound to.
@@ -34,6 +34,9 @@ public abstract class PushClient {
     ) {
         _baasClient = baasClient;
         _context = context;
+
+        final String globPrefPath = String.format(SHARED_PREFERENCES_NAME, getBaasClient().getAppId());
+        _globalPreferences = context.getSharedPreferences(globPrefPath, Context.MODE_PRIVATE);
     }
 
     /**
@@ -65,51 +68,56 @@ public abstract class PushClient {
     }
 
     /**
-     * @param deviceId The device ID representing this client.
+     * @param info The push provider info to persist.
+     */
+    protected synchronized void addInfoToConfigs(final PushProviderInfo info) {
+        final Document configs = Document.parse(_globalPreferences.getString(PREF_CONFIGS, "{}"));
+        configs.put(info.getService(), info.toDocument().toJson());
+        _globalPreferences.edit().putString(PREF_CONFIGS, configs.toJson()).apply();
+    }
+
+    /**
+     * @param info The push provider info to no longer persist.
+     */
+    protected synchronized void removeInfoFromConfigs(final PushProviderInfo info) {
+        final Document configs = Document.parse(_globalPreferences.getString(PREF_CONFIGS, "{}"));
+        configs.remove(info.getService());
+        _globalPreferences.edit().putString(PREF_CONFIGS, configs.toJson()).apply();
+    }
+
+    /**
+     * @param serviceName The service that will handle push for this client.
      * @return A generic device registration request.
      */
-    protected Document getBaseRegisterPushDeviceRequest(final String deviceId) {
+    protected Document getBaseRegisterPushRequest(final String serviceName) {
         final Document request = new Document();
 
-        final String packageName = getContext().getPackageName();
-        final PackageManager manager = getContext().getPackageManager();
-        final PackageInfo info;
-        try {
-            info = manager.getPackageInfo(packageName, 0);
-        } catch (final PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Error while getting info for app package", e);
-            throw new BaasException.BaasClientException(e);
-        }
-
-        request.put(DeviceFields.USER_ID, _baasClient.getAuth().getUser().getId());
-        request.put(DeviceFields.DEVICE_ID, deviceId);
-        request.put(DeviceFields.APP_ID, getContext().getPackageName());
-        request.put(DeviceFields.APP_VERSION, info.versionName);
-        request.put(DeviceFields.PLATFORM, "android");
-        request.put(DeviceFields.PLATFORM_VERSION, Build.VERSION.RELEASE);
+        request.put(DeviceFields.SERVICE_NAME, serviceName);
+        request.put(DeviceFields.DATA, new Document());
 
         return request;
     }
 
     /**
-     * @param deviceId The device ID representing this client.
+     * @param serviceName The service that handles push for this client.
      * @return A generic device deregistration request.
      */
-    protected Document getBaseDeregisterPushDeviceRequest(final String deviceId) {
+    protected Document getBaseDeregisterPushDeviceRequest(final String serviceName) {
         final Document request = new Document();
-        request.put(DeviceFields.USER_ID, _baasClient.getAuth().getUser().getId());
-        request.put(DeviceFields.DEVICE_ID, deviceId);
+
+        request.put(DeviceFields.SERVICE_NAME, serviceName);
 
         return request;
     }
 
-    private static class DeviceFields {
-        static final String USER_ID = "userId";
-        static final String DEVICE_ID = "deviceId";
-        static final String APP_ID = "appId";
-        static final String APP_VERSION = "appVersion";
-        static final String PLATFORM = "platform";
-        static final String PLATFORM_VERSION = "platformVersion";
+    protected static class DeviceFields {
+        static final String SERVICE_NAME = "service";
+        public static final String DATA = "data";
+    }
+
+    protected static class Actions {
+        public static final String REGISTER_PUSH = "registerPush";
+        public static final String DEREGISTER_PUSH = "deregisterPush";
     }
 }
 

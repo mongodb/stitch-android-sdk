@@ -1,10 +1,8 @@
 package com.mongodb.baas.android.auth.oauth2.facebook;
 
-import com.google.android.gms.tasks.RuntimeExecutionException;
 import com.mongodb.baas.android.auth.AuthProvider;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.bson.Document;
 
 import static com.mongodb.baas.android.auth.oauth2.OAuth2.AUTH_TYPE;
 import static com.mongodb.baas.android.auth.oauth2.OAuth2.Fields;
@@ -43,11 +41,9 @@ public class FacebookAuthProvider implements AuthProvider {
     }
 
     @Override
-    public JSONObject getAuthPayload() {
-        try {
-            return new JSONObject().put(Fields.ACCESS_TOKEN, _accessToken);
-        } catch (final JSONException e) {
-            throw new RuntimeExecutionException(e);
-        }
+    public Document getAuthPayload() {
+        final Document payload = new Document();
+        payload.put(Fields.ACCESS_TOKEN, _accessToken);
+        return payload;
     }
 }

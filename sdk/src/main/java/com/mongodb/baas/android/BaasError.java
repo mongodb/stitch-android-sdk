@@ -7,11 +7,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 import static com.mongodb.baas.android.BaasException.BaasRequestException;
 import static com.mongodb.baas.android.BaasException.BaasServiceException;
+import static com.mongodb.baas.android.http.ContentTypes.APPLICATION_JSON;
+import static com.mongodb.baas.android.http.Headers.CONTENT_TYPE;
 
 class BaasError {
 
@@ -31,7 +34,10 @@ class BaasError {
         try {
             data = new String(
                     error.networkResponse.data,
-                    HttpHeaderParser.parseCharset(error.networkResponse.headers, "utf-8"));
+                    HttpHeaderParser.parseCharset(
+                            error.networkResponse.headers,
+                            StandardCharsets.UTF_8.displayName())
+                    );
         } catch (final UnsupportedEncodingException e) {
             throw new BaasRequestException(e);
         }
@@ -39,8 +45,8 @@ class BaasError {
         final String errorMsg;
 
         // Look for rich error message
-        if (error.networkResponse.headers.containsKey("Content-Type") &&
-                error.networkResponse.headers.get("Content-Type").equals("application/json")) {
+        if (error.networkResponse.headers.containsKey(CONTENT_TYPE) &&
+                error.networkResponse.headers.get(CONTENT_TYPE).equals(APPLICATION_JSON)) {
             try {
                 final JSONObject obj = new JSONObject(data);
                 errorMsg = obj.getString(Fields.ERROR);

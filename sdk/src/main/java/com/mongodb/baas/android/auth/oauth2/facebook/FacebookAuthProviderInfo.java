@@ -17,10 +17,10 @@ public class FacebookAuthProviderInfo {
     @JsonCreator
     private FacebookAuthProviderInfo(
 
-            @JsonProperty("clientId")
+            @JsonProperty(Fields.CLIENT_ID)
             final String appId,
 
-            @JsonProperty("metadataFields")
+            @JsonProperty(Fields.METADATA_FIELDS)
             final List<String> scopes
     ) {
         _appId = appId;
@@ -33,5 +33,10 @@ public class FacebookAuthProviderInfo {
 
     public List<String> getScopes() {
         return _scopes;
+    }
+
+    private static class Fields {
+        private static final String CLIENT_ID = "clientId";
+        private static final String METADATA_FIELDS = "metadataFields";
     }
 }

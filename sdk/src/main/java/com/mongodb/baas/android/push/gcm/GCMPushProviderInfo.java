@@ -1,35 +1,27 @@
 package com.mongodb.baas.android.push.gcm;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mongodb.baas.android.push.PushProviderInfo;
-import com.mongodb.baas.android.push.PushProviderName;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import org.bson.Document;
 
-import static com.mongodb.baas.android.push.PushClient.SHARED_PREFERENCES_NAME;
 import static com.mongodb.baas.android.push.PushProviderName.GCM;
-import static com.mongodb.baas.android.push.gcm.GCMPushClient.PREF_SENDER_IDS;
 
 /**
  * GCMPushProviderInfo contains information needed to create a {@link GCMPushClient}.
  */
-public class GCMPushProviderInfo implements PushProviderInfo {
+public class GCMPushProviderInfo extends PushProviderInfo {
+
     private final String _senderId;
+    private final boolean _fromProperties;
 
-    @JsonCreator
     private GCMPushProviderInfo(
-
-            @JsonProperty("senderId")
-            final String senderId
+            final String serviceName,
+            final String senderId,
+            final boolean fromProperties
     ) {
+        super(GCM, serviceName);
         _senderId = senderId;
+        _fromProperties = fromProperties;
     }
 
     /**
@@ -37,39 +29,33 @@ public class GCMPushProviderInfo implements PushProviderInfo {
      * should be read from provided properties.
      */
     public static GCMPushProviderInfo fromProperties() {
-        return new GCMPushProviderInfo(null);
+        return new GCMPushProviderInfo(null, null, true);
     }
 
     /**
+     * @param serviceName The service that will handle push for this provider.
+     * @param config The persisted configuration of this provider.
+     * @return A GCMPushProviderInfo sourced from a persisted config.
+     */
+    public static GCMPushProviderInfo fromConfig(final String serviceName, final Document config) {
+        final String senderId = config.getString(Fields.SENDER_ID);
+        return new GCMPushProviderInfo(serviceName, senderId, false);
+    }
+
+    /**
+     * @param serviceName The service that will handle push for this provider.
      * @param senderId The GCM Sender ID.
      * @return A GCMPushProviderInfo sourced from a Sender ID.
      */
-    public static GCMPushProviderInfo fromSenderId(final String senderId) {
-        return new GCMPushProviderInfo(senderId);
+    public static GCMPushProviderInfo fromSenderId(final String serviceName, final String senderId) {
+        return new GCMPushProviderInfo(serviceName, senderId, false);
     }
 
     /**
-     * @param context     The Android {@link Context} that will allow preferences to be fetched.
-     * @param clientAppId The app ID to scope preferences to.
-     * @return The list of GCM information required to construct all active GCM clients.
+     * @return Whether or not the info should be sourced from properties.
      */
-    public synchronized static List<PushProviderInfo> fromPreferences(final Context context, final String clientAppId) {
-        final String globPrefPath = String.format(SHARED_PREFERENCES_NAME, clientAppId, GCM.getServiceName());
-        final SharedPreferences preferences = context.getSharedPreferences(globPrefPath, Context.MODE_PRIVATE);
-        final Set<String> senderIds = preferences.getStringSet(PREF_SENDER_IDS, new HashSet<String>());
-
-        final List<PushProviderInfo> info = new ArrayList<>();
-        for (final String senderId : senderIds) {
-            info.add(GCMPushProviderInfo.fromSenderId(senderId));
-        }
-        return info;
-    }
-
-    /**
-     * @return Whether or not this provider has a sender id associated with it.
-     */
-    public boolean hasSenderId() {
-        return _senderId != null;
+    boolean isFromProperties() {
+        return _fromProperties;
     }
 
     /**
@@ -80,10 +66,17 @@ public class GCMPushProviderInfo implements PushProviderInfo {
     }
 
     /**
-     * @return The name of this provider.
+     * @return The provider info as a serializable document.
      */
     @Override
-    public PushProviderName getName() {
-        return GCM;
+    public Document toDocument() {
+        final Document doc = super.toDocument();
+        final Document config = (Document) doc.get(PushProviderInfo.Fields.CONFIG);
+        config.put(Fields.SENDER_ID, _senderId);
+        return doc;
+    }
+
+    private static class Fields {
+        private static final String SENDER_ID = "senderId";
     }
 }

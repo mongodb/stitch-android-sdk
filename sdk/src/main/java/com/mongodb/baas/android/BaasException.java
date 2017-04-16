@@ -88,8 +88,6 @@ public class BaasException extends RuntimeException {
      */
     static class BaasAuthException extends BaasClientException {
 
-        static final String MUST_AUTH_MESSAGE = "Must first authenticate";
-
         BaasAuthException(final String message) {
             super(message);
         }

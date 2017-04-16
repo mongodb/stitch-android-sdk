@@ -100,12 +100,12 @@ public class MongoClient {
                 final Document projection
         ) {
             final Map<String, Object> args = new HashMap<>();
-            args.put("database", _database._dbName);
-            args.put("collection", _collName);
-            args.put("query", query);
-            args.put("project", projection);
+            args.put(Parameters.DATABASE, _database._dbName);
+            args.put(Parameters.COLLECTION, _collName);
+            args.put(Parameters.QUERY, query);
+            args.put(Parameters.PROJECT, projection);
             return new PipelineStage(
-                    "find",
+                    Stages.FIND,
                     _database._client._service,
                     args);
         }
@@ -126,14 +126,14 @@ public class MongoClient {
                 final boolean multi
         ) {
             final Map<String, Object> args = new HashMap<>();
-            args.put("database", _database._dbName);
-            args.put("collection", _collName);
-            args.put("query", query);
-            args.put("update", update);
-            args.put("upsert", upsert);
-            args.put("multi", multi);
+            args.put(Parameters.DATABASE, _database._dbName);
+            args.put(Parameters.COLLECTION, _collName);
+            args.put(Parameters.QUERY, query);
+            args.put(Parameters.UPDATE, update);
+            args.put(Parameters.UPSERT, upsert);
+            args.put(Parameters.MULTI, multi);
             return new PipelineStage(
-                    "update",
+                    Stages.UPDATE,
                     _database._client._service,
                     args);
         }
@@ -148,18 +148,18 @@ public class MongoClient {
                 final List<Document> documents
         ) {
             final Map<String, Object> literalArgs = new HashMap<>();
-            literalArgs.put("items", documents);
+            literalArgs.put(PipelineStage.LiteralStage.PARAMETER_ITEMS, documents);
 
             final Map<String, Object> insertArgs = new HashMap<>();
-            insertArgs.put("database", _database._dbName);
-            insertArgs.put("collection", _collName);
+            insertArgs.put(Parameters.DATABASE, _database._dbName);
+            insertArgs.put(Parameters.COLLECTION, _collName);
 
             final List<PipelineStage> pipelineStages = new ArrayList<>();
             pipelineStages.add(new PipelineStage(
-                    "literal",
+                    PipelineStage.LiteralStage.NAME,
                     literalArgs));
             pipelineStages.add(new PipelineStage(
-                    "insert",
+                    Stages.INSERT,
                     _database._client._service,
                     insertArgs));
 
@@ -178,12 +178,12 @@ public class MongoClient {
                 final boolean singleDoc
         ) {
             final Map<String, Object> args = new HashMap<>();
-            args.put("database", _database._dbName);
-            args.put("collection", _collName);
-            args.put("query", query);
-            args.put("singleDoc", singleDoc);
+            args.put(Parameters.DATABASE, _database._dbName);
+            args.put(Parameters.COLLECTION, _collName);
+            args.put(Parameters.QUERY, query);
+            args.put(Parameters.SINGLE_DOCUMENT, singleDoc);
             return new PipelineStage(
-                    "delete",
+                    Stages.DELETE,
                     _database._client._service,
                     args);
         }
@@ -237,7 +237,11 @@ public class MongoClient {
                     if (task.isSuccessful()) {
                         return null;
                     }
-                    Log.d(TAG, "Error upserting single document", task.getException());
+                    Log.d(
+                            TAG,
+                            "Error upserting single document",
+                            task.getException()
+                    );
                     throw task.getException();
                 }
             });
@@ -269,7 +273,11 @@ public class MongoClient {
                     if (task.isSuccessful()) {
                         return null;
                     }
-                    Log.d(TAG, "Error updating many documents", task.getException());
+                    Log.d(
+                            TAG,
+                            "Error updating many documents",
+                            task.getException()
+                    );
                     throw task.getException();
                 }
             });
@@ -288,7 +296,11 @@ public class MongoClient {
                     if (task.isSuccessful()) {
                         return null;
                     }
-                    Log.d(TAG, "Error inserting single document", task.getException());
+                    Log.d(
+                            TAG,
+                            "Error inserting single document",
+                            task.getException()
+                    );
                     throw task.getException();
                 }
             });
@@ -307,7 +319,11 @@ public class MongoClient {
                     if (task.isSuccessful()) {
                         return null;
                     }
-                    Log.d(TAG, "Error inserting multiple documents", task.getException());
+                    Log.d(
+                            TAG,
+                            "Error inserting multiple documents",
+                            task.getException()
+                    );
                     throw task.getException();
                 }
             });
@@ -326,7 +342,11 @@ public class MongoClient {
                     if (task.isSuccessful()) {
                         return null;
                     }
-                    Log.d(TAG, "Error deleting single document", task.getException());
+                    Log.d(
+                            TAG,
+                            "Error deleting single document",
+                            task.getException()
+                    );
                     throw task.getException();
                 }
             });
@@ -345,7 +365,11 @@ public class MongoClient {
                     if (task.isSuccessful()) {
                         return null;
                     }
-                    Log.d(TAG, "Error deleting many documents", task.getException());
+                    Log.d(
+                            TAG,
+                            "Error deleting many documents",
+                            task.getException()
+                    );
                     throw task.getException();
                 }
             });
@@ -370,11 +394,34 @@ public class MongoClient {
                         }
                         return docs;
                     } else {
-                        Log.d(TAG, "Error getting pipeline results", task.getException());
+                        Log.d(
+                                TAG,
+                                "Error getting pipeline results",
+                                task.getException()
+                        );
                         throw task.getException();
                     }
                 }
             });
+        }
+
+        private static class Stages {
+            private static final String FIND = "find";
+            private static final String UPDATE = "update";
+            private static final String INSERT = "insert";
+            private static final String DELETE = "delete";
+
+        }
+
+        private static class Parameters {
+            private static final String DATABASE = "database";
+            private static final String COLLECTION = "collection";
+            private static final String QUERY = "query";
+            private static final String UPDATE = "update";
+            private static final String UPSERT = "upsert";
+            private static final String MULTI = "multi";
+            private static final String PROJECT = "project";
+            private static final String SINGLE_DOCUMENT = "singleDoc";
         }
     }
 }

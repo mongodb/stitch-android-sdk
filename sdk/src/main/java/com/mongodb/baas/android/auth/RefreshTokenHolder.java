@@ -10,18 +10,25 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RefreshTokenHolder {
 
-    @JsonProperty("refreshToken")
+    @JsonProperty(Fields.REFRESH_TOKEN)
     private final String _refreshToken;
 
     @JsonCreator
     private RefreshTokenHolder(
-            @JsonProperty("refreshToken")
+            @JsonProperty(Fields.REFRESH_TOKEN)
             final String refreshToken
     ) {
         _refreshToken = refreshToken;
     }
 
+    /**
+     * @return The refresh token.
+     */
     public String getToken() {
         return _refreshToken;
+    }
+
+    private static class Fields {
+        private static final String REFRESH_TOKEN = "refreshToken";
     }
 }

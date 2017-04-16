@@ -2,6 +2,9 @@ package com.mongodb.baas.android;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -24,11 +27,12 @@ import com.mongodb.baas.android.auth.RefreshTokenHolder;
 import com.mongodb.baas.android.auth.anonymous.AnonymousAuthProviderInfo;
 import com.mongodb.baas.android.auth.oauth2.facebook.FacebookAuthProviderInfo;
 import com.mongodb.baas.android.auth.oauth2.google.GoogleAuthProviderInfo;
+import com.mongodb.baas.android.http.Headers;
+import com.mongodb.baas.android.http.Volley.AuthenticatedJsonStringRequest;
+import com.mongodb.baas.android.http.Volley.JsonStringRequest;
 import com.mongodb.baas.android.push.AvailablePushProviders;
 import com.mongodb.baas.android.push.PushClient;
 import com.mongodb.baas.android.push.PushManager;
-import com.mongodb.baas.android.push.PushProviderName;
-import com.mongodb.baas.android.push.gcm.GCMPushProviderInfo;
 
 import org.bson.Document;
 import org.json.JSONException;
@@ -46,17 +50,16 @@ import java.util.Properties;
 import static com.mongodb.baas.android.BaasError.ErrorCode;
 import static com.mongodb.baas.android.BaasError.parseRequestError;
 import static com.mongodb.baas.android.BaasException.BaasAuthException;
-import static com.mongodb.baas.android.BaasException.BaasAuthException.MUST_AUTH_MESSAGE;
 import static com.mongodb.baas.android.BaasException.BaasRequestException;
 import static com.mongodb.baas.android.BaasException.BaasServiceException;
-import static com.mongodb.baas.android.Volley.AuthenticatedJsonStringRequest;
-import static com.mongodb.baas.android.Volley.JsonStringRequest;
+import static com.mongodb.baas.android.http.Headers.GetAuthorizationBearer;
 
 /**
  * A BaasClient is responsible for handling the overall interaction with all BaaS services.
  */
 public class BaasClient {
 
+    private static final String PLATFORM = "android";
     private static final String TAG = "BaaS";
     private static final String DEFAULT_BASE_URL = "https://baas-dev.10gen.cc";
 
@@ -64,12 +67,16 @@ public class BaasClient {
     private static final String BAAS_PROPERTIES_FILE_NAME = "baas.properties";
     private static final String PROP_APP_ID = "appId";
     private static final String PROP_BASE_URL = "baseUrl";
+
     // Preferences
     private static final String SHARED_PREFERENCES_NAME = "com.mongodb.baas.sdk.SharedPreferences.%s";
     private static final String PREF_AUTH_JWT_NAME = "auth_token";
     private static final String PREF_AUTH_REFRESH_TOKEN_NAME = "refresh_token";
+    private static final String PREF_DEVICE_ID_NAME = "deviceId";
     private final Properties _properties;
+
     // Members
+    private final Context _context;
     private final String _baseUrl;
     private final String _clientAppId;
     private final RequestQueue _queue;
@@ -85,6 +92,7 @@ public class BaasClient {
      * @param baseUrl     The base URL of the BaaS Client API server.
      */
     public BaasClient(final Context context, final String clientAppId, final String baseUrl) {
+        _context = context;
         _queue = Volley.newRequestQueue(context);
         _objMapper = CustomObjectMapper.createObjectMapper();
 
@@ -127,14 +135,30 @@ public class BaasClient {
         this(context, clientAppId, DEFAULT_BASE_URL);
     }
 
+    /**
+     * @param context The Android {@link Context} that this client should be bound to.
+     * @return A client derived from the properties file.
+     */
     public static BaasClient fromProperties(final Context context) {
         return new BaasClient(context, null, null);
     }
 
     // Public Methods
 
+    // General Methods
+
+    /**
+     * @return The client's App ID
+     */
     public String getAppId() {
         return _clientAppId;
+    }
+
+    /**
+     * @return The Android {@link Context} that this client is bound to.
+     */
+    public Context getContext() {
+        return _context;
     }
 
     // Auth Methods
@@ -147,7 +171,7 @@ public class BaasClient {
      */
     public Auth getAuth() {
         if (!isAuthenticated()) {
-            throw new BaasAuthException(MUST_AUTH_MESSAGE);
+            throw new BaasAuthException("Must first authenticate");
         }
         return _auth;
     }
@@ -182,7 +206,7 @@ public class BaasClient {
         if (!isAuthenticated()) {
             return Tasks.forResult(null);
         }
-        return executeRequest(Request.Method.DELETE, "auth", null, false, true).continueWith(new Continuation<String, Void>() {
+        return executeRequest(Request.Method.DELETE, Paths.AUTH, null, false, true).continueWith(new Continuation<String, Void>() {
             @Override
             public Void then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
@@ -209,16 +233,15 @@ public class BaasClient {
 
         final TaskCompletionSource<Auth> future = new TaskCompletionSource<>();
         final String url = String.format(
-                "%s/v1/app/%s/auth/%s/%s",
-                _baseUrl,
-                _clientAppId,
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
                 authProvider.getType(),
                 authProvider.getName());
 
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
                 url,
-                authProvider.getAuthPayload().toString(),
+                getAuthRequest(authProvider).toJson(),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -228,6 +251,7 @@ public class BaasClient {
                                     _objMapper.readValue(response, RefreshTokenHolder.class);
                             _preferences.edit().putString(PREF_AUTH_JWT_NAME, response).apply();
                             _preferences.edit().putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken()).apply();
+                            _preferences.edit().putString(PREF_DEVICE_ID_NAME, _auth.getDeviceId()).apply();
                             future.setResult(_auth);
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
@@ -275,7 +299,7 @@ public class BaasClient {
     public Task<AvailableAuthProviders> getAuthProviders() {
 
         final TaskCompletionSource<AvailableAuthProviders> future = new TaskCompletionSource<>();
-        final String url = String.format("%s/v1/app/%s/auth", _baseUrl, _clientAppId);
+        final String url = getResourcePath(Paths.AUTH);
 
         final JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.GET,
@@ -312,7 +336,7 @@ public class BaasClient {
                             } catch (final JSONException | IOException e) {
                                 Log.e(
                                         TAG,
-                                        String.format("Error while getting auth provider info for '%s'", authProviderName),
+                                        String.format("Error while getting auth provider info for %s", authProviderName),
                                         e);
                                 future.setException(e);
                                 return;
@@ -353,12 +377,12 @@ public class BaasClient {
             return Tasks.forException(e);
         }
 
-        return executeRequest(Request.Method.POST, "pipeline", pipeStr).continueWith(new Continuation<String, List<Object>>() {
+        return executeRequest(Request.Method.POST, Paths.PIPELINE, pipeStr).continueWith(new Continuation<String, List<Object>>() {
             @Override
             public List<Object> then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
                     final Document doc = Document.parse(task.getResult());
-                    return (List<Object>) doc.get("result");
+                    return (List<Object>) doc.get(PipelineResponseFields.RESULT);
                 } else {
                     Log.e(TAG, "Error while executing pipeline", task.getException());
                     throw task.getException();
@@ -380,6 +404,21 @@ public class BaasClient {
 
     // Network
 
+    private static class Paths {
+        private static final String AUTH = "auth";
+        private static final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
+        private static final String PIPELINE = "pipeline";
+        private static final String PUSH = "push";
+    }
+
+    /**
+     * @param resource The target resource.
+     * @return A path to the given resource.
+     */
+    private String getResourcePath(final String resource) {
+        return String.format("%s/v1/app/%s/%s", _baseUrl, _clientAppId, resource);
+    }
+
     /**
      * Executes a network request against the app. The request will be retried if there
      * is an access token expiration.
@@ -389,7 +428,7 @@ public class BaasClient {
      * @return A task containing the body of the network response that can be resolved on completion
      * of the network request.
      */
-    public Task<String> executeRequest(
+    private Task<String> executeRequest(
             final int method,
             final String resource
     ) {
@@ -425,7 +464,7 @@ public class BaasClient {
      * @return A task containing the body of the network response that can be resolved on completion
      * of the network request.
      */
-    public Task<String> executeRequest(
+    private Task<String> executeRequest(
             final int method,
             final String resource,
             final String body,
@@ -433,7 +472,7 @@ public class BaasClient {
             final boolean useRefreshToken
     ) {
         ensureAuthenticated();
-        final String url = String.format("%s/v1/app/%s/%s", _baseUrl, _clientAppId, resource);
+        final String url = getResourcePath(resource);
         final String token = useRefreshToken ? getRefreshToken() : _auth.getAccessToken();
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
         final AuthenticatedJsonStringRequest request = new AuthenticatedJsonStringRequest(
@@ -441,8 +480,8 @@ public class BaasClient {
                 url,
                 body,
                 Collections.singletonMap(
-                        "Authorization",
-                        String.format("Bearer %s", token)),
+                        Headers.AUTHORIZATION,
+                        GetAuthorizationBearer(token)),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -473,6 +512,12 @@ public class BaasClient {
         return future.getTask();
     }
 
+    // Pipelines
+
+    private static class PipelineResponseFields {
+        private static final String RESULT = "result";
+    }
+
     // Push
 
     /**
@@ -490,37 +535,10 @@ public class BaasClient {
      */
     public Task<AvailablePushProviders> getPushProviders() {
 
-        return executeRequest(Request.Method.GET, "push").continueWith(new Continuation<String, AvailablePushProviders>() {
+        return executeRequest(Request.Method.GET, Paths.PUSH).continueWith(new Continuation<String, AvailablePushProviders>() {
             @Override
             public AvailablePushProviders then(@NonNull final Task<String> task) throws Exception {
-                final Document doc = Document.parse(task.getResult());
-
-                final AvailablePushProviders.Builder builder = new AvailablePushProviders.Builder();
-
-                // Build push info
-                for (final String pushProviderSvcName : doc.keySet()) {
-                    try {
-                        final Document info = (Document) doc.get(pushProviderSvcName);
-
-                        final PushProviderName providerName =
-                                PushProviderName.fromServiceName(pushProviderSvcName);
-                        switch (providerName) {
-                            case GCM:
-                                final GCMPushProviderInfo gcmInfo =
-                                        _objMapper.readValue(info.toJson(), GCMPushProviderInfo.class);
-                                builder.withGCM(gcmInfo);
-                                break;
-                        }
-                    } catch (final ClassCastException | IOException e) {
-                        Log.e(
-                                TAG,
-                                String.format("Error while getting push info for '%s'", pushProviderSvcName),
-                                e);
-                        throw e;
-                    }
-                }
-
-                return builder.build();
+                return AvailablePushProviders.fromQuery(task.getResult());
             }
         });
     }
@@ -543,7 +561,7 @@ public class BaasClient {
      */
     private void ensureAuthenticated() {
         if (!isAuthenticated()) {
-            throw new BaasAuthException(MUST_AUTH_MESSAGE);
+            throw new BaasAuthException("Must first authenticate");
         }
     }
 
@@ -566,11 +584,11 @@ public class BaasClient {
     }
 
     /**
-     * Gets the refresh token for the current user if authenticated; throws otherwise.
+     * @return The refresh token for the current user if authenticated; throws otherwise.
      */
     private String getRefreshToken() {
         if (!isAuthenticated()) {
-            throw new BaasAuthException(MUST_AUTH_MESSAGE);
+            throw new BaasAuthException("Must first authenticate");
         }
 
         return _preferences.getString(PREF_AUTH_REFRESH_TOKEN_NAME, "");
@@ -636,7 +654,7 @@ public class BaasClient {
      * @return A task that can resolved upon completion of refreshing the access token.
      */
     private Task<Void> refreshAccessToken() {
-        return executeRequest(Request.Method.POST, "auth/newAccessToken", null, false, true)
+        return executeRequest(Request.Method.POST, Paths.NEW_ACCESS_TOKEN, null, false, true)
                 .continueWith(new Continuation<String, Void>() {
                     @Override
                     public Void then(@NonNull Task<String> task) throws Exception {
@@ -647,7 +665,7 @@ public class BaasClient {
                         final String newAccessToken;
                         try {
                             final JSONObject response = new JSONObject(task.getResult());
-                            newAccessToken = response.getString("accessToken");
+                            newAccessToken = response.getString(AuthFields.ACCESS_TOKEN);
                         } catch (final JSONException e) {
                             Log.e(TAG, "Error parsing access token response", e);
                             throw new BaasException(e);
@@ -667,5 +685,77 @@ public class BaasClient {
                         return null;
                     }
                 });
+    }
+
+    /**
+     * @param provider The provider that will handle authentication.
+     * @return A {@link Document} representing all information required for
+     * an auth request against a specific provider.
+     */
+    private Document getAuthRequest(final AuthProvider provider) {
+        final Document request = provider.getAuthPayload();
+        final Document options = new Document();
+        options.put(AuthFields.DEVICE, getDeviceInfo());
+        request.put(AuthFields.OPTIONS, options);
+        return request;
+    }
+
+    private static class AuthFields {
+        private static final String ACCESS_TOKEN = "accessToken";
+        static final String OPTIONS = "options";
+        static final String DEVICE = "device";
+    }
+
+    // Device
+
+    /**
+     * @return Whether or not this client has stored a device ID.
+     */
+    private boolean hasDeviceId() {
+        return _preferences.contains(PREF_DEVICE_ID_NAME);
+    }
+
+    /**
+     * @return The client's device ID if there is one.
+     */
+    private String getDeviceId() {
+        return _preferences.getString(PREF_DEVICE_ID_NAME, "");
+    }
+
+    /**
+     * @return A {@link Document} representing the information for this device
+     * from the context of this app.
+     */
+    private Document getDeviceInfo() {
+        final Document info = new Document();
+
+        if (hasDeviceId()) {
+            info.put(DeviceFields.DEVICE_ID, getDeviceId());
+        }
+
+        final String packageName = _context.getPackageName();
+        final PackageManager manager = _context.getPackageManager();
+
+        try {
+            final PackageInfo pkgInfo = manager.getPackageInfo(packageName, 0);
+            info.put(DeviceFields.APP_VERSION, pkgInfo.versionName);
+        } catch (final PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Error while getting info for app package", e);
+            throw new BaasException.BaasClientException(e);
+        }
+
+        info.put(DeviceFields.APP_ID, packageName);
+        info.put(DeviceFields.PLATFORM, PLATFORM);
+        info.put(DeviceFields.PLATFORM_VERSION, Build.VERSION.RELEASE);
+
+        return info;
+    }
+
+    private static class DeviceFields {
+        static final String DEVICE_ID = "deviceId";
+        static final String APP_ID = "appId";
+        static final String APP_VERSION = "appVersion";
+        static final String PLATFORM = "platform";
+        static final String PLATFORM_VERSION = "platformVersion";
     }
 }

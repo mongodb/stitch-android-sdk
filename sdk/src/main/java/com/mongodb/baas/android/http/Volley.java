@@ -1,4 +1,4 @@
-package com.mongodb.baas.android;
+package com.mongodb.baas.android.http;
 
 import com.android.volley.NetworkResponse;
 import com.android.volley.ParseError;
@@ -9,8 +9,8 @@ import com.android.volley.toolbox.JsonRequest;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
-class Volley {
-    static class JsonStringRequest extends JsonRequest<String> {
+public class Volley {
+    public static class JsonStringRequest extends JsonRequest<String> {
 
         /**
          * Creates a new request.
@@ -21,7 +21,7 @@ class Volley {
          * @param listener      Listener to receive the JSON response
          * @param errorListener Error listener, or null to ignore errors.
          */
-        JsonStringRequest(
+        public JsonStringRequest(
                 final int method,
                 final String url,
                 final String jsonRequest,
@@ -45,7 +45,7 @@ class Volley {
         }
     }
 
-    static class AuthenticatedJsonStringRequest extends JsonRequest<String> {
+    public static class AuthenticatedJsonStringRequest extends JsonRequest<String> {
 
         private final Map<String, String> _headers;
 
@@ -59,7 +59,7 @@ class Volley {
          * @param listener      Listener to receive the JSON string response
          * @param errorListener Error listener, or null to ignore errors.
          */
-        AuthenticatedJsonStringRequest(
+        public AuthenticatedJsonStringRequest(
                 final int method,
                 final String url,
                 final String jsonRequest,

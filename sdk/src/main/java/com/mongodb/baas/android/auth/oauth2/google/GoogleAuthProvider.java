@@ -1,10 +1,8 @@
 package com.mongodb.baas.android.auth.oauth2.google;
 
-import com.google.android.gms.tasks.RuntimeExecutionException;
 import com.mongodb.baas.android.auth.AuthProvider;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.bson.Document;
 
 import static com.mongodb.baas.android.auth.oauth2.OAuth2.AUTH_TYPE;
 import static com.mongodb.baas.android.auth.oauth2.OAuth2.Fields;
@@ -44,11 +42,9 @@ public class GoogleAuthProvider implements AuthProvider {
     }
 
     @Override
-    public JSONObject getAuthPayload() {
-        try {
-            return new JSONObject().put(Fields.AUTH_CODE, _authCode);
-        } catch (final JSONException e) {
-            throw new RuntimeExecutionException(e);
-        }
+    public Document getAuthPayload() {
+        final Document payload = new Document();
+        payload.put(Fields.AUTH_CODE, _authCode);
+        return payload;
     }
 }

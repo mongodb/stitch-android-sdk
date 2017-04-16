@@ -2,7 +2,7 @@ package com.mongodb.baas.android.auth.anonymous;
 
 import com.mongodb.baas.android.auth.AuthProvider;
 
-import org.json.JSONObject;
+import org.bson.Document;
 
 /**
  * AnonymousAuthProvider provides a way to authenticate anonymously.
@@ -23,7 +23,7 @@ public class AnonymousAuthProvider implements AuthProvider {
     }
 
     @Override
-    public JSONObject getAuthPayload() {
-        return new JSONObject();
+    public Document getAuthPayload() {
+        return new Document();
     }
 }
