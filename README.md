@@ -183,7 +183,7 @@
 	```
 	final PushClient pushClient = _client.getPush().forProvider(GCMPushProviderInfo.fromProperties());
 	```
-	* Note: This assumed you've set the **push.gcm.senderId** property in your **baas.properties**
+	* Note: This assumed you've set the **push.gcm.senderId** and **push.gcm.service** property in your **baas.properties**
 	
 4. To create a GCM Push Provider by asking BaaS, you must use the *getPushProviders* method and ensure a GCM provider exists:
 
