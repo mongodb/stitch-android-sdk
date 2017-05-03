@@ -93,17 +93,31 @@ public class MongoClient {
          *
          * @param query      The query specifier.
          * @param projection The projection document.
+         * @param limit      The maximum amount of matching documents to accept.
+         * @param count      Whether or not to output a count of documents matching the query.
          * @return A stage representing this CRUD action.
          */
         public PipelineStage makeFindStage(
                 final Document query,
-                final Document projection
+                final Document projection,
+                final Integer limit,
+                final Boolean count
         ) {
             final Map<String, Object> args = new HashMap<>();
             args.put(Parameters.DATABASE, _database._dbName);
             args.put(Parameters.COLLECTION, _collName);
             args.put(Parameters.QUERY, query);
-            args.put(Parameters.PROJECT, projection);
+
+            if (projection != null) {
+                args.put(Parameters.PROJECT, projection);
+            }
+            if (limit != null) {
+                args.put(Parameters.LIMIT, limit);
+            }
+            if (count != null) {
+                args.put(Parameters.COUNT, count);
+            }
+
             return new PipelineStage(
                     Stages.FIND,
                     _database._client._service,
@@ -196,7 +210,19 @@ public class MongoClient {
          * of the request.
          */
         public Task<List<Document>> find(final Document query) {
-            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, null)));
+            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, null, null, null)));
+        }
+
+        /**
+         * Finds documents matching a query up to the specified limit.
+         *
+         * @param query      The query specifier.
+         * @param limit      The maximum amount of matching documents to accept.
+         * @return A task containing the matched documents that can be resolved upon completion
+         * of the request.
+         */
+        public Task<List<Document>> find(final Document query, final Integer limit) {
+            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, null, limit, null)));
         }
 
         /**
@@ -208,7 +234,71 @@ public class MongoClient {
          * of the request.
          */
         public Task<List<Document>> find(final Document query, final Document projection) {
-            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, projection)));
+            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, projection, null, null)));
+        }
+
+        /**
+         * Finds and projects documents matching a query up to the specified limit.
+         *
+         * @param query      The query specifier.
+         * @param projection The projection document.
+         * @param limit      The maximum amount of matching documents to accept.
+         * @return A task containing the matched and projected documents that can be resolved upon completion
+         * of the request.
+         */
+        public Task<List<Document>> find(final Document query, final Document projection, final Integer limit) {
+            return convertToDocuments(_database._client._baasClient.executePipeline(makeFindStage(query, projection, limit, null)));
+        }
+
+        /**
+         * Counts the number of documents matching a query.
+         *
+         * @param query      The query specifier.
+         * @return A task containing the number of matched documents that can be resolved upon completion
+         * of the request.
+         */
+        public Task<Integer> count(final Document query) {
+            return _database._client._baasClient.executePipeline(makeFindStage(query, null, null, true)).continueWith(new Continuation<List<Object>, Integer>() {
+                @Override
+                public Integer then(@NonNull final Task<List<Object>> task) throws Exception {
+                    if (task.isSuccessful()) {
+                        return (Integer) task.getResult().get(0);
+                    } else {
+                        Log.d(
+                                TAG,
+                                "Error getting pipeline results",
+                                task.getException()
+                        );
+                        throw task.getException();
+                    }
+                }
+            });
+        }
+
+        /**
+         * Counts the number of documents matching a query up to the specified limit.
+         *
+         * @param query      The query specifier.
+         * @param limit      The maximum amount of matching documents to accept.
+         * @return A task containing the number of matched documents that can be resolved upon completion
+         * of the request.
+         */
+        public Task<Integer> count(final Document query, final Integer limit) {
+            return _database._client._baasClient.executePipeline(makeFindStage(query, null, limit, true)).continueWith(new Continuation<List<Object>, Integer>() {
+                @Override
+                public Integer then(@NonNull final Task<List<Object>> task) throws Exception {
+                    if (task.isSuccessful()) {
+                        return (Integer) task.getResult().get(0);
+                    } else {
+                        Log.d(
+                                TAG,
+                                "Error getting pipeline results",
+                                task.getException()
+                        );
+                        throw task.getException();
+                    }
+                }
+            });
         }
 
         /**
@@ -422,6 +512,8 @@ public class MongoClient {
             private static final String MULTI = "multi";
             private static final String PROJECT = "project";
             private static final String SINGLE_DOCUMENT = "singleDoc";
+            private static final String LIMIT = "limit";
+            private static final String COUNT = "count";
         }
     }
 }
