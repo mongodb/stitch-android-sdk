@@ -15,14 +15,14 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
 
-    private final ObjectId _id;
+    private final String _id;
     private final List<Identity> _identities;
     private final Map<String, Object> _data;
 
     @JsonCreator
     private User(
             @JsonProperty(Fields.ID)
-            final ObjectId id,
+            final String id,
 
             @JsonProperty(Fields.IDENTITIES)
             final List<Identity> identities,
@@ -39,7 +39,7 @@ public class User {
      * @return The Unique ID of this user within BaaS.
      */
     @JsonProperty(Fields.ID)
-    public ObjectId getId() {
+    public String getId() {
         return _id;
     }
 
