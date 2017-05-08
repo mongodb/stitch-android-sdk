@@ -61,7 +61,7 @@ public class BaasClient {
 
     private static final String PLATFORM = "android";
     private static final String TAG = "BaaS";
-    private static final String DEFAULT_BASE_URL = "https://master.baas-dev.10gen.cc";
+    private static final String DEFAULT_BASE_URL = "https://baas-dev.10gen.cc";
 
     // Properties
     private static final String BAAS_PROPERTIES_FILE_NAME = "baas.properties";

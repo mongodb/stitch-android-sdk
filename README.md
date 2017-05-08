@@ -31,7 +31,7 @@
 4. Also add the following to your dependencies block:
 
 	```
-	compile('com.mongodb.baas:android-sdk:0.1.1-SNAPSHOT'){
+	compile('com.mongodb.baas:android-sdk:0.1.2-SNAPSHOT'){
 		changing = true
 	}
 	```
