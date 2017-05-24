@@ -2,7 +2,7 @@ functions:
   "fetch_source":
     - command: git.get_project
       params:
-        directory: "baas-android-sdk"
+        directory: "stitch-android-sdk"
 
   "install_aws_cli":
     - command: shell.exec
@@ -22,7 +22,7 @@ tasks:
         params:
           script: |
             set -e
-            cd baas-android-sdk
+            cd stitch-android-sdk
             echo "building SDK"
             ./gradlew build
 
@@ -40,7 +40,7 @@ tasks:
             export PATH=$HOME/bin:$PATH
             export AWS_ACCESS_KEY_ID=${sdks_aws_key}
             export AWS_SECRET_ACCESS_KEY=${sdks_aws_secret}
-            cd baas-android-sdk
+            cd stitch-android-sdk
             echo "building SDK"
             ./gradlew copyJarsToS3
 
@@ -58,7 +58,7 @@ tasks:
             export PATH=$HOME/bin:$PATH
             export AWS_ACCESS_KEY_ID=${sdks_aws_key}
             export AWS_SECRET_ACCESS_KEY=${sdks_aws_secret}
-            cd baas-android-sdk
+            cd stitch-android-sdk
             echo "building docs"
             ./gradlew generateReleaseJavadoc copyDocsToS3
 

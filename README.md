@@ -2,13 +2,13 @@
 
 ## Creating a new app with the SDK
 
-### Set up an application on BaaS
+### Set up an application on Stitch
 1. Go to https://baas-dev.10gen.cc/ and log in
 2. Create a new app with your desired name
 3. Take note of the app's client App ID by going to Clients under Platform in the side pane
 4. Go to Authentication under Control in the side pane and enable "Allow users to log in anonymously"
 
-### Set up a project in Android Studio using BaaS
+### Set up a project in Android Studio using Stitch
 1. Download and install [Android Studio](https://developer.android.com/studio/index.html)
 2. Start a new Android Studio project
 	* Note: The minimum supported API level is 19 (Android 4.4 KitKat)
@@ -18,7 +18,7 @@
 	```
 	repositories {
 		maven {
-			url "https://s3.amazonaws.com/baas-sdks/android/maven/snapshots"
+			url "https://s3.amazonaws.com/stitch-sdks/android/maven/snapshots"
 		}
 
 		// TODO: Remove once BSON 3.5.0 is released
@@ -31,7 +31,7 @@
 4. Also add the following to your dependencies block:
 
 	```
-	compile('com.mongodb.baas:android-sdk:0.1.2-SNAPSHOT'){
+	compile('com.mongodb.stitch:android-sdk:0.1.2-SNAPSHOT'){
 		changing = true
 	}
 	```
@@ -50,19 +50,19 @@
 ### Using the SDK
 
 #### Logging In
-1. To initialize our connection to BaaS, go to your **MainActivity.java** and within your *onCreate* method, add the following line and replace your-app-id with the app ID you took note of when setting up the application in BaaS:
+1. To initialize our connection to Stitch, go to your **MainActivity.java** and within your *onCreate* method, add the following line and replace your-app-id with the app ID you took note of when setting up the application in Stitch:
 
 	```
-	final BaasClient _client = new BaasClient(this, "your-app-id");
+	final StitchClient _client = new StitchClient(this, "your-app-id");
 	```
 	
-	* Note: To create a BaasClient using properties, make sure to set the **appId** property in your **baas.properties** and use the following factory method:
+	* Note: To create a StitchClient using properties, make sure to set the **appId** property in your **stitch.properties** and use the following factory method:
 
 		```
-		final BaasClient _client = BaasClient.fromProperties(this);
+		final StitchClient _client = StitchClient.fromProperties(this);
 		```
 
-2. This will only instantiate a client but will not make any outgoing connection to BaaS
+2. This will only instantiate a client but will not make any outgoing connection to Stitch
 3. Since we enabled anonymous log in, let's log in with it; add the following after your new _client:
 
 	```
@@ -70,19 +70,19 @@
 	            @Override
 	            public void onSuccess(final AuthProviderInfo authProviderInfo) {
 	                if (authProviderInfo.hasAnonymous()) {
-	                    Log.d("baas", "logging in anonymously");
+	                    Log.d("stitch", "logging in anonymously");
 	                    _client.logInWithProvider(new AnonymousAuthProvider()).addOnCompleteListener(new OnCompleteListener<Auth>() {
 	                        @Override
 	                        public void onComplete(@NonNull final Task<Auth> task) {
 	                            if (task.isSuccessful()) {
-	                                Log.d("baas", "logged in anonymously as user " + _client.getAuth().getUser().getId());
+	                                Log.d("stitch", "logged in anonymously as user " + _client.getAuth().getUser().getId());
 	                            } else {
-	                                Log.e("baas", "failed to log in anonymously", task.getException());
+	                                Log.e("stitch", "failed to log in anonymously", task.getException());
 	                            }
 	                        }
 	                    });
 	                } else {
-	                    Log.e("baas", "no anonymous provider");
+	                    Log.e("stitch", "no anonymous provider");
 	                }
 	            }
 	        });
@@ -90,11 +90,11 @@
 
 4. Now run your app in Android Studio by going to run, Run 'app'. Use the Android Virtual Device you created previously
 5. Once the app is running, open up the Android Monitor by going to View, Tool Windows, Android Monitor
-6. You should see log messages with baas as a tag showing messages like:
+6. You should see log messages with stitch as a tag showing messages like:
 
 	```
-	03-12 19:16:59.003 6175-6175/? D/baas: logging in anonymously                                                    	
-	03-12 19:16:59.103 6175-6175/? D/baas: logged in anonymously as user 58c5d6ebb9ede022a3d75050
+	03-12 19:16:59.003 6175-6175/? D/stitch: logging in anonymously                                                    	
+	03-12 19:16:59.103 6175-6175/? D/stitch: logged in anonymously as user 58c5d6ebb9ede022a3d75050
 	```
 
 #### Running a Pipeline
@@ -103,7 +103,7 @@
 2. To avoid nesting our tasks any further, after logging in we should call some init method that will use the client. We will also place the client as a member of our activity:
 
 	```
-	private BaasClient _client;
+	private StitchClient _client;
 	
 	private void init() {
         final Map<String, Object> literalArgs = new HashMap<>();
@@ -111,9 +111,9 @@
         _client.executePipeline(new PipelineStage("literal", literalArgs)).addOnSuccessListener(new OnSuccessListener<List<Object>>() {
             @Override
             public void onSuccess(final List<Object> objects) {
-                Log.d("baas", "number of results: " + objects.size());
+                Log.d("stitch", "number of results: " + objects.size());
                 for (final Object resultItem : objects) {
-                    Log.d("baas", resultItem.toString());
+                    Log.d("stitch", resultItem.toString());
                 }
             }
         });
@@ -122,8 +122,8 @@
 3. Call *init()* after logging in and run your app. You should see a messages like:
 
 	```
-	03-12 20:14:15.601 2592-2592/com.mongodb.baas.myapplication D/baas: number of results: 1
-03-12 20:14:15.601 2592-2592/com.mongodb.baas.myapplication D/baas: Hello world!
+	03-12 20:14:15.601 2592-2592/com.mongodb.stitch.myapplication D/stitch: number of results: 1
+03-12 20:14:15.601 2592-2592/com.mongodb.stitch.myapplication D/stitch: Hello world!
 	```
 
 #### Set up Push Notifications (GCM)
@@ -136,7 +136,7 @@
 4. Skip adding the Firebase SDK
 5. Click the gear next to overview in your Firebase project and go to Project Settings
 6. Go to Cloud Messaging and take note of your Legacy server key and Sender ID
-7. In BaaS go to the Notifications section and enter in your API Key (legacy server key) and Sender ID
+7. In Stitch go to the Notifications section and enter in your API Key (legacy server key) and Sender ID
 
 ##### Receive Push Notifications in Android
 
@@ -146,7 +146,7 @@
 		```
 		package your.app.package.name;
 	
-		import com.mongodb.baas.android.push.gcm.GCMListenerService;
+		import com.mongodb.stitch.android.push.gcm.GCMListenerService;
 		
 		public class GCMService extends GCMListenerService {}
 		``` 
@@ -177,15 +177,15 @@
 		<uses-permission android:name="android.permission.WAKE_LOCK" />
 		```
 	
-2. Once logged in, you can either create a GCM Push Provider by asking BaaS for the provider information or providing it in your **baas.properties**
+2. Once logged in, you can either create a GCM Push Provider by asking Stitch for the provider information or providing it in your **stitch.properties**
 3. To create a GCM Push Provider from properties, simply use the provided factory method:
 
 	```
 	final PushClient pushClient = _client.getPush().forProvider(GCMPushProviderInfo.fromProperties());
 	```
-	* Note: This assumed you've set the **push.gcm.senderId** and **push.gcm.service** property in your **baas.properties**
+	* Note: This assumed you've set the **push.gcm.senderId** and **push.gcm.service** property in your **stitch.properties**
 	
-4. To create a GCM Push Provider by asking BaaS, you must use the *getPushProviders* method and ensure a GCM provider exists:
+4. To create a GCM Push Provider by asking Stitch, you must use the *getPushProviders* method and ensure a GCM provider exists:
 
 	```
 	_client.getPushProviders().addOnSuccessListener(new OnSuccessListener<AvailablePushProviders>() {
