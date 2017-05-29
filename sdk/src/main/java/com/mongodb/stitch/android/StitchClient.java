@@ -59,7 +59,7 @@ public class StitchClient {
 
     private static final String PLATFORM = "android";
     private static final String TAG = "Stitch";
-    private static final String DEFAULT_BASE_URL = "https://baas-dev.10gen.cc";
+    private static final String DEFAULT_BASE_URL = "https://stitch.mongodb.com";
 
     // Properties
     private static final String STITCH_PROPERTIES_FILE_NAME = "stitch.properties";

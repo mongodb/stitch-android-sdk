@@ -3,7 +3,7 @@
 ## Creating a new app with the SDK
 
 ### Set up an application on Stitch
-1. Go to https://baas-dev.10gen.cc/ and log in
+1. Go to https://stitch.mongodb.com/ and log in
 2. Create a new app with your desired name
 3. Take note of the app's client App ID by going to Clients under Platform in the side pane
 4. Go to Authentication under Control in the side pane and enable "Allow users to log in anonymously"
