@@ -23,6 +23,8 @@ import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.Auth;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
+import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
+import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProviderInfo;
 import com.mongodb.stitch.android.auth.oauth2.facebook.FacebookAuthProviderInfo;
@@ -271,6 +273,221 @@ public class StitchClient {
     }
 
     /**
+     * Registers the current user using email and password.
+     *
+     * @param email    email for the given user
+     * @param password password for the given user
+     * @return A task containing whether or not registration was successful.
+     */
+    public Task<Boolean> register(@NonNull String email, @NonNull String password) {
+        final EmailPasswordAuthProvider provider = new EmailPasswordAuthProvider(email, password);
+
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                provider.getType(),
+                Paths.USERPASS_REGISTER
+        );
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                getAuthRequest(provider.getRegistrationPayload()).toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while logging in with auth provider", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Confirm a newly registered email in this context
+     * @param token confirmation token emailed to new user
+     * @param tokenId confirmation tokenId emailed to new user
+     * @return A task containing whether or not the email was confirmed successfully
+     */
+    public Task<Boolean> emailConfirm(@NonNull final String token, @NonNull final String tokenId) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                Paths.USERPASS_CONFIRM
+        );
+
+        final Document params = new Document();
+
+        params.put("token", token);
+        params.put("tokenId", tokenId);
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                params.toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while confirming email", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Send a confirmation email for a newly registered user
+     * @param email email address of user
+     * @return A task containing whether or not the email was sent successfully.
+     */
+    public Task<Boolean> sendEmailConfirm(@NonNull final String email) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                Paths.USERPASS_CONFIRM_SEND
+        );
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                new Document("email", email).toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while sending confirmation email", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Reset a given user's password
+     * @param token token associated with this user
+     * @param tokenId id of the token associated with this user
+     * @return A task containing whether or not the reset was successful
+     */
+    public Task<Boolean> resetPassword(@NonNull final String token, @NonNull final String tokenId) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                Paths.USERPASS_RESET
+        );
+
+        final Document params = new Document();
+
+        params.put(RegistrationFields.TOKEN, token);
+        params.put(RegistrationFields.TOKEN_ID, tokenId);
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                params.toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while reseting password", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Send a reset password email to a given email address
+     * @param email email address to reset password for
+     * @return A task containing whether or not the reset email was sent successfully
+     */
+    public Task<Boolean> sendResetPassword(@NonNull final String email) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                Paths.USERPASS_RESET_SEND
+        );
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                new Document("email", email).toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while sending reset password email", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
      * Adds a listener for auth events.
      *
      * @param authListener The listener that will receive auth events.
@@ -330,6 +547,12 @@ public class StitchClient {
                                                 _objMapper.readValue(info.toString(), AnonymousAuthProviderInfo.class);
                                         builder.withAnonymous(anonInfo);
                                         break;
+                                    case EmailPasswordAuthProviderInfo.FQ_NAME:
+                                        final EmailPasswordAuthProviderInfo emailPassInfo =
+                                                _objMapper.readValue(info.toString(), EmailPasswordAuthProviderInfo.class);
+                                        builder.withEmailPass(emailPassInfo);
+                                        break;
+
                                 }
                             } catch (final JSONException | IOException e) {
                                 Log.e(
@@ -407,6 +630,12 @@ public class StitchClient {
         private static final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
         private static final String PIPELINE = "pipeline";
         private static final String PUSH = "push";
+        private static final String USERPASS_REGISTER = "userpass/register";
+        private static final String USERPASS_CONFIRM = "local/userpass/confirm";
+        private static final String USERPASS_CONFIRM_SEND = "local/userpass/confirm/send";
+        private static final String USERPASS_RESET = "local/userpass/reset";
+        private static final String USERPASS_RESET_SEND = "local/userpass/reset/send";
+
     }
 
     /**
@@ -691,7 +920,15 @@ public class StitchClient {
      * an auth request against a specific provider.
      */
     private Document getAuthRequest(final AuthProvider provider) {
-        final Document request = provider.getAuthPayload();
+        return getAuthRequest(provider.getAuthPayload());
+    }
+
+    /**
+     * @param request Arbitrary document for authentication
+     * @return A {@link Document} representing all information required for
+     * an auth request against a specific provider.
+     */
+    private Document getAuthRequest(final Document request) {
         final Document options = new Document();
         options.put(AuthFields.DEVICE, getDeviceInfo());
         request.put(AuthFields.OPTIONS, options);
@@ -747,6 +984,11 @@ public class StitchClient {
         info.put(DeviceFields.PLATFORM_VERSION, Build.VERSION.RELEASE);
 
         return info;
+    }
+
+    private static class RegistrationFields {
+        private static final String TOKEN = "token";
+        private static final String TOKEN_ID = "tokenId";
     }
 
     private static class DeviceFields {
