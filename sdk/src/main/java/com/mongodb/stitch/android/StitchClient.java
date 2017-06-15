@@ -23,6 +23,8 @@ import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.Auth;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
+import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
+import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProviderInfo;
 import com.mongodb.stitch.android.auth.oauth2.facebook.FacebookAuthProviderInfo;
@@ -271,6 +273,54 @@ public class StitchClient {
     }
 
     /**
+     * Registers the current user using email and password.
+     * @param email email for the given user
+     * @param password password for the given user
+     * @return A task containing whether or not registration was successful.
+     */
+    public Task<Boolean> register(@NonNull String email, @NonNull String password) {
+        final EmailPasswordAuthProvider provider = new EmailPasswordAuthProvider(email, password);
+
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                provider.getType(),
+                "userpass/register"
+        );
+
+        Document params = new Document();
+
+        // register requires a special payload not supported by the AuthProvider interface
+        params.put("email", provider.getEmail());
+        params.put("password", provider.getPassword());
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                getAuthRequest(params).toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "Error while logging in with auth provider", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
      * Adds a listener for auth events.
      *
      * @param authListener The listener that will receive auth events.
@@ -330,6 +380,12 @@ public class StitchClient {
                                                 _objMapper.readValue(info.toString(), AnonymousAuthProviderInfo.class);
                                         builder.withAnonymous(anonInfo);
                                         break;
+                                    case EmailPasswordAuthProviderInfo.FQ_NAME:
+                                        final EmailPasswordAuthProviderInfo emailPassInfo =
+                                                _objMapper.readValue(info.toString(), EmailPasswordAuthProviderInfo.class);
+                                        builder.withEmailPass(emailPassInfo);
+                                        break;
+
                                 }
                             } catch (final JSONException | IOException e) {
                                 Log.e(
@@ -691,7 +747,15 @@ public class StitchClient {
      * an auth request against a specific provider.
      */
     private Document getAuthRequest(final AuthProvider provider) {
-        final Document request = provider.getAuthPayload();
+        return getAuthRequest(provider.getAuthPayload());
+    }
+
+    /**
+     * @param request Arbitrary document for authentication
+     * @return A {@link Document} representing all information required for
+     * an auth request against a specific provider.
+     */
+    private Document getAuthRequest(final Document request) {
         final Document options = new Document();
         options.put(AuthFields.DEVICE, getDeviceInfo());
         request.put(AuthFields.OPTIONS, options);
