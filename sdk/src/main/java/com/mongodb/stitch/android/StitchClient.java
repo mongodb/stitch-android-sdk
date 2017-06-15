@@ -274,7 +274,8 @@ public class StitchClient {
 
     /**
      * Registers the current user using email and password.
-     * @param email email for the given user
+     *
+     * @param email    email for the given user
      * @param password password for the given user
      * @return A task containing whether or not registration was successful.
      */
@@ -309,6 +310,178 @@ public class StitchClient {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         Log.e(TAG, "Error while logging in with auth provider", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Confirm a newly registered email in this context
+     * @param token confirmation token emailed to new user
+     * @param tokenId confirmation tokenId emailed to new user
+     * @return A task containing whether or not the email was confirmed successfully
+     */
+    public Task<Boolean> emailConfirm(@NonNull final String token, @NonNull final String tokenId) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                "local/userpass/confirm"
+        );
+
+        Document params = new Document();
+
+        params.put("token", token);
+        params.put("tokenId", tokenId);
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                params.toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "Error while confirming email", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Send a confirmation email for a newly registered user
+     * @param email email address of user
+     * @return A task containing whether or not the email was sent successfully.
+     */
+    public Task<Boolean> sendEmailConfirm(@NonNull final String email) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                "local/userpass/confirm/send"
+        );
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                new Document("email", email).toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "Error while sending confirmation email", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Reset a given user's password
+     * @param token token associated with this user
+     * @param tokenId id of the token associated with this user
+     * @return A task containing whether or not the reset was successful
+     */
+    public Task<Boolean> resetPassword(@NonNull final String token, @NonNull final String tokenId) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                "local/userpass/reset"
+        );
+
+        Document params = new Document();
+
+        params.put("token", token);
+        params.put("tokenId", tokenId);
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                params.toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "Error while reseting password", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
+    }
+
+    /**
+     * Send a reset password email to a given email address
+     * @param email email address to reset password for
+     * @return A task containing whether or not the reset email was sent successfully
+     */
+    public Task<Boolean> sendResetPassword(@NonNull final String email) {
+        final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
+
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                "local/userpass/reset/send"
+        );
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                new Document("email", email).toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        future.setResult(response != null);
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.e(TAG, "Error while sending reset password email", error);
                         future.setException(parseRequestError(error));
                     }
                 }
