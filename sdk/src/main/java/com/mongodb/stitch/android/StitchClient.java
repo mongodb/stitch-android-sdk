@@ -287,28 +287,22 @@ public class StitchClient {
                 "%s/%s/%s",
                 getResourcePath(Paths.AUTH),
                 provider.getType(),
-                "userpass/register"
+                Paths.USERPASS_REGISTER
         );
-
-        Document params = new Document();
-
-        // register requires a special payload not supported by the AuthProvider interface
-        params.put("email", provider.getEmail());
-        params.put("password", provider.getPassword());
 
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
                 url,
-                getAuthRequest(params).toJson(),
+                getAuthRequest(provider.getRegistrationPayload()).toJson(),
                 new Response.Listener<String>() {
                     @Override
-                    public void onResponse(String response) {
+                    public void onResponse(final String response) {
                         future.setResult(response != null);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
-                    public void onErrorResponse(VolleyError error) {
+                    public void onErrorResponse(final VolleyError error) {
                         Log.e(TAG, "Error while logging in with auth provider", error);
                         future.setException(parseRequestError(error));
                     }
@@ -334,10 +328,10 @@ public class StitchClient {
                 "%s/%s/%s",
                 getResourcePath(Paths.AUTH),
                 "",
-                "local/userpass/confirm"
+                Paths.USERPASS_CONFIRM
         );
 
-        Document params = new Document();
+        final Document params = new Document();
 
         params.put("token", token);
         params.put("tokenId", tokenId);
@@ -348,13 +342,13 @@ public class StitchClient {
                 params.toJson(),
                 new Response.Listener<String>() {
                     @Override
-                    public void onResponse(String response) {
+                    public void onResponse(final String response) {
                         future.setResult(response != null);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
-                    public void onErrorResponse(VolleyError error) {
+                    public void onErrorResponse(final VolleyError error) {
                         Log.e(TAG, "Error while confirming email", error);
                         future.setException(parseRequestError(error));
                     }
@@ -379,7 +373,7 @@ public class StitchClient {
                 "%s/%s/%s",
                 getResourcePath(Paths.AUTH),
                 "",
-                "local/userpass/confirm/send"
+                Paths.USERPASS_CONFIRM_SEND
         );
 
         final JsonStringRequest request = new JsonStringRequest(
@@ -388,13 +382,13 @@ public class StitchClient {
                 new Document("email", email).toJson(),
                 new Response.Listener<String>() {
                     @Override
-                    public void onResponse(String response) {
+                    public void onResponse(final String response) {
                         future.setResult(response != null);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
-                    public void onErrorResponse(VolleyError error) {
+                    public void onErrorResponse(final VolleyError error) {
                         Log.e(TAG, "Error while sending confirmation email", error);
                         future.setException(parseRequestError(error));
                     }
@@ -420,13 +414,13 @@ public class StitchClient {
                 "%s/%s/%s",
                 getResourcePath(Paths.AUTH),
                 "",
-                "local/userpass/reset"
+                Paths.USERPASS_RESET
         );
 
-        Document params = new Document();
+        final Document params = new Document();
 
-        params.put("token", token);
-        params.put("tokenId", tokenId);
+        params.put(RegistrationFields.TOKEN, token);
+        params.put(RegistrationFields.TOKEN_ID, tokenId);
 
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
@@ -434,13 +428,13 @@ public class StitchClient {
                 params.toJson(),
                 new Response.Listener<String>() {
                     @Override
-                    public void onResponse(String response) {
+                    public void onResponse(final String response) {
                         future.setResult(response != null);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
-                    public void onErrorResponse(VolleyError error) {
+                    public void onErrorResponse(final VolleyError error) {
                         Log.e(TAG, "Error while reseting password", error);
                         future.setException(parseRequestError(error));
                     }
@@ -465,7 +459,7 @@ public class StitchClient {
                 "%s/%s/%s",
                 getResourcePath(Paths.AUTH),
                 "",
-                "local/userpass/reset/send"
+                Paths.USERPASS_RESET_SEND
         );
 
         final JsonStringRequest request = new JsonStringRequest(
@@ -474,13 +468,13 @@ public class StitchClient {
                 new Document("email", email).toJson(),
                 new Response.Listener<String>() {
                     @Override
-                    public void onResponse(String response) {
+                    public void onResponse(final String response) {
                         future.setResult(response != null);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
-                    public void onErrorResponse(VolleyError error) {
+                    public void onErrorResponse(final VolleyError error) {
                         Log.e(TAG, "Error while sending reset password email", error);
                         future.setException(parseRequestError(error));
                     }
@@ -636,6 +630,12 @@ public class StitchClient {
         private static final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
         private static final String PIPELINE = "pipeline";
         private static final String PUSH = "push";
+        private static final String USERPASS_REGISTER = "userpass/register";
+        private static final String USERPASS_CONFIRM = "local/userpass/confirm";
+        private static final String USERPASS_CONFIRM_SEND = "local/userpass/confirm/send";
+        private static final String USERPASS_RESET = "local/userpass/reset";
+        private static final String USERPASS_RESET_SEND = "local/userpass/reset/send";
+
     }
 
     /**
@@ -984,6 +984,11 @@ public class StitchClient {
         info.put(DeviceFields.PLATFORM_VERSION, Build.VERSION.RELEASE);
 
         return info;
+    }
+
+    private static class RegistrationFields {
+        private static final String TOKEN = "token";
+        private static final String TOKEN_ID = "tokenId";
     }
 
     private static class DeviceFields {

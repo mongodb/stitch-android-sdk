@@ -14,6 +14,7 @@ public class EmailPasswordAuthProvider implements AuthProvider {
     private static final String AUTH_NAME = "userpass";
 
     private static final String KEY_USERNAME = "username";
+    private static final String KEY_EMAIL = "email";
     private static final String KEY_PASSWORD = "password";
 
     private final String email;
@@ -42,9 +43,23 @@ public class EmailPasswordAuthProvider implements AuthProvider {
         return AUTH_TYPE;
     }
 
+    /**
+     * Create a payload exclusively for {@link com.mongodb.stitch.android.StitchClient#register(String, String)}
+     *
+     * @return a payload containing the email and password of the registrant
+     */
+    public Document getRegistrationPayload() {
+        final Document doc = new Document();
+
+        doc.put(KEY_EMAIL, this.email);
+        doc.put(KEY_PASSWORD, this.password);
+
+        return doc;
+    }
+
     @Override
     public Document getAuthPayload() {
-        Document document = new Document();
+        final Document document = new Document();
 
         document.put(KEY_USERNAME, this.email);
         document.put(KEY_PASSWORD, this.password);

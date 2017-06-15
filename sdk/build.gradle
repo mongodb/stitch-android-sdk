@@ -16,11 +16,18 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+
+
     buildTypes {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'proguard-rules.pro'
+        }
+
+        debug {
+            buildConfigField "String", "TEST_APP", "\"<APP-ID-HERE>\""
+            buildConfigField "String", "BASE_URL", "\"<BASE-URL-HERE>\""
         }
     }
     lintOptions {
@@ -41,6 +48,7 @@ repositories {
 configurations.all {
     resolutionStrategy.force 'com.android.support:support-annotations:23.1.0'
 }
+
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {

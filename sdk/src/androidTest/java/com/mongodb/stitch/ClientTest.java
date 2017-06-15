@@ -10,7 +10,6 @@ import android.support.test.runner.AndroidJUnit4;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.TaskCompletionSource;
 import com.mongodb.stitch.android.StitchClient;
 import com.mongodb.stitch.android.auth.Auth;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
@@ -21,12 +20,17 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
 import java.util.Locale;
 import java.util.Random;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.CountDownLatch;
 
 /**
- * Created by jsflax on 6/14/17.
+ * Test for various {@link StitchClient} methods.
+ * <p>
+ * TODO: Add more test functions for the various calls.
+ * TODO: Mock responses for requests to avoid sending them over the wire.
  */
 @RunWith(AndroidJUnit4.class)
 @LargeTest
@@ -44,21 +48,26 @@ public class ClientTest {
     @Before
     public void setup() {
         instrumentationCtx = InstrumentationRegistry.getContext();
-        stitchClient = new StitchClient(instrumentationCtx, "test-xdqip", "http://192.168.0.5:8080");
+        stitchClient = new StitchClient(
+                instrumentationCtx,
+                BuildConfig.TEST_APP,
+                BuildConfig.BASE_URL
+        );
+
         stitchClient.getProperties().clear();
         try {
-            _preferences = (SharedPreferences)stitchClient.getClass()
-                                                          .getDeclaredField("_preferences")
-                                                          .get(stitchClient);
+            _preferences = (SharedPreferences) stitchClient.getClass()
+                    .getDeclaredField("_preferences")
+                    .get(stitchClient);
             _preferences.edit().clear().commit();
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+        } catch (final NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
     }
 
     @Test
-    public void testRegister() {
-        final ReentrantLock lock = new ReentrantLock();
+    public void testRegister() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
 
         stitchClient.register(
                 String.format(
@@ -72,18 +81,17 @@ public class ClientTest {
             public void onComplete(@NonNull Task<Boolean> task) {
                 assertThat(task.getException() == null);
                 assertThat(task.getResult());
-                if (lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
+
+                latch.countDown();
             }
         });
 
-        lock.lock();
+        latch.await();
     }
 
     @Test
-    public void testLogin() {
-        final ReentrantLock lock = new ReentrantLock();
+    public void testLogin() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
 
         stitchClient.logInWithProvider(
                 new EmailPasswordAuthProvider("foo1@bar.com", "bazqux")
@@ -94,12 +102,10 @@ public class ClientTest {
                 Auth auth = task.getResult();
                 assertThat(auth.getUser() != null);
 
-                if (lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
+                latch.countDown();
             }
         });
 
-        lock.lock();
+        latch.await();
     }
 }
