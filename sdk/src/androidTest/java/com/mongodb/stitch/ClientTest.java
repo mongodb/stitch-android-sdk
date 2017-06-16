@@ -12,7 +12,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.StitchClient;
 import com.mongodb.stitch.android.auth.Auth;
-import com.mongodb.stitch.android.auth.User;
+import com.mongodb.stitch.android.auth.UserProfile;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.test.BuildConfig;
 
@@ -100,12 +100,12 @@ public class ClientTest {
                 assertThat(task.getException() == null);
                 Auth auth = task.getResult();
 
-                stitchClient.getUserProfile().addOnCompleteListener(new OnCompleteListener<User>() {
+                stitchClient.getUserProfile().addOnCompleteListener(new OnCompleteListener<UserProfile>() {
                     @Override
-                    public void onComplete(@NonNull Task<User> task) {
-                        User user = task.getResult();
+                    public void onComplete(@NonNull Task<UserProfile> task) {
+                        UserProfile userProfile = task.getResult();
 
-                        assertThat(user != null);
+                        assertThat(userProfile != null);
                         latch.countDown();
                     }
                 });

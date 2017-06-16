@@ -17,14 +17,13 @@ import com.android.volley.toolbox.Volley;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.Auth;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
-import com.mongodb.stitch.android.auth.User;
+import com.mongodb.stitch.android.auth.UserProfile;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
@@ -47,10 +46,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import static com.mongodb.stitch.android.StitchError.ErrorCode;
@@ -90,7 +87,7 @@ public class StitchClient {
     private final List<AuthListener> _authListeners;
 
     private Auth _auth;
-    private User _user;
+    private UserProfile _userProfile;
 
     /**
      * @param context     The Android {@link Context} that this client should be bound to.
@@ -228,7 +225,7 @@ public class StitchClient {
      * Fetch the current user profile
      * @return profile of the given user
      */
-    public Task<User> getUserProfile() {
+    public Task<UserProfile> getUserProfile() {
         if (!isAuthenticated()) {
             Log.d(TAG, "Must log in before fetching user profile");
             return Tasks.forException(
@@ -236,20 +233,21 @@ public class StitchClient {
             );
         }
 
-        return executeRequest(Request.Method.GET, Paths.USER_PROFILE).continueWith(new Continuation<String, User>() {
+        return executeRequest(Request.Method.GET, Paths.USER_PROFILE).continueWith(new Continuation<String, UserProfile>() {
             @Override
-            public User then(@NonNull Task<String> task) throws Exception {
+            public UserProfile then(@NonNull Task<String> task) throws Exception {
                 if (!task.isSuccessful()) {
                     throw task.getException();
                 }
 
                 try {
-                    _user = _objMapper.readValue(task.getResult(), User.class);
+                    _userProfile = _objMapper.readValue(task.getResult(), UserProfile.class);
                 } catch (final IOException e) {
                     Log.e(TAG, "Error parsing user response", e);
+                    throw e;
                 }
 
-                return _user;
+                return _userProfile;
             }
         });
     }

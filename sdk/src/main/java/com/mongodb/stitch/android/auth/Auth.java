@@ -12,7 +12,6 @@ public class Auth {
 
     private final String _accessToken;
     private final String _userId;
-    private final String _refreshToken;
     private final String _deviceId;
     private final String _provider;
 
@@ -28,16 +27,12 @@ public class Auth {
             final String deviceId,
 
             @JsonProperty(Fields.USER_ID)
-            final String userId,
-
-            @JsonProperty(Fields.REFRESH_TOKEN)
-            final String refreshToken
+            final String userId
     ) {
         _accessToken = accessToken;
         _userId = userId;
         _provider = provider;
         _deviceId = deviceId;
-        _refreshToken = refreshToken;
     }
 
     /**
@@ -77,13 +72,11 @@ public class Auth {
      * @return A new session with a fresh access token.
      */
     public Auth withNewAccessToken(final String newAccessToken) {
-        return new Auth(newAccessToken, _provider, _deviceId, _userId, _refreshToken);
+        return new Auth(newAccessToken, _provider, _deviceId, _userId);
     }
 
     private static class Fields {
         private static final String ACCESS_TOKEN = "accessToken";
-        private static final String REFRESH_TOKEN = "refreshToken";
-        private static final String USER = "user";
         private static final String USER_ID = "userId";
         private static final String PROVIDER = "provider";
         private static final String DEVICE_ID = "deviceId";

@@ -8,17 +8,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * User represents an authenticated user.
+ * UserProfile represents an authenticated user.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class User {
+public class UserProfile {
 
     private final String _userId;
     private final List<Identity> _identities;
     private final Map<String, Object> _data;
 
     @JsonCreator
-    private User(
+    private UserProfile(
             @JsonProperty(Fields.ID)
             final String userId,
 
