@@ -27,8 +27,8 @@ android {
         }
 
         debug {
-            buildConfigField "String", "TEST_APP", "\"test-xdqip\""
-            buildConfigField "String", "BASE_URL", "\"http://10.4.121.21:8080\""
+            buildConfigField "String", "TEST_APP", "\"<APP-ID-HERE>\""
+            buildConfigField "String", "BASE_URL", "\"<BASE-URL-HERE>\""
         }
     }
     lintOptions {
