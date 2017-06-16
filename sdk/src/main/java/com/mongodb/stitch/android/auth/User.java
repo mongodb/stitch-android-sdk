@@ -13,14 +13,14 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
 
-    private final String _id;
+    private final String _userId;
     private final List<Identity> _identities;
     private final Map<String, Object> _data;
 
     @JsonCreator
     private User(
             @JsonProperty(Fields.ID)
-            final String id,
+            final String userId,
 
             @JsonProperty(Fields.IDENTITIES)
             final List<Identity> identities,
@@ -28,7 +28,7 @@ public class User {
             @JsonProperty(Fields.DATA)
             final Map<String, Object> data
     ) {
-        _id = id;
+        _userId = userId;
         _identities = identities;
         _data = data;
     }
@@ -38,7 +38,7 @@ public class User {
      */
     @JsonProperty(Fields.ID)
     public String getId() {
-        return _id;
+        return _userId;
     }
 
     /**
@@ -95,7 +95,7 @@ public class User {
         }
 
         private static class Fields {
-            private static final String ID = "id";
+            private static final String ID = "userId";
             private static final String PROVIDER = "provider";
         }
     }

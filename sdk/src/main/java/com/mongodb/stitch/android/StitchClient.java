@@ -23,6 +23,7 @@ import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.Auth;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
+import com.mongodb.stitch.android.auth.User;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
@@ -84,7 +85,9 @@ public class StitchClient {
     private final SharedPreferences _preferences;
     private final PushManager _pushManager;
     private final List<AuthListener> _authListeners;
+
     private Auth _auth;
+    private User _user;
 
     /**
      * @param context     The Android {@link Context} that this client should be bound to.
@@ -216,6 +219,56 @@ public class StitchClient {
                 throw task.getException();
             }
         });
+    }
+
+    /**
+     * Fetch the current user profile
+     * @return profile of the given user
+     */
+    public Task<User> getUserProfile() {
+        if (!isAuthenticated()) {
+            Log.d(TAG, "Must log in before fetching user profile");
+            return Tasks.forException(
+                    new StitchAuthException("Must log in before fetching user profile")
+            );
+        }
+
+        final TaskCompletionSource<User> future = new TaskCompletionSource<>();
+        final String url = String.format(
+                "%s/%s/%s",
+                getResourcePath(Paths.AUTH),
+                "",
+                "user/me");
+
+        final JsonStringRequest request = new JsonStringRequest(
+                Request.Method.POST,
+                url,
+                getAuthRequest(new Document("accessToken", _auth.getAccessToken())).toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
+                        try {
+                            _user = _objMapper.readValue(response, User.class);
+                            future.setResult(_user);
+                        } catch (final IOException e) {
+                            Log.e(TAG, "Error parsing user response", e);
+                            future.setException(new StitchException(e));
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while fetching user profile", error);
+                        future.setException(parseRequestError(error));
+                    }
+                }
+        );
+
+        request.setTag(this);
+        _queue.add(request);
+
+        return future.getTask();
     }
 
     /**
