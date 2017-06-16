@@ -95,13 +95,13 @@ public class User {
         }
 
         private static class Fields {
-            private static final String ID = "userId";
+            private static final String ID = "id";
             private static final String PROVIDER = "provider";
         }
     }
 
     private static class Fields {
-        private static final String ID = "_id";
+        private static final String ID = "userId";
         private static final String IDENTITIES = "identities";
         private static final String DATA = "data";
     }

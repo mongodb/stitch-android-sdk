@@ -17,6 +17,7 @@ import com.android.volley.toolbox.Volley;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
@@ -46,8 +47,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static com.mongodb.stitch.android.StitchError.ErrorCode;
@@ -233,42 +236,22 @@ public class StitchClient {
             );
         }
 
-        final TaskCompletionSource<User> future = new TaskCompletionSource<>();
-        final String url = String.format(
-                "%s/%s/%s",
-                getResourcePath(Paths.AUTH),
-                "",
-                "user/me");
-
-        final JsonStringRequest request = new JsonStringRequest(
-                Request.Method.POST,
-                url,
-                getAuthRequest(new Document("accessToken", _auth.getAccessToken())).toJson(),
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(final String response) {
-                        try {
-                            _user = _objMapper.readValue(response, User.class);
-                            future.setResult(_user);
-                        } catch (final IOException e) {
-                            Log.e(TAG, "Error parsing user response", e);
-                            future.setException(new StitchException(e));
-                        }
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while fetching user profile", error);
-                        future.setException(parseRequestError(error));
-                    }
+        return executeRequest(Request.Method.GET, Paths.USER_PROFILE).continueWith(new Continuation<String, User>() {
+            @Override
+            public User then(@NonNull Task<String> task) throws Exception {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
                 }
-        );
 
-        request.setTag(this);
-        _queue.add(request);
+                try {
+                    _user = _objMapper.readValue(task.getResult(), User.class);
+                } catch (final IOException e) {
+                    Log.e(TAG, "Error parsing user response", e);
+                }
 
-        return future.getTask();
+                return _user;
+            }
+        });
     }
 
     /**
@@ -680,6 +663,7 @@ public class StitchClient {
 
     private static class Paths {
         private static final String AUTH = "auth";
+        private static final String USER_PROFILE = AUTH + "/me";
         private static final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
         private static final String PIPELINE = "pipeline";
         private static final String PUSH = "push";

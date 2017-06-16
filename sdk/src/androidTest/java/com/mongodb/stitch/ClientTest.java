@@ -12,6 +12,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.StitchClient;
 import com.mongodb.stitch.android.auth.Auth;
+import com.mongodb.stitch.android.auth.User;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.test.BuildConfig;
 
@@ -20,8 +21,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.net.Inet4Address;
-import java.net.UnknownHostException;
 import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -100,9 +99,16 @@ public class ClientTest {
             public void onComplete(@NonNull Task<Auth> task) {
                 assertThat(task.getException() == null);
                 Auth auth = task.getResult();
-                assertThat(auth.getUser() != null);
 
-                latch.countDown();
+                stitchClient.getUserProfile().addOnCompleteListener(new OnCompleteListener<User>() {
+                    @Override
+                    public void onComplete(@NonNull Task<User> task) {
+                        User user = task.getResult();
+
+                        assertThat(user != null);
+                        latch.countDown();
+                    }
+                });
             }
         });
 
