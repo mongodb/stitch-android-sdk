@@ -76,36 +76,6 @@ dependencies {
     // TODO: Using fork with fixes until https://code.google.com/p/android/issues/detail?id=209471 is resolved
     compile 'com.mcxiaoke.volley:library:1.0.19'
 }
-/**
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId 'com.mongodb' //You can either define these here or get them from project conf elsewhere
-            artifactId 'stitch'
-            version '0.1.0'
-            artifact "$buildDir/outputs/aar/app-release.aar" //aar artifact you want to publish
-
-            //generate pom nodes for dependencies
-            pom.withXml {
-                def dependenciesNode = asNode().appendNode('dependencies')
-                configurations.compile.allDependencies.each { dependency ->
-                    def dependencyNode = dependenciesNode.appendNode('dependency')
-                    dependencyNode.appendNode('groupId', dependency.group)
-                    dependencyNode.appendNode('artifactId', dependency.name)
-                    dependencyNode.appendNode('version', dependency.version)
-                }
-            }
-        }
-    }
-
-    //publish to filesystem repo
-    repositories{
-        maven {
-            url "$buildDir/repo"
-        }
-    }
-}
-*/
 
 apply plugin: 'maven'
 

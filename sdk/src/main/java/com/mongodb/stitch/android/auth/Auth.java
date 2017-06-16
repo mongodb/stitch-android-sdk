@@ -11,26 +11,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class Auth {
 
     private final String _accessToken;
-    private final User _user;
-    private final String _provider;
+    private final String _userId;
     private final String _deviceId;
+    private final String _provider;
 
     @JsonCreator
     private Auth(
             @JsonProperty(Fields.ACCESS_TOKEN)
             final String accessToken,
 
-            @JsonProperty(Fields.USER)
-            final User user,
-
             @JsonProperty(Fields.PROVIDER)
             final String provider,
 
             @JsonProperty(Fields.DEVICE_ID)
-            final String deviceId
+            final String deviceId,
+
+            @JsonProperty(Fields.USER_ID)
+            final String userId
     ) {
         _accessToken = accessToken;
-        _user = user;
+        _userId = userId;
         _provider = provider;
         _deviceId = deviceId;
     }
@@ -46,9 +46,9 @@ public class Auth {
     /**
      * @return The user this session was created for.
      */
-    @JsonProperty(Fields.USER)
-    public User getUser() {
-        return _user;
+    @JsonProperty(value = Fields.USER_ID)
+    public String getUserId() {
+        return _userId;
     }
 
     /**
@@ -72,12 +72,12 @@ public class Auth {
      * @return A new session with a fresh access token.
      */
     public Auth withNewAccessToken(final String newAccessToken) {
-        return new Auth(newAccessToken, _user, _provider, _deviceId);
+        return new Auth(newAccessToken, _provider, _deviceId, _userId);
     }
 
     private static class Fields {
         private static final String ACCESS_TOKEN = "accessToken";
-        private static final String USER = "user";
+        private static final String USER_ID = "userId";
         private static final String PROVIDER = "provider";
         private static final String DEVICE_ID = "deviceId";
     }

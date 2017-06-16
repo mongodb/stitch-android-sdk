@@ -23,6 +23,7 @@ import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.Auth;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
+import com.mongodb.stitch.android.auth.UserProfile;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
@@ -84,7 +85,9 @@ public class StitchClient {
     private final SharedPreferences _preferences;
     private final PushManager _pushManager;
     private final List<AuthListener> _authListeners;
+
     private Auth _auth;
+    private UserProfile _userProfile;
 
     /**
      * @param context     The Android {@link Context} that this client should be bound to.
@@ -214,6 +217,37 @@ public class StitchClient {
                     return null;
                 }
                 throw task.getException();
+            }
+        });
+    }
+
+    /**
+     * Fetch the current user profile
+     * @return profile of the given user
+     */
+    public Task<UserProfile> getUserProfile() {
+        if (!isAuthenticated()) {
+            Log.d(TAG, "Must log in before fetching user profile");
+            return Tasks.forException(
+                    new StitchAuthException("Must log in before fetching user profile")
+            );
+        }
+
+        return executeRequest(Request.Method.GET, Paths.USER_PROFILE).continueWith(new Continuation<String, UserProfile>() {
+            @Override
+            public UserProfile then(@NonNull Task<String> task) throws Exception {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
+                }
+
+                try {
+                    _userProfile = _objMapper.readValue(task.getResult(), UserProfile.class);
+                } catch (final IOException e) {
+                    Log.e(TAG, "Error parsing user response", e);
+                    throw e;
+                }
+
+                return _userProfile;
             }
         });
     }
@@ -627,6 +661,7 @@ public class StitchClient {
 
     private static class Paths {
         private static final String AUTH = "auth";
+        private static final String USER_PROFILE = AUTH + "/me";
         private static final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
         private static final String PIPELINE = "pipeline";
         private static final String PUSH = "push";
