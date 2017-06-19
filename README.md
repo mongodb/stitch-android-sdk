@@ -17,10 +17,6 @@
 	
 	```
 	repositories {
-		maven {
-			url "https://s3.amazonaws.com/stitch-sdks/android/maven/snapshots"
-		}
-
 		// TODO: Remove once BSON 3.5.0 is released
 		maven {
             url "https://oss.sonatype.org/content/repositories/snapshots"
@@ -31,9 +27,7 @@
 4. Also add the following to your dependencies block:
 
 	```
-	compile('com.mongodb.stitch:android-sdk:0.1.2-SNAPSHOT'){
-		changing = true
-	}
+	compile 'org.mongodb:stitch:0.1.0-SNAPSHOT'
 	```
 
 5. Android Studio will prompt you to sync your changes in your project; hit Sync Now
