@@ -87,7 +87,7 @@ uploadArchives {
 
 	// Add other pom properties here if you want (developer details / licenses)
 	repository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-			authentication(userName: project.properties['sonatypeUsername'], password: project.properties['sonatypePassword'])
+			authentication(userName: sonatypeUsername, password: sonatypePassword)
         }
 	
     }
