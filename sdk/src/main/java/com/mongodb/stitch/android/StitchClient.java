@@ -287,6 +287,7 @@ public class StitchClient {
                             _preferences.edit().putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken()).apply();
                             _preferences.edit().putString(PREF_DEVICE_ID_NAME, _auth.getDeviceId()).apply();
                             future.setResult(_auth);
+                            onLogin();
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
                             future.setException(new StitchException(e));
