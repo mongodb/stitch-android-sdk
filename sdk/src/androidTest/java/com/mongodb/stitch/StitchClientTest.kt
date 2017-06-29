@@ -10,6 +10,7 @@ import com.mongodb.stitch.android.StitchClient
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.android.auth.oauth2.facebook.FacebookAuthProviderInfo
 import com.mongodb.stitch.android.auth.oauth2.google.GoogleAuthProviderInfo
+import io.appflate.restmock.MatchableCall
 import io.appflate.restmock.RESTMockServer
 import io.appflate.restmock.RESTMockServerStarter
 import io.appflate.restmock.android.AndroidAssetsFileParser
@@ -58,8 +59,8 @@ class StitchClientTest {
         const val GCM_TYPE_KEY = "type"
         const val GCM_SENDER_ID_KEY = "senderId"
 
-        /** Mock data for available providers [StitchClient.getAuthProviders] */
-        val mockProviderData = JSONObject(mapOf(
+        /** Mock data for all available providers [StitchClient.getAuthProviders] */
+        val mockFullProviderData = JSONObject(mapOf(
                 "anon/user" to emptyMap<String, String>(),
                 "local/userpass" to mapOf(
                         "emailConfirmationUrl" to FAKE_DEFER_URL,
@@ -74,6 +75,18 @@ class StitchClientTest {
                 ),
                 "oauth2/facebook" to mapOf(
                         "clientId" to FAKE_FACEBOOK_CLIENT_ID,
+                        "metadataFields" to arrayOf(
+                                FAKE_METADATA_FIELD_EMAIL,
+                                FAKE_METADATA_FIELD_BIRTHDAY
+                        )
+                )
+        )).toString()
+
+        /** Mock data for available providers [StitchClient.getAuthProviders] */
+        val mockPartialProviderData = JSONObject(mapOf(
+                "anon/user" to emptyMap<String, String>(),
+                "oauth2/google" to mapOf(
+                        "clientId" to FAKE_GOOGLE_CLIENT_ID,
                         "metadataFields" to arrayOf(
                                 FAKE_METADATA_FIELD_EMAIL,
                                 FAKE_METADATA_FIELD_BIRTHDAY
@@ -118,6 +131,8 @@ class StitchClientTest {
     private val instrumentationCtx: Context = InstrumentationRegistry.getContext()
     /** [StitchClient] for this test */
     private var stitchClient: StitchClient? = null
+    /** matchableCall associated with [RESTMockServer] for auth provider call */
+    private var matchableCallAuth: MatchableCall? = null
 
     @Before
     fun setup() {
@@ -125,7 +140,7 @@ class StitchClientTest {
         RESTMockServerStarter.startSync(AndroidAssetsFileParser(instrumentationCtx), AndroidLogger())
 
         // instantiate a new StitchClient using a dummy name and the mock baseUrl
-        val stitchClient = StitchClient(instrumentationCtx, "dummy-app", RESTMockServer.getUrl())//"https://stitch-dev.mongodb.com")
+        val stitchClient = StitchClient(instrumentationCtx, "dummy-app", RESTMockServer.getUrl())
         this.stitchClient = stitchClient
 
         // clear all instances of the internal [SharedPreferences] to start with a clean slate
@@ -146,7 +161,9 @@ class StitchClientTest {
 
         // mock out all calls related to auth
         RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
-        RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(mockResponseBuilder(mockProviderData))
+        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                mockResponseBuilder(mockFullProviderData)
+        )
         RESTMockServer.whenDELETE(pathEndsWith("auth")).thenReturnEmpty(200)
 
         // mock out all calls related to pipelines
@@ -198,6 +215,40 @@ class StitchClientTest {
                 is FacebookAuthProviderInfo ->
                     assertThat(it.applicationId == FAKE_FACEBOOK_CLIENT_ID)
             }
+        }
+
+        val nextAuthCall = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                mockResponseBuilder(mockPartialProviderData)
+        )
+
+        RESTMockServer.replaceMatchableCall(matchableCallAuth, nextAuthCall)
+        // fetch partially mocked authProviders
+        await(stitchClient!!.authProviders).let {
+            // assert all providers provided in mock are available
+            assertThat(it.hasAnonymous() && !it.hasEmailPassword()
+                    && !it.hasFacebook() && it.hasGoogle())
+
+            // return as an array for convenience
+            arrayOf(it.anonymous, it.google)
+        }.forEach {
+            // assert google and facebook auth providers have their
+            // respective ids
+            when (it) {
+                is GoogleAuthProviderInfo ->
+                    assertThat(it.clientId == FAKE_GOOGLE_CLIENT_ID)
+            }
+        }
+
+        RESTMockServer.replaceMatchableCall(
+                nextAuthCall,
+                RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(mockResponseBuilder("{}"))
+        )
+
+        // fetch empty mocked authProviders
+        await(stitchClient!!.authProviders).let {
+            // assert all providers provided in mock are available
+            assertThat(!it.hasAnonymous() && !it.hasEmailPassword()
+                    && !it.hasFacebook() && !it.hasGoogle())
         }
 
         // log in anonymously
