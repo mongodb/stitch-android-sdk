@@ -2,6 +2,7 @@ package com.mongodb.stitch
 
 import com.google.android.gms.tasks.Task
 import com.mongodb.stitch.android.test.BuildConfig
+import okhttp3.mockwebserver.MockResponse
 import java.util.concurrent.CountDownLatch
 
 /**
@@ -52,4 +53,24 @@ fun assertThat(assertion: Boolean, exception: Exception? = null) {
             throw AssertionError("Failed assertion")
         }
     }
+}
+
+/**
+ * Convenience builder for [MockResponse] class
+ *
+ * @param[body] string based body of response
+ * @param[responseCode] HTTP status code of response
+ * @param[contentType] Content-Type header of response
+ * @param[block] builder block for functional building of [MockResponse] beyond previous params
+ */
+fun mockResponseBuilder(body: String,
+                        responseCode: Int = 200,
+                        contentType: String = "application/json",
+                        block: MockResponse.() -> Unit = {}): MockResponse {
+    val mockResponse = MockResponse()
+    mockResponse.setBody(body)
+    mockResponse.setResponseCode(responseCode)
+    mockResponse.setHeader("Content-Type", contentType)
+    mockResponse.block()
+    return mockResponse
 }

@@ -145,18 +145,18 @@ class StitchClientTest {
         globalPreferences.edit().clear().commit()
 
         // mock out all calls related to auth
-        RESTMockServer.whenPOST(pathContains("auth")).thenReturnString(mockAuthData)
-        RESTMockServer.whenGET(pathEndsWith("auth")).thenReturnString(mockProviderData)
+        RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
+        RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(mockResponseBuilder(mockProviderData))
         RESTMockServer.whenDELETE(pathEndsWith("auth")).thenReturnEmpty(200)
 
         // mock out all calls related to pipelines
-        RESTMockServer.whenPOST(pathEndsWith("pipeline")).thenReturnString(mockPipelineData)
+        RESTMockServer.whenPOST(pathEndsWith("pipeline")).thenReturn(mockResponseBuilder(mockPipelineData))
 
         // mock out user profile call
-        RESTMockServer.whenGET(pathEndsWith("me")).thenReturnString(mockUserData)
+        RESTMockServer.whenGET(pathEndsWith("me")).thenReturn(mockResponseBuilder(mockUserData))
 
         // mock out push providers call
-        RESTMockServer.whenGET(pathEndsWith("push")).thenReturnString(mockPushData)
+        RESTMockServer.whenGET(pathEndsWith("push")).thenReturn(mockResponseBuilder(mockPushData))
     }
 
     /**
@@ -278,6 +278,8 @@ class StitchClientTest {
                 "items" to listOf(FAKE_PIPELINE_LITERAL_FOO, FAKE_PIPELINE_LITERAL_BAR)
         ))))
 
-        assertThat(pipelineData.containsAll(listOf(FAKE_PIPELINE_LITERAL_FOO, FAKE_PIPELINE_LITERAL_BAR)))
+        assertThat(pipelineData.containsAll(
+                listOf(FAKE_PIPELINE_LITERAL_FOO, FAKE_PIPELINE_LITERAL_BAR))
+        )
     }
 }
