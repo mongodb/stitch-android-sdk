@@ -61,7 +61,6 @@ dependencies {
     androidTestCompile 'com.android.support.test.espresso:espresso-core:2.2.2'
     // Set this dependency to build and run UI Automator tests
     androidTestCompile 'com.android.support.test.uiautomator:uiautomator-v18:2.1.2'
-    androidTestCompile 'com.facebook.android:facebook-android-sdk:4.+'
     androidTestCompile 'com.github.andrzejchm.RESTMock:android:0.2.2'
     // Set this dependency to enable kotlin for android tests
     androidTestCompile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
@@ -70,8 +69,6 @@ dependencies {
     androidTestCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
 
     testCompile 'junit:junit:4.12'
-
-    compile 'com.android.support:multidex:1.0.1'
 
     compile 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
     compile 'org.apache.commons:commons-lang3:3.5'
