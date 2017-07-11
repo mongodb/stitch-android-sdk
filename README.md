@@ -62,26 +62,26 @@
 3. Since we enabled anonymous log in, let's log in with it; add the following after your new _client:
 
 	```
-	_client.getAuthProviders().addOnSuccessListener(new OnSuccessListener<AuthProviderInfo>() {
-	            @Override
-	            public void onSuccess(final AuthProviderInfo authProviderInfo) {
-	                if (authProviderInfo.hasAnonymous()) {
-	                    Log.d("stitch", "logging in anonymously");
-	                    _client.logInWithProvider(new AnonymousAuthProvider()).addOnCompleteListener(new OnCompleteListener<Auth>() {
-	                        @Override
-	                        public void onComplete(@NonNull final Task<Auth> task) {
-	                            if (task.isSuccessful()) {
-	                                Log.d("stitch", "logged in anonymously as user " + _client.getAuth().getUser().getId());
-	                            } else {
-	                                Log.e("stitch", "failed to log in anonymously", task.getException());
-	                            }
-	                        }
-	                    });
-	                } else {
-	                    Log.e("stitch", "no anonymous provider");
-	                }
-	            }
-	        });
+	 _client.getAuthProviders().addOnSuccessListener(new OnSuccessListener<AvailableAuthProviders>() {
+            @Override
+            public void onSuccess(final AvailableAuthProviders auth) {
+                if (auth.hasAnonymous()) {
+                    Log.d("stitch", "logging in anonymously");
+                    _client.logInWithProvider(new AnonymousAuthProvider()).addOnCompleteListener(new OnCompleteListener<Auth>() {
+                        @Override
+                        public void onComplete(@NonNull final Task<Auth> task) {
+                            if (task.isSuccessful()) {
+                                Log.d("stitch", "logged in anonymously as user " + _client.getAuth().getUserId());
+                            } else {
+                                Log.e("stitch", "failed to log in anonymously", task.getException());
+                            }
+                        }
+                    });
+                } else {
+                    Log.e("stitch", "no anonymous provider");
+                }
+            }
+        });
 	```
 
 4. Now run your app in Android Studio by going to run, Run 'app'. Use the Android Virtual Device you created previously
