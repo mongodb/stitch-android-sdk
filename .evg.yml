@@ -26,24 +26,6 @@ tasks:
             echo "building SDK"
             ./gradlew build
 
-  - name: dist
-    depends_on:
-      - name: run_tests
-    commands:
-      - func: "fetch_source"
-      - func: "install_aws_cli"
-      - command: shell.exec
-        params:
-          silent: true
-          script: |
-            set -e
-            export PATH=$HOME/bin:$PATH
-            export AWS_ACCESS_KEY_ID=${sdks_aws_key}
-            export AWS_SECRET_ACCESS_KEY=${sdks_aws_secret}
-            cd stitch-android-sdk
-            echo "building SDK"
-            ./gradlew copyJarsToS3
-
   - name: docs_dist
     depends_on:
       - name: run_tests
@@ -69,5 +51,4 @@ buildvariants:
     - baas-linux
   tasks:
     - name: run_tests
-    - name: dist
     - name: docs_dist
