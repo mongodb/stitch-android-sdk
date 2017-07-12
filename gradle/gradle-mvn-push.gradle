@@ -1,6 +1,7 @@
 // Adapted from https://github.com/codepath/android_guides/wiki/Building-your-own-Android-library
 
 apply plugin: 'maven'
+apply plugin: 'com.vanniktech.android.javadoc'
 
 def isReleaseBuild() {
     return POM_VERSION_NAME.contains("SNAPSHOT") == false
