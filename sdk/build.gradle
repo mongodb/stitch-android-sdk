@@ -2,8 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'maven-publish'
 
-if (rootProject.file('gradle/gradle-mvn-push.gradle').exists() &&
-    rootProject.file('local.properties').exists()) {
+if (rootProject.file('gradle/gradle-mvn-push.gradle').exists()) {
     apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 }
 

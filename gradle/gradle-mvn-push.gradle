@@ -36,7 +36,11 @@ uploadArchives {
                 groupId = POM_GROUP
             }
 
-             def properties = new Properties()
+            if (!rootProject.file('local.properties').exists()) {
+                return
+            }
+
+            def properties = new Properties()
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
             def sonatypeUsername = properties.getProperty("sonatypeUsername")
