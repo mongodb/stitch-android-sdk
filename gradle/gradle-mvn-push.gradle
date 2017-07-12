@@ -1,25 +1,16 @@
 // Adapted from https://github.com/codepath/android_guides/wiki/Building-your-own-Android-library
 
 apply plugin: 'maven'
-apply plugin: 'com.vanniktech.android.javadoc'
 
 def isReleaseBuild() {
     return POM_VERSION_NAME.contains("SNAPSHOT") == false
 }
 
-def getJarsOutputDir() {
+def getRepositoryUrl() {
     if (isReleaseBuild()) {
-        return "${project.buildDir}/releases"
+        return "https://oss.sonatype.org/content/repositories/releases/"
     } else {
-        return "${project.buildDir}/snapshots"
-    }
-}
-
-def getJarsDestUrl() {
-    if (isReleaseBuild()) {
-        return "s3://${S3_BUCKET}/${S3_DIRECTORY}/maven/releases"
-    } else {
-        return "s3://${S3_BUCKET}/${S3_DIRECTORY}/maven/snapshots"
+        return "https://oss.sonatype.org/content/repositories/snapshots/"
     }
 }
 
@@ -44,7 +35,18 @@ uploadArchives {
                 groupId = POM_GROUP
             }
 
-            repository(url: "file:///" + getJarsOutputDir())
+             def properties = new Properties()
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+            def sonatypeUsername = properties.getProperty("sonatypeUsername")
+            def sonatypePassword = properties.getProperty("sonatypePassword")
+
+            if (sonatypeUsername && sonatypePassword) {
+                // Add other pom properties here if you want (developer details / licenses)
+                repository(url: getRepositoryUrl()) {
+                    authentication(userName: sonatypeUsername, password: sonatypePassword)
+                }
+            }
         }
     }
 }
@@ -71,12 +73,11 @@ artifacts {
     archives androidJavadocsJar
 }
 
-task copyJarsToS3(type: Exec) {
-    commandLine 'aws', 's3', 'cp', '--acl', 'public-read', '--recursive', getJarsOutputDir(), getJarsDestUrl()
-}
-
-copyJarsToS3.dependsOn uploadArchives
-
 task copyDocsToS3(type: Exec) {
     commandLine 'aws', 's3', 'cp', '--acl', 'public-read', '--recursive', getDocsOutputDir(), getDocsDestUrl()
+}
+
+artifacts {
+    archives androidSourcesJar
+    archives androidJavadocsJar
 }
