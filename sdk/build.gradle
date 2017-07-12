@@ -75,7 +75,6 @@ dependencies {
     compile 'com.google.android.gms:play-services-base:10.2.1'
     compile "com.google.android.gms:play-services-gcm:10.2.1"
 
-    // TODO: Remove -alpha1 once BSON 3.5.0 is released
     compile 'org.mongodb:bson:3.5.0-alpha1'
 
     // TODO: Using fork with fixes until https://code.google.com/p/android/issues/detail?id=209471 is resolved
