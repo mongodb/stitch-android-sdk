@@ -1,0 +1,141 @@
+package com.mongodb.stitch
+
+import android.content.Context
+import android.support.test.InstrumentationRegistry
+import android.support.test.runner.AndroidJUnit4
+import com.mongodb.stitch.android.StitchClient
+import com.mongodb.stitch.android.auth.apiKey.ApiKey
+import com.mongodb.stitch.android.auth.apiKey.ApiKeyProvider
+import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * Test public methods of StitchClient, running through authentication
+ * and pipeline flows. Full service test.
+ */
+@RunWith(AndroidJUnit4::class)
+class StitchClientServiceTest {
+    /** Base context from test runner */
+    private val instrumentationCtx: Context by lazy { InstrumentationRegistry.getContext() }
+    /** [StitchClient] for this test */
+    private val stitchClient: StitchClient by lazy {
+        StitchClient(
+                instrumentationCtx,
+                "test-mtkeh",
+                "http://10.4.116.202:8080"
+        )
+    }
+
+    private val email: String = "android_service_test@stitch.com"
+    private val pass: String = "android"
+
+    @Before
+    fun setup() {
+        clearStitchClient(instrumentationCtx, stitchClient)
+    }
+
+    @After
+    fun clear() {
+        if (stitchClient.isAuthenticated) {
+            await(stitchClient.logout())
+            await(stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+            val auth = stitchClient.auth!!
+            await(auth.fetchSelfApiKeys()).forEach {
+                await(auth.deleteSelfApiKey(it.id))
+            }
+        }
+    }
+
+    /**
+     * Test creating and logging in with an api key
+     */
+    @Test
+    fun testCreateSelfApiKey() {
+        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        val auth = stitchClient.auth?.let { it } ?: return
+
+        val key = await(
+                auth.createSelfApiKey("selfApiKeyTest").addOnCompleteListener {
+                    assertThat(it.isSuccessful, it.exception)
+                }
+        )
+
+        assertThat(key != null)
+        assertThat(key.key != null)
+
+        await(this.stitchClient.logout())
+        await(this.stitchClient.logInWithProvider(ApiKeyProvider(key.key!!)).addOnCompleteListener {
+            assertThat(it.isSuccessful, it.exception)
+            assertThat(it.result.accessToken != null)
+        })
+    }
+
+    @Test
+    fun testFetchApiKey() {
+        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        val auth = stitchClient.auth?.let { it } ?: return
+
+        val key = await(
+                auth.createSelfApiKey("selfApiKeyTest").addOnCompleteListener {
+                    assertThat(it.isSuccessful, it.exception)
+                }
+        )
+
+        assertThat(key != null)
+        assertThat(key.key != null)
+
+        val partialKey = await(auth.fetchSelfApiKey(key.id))
+        assertThat(partialKey.name == key.name)
+        assertThat(partialKey.id == key.id)
+        assertThat(!partialKey.disabled)
+    }
+
+    @Test
+    fun testFetchApiKeys() {
+        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        val auth = stitchClient.auth?.let { it } ?: return
+
+        val keys: List<ApiKey> = (0..3).map {
+            await(auth
+                    .createSelfApiKey("selfApiKeyTest$it")
+                    .addOnCompleteListener {
+                assertThat(it.isSuccessful, it.exception)
+            })
+        }
+
+        keys.forEach { assertThat(it.key != null) }
+
+        val partialKeys = await(auth.fetchSelfApiKeys())
+        val partialKeysMapped = partialKeys.associateBy { it.id }
+
+        partialKeys.forEach {
+            assertThat(partialKeysMapped.containsKey(it.id))
+        }
+    }
+
+    @Test
+    fun testEnableDisableApiKey() {
+        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        val auth = stitchClient.auth?.let { it } ?: return
+
+        val key = await(
+                auth.createSelfApiKey("selfApiKeyTest").addOnCompleteListener {
+                    assertThat(it.isSuccessful, it.exception)
+                }
+        )
+
+        assertThat(key != null)
+        assertThat(key.key != null)
+
+        await(auth.disableSelfApiKey(key.id))
+
+        assertThat(await(auth.fetchSelfApiKey(key.id)).disabled)
+
+        await(auth.enableSelfApiKey(key.id))
+
+        assertThat(!await(auth.fetchSelfApiKey(key.id)).disabled)
+    }
+}

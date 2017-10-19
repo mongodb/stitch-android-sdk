@@ -20,6 +20,7 @@ import io.appflate.restmock.utils.RequestMatchers.pathEndsWith
 import org.bson.Document
 import org.json.JSONObject
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.reflect.full.declaredMemberProperties
@@ -125,55 +126,58 @@ class StitchClientTest {
                         GCM_TYPE_KEY to GCM_KEY
                 )
         )).toString()
-    }
 
-    /** Base context from test runner */
-    private val instrumentationCtx: Context = InstrumentationRegistry.getContext()
-    /** [StitchClient] for this test */
-    private var stitchClient: StitchClient? = null
-    /** matchableCall associated with [RESTMockServer] for auth provider call */
-    private var matchableCallAuth: MatchableCall? = null
-
-    @Before
-    fun setup() {
-        // start the mock server
-        RESTMockServerStarter.startSync(AndroidAssetsFileParser(instrumentationCtx), AndroidLogger())
-
-        // instantiate a new StitchClient using a dummy name and the mock baseUrl
-        val stitchClient = StitchClient(instrumentationCtx, "dummy-app", RESTMockServer.getUrl())
-        this.stitchClient = stitchClient
-
-        // clear all instances of the internal [SharedPreferences] to start with a clean slate
-        stitchClient.properties.clear()
-        stitchClient.javaClass.kotlin.declaredMemberProperties.first {
-            it.name == "_preferences"
-        }.also { it.isAccessible = true }.get(stitchClient).also {
-            (it as SharedPreferences).edit().clear().commit()
+        /** Base context from test runner */
+        private val instrumentationCtx: Context by lazy {
+            InstrumentationRegistry.getContext()
         }
 
-        // clear out the global preferences as well
-        val globPrefPath = String.format(SHARED_PREFERENCES_NAME, stitchClient.appId)
-        val globalPreferences = instrumentationCtx.getSharedPreferences(
-                globPrefPath,
-                Context.MODE_PRIVATE
-        )
-        globalPreferences.edit().clear().commit()
+        /** [StitchClient] for this test */
+        private val stitchClient: StitchClient by lazy {
+            StitchClient(instrumentationCtx, "dummy-app", RESTMockServer.getUrl())
+        }
 
-        // mock out all calls related to auth
-        RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
-        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
-                mockResponseBuilder(mockFullProviderData)
-        )
-        RESTMockServer.whenDELETE(pathEndsWith("auth")).thenReturnEmpty(200)
+        /** matchableCall associated with [RESTMockServer] for auth provider call */
+        private var matchableCallAuth: MatchableCall? = null
 
-        // mock out all calls related to pipelines
-        RESTMockServer.whenPOST(pathEndsWith("pipeline")).thenReturn(mockResponseBuilder(mockPipelineData))
+        @JvmStatic
+        @BeforeClass
+        fun setup() {
+            // start the mock server
+            RESTMockServerStarter.startSync(AndroidAssetsFileParser(instrumentationCtx), AndroidLogger())
 
-        // mock out user profile call
-        RESTMockServer.whenGET(pathEndsWith("me")).thenReturn(mockResponseBuilder(mockUserData))
+            // clear all instances of the internal [SharedPreferences] to start with a clean slate
+            stitchClient.properties.clear()
+            stitchClient.javaClass.kotlin.declaredMemberProperties.first {
+                it.name == "_preferences"
+            }.also { it.isAccessible = true }.get(stitchClient).also {
+                (it as SharedPreferences).edit().clear().commit()
+            }
 
-        // mock out push providers call
-        RESTMockServer.whenGET(pathEndsWith("push")).thenReturn(mockResponseBuilder(mockPushData))
+            // clear out the global preferences as well
+            val globPrefPath = String.format(SHARED_PREFERENCES_NAME, stitchClient.appId)
+            val globalPreferences = instrumentationCtx.getSharedPreferences(
+                    globPrefPath,
+                    Context.MODE_PRIVATE
+            )
+            globalPreferences.edit().clear().commit()
+
+            // mock out all calls related to auth
+            RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
+            matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                    mockResponseBuilder(mockFullProviderData)
+            )
+            RESTMockServer.whenDELETE(pathEndsWith("auth")).thenReturnEmpty(200)
+
+            // mock out all calls related to pipelines
+            RESTMockServer.whenPOST(pathEndsWith("pipeline")).thenReturn(mockResponseBuilder(mockPipelineData))
+
+            // mock out user profile call
+            RESTMockServer.whenGET(pathEndsWith("me")).thenReturn(mockResponseBuilder(mockUserData))
+
+            // mock out push providers call
+            RESTMockServer.whenGET(pathEndsWith("push")).thenReturn(mockResponseBuilder(mockPushData))
+        }
     }
 
     /**
@@ -185,7 +189,7 @@ class StitchClientTest {
 
         // add an auth listener to the stitchClient, asserting logged in
         // and logged out status later in this test
-        stitchClient!!.addAuthListener(object : AuthListener {
+        stitchClient.addAuthListener(object : AuthListener {
             override fun onLogin() {
                 loggedIn = true
             }
@@ -196,10 +200,10 @@ class StitchClientTest {
         })
 
         // assert that we have not authenticated yet
-        assertThat(!stitchClient!!.isAuthenticated)
+        assertThat(!stitchClient.isAuthenticated)
 
         // fetch mocked authProviders
-        await(stitchClient!!.authProviders).let {
+        await(stitchClient.authProviders).let {
             // assert all providers provided in mock are available
             assertThat(it.hasAnonymous() && it.hasEmailPassword()
                     && it.hasFacebook() && it.hasGoogle())
@@ -223,7 +227,7 @@ class StitchClientTest {
 
         RESTMockServer.replaceMatchableCall(matchableCallAuth, nextAuthCall)
         // fetch partially mocked authProviders
-        await(stitchClient!!.authProviders).let {
+        await(stitchClient.authProviders).let {
             // assert all providers provided in mock are available
             assertThat(it.hasAnonymous() && !it.hasEmailPassword()
                     && !it.hasFacebook() && it.hasGoogle())
@@ -245,38 +249,38 @@ class StitchClientTest {
         )
 
         // fetch empty mocked authProviders
-        await(stitchClient!!.authProviders).let {
+        await(stitchClient.authProviders).let {
             // assert all providers provided in mock are available
             assertThat(!it.hasAnonymous() && !it.hasEmailPassword()
                     && !it.hasFacebook() && !it.hasGoogle())
         }
 
         // log in anonymously
-        await(stitchClient!!.logInWithProvider(AnonymousAuthProvider()))
+        await(stitchClient.logInWithProvider(AnonymousAuthProvider()))
 
         // assert that the [AuthListener] we previously added has been called
         assertThat(loggedIn)
 
         // assert that isAuthenticated has been properly flagged
-        assertThat(stitchClient!!.isAuthenticated)
+        assertThat(stitchClient.isAuthenticated)
 
         // fetch the user profile and assert it has been mapped properly
         // from the mock data
-        val userProfile = await(stitchClient!!.userProfile)
+        val userProfile = await(stitchClient.auth!!.userProfile)
         assertThat(userProfile.id == FAKE_USER_ID && userProfile.identities.size == 1)
         val identity = userProfile.identities.first()
         assertThat(identity.id == FAKE_USER_ID && identity.provider == FAKE_ANON_IDENTITY)
 
         // assign the auth object in scope and assert it has been mapped
         // properly from the mock data
-        val auth = stitchClient!!.auth
+        val auth = stitchClient.auth!!.authInfo
         assertThat(auth.accessToken == FAKE_ACCESS_TOKEN && auth.deviceId == FAKE_DEVICE_ID
                 && auth.userId == FAKE_USER_ID)
 
         // log out and assert that we are no longer authenticated and that
         // the [AuthListener] has been called
-        await(stitchClient!!.logout())
-        assertThat(!stitchClient!!.isAuthenticated)
+        await(stitchClient.logout())
+        assertThat(!stitchClient.isAuthenticated)
         assertThat(!loggedIn)
     }
 
@@ -286,20 +290,20 @@ class StitchClientTest {
     @Test
     fun testPush() {
         // log in anonymously
-        await(stitchClient!!.logInWithProvider(AnonymousAuthProvider()))
+        await(stitchClient.logInWithProvider(AnonymousAuthProvider()))
 
         // fetch available pushProviders
-        val pushProviders = await(stitchClient!!.pushProviders)
+        val pushProviders = await(stitchClient.pushProviders)
 
         // assert that gcm has been properly parsed from the mock response
         assertThat(pushProviders.hasGCM())
 
         // register with the "server"
-        await(stitchClient!!.push.forProvider(pushProviders.gcm).register())
+        await(stitchClient.push.forProvider(pushProviders.gcm).register())
 
         // fetch the global preferences and assert that the config object that
         // we've saved matches what is expected
-        val globPrefPath = String.format(SHARED_PREFERENCES_NAME, stitchClient!!.appId)
+        val globPrefPath = String.format(SHARED_PREFERENCES_NAME, stitchClient.appId)
         val globalPreferences = instrumentationCtx.getSharedPreferences(globPrefPath, Context.MODE_PRIVATE)
         val doc = Document.parse(globalPreferences.getString(PREF_CONFIGS, "{}"))
 
@@ -309,7 +313,7 @@ class StitchClientTest {
         assertThat((gcmDoc[GCM_CONFIG_KEY] as Document)[GCM_SENDER_ID_KEY] == FAKE_SENDER_ID)
 
         // deregister from the "server"
-        await(stitchClient!!.push.forProvider(pushProviders.gcm).deregister())
+        await(stitchClient.push.forProvider(pushProviders.gcm).deregister())
 
         // assert that the global prefs have been properly cleared of the gcm config
         val prefs = Document.parse(globalPreferences.getString(PREF_CONFIGS, "{}"))
@@ -322,10 +326,10 @@ class StitchClientTest {
     @Test
     fun testPipeline() {
         // log in anonymously to be able to execute pipelines
-        await(stitchClient!!.logInWithProvider(AnonymousAuthProvider()))
+        await(stitchClient.logInWithProvider(AnonymousAuthProvider()))
 
         // execute a new pipeline and assert that it contains the mocked data
-        val pipelineData = await(stitchClient!!.executePipeline(PipelineStage("literal", mapOf(
+        val pipelineData = await(stitchClient.executePipeline(PipelineStage("literal", mapOf(
                 "items" to listOf(FAKE_PIPELINE_LITERAL_FOO, FAKE_PIPELINE_LITERAL_BAR)
         ))))
 
