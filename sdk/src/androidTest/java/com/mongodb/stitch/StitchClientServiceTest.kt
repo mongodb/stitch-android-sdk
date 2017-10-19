@@ -24,8 +24,8 @@ class StitchClientServiceTest {
     private val stitchClient: StitchClient by lazy {
         StitchClient(
                 instrumentationCtx,
-                "test-mtkeh",
-                "http://10.4.116.202:8080"
+                "{TEST-APP-NAME}",
+                "http://localhost:8080"
         )
     }
 
@@ -43,8 +43,8 @@ class StitchClientServiceTest {
             await(stitchClient.logout())
             await(stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
             val auth = stitchClient.auth!!
-            await(auth.fetchSelfApiKeys()).forEach {
-                await(auth.deleteSelfApiKey(it.id))
+            await(auth.fetchApiKeys()).forEach {
+                await(auth.deleteApiKey(it.id))
             }
         }
     }
@@ -58,7 +58,7 @@ class StitchClientServiceTest {
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
-                auth.createSelfApiKey("selfApiKeyTest").addOnCompleteListener {
+                auth.createApiKey("selfApiKeyTest").addOnCompleteListener {
                     assertThat(it.isSuccessful, it.exception)
                 }
         )
@@ -79,7 +79,7 @@ class StitchClientServiceTest {
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
-                auth.createSelfApiKey("selfApiKeyTest").addOnCompleteListener {
+                auth.createApiKey("selfApiKeyTest").addOnCompleteListener {
                     assertThat(it.isSuccessful, it.exception)
                 }
         )
@@ -87,7 +87,7 @@ class StitchClientServiceTest {
         assertThat(key != null)
         assertThat(key.key != null)
 
-        val partialKey = await(auth.fetchSelfApiKey(key.id))
+        val partialKey = await(auth.fetchApiKey(key.id))
         assertThat(partialKey.name == key.name)
         assertThat(partialKey.id == key.id)
         assertThat(!partialKey.disabled)
@@ -100,7 +100,7 @@ class StitchClientServiceTest {
 
         val keys: List<ApiKey> = (0..3).map {
             await(auth
-                    .createSelfApiKey("selfApiKeyTest$it")
+                    .createApiKey("selfApiKeyTest$it")
                     .addOnCompleteListener {
                 assertThat(it.isSuccessful, it.exception)
             })
@@ -108,7 +108,7 @@ class StitchClientServiceTest {
 
         keys.forEach { assertThat(it.key != null) }
 
-        val partialKeys = await(auth.fetchSelfApiKeys())
+        val partialKeys = await(auth.fetchApiKeys())
         val partialKeysMapped = partialKeys.associateBy { it.id }
 
         partialKeys.forEach {
@@ -122,7 +122,7 @@ class StitchClientServiceTest {
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
-                auth.createSelfApiKey("selfApiKeyTest").addOnCompleteListener {
+                auth.createApiKey("selfApiKeyTest").addOnCompleteListener {
                     assertThat(it.isSuccessful, it.exception)
                 }
         )
@@ -130,12 +130,12 @@ class StitchClientServiceTest {
         assertThat(key != null)
         assertThat(key.key != null)
 
-        await(auth.disableSelfApiKey(key.id))
+        await(auth.disableApiKey(key.id))
 
-        assertThat(await(auth.fetchSelfApiKey(key.id)).disabled)
+        assertThat(await(auth.fetchApiKey(key.id)).disabled)
 
-        await(auth.enableSelfApiKey(key.id))
+        await(auth.enableApiKey(key.id))
 
-        assertThat(!await(auth.fetchSelfApiKey(key.id)).disabled)
+        assertThat(!await(auth.fetchApiKey(key.id)).disabled)
     }
 }

@@ -19,7 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by jasonflax on 10/18/17.
+ * Authentication resource
  */
 public class Auth {
     private static final String TAG = "Stitch.Auth";
@@ -77,7 +77,12 @@ public class Auth {
         });
     }
 
-    public Task<ApiKey> createSelfApiKey(@NonNull final String name) {
+    /**
+     * Create an api key associated with this user
+     * @param name name of new api key
+     * @return task with new api key
+     */
+    public Task<ApiKey> createApiKey(@NonNull final String name) {
         return _stitchClient.executeRequest(
                 Request.Method.POST,
                 Paths.USER_PROFILE_API_KEYS,
@@ -97,7 +102,12 @@ public class Auth {
         });
     }
 
-    public Task<ApiKey> fetchSelfApiKey(@NonNull final String id) {
+    /**
+     * Fetch an api key associated with this user by its id
+     * @param id id of this user
+     * @return api key for this id
+     */
+    public Task<ApiKey> fetchApiKey(@NonNull final String id) {
         return _stitchClient.executeRequest(
                 Request.Method.GET,
                 String.format(
@@ -121,7 +131,11 @@ public class Auth {
         });
     }
 
-    public Task<List<ApiKey>> fetchSelfApiKeys() {
+    /**
+     * Fetch all api keys associated with this user
+     * @return list of api keys
+     */
+    public Task<List<ApiKey>> fetchApiKeys() {
         return _stitchClient.executeRequest(
                 Request.Method.GET,
                 Paths.USER_PROFILE_API_KEYS,
@@ -141,7 +155,12 @@ public class Auth {
         });
     }
 
-    public Task<Boolean> deleteSelfApiKey(@NonNull final String id) {
+    /**
+     * Delete an api key associated with this user
+     * @param id id to delete
+     * @return success boolean
+     */
+    public Task<Boolean> deleteApiKey(@NonNull final String id) {
         return _stitchClient.executeRequest(
                 Request.Method.DELETE,
                 String.format(
@@ -165,8 +184,14 @@ public class Auth {
         });
     }
 
-    private Task<Boolean> _enableDisableSelfApiKey(@NonNull final String id,
-                                                   final boolean shouldEnable) {
+    /**
+     * Enable or disable an api key associated with this user
+     * @param id id of api key
+     * @param shouldEnable whether or not the api key should be enabled
+     * @return success boolean
+     */
+    private Task<Boolean> _enableDisableApiKey(@NonNull final String id,
+                                               final boolean shouldEnable) {
         return _stitchClient.executeRequest(
                 Request.Method.PUT,
                 String.format(
@@ -198,11 +223,21 @@ public class Auth {
         });
     }
 
-    public Task<Boolean> enableSelfApiKey(@NonNull final String id) {
-        return _enableDisableSelfApiKey(id, true);
+    /**
+     * Enable an api key associated with this user
+     * @param id id of api key
+     * @return success boolean
+     */
+    public Task<Boolean> enableApiKey(@NonNull final String id) {
+        return _enableDisableApiKey(id, true);
     }
 
-    public Task<Boolean> disableSelfApiKey(@NonNull final String id) {
-        return _enableDisableSelfApiKey(id, false);
+    /**
+     * Disable an api key associated with this user
+     * @param id id of api key
+     * @return success boolean
+     */
+    public Task<Boolean> disableApiKey(@NonNull final String id) {
+        return _enableDisableApiKey(id, false);
     }
 }
