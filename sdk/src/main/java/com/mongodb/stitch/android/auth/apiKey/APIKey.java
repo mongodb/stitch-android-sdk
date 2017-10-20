@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * Api Key offers a secondary form of login.
  */
-public final class ApiKey {
+public final class APIKey {
     private static class Fields {
         private static final String ID = "_id";
         private static final String KEY = "key";
@@ -23,17 +23,10 @@ public final class ApiKey {
     private final boolean _disabled;
 
     @JsonCreator
-    private ApiKey(@JsonProperty(Fields.ID)
-                   @NonNull
-                   final String id,
-                   @JsonProperty(Fields.KEY)
-                   @Nullable
-                   final String key,
-                   @JsonProperty(ApiKey.Fields.NAME)
-                   @NonNull
-                   final String name,
-                   @JsonProperty(ApiKey.Fields.DISABLED)
-                   final boolean disabled) {
+    private APIKey(@JsonProperty(Fields.ID) @NonNull final String id,
+                   @JsonProperty(Fields.KEY) @Nullable final String key,
+                   @JsonProperty(APIKey.Fields.NAME) @NonNull final String name,
+                   @JsonProperty(APIKey.Fields.DISABLED) final boolean disabled) {
         this._id = id;
         this._key = key;
         this._name = name;
@@ -46,19 +39,19 @@ public final class ApiKey {
         return this._id;
     }
 
-    @JsonProperty(Fields.ID)
+    @JsonProperty(Fields.KEY)
     @Nullable
     public String getKey() {
         return this._key;
     }
 
-    @JsonProperty(Fields.ID)
+    @JsonProperty(Fields.NAME)
     @NonNull
     public String getName() {
         return this._name;
     }
 
-    @JsonProperty(Fields.ID)
+    @JsonProperty(Fields.DISABLED)
     public boolean getDisabled() {
         return this._disabled;
     }

@@ -4,8 +4,8 @@ import android.content.Context
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
 import com.mongodb.stitch.android.StitchClient
-import com.mongodb.stitch.android.auth.apiKey.ApiKey
-import com.mongodb.stitch.android.auth.apiKey.ApiKeyProvider
+import com.mongodb.stitch.android.auth.apiKey.APIKey
+import com.mongodb.stitch.android.auth.apiKey.APIKeyProvider
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider
 import org.junit.After
 import org.junit.Before
@@ -39,13 +39,15 @@ class StitchClientServiceTest {
 
     @After
     fun clear() {
-        if (stitchClient.isAuthenticated) {
-            await(stitchClient.logout())
-            await(stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
-            val auth = stitchClient.auth!!
-            await(auth.fetchApiKeys()).forEach {
-                await(auth.deleteApiKey(it.id))
-            }
+        if (!stitchClient.isAuthenticated) {
+            return
+        }
+
+        await(stitchClient.logout())
+        await(stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        val auth = stitchClient.auth!!
+        await(auth.fetchApiKeys()).forEach {
+            await(auth.deleteApiKey(it.id))
         }
     }
 
@@ -67,7 +69,7 @@ class StitchClientServiceTest {
         assertThat(key.key != null)
 
         await(this.stitchClient.logout())
-        await(this.stitchClient.logInWithProvider(ApiKeyProvider(key.key!!)).addOnCompleteListener {
+        await(this.stitchClient.logInWithProvider(APIKeyProvider(key.key!!)).addOnCompleteListener {
             assertThat(it.isSuccessful, it.exception)
             assertThat(it.result.accessToken != null)
         })
@@ -98,7 +100,7 @@ class StitchClientServiceTest {
         await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
         val auth = stitchClient.auth?.let { it } ?: return
 
-        val keys: List<ApiKey> = (0..3).map {
+        val keys: List<APIKey> = (0..3).map {
             await(auth
                     .createApiKey("selfApiKeyTest$it")
                     .addOnCompleteListener {

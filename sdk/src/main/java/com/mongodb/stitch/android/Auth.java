@@ -10,7 +10,7 @@ import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.auth.AuthInfo;
 import com.mongodb.stitch.android.auth.UserProfile;
-import com.mongodb.stitch.android.auth.apiKey.ApiKey;
+import com.mongodb.stitch.android.auth.apiKey.APIKey;
 
 import org.bson.Document;
 
@@ -82,20 +82,20 @@ public class Auth {
      * @param name name of new api key
      * @return task with new api key
      */
-    public Task<ApiKey> createApiKey(@NonNull final String name) {
+    public Task<APIKey> createApiKey(@NonNull final String name) {
         return _stitchClient.executeRequest(
                 Request.Method.POST,
                 Paths.USER_PROFILE_API_KEYS,
                 new Document("name", name).toJson(),
                 true,
                 true
-        ).continueWith(new Continuation<String, ApiKey>() {
+        ).continueWith(new Continuation<String, APIKey>() {
             @Override
-            public ApiKey then(@NonNull final Task<String> task) throws Exception {
+            public APIKey then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
-                    return _objMapper.readValue(task.getResult(), ApiKey.class);
+                    return _objMapper.readValue(task.getResult(), APIKey.class);
                 } else {
-                    Log.e(TAG, "Error while creating self api key", task.getException());
+                    Log.e(TAG, "Error while creating user api key", task.getException());
                     throw task.getException();
                 }
             }
@@ -107,7 +107,7 @@ public class Auth {
      * @param id id of this user
      * @return api key for this id
      */
-    public Task<ApiKey> fetchApiKey(@NonNull final String id) {
+    public Task<APIKey> fetchApiKey(@NonNull final String id) {
         return _stitchClient.executeRequest(
                 Request.Method.GET,
                 String.format(
@@ -118,13 +118,13 @@ public class Auth {
                 null,
                 true,
                 true
-        ).continueWith(new Continuation<String, ApiKey>() {
+        ).continueWith(new Continuation<String, APIKey>() {
             @Override
-            public ApiKey then(@NonNull final Task<String> task) throws Exception {
+            public APIKey then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
-                    return _objMapper.readValue(task.getResult(), ApiKey.class);
+                    return _objMapper.readValue(task.getResult(), APIKey.class);
                 } else {
-                    Log.e(TAG, "Error while fetching self api keys", task.getException());
+                    Log.e(TAG, "Error while fetching user api keys", task.getException());
                     throw task.getException();
                 }
             }
@@ -135,20 +135,20 @@ public class Auth {
      * Fetch all api keys associated with this user
      * @return list of api keys
      */
-    public Task<List<ApiKey>> fetchApiKeys() {
+    public Task<List<APIKey>> fetchApiKeys() {
         return _stitchClient.executeRequest(
                 Request.Method.GET,
                 Paths.USER_PROFILE_API_KEYS,
                 null,
                 true,
                 true
-        ).continueWith(new Continuation<String, List<ApiKey>>() {
+        ).continueWith(new Continuation<String, List<APIKey>>() {
             @Override
-            public List<ApiKey> then(@NonNull final Task<String> task) throws Exception {
+            public List<APIKey> then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
-                    return Arrays.asList(_objMapper.readValue(task.getResult(), ApiKey[].class));
+                    return Arrays.asList(_objMapper.readValue(task.getResult(), APIKey[].class));
                 } else {
-                    Log.e(TAG, "Error while fetching self api keys", task.getException());
+                    Log.e(TAG, "Error while fetching user api keys", task.getException());
                     throw task.getException();
                 }
             }
@@ -177,7 +177,7 @@ public class Auth {
                 if (task.isSuccessful()) {
                     return true;
                 } else {
-                    Log.e(TAG, "Error while deleting self api key", task.getException());
+                    Log.e(TAG, "Error while deleting user api key", task.getException());
                     throw task.getException();
                 }
             }

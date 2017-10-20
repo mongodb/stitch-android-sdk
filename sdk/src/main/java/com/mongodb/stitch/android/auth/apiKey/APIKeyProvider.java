@@ -7,16 +7,16 @@ import com.mongodb.stitch.android.auth.AuthProvider;
 import org.bson.Document;
 
 /**
- * ApiKeyProvider provides a way to authenticate using a generated apiKey.
+ * APIKeyProvider provides a way to authenticate using a generated apiKey.
  */
-public class ApiKeyProvider implements AuthProvider {
+public class APIKeyProvider implements AuthProvider {
     private static final String AUTH_TYPE = "api";
     private static final String AUTH_NAME = "key";
 
     @NonNull
     private final String _key;
 
-    public ApiKeyProvider(@NonNull final String key) {
+    public APIKeyProvider(@NonNull final String key) {
         this._key = key;
     }
 

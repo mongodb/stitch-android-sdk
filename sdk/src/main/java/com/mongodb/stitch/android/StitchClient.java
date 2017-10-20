@@ -24,8 +24,6 @@ import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.AuthInfo;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
-import com.mongodb.stitch.android.auth.UserProfile;
-import com.mongodb.stitch.android.auth.apiKey.ApiKey;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
@@ -420,7 +418,7 @@ public class StitchClient {
     /**
      * Reset a given user's password
      *
-     * @param token   token associated with this user
+     * @param token token associated with this user
      * @param tokenId id of the token associated with this user
      * @return A task containing whether or not the reset was successful
      */
