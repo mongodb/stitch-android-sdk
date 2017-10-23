@@ -34,7 +34,7 @@ class StitchClientTest {
     companion object {
         const val FAKE_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMyNTAzNjk4MDAwLCJuYW1lIjoidGVzdC1qd3QtdG9rZW4ifQ.BS2VIFFc9AI9_6xlSXZAxwfI_oueaPaJameTynQs8ZA";
         const val EXPIRED_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDg3NjkxOTksIm5hbWUiOiJ0ZXN0LWp3dC10b2tlbiJ9.ZdfK0WTpBrR-vbGVDMbkycnyP3QqQpRTXLKkkqr6tXU";
-        const val FAKE_REFRESH_TOKEN = "fake-refresh-token"
+        const val FAKE_REFRESH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMyNTAzNjk4MDAwLCJuYW1lIjoidGVzdC1qd3QtdG9rZW4ifQ.BS2VIFFc9AI9_6xlSXZAxwfI_oueaPaJameTynQs8ZA";
         const val FAKE_USER_ID = "fake-user-id"
         const val FAKE_DEVICE_ID = "fake-device-id"
 
@@ -279,7 +279,7 @@ class StitchClientTest {
         // assign the auth object in scope and assert it has been mapped
         // properly from the mock data
         val auth = stitchClient!!.auth
-        assertThat(auth.accessToken == FAKE_ACCESS_TOKEN && auth.deviceId == FAKE_DEVICE_ID
+        assertThat(auth.decodedJWT.rawToken == FAKE_ACCESS_TOKEN && auth.deviceId == FAKE_DEVICE_ID
                 && auth.userId == FAKE_USER_ID)
 
         // log out and assert that we are no longer authenticated and that

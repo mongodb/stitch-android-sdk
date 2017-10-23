@@ -11,13 +11,18 @@ import java.util.Map;
 @SuppressWarnings("WeakerAccess")
 public class DecodedJWT {
 
-    private final String[] parts;
+    private final String raw;
     private final Map<String, Object> payload;
 
     public DecodedJWT(final String jwt) {
-        parts = splitToken(jwt);
+        this.raw = jwt;
+        final String[] parts = splitToken(jwt);
         final String payloadJson = new String(Base64.decode(parts[1], Base64.URL_SAFE));
-        payload = convertFromJSON(payloadJson);
+        this.payload = convertFromJSON(payloadJson);
+    }
+
+    public String getRawToken() {
+        return raw;
     }
 
     public Long getExpiration() throws StitchException {
@@ -32,6 +37,10 @@ public class DecodedJWT {
             return (String)payload.get("name");
         }
         throw new StitchException.StitchRequestException("Malformed JWT token. The name field must be a string.");
+    }
+
+    public boolean isExpired() {
+        return System.currentTimeMillis() / 1000L >= getExpiration() - 10L;
     }
 
     private String[] splitToken(final String jwt) {

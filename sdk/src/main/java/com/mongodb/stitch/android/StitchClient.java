@@ -737,10 +737,9 @@ public class StitchClient {
     ) {
         ensureAuthenticated();
         final String url = getResourcePath(resource);
-        final String token = useRefreshToken ? getRefreshToken() : _auth.getAccessToken();
+        final DecodedJWT token = new DecodedJWT(useRefreshToken ? getRefreshToken() : _auth.getDecodedJWT().getRawToken());
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
-
-        if (!useRefreshToken && isTokenExpired(token)) {
+        if (!useRefreshToken && token.isExpired()) {
             handleInvalidSession(method, resource, body, future);
             return future.getTask();
         }
@@ -751,7 +750,7 @@ public class StitchClient {
                 body,
                 Collections.singletonMap(
                         Headers.AUTHORIZATION,
-                        GetAuthorizationBearer(token)),
+                        GetAuthorizationBearer(token.getRawToken())),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -780,11 +779,6 @@ public class StitchClient {
         _queue.add(request);
 
         return future.getTask();
-    }
-
-    private boolean isTokenExpired(final String jwt) {
-        final DecodedJWT decodedToken = new DecodedJWT(jwt);
-        return System.currentTimeMillis() / 1000L >= decodedToken.getExpiration() - 10;
     }
 
     // Pipelines
