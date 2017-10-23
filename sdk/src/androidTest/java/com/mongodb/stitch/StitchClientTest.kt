@@ -13,10 +13,10 @@ import com.mongodb.stitch.android.auth.oauth2.google.GoogleAuthProviderInfo
 import io.appflate.restmock.MatchableCall
 import io.appflate.restmock.RESTMockServer
 import io.appflate.restmock.RESTMockServerStarter
+import io.appflate.restmock.RequestsVerifier
 import io.appflate.restmock.android.AndroidAssetsFileParser
 import io.appflate.restmock.android.AndroidLogger
-import io.appflate.restmock.utils.RequestMatchers.pathContains
-import io.appflate.restmock.utils.RequestMatchers.pathEndsWith
+import io.appflate.restmock.utils.RequestMatchers.*
 import org.bson.Document
 import org.json.JSONObject
 import org.junit.Before
@@ -32,8 +32,9 @@ import kotlin.reflect.jvm.isAccessible
 @RunWith(AndroidJUnit4::class)
 class StitchClientTest {
     companion object {
-        const val FAKE_ACCESS_TOKEN = "fake-access-token"
-        const val FAKE_REFRESH_TOKEN = "fake-refresh-token"
+        const val FAKE_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMyNTAzNjk4MDAwLCJuYW1lIjoidGVzdC1qd3QtdG9rZW4ifQ.BS2VIFFc9AI9_6xlSXZAxwfI_oueaPaJameTynQs8ZA";
+        const val EXPIRED_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDg3NjkxOTksIm5hbWUiOiJ0ZXN0LWp3dC10b2tlbiJ9.ZdfK0WTpBrR-vbGVDMbkycnyP3QqQpRTXLKkkqr6tXU";
+        const val FAKE_REFRESH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjMyNTAzNjk4MDAwLCJuYW1lIjoidGVzdC1qd3QtdG9rZW4ifQ.BS2VIFFc9AI9_6xlSXZAxwfI_oueaPaJameTynQs8ZA";
         const val FAKE_USER_ID = "fake-user-id"
         const val FAKE_DEVICE_ID = "fake-device-id"
 
@@ -102,6 +103,14 @@ class StitchClientTest {
                 "deviceId" to FAKE_DEVICE_ID
         )).toString()
 
+        /** Mock data for auth object from [StitchClient.logInWithProvider] */
+        val mockExpiredAuthData = JSONObject(mapOf(
+                "accessToken" to EXPIRED_ACCESS_TOKEN,
+                "refreshToken" to FAKE_REFRESH_TOKEN,
+                "userId" to FAKE_USER_ID,
+                "deviceId" to FAKE_DEVICE_ID
+        )).toString()
+
         /** Mock data for pipeline execution from [StitchClient.executePipeline] */
         val mockPipelineData = JSONObject(mapOf(
                 "result" to arrayOf(FAKE_PIPELINE_LITERAL_FOO, FAKE_PIPELINE_LITERAL_BAR)
@@ -159,11 +168,6 @@ class StitchClientTest {
         )
         globalPreferences.edit().clear().commit()
 
-        // mock out all calls related to auth
-        RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
-        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
-                mockResponseBuilder(mockFullProviderData)
-        )
         RESTMockServer.whenDELETE(pathEndsWith("auth")).thenReturnEmpty(200)
 
         // mock out all calls related to pipelines
@@ -181,6 +185,11 @@ class StitchClientTest {
      */
     @Test
     fun testAuth() {
+        // mock out all calls related to auth
+        RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
+        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                mockResponseBuilder(mockFullProviderData)
+        )
         var loggedIn = false
 
         // add an auth listener to the stitchClient, asserting logged in
@@ -270,7 +279,7 @@ class StitchClientTest {
         // assign the auth object in scope and assert it has been mapped
         // properly from the mock data
         val auth = stitchClient!!.auth
-        assertThat(auth.accessToken == FAKE_ACCESS_TOKEN && auth.deviceId == FAKE_DEVICE_ID
+        assertThat(auth.decodedJWT.rawToken == FAKE_ACCESS_TOKEN && auth.deviceId == FAKE_DEVICE_ID
                 && auth.userId == FAKE_USER_ID)
 
         // log out and assert that we are no longer authenticated and that
@@ -281,10 +290,70 @@ class StitchClientTest {
     }
 
     /**
+     * Test authentication works with expired token
+     */
+    @Test
+    fun testAuthWithExpiredToken() {
+        // mock out all calls related to auth
+        RESTMockServer.whenPOST(pathDoesNotContain("newAccessToken")).thenReturn(mockResponseBuilder(mockExpiredAuthData))
+        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                mockResponseBuilder(mockFullProviderData)
+        )
+        RESTMockServer.whenPOST(pathEndsWith("newAccessToken")).thenReturn(mockResponseBuilder(mockAuthData))
+
+        var loggedIn = false
+        // add an auth listener to the stitchClient, asserting logged in
+        // and logged out status later in this test
+        stitchClient!!.addAuthListener(object : AuthListener {
+            override fun onLogin() {
+                loggedIn = true
+            }
+
+            override fun onLogout(lastProvider: String?) {
+                loggedIn = false
+            }
+        })
+
+        // assert that we have not authenticated yet
+        assertThat(!stitchClient!!.isAuthenticated)
+
+        val nextAuthCall = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                mockResponseBuilder(mockPartialProviderData)
+        )
+        RESTMockServer.replaceMatchableCall(matchableCallAuth, nextAuthCall)
+        RESTMockServer.replaceMatchableCall(
+                nextAuthCall,
+                RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(mockResponseBuilder("{}"))
+        )
+
+        // log in anonymously
+        await(stitchClient!!.logInWithProvider(AnonymousAuthProvider()))
+        // assert that the [AuthListener] we previously added has been called
+        assertThat(loggedIn)
+        // assert that isAuthenticated has been properly flagged
+        assertThat(stitchClient!!.isAuthenticated)
+
+        // fetch the user profile and assert it has been mapped properly
+        // from the mock data
+        val userProfile = await(stitchClient!!.userProfile)
+        assertThat(userProfile.id == FAKE_USER_ID && userProfile.identities.size == 1)
+        val identity = userProfile.identities.first()
+        assertThat(identity.id == FAKE_USER_ID && identity.provider == FAKE_ANON_IDENTITY)
+
+        // assert that /newAccessToken was only called once
+        RequestsVerifier.verifyPOST(pathEndsWith("newAccessToken")).invoked();
+    }
+
+    /**
      * Test push notification registration flow
      */
     @Test
     fun testPush() {
+        // mock out all calls related to auth
+        RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
+        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                mockResponseBuilder(mockFullProviderData)
+        )
         // log in anonymously
         await(stitchClient!!.logInWithProvider(AnonymousAuthProvider()))
 
@@ -321,6 +390,11 @@ class StitchClientTest {
      */
     @Test
     fun testPipeline() {
+        // mock out all calls related to auth
+        RESTMockServer.whenPOST(pathContains("auth")).thenReturn(mockResponseBuilder(mockAuthData))
+        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
+                mockResponseBuilder(mockFullProviderData)
+        )
         // log in anonymously to be able to execute pipelines
         await(stitchClient!!.logInWithProvider(AnonymousAuthProvider()))
 
