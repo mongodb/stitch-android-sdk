@@ -23,6 +23,7 @@ import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.Auth;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
+import com.mongodb.stitch.android.auth.DecodedJWT;
 import com.mongodb.stitch.android.auth.UserProfile;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
@@ -738,6 +739,12 @@ public class StitchClient {
         final String url = getResourcePath(resource);
         final String token = useRefreshToken ? getRefreshToken() : _auth.getAccessToken();
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
+
+        if (!useRefreshToken && isTokenExpired(token)) {
+            handleInvalidSession(method, resource, body, future);
+            return future.getTask();
+        }
+
         final AuthenticatedJsonStringRequest request = new AuthenticatedJsonStringRequest(
                 method,
                 url,
@@ -773,6 +780,11 @@ public class StitchClient {
         _queue.add(request);
 
         return future.getTask();
+    }
+
+    private boolean isTokenExpired(final String jwt) {
+        final DecodedJWT decodedToken = new DecodedJWT(jwt);
+        return System.currentTimeMillis() / 1000L >= decodedToken.getExpiration() - 10;
     }
 
     // Pipelines
