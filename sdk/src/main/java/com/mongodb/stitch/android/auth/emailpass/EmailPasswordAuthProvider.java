@@ -3,6 +3,7 @@ package com.mongodb.stitch.android.auth.emailpass;
 import android.support.annotation.NonNull;
 
 import com.mongodb.stitch.android.auth.AuthProvider;
+import com.mongodb.stitch.android.StitchClient;
 
 import org.bson.Document;
 
@@ -44,7 +45,7 @@ public class EmailPasswordAuthProvider implements AuthProvider {
     }
 
     /**
-     * Create a payload exclusively for {@link com.mongodb.stitch.android.StitchClient#register(String, String)}
+     * Create a payload exclusively for {@link StitchClient#register(String, String)}
      *
      * @return a payload containing the email and password of the registrant
      */

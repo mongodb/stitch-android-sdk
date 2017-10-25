@@ -1,9 +1,14 @@
 package com.mongodb.stitch
 
+import android.content.Context
+import android.content.SharedPreferences
 import com.google.android.gms.tasks.Task
+import com.mongodb.stitch.android.StitchClient
 import com.mongodb.stitch.android.test.BuildConfig
 import okhttp3.mockwebserver.MockResponse
 import java.util.concurrent.CountDownLatch
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.jvm.isAccessible
 
 /**
  * Convenience method that allows suspension using a [CountDownLatch].
@@ -22,6 +27,24 @@ inline fun <R> latch(count: Int = 1, block: CountDownLatch.() -> R): R {
     latch.await()
     // return the result of the block
     return r
+}
+
+fun clearStitchClient(ctx: Context, stitchClient: StitchClient) {
+    // clear all instances of the internal [SharedPreferences] to start with a clean slate
+    stitchClient.properties.clear()
+    stitchClient.javaClass.kotlin.declaredMemberProperties.first {
+        it.name == "_preferences"
+    }.also { it.isAccessible = true }.get(stitchClient).also {
+        (it as SharedPreferences).edit().clear().commit()
+    }
+
+    // clear out the global preferences as well
+    val globPrefPath = String.format(StitchClientTest.SHARED_PREFERENCES_NAME, stitchClient.appId)
+    val globalPreferences = ctx.getSharedPreferences(
+            globPrefPath,
+            Context.MODE_PRIVATE
+    )
+    globalPreferences.edit().clear().commit()
 }
 
 /**

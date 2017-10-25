@@ -11,7 +11,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.mongodb.stitch.android.StitchException.StitchRequestException;
 import static com.mongodb.stitch.android.http.ContentTypes.APPLICATION_JSON;
 import static com.mongodb.stitch.android.http.Headers.CONTENT_TYPE;
 
@@ -23,10 +22,10 @@ class StitchError {
      * @param error The network error.
      * @return An exception describing the network error.
      */
-    static StitchRequestException parseRequestError(final VolleyError error) {
+    static StitchException.StitchRequestException parseRequestError(final VolleyError error) {
 
         if (error.networkResponse == null) {
-            return new StitchRequestException(error);
+            return new StitchException.StitchRequestException(error);
         }
 
         final String data;
@@ -38,7 +37,7 @@ class StitchError {
                             StandardCharsets.UTF_8.displayName())
                     );
         } catch (final UnsupportedEncodingException e) {
-            throw new StitchRequestException(e);
+            throw new StitchException.StitchRequestException(e);
         }
 
         final String errorMsg;
@@ -54,7 +53,7 @@ class StitchError {
                     return new StitchException.StitchServiceException(errorMsg, ErrorCode.fromCodeName(errorCode));
                 }
             } catch (final JSONException e) {
-                throw new StitchRequestException(e);
+                throw new StitchException.StitchRequestException(e);
             }
         } else {
             errorMsg = data;

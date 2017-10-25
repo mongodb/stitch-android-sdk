@@ -6,6 +6,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.android.volley.Request;
@@ -20,11 +21,10 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
-import com.mongodb.stitch.android.auth.Auth;
+import com.mongodb.stitch.android.auth.AuthInfo;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
 import com.mongodb.stitch.android.auth.DecodedJWT;
-import com.mongodb.stitch.android.auth.UserProfile;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
@@ -53,7 +53,6 @@ import java.util.Properties;
 
 import static com.mongodb.stitch.android.StitchError.ErrorCode;
 import static com.mongodb.stitch.android.StitchError.parseRequestError;
-import static com.mongodb.stitch.android.StitchException.StitchAuthException;
 import static com.mongodb.stitch.android.http.Headers.GetAuthorizationBearer;
 
 /**
@@ -87,8 +86,8 @@ public class StitchClient {
     private final PushManager _pushManager;
     private final List<AuthListener> _authListeners;
 
+    @Nullable
     private Auth _auth;
-    private UserProfile _userProfile;
 
     /**
      * @param context     The Android {@link Context} that this client should be bound to.
@@ -165,7 +164,7 @@ public class StitchClient {
         return _context;
     }
 
-    // Auth Methods
+    // AuthInfo Methods
 
     /**
      * Gets the currently authenticated user. Must only be used when the client has been
@@ -173,9 +172,10 @@ public class StitchClient {
      *
      * @return The currently Authenticated user.
      */
+    @Nullable
     public Auth getAuth() {
         if (!isAuthenticated()) {
-            throw new StitchAuthException("Must first authenticate");
+            throw new StitchException.StitchAuthException("Must first authenticate");
         }
         return _auth;
     }
@@ -190,7 +190,13 @@ public class StitchClient {
 
         if (_preferences.contains(PREF_AUTH_JWT_NAME)) {
             try {
-                _auth = _objMapper.readValue(_preferences.getString(PREF_AUTH_JWT_NAME, ""), Auth.class);
+                _auth = new Auth(
+                        this,
+                        _objMapper.readValue(
+                                _preferences.getString(PREF_AUTH_JWT_NAME, ""),
+                                AuthInfo.class
+                        )
+                );
             } catch (final IOException e) {
                 throw new StitchException(e);
             }
@@ -223,50 +229,19 @@ public class StitchClient {
     }
 
     /**
-     * Fetch the current user profile
-     * @return profile of the given user
-     */
-    public Task<UserProfile> getUserProfile() {
-        if (!isAuthenticated()) {
-            Log.d(TAG, "Must log in before fetching user profile");
-            return Tasks.forException(
-                    new StitchAuthException("Must log in before fetching user profile")
-            );
-        }
-
-        return executeRequest(Request.Method.GET, Paths.USER_PROFILE).continueWith(new Continuation<String, UserProfile>() {
-            @Override
-            public UserProfile then(@NonNull Task<String> task) throws Exception {
-                if (!task.isSuccessful()) {
-                    throw task.getException();
-                }
-
-                try {
-                    _userProfile = _objMapper.readValue(task.getResult(), UserProfile.class);
-                } catch (final IOException e) {
-                    Log.e(TAG, "Error parsing user response", e);
-                    throw e;
-                }
-
-                return _userProfile;
-            }
-        });
-    }
-
-    /**
      * Logs the current user in using a specific auth provider.
      *
      * @param authProvider The provider that will handle the login.
-     * @return A task containing an {@link Auth} session that can be resolved on completion of log in.
+     * @return A task containing an {@link AuthInfo} session that can be resolved on completion of log in.
      */
-    public Task<Auth> logInWithProvider(AuthProvider authProvider) {
+    public Task<AuthInfo> logInWithProvider(AuthProvider authProvider) {
 
         if (isAuthenticated()) {
             Log.d(TAG, "Already logged in. Returning cached token");
-            return Tasks.forResult(_auth);
+            return Tasks.forResult(_auth.getAuthInfo());
         }
 
-        final TaskCompletionSource<Auth> future = new TaskCompletionSource<>();
+        final TaskCompletionSource<AuthInfo> future = new TaskCompletionSource<>();
         final String url = String.format(
                 "%s/%s/%s",
                 getResourcePath(Paths.AUTH),
@@ -281,13 +256,15 @@ public class StitchClient {
                     @Override
                     public void onResponse(final String response) {
                         try {
-                            _auth = _objMapper.readValue(response, Auth.class);
+                            _auth = new Auth(
+                                    StitchClient.this,
+                                    _objMapper.readValue(response, AuthInfo.class));
                             final RefreshTokenHolder refreshToken =
                                     _objMapper.readValue(response, RefreshTokenHolder.class);
                             _preferences.edit().putString(PREF_AUTH_JWT_NAME, response).apply();
                             _preferences.edit().putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken()).apply();
-                            _preferences.edit().putString(PREF_DEVICE_ID_NAME, _auth.getDeviceId()).apply();
-                            future.setResult(_auth);
+                            _preferences.edit().putString(PREF_DEVICE_ID_NAME, _auth.getAuthInfo().getDeviceId()).apply();
+                            future.setResult(_auth.getAuthInfo());
                             onLogin();
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
@@ -353,7 +330,8 @@ public class StitchClient {
 
     /**
      * Confirm a newly registered email in this context
-     * @param token confirmation token emailed to new user
+     *
+     * @param token   confirmation token emailed to new user
      * @param tokenId confirmation tokenId emailed to new user
      * @return A task containing whether or not the email was confirmed successfully
      */
@@ -399,6 +377,7 @@ public class StitchClient {
 
     /**
      * Send a confirmation email for a newly registered user
+     *
      * @param email email address of user
      * @return A task containing whether or not the email was sent successfully.
      */
@@ -439,6 +418,7 @@ public class StitchClient {
 
     /**
      * Reset a given user's password
+     *
      * @param token token associated with this user
      * @param tokenId id of the token associated with this user
      * @return A task containing whether or not the reset was successful
@@ -485,6 +465,7 @@ public class StitchClient {
 
     /**
      * Send a reset password email to a given email address
+     *
      * @param email email address to reset password for
      * @return A task containing whether or not the reset email was sent successfully
      */
@@ -664,6 +645,7 @@ public class StitchClient {
     private static class Paths {
         private static final String AUTH = "auth";
         private static final String USER_PROFILE = AUTH + "/me";
+        private static final String USER_PROFILE_API_KEYS = USER_PROFILE + "/api_keys";
         private static final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
         private static final String PIPELINE = "pipeline";
         private static final String PUSH = "push";
@@ -692,7 +674,7 @@ public class StitchClient {
      * @return A task containing the body of the network response that can be resolved on completion
      * of the network request.
      */
-    private Task<String> executeRequest(
+    Task<String> executeRequest(
             final int method,
             final String resource
     ) {
@@ -728,7 +710,7 @@ public class StitchClient {
      * @return A task containing the body of the network response that can be resolved on completion
      * of the network request.
      */
-    private Task<String> executeRequest(
+    Task<String> executeRequest(
             final int method,
             final String resource,
             final String body,
@@ -737,7 +719,8 @@ public class StitchClient {
     ) {
         ensureAuthenticated();
         final String url = getResourcePath(resource);
-        final DecodedJWT token = new DecodedJWT(useRefreshToken ? getRefreshToken() : _auth.getDecodedJWT().getRawToken());
+        final DecodedJWT token = new DecodedJWT(useRefreshToken ? getRefreshToken() :
+                _auth.getAuthInfo().getDecodedJWT().getRawToken());
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
         if (!useRefreshToken && token.isExpired()) {
             handleInvalidSession(method, resource, body, future);
@@ -823,14 +806,14 @@ public class StitchClient {
 
     // Private Methods
 
-    // Auth
+    // AuthInfo
 
     /**
      * Checks if the client is authenticated and if it isn't it throws.
      */
     private void ensureAuthenticated() {
         if (!isAuthenticated()) {
-            throw new StitchAuthException("Must first authenticate");
+            throw new StitchException.StitchAuthException("Must first authenticate");
         }
     }
 
@@ -857,7 +840,7 @@ public class StitchClient {
      */
     private String getRefreshToken() {
         if (!isAuthenticated()) {
-            throw new StitchAuthException("Must first authenticate");
+            throw new StitchException.StitchAuthException("Must first authenticate");
         }
 
         return _preferences.getString(PREF_AUTH_REFRESH_TOKEN_NAME, "");
@@ -870,7 +853,7 @@ public class StitchClient {
         if (_auth == null) {
             return;
         }
-        final String lastProvider = _auth.getProvider();
+        final String lastProvider = _auth.getAuthInfo().getProvider();
         _auth = null;
         _preferences.edit().remove(PREF_AUTH_JWT_NAME).apply();
         _preferences.edit().remove(PREF_AUTH_REFRESH_TOKEN_NAME).apply();
@@ -940,11 +923,12 @@ public class StitchClient {
                             throw new StitchException(e);
                         }
 
-                        _auth = _auth.withNewAccessToken(newAccessToken);
+                        _auth = new Auth(StitchClient.this,
+                                _auth.getAuthInfo().withNewAccessToken(newAccessToken));
 
                         final String authJson;
                         try {
-                            authJson = _objMapper.writeValueAsString(_auth);
+                            authJson = _objMapper.writeValueAsString(_auth.getAuthInfo());
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
                             throw new StitchException(e);

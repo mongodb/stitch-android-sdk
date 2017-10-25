@@ -6,10 +6,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Auth represents a session on Stitch for a specific user.
+ * AuthInfo represents a session on Stitch for a specific user.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Auth {
+public class AuthInfo {
+    private static class Fields {
+        private static final String ACCESS_TOKEN = "accessToken";
+        private static final String USER_ID = "userId";
+        private static final String PROVIDER = "provider";
+        private static final String DEVICE_ID = "deviceId";
+    }
 
     private final String _accessToken;
     private final String _userId;
@@ -17,7 +23,7 @@ public class Auth {
     private final String _provider;
 
     @JsonCreator
-    private Auth(
+    private AuthInfo(
             @JsonProperty(Fields.ACCESS_TOKEN)
             final String accessToken,
 
@@ -77,14 +83,7 @@ public class Auth {
      * @param newAccessToken The new access token to use.
      * @return A new session with a fresh access token.
      */
-    public Auth withNewAccessToken(final String newAccessToken) {
-        return new Auth(newAccessToken, _provider, _deviceId, _userId);
-    }
-
-    private static class Fields {
-        private static final String ACCESS_TOKEN = "accessToken";
-        private static final String USER_ID = "userId";
-        private static final String PROVIDER = "provider";
-        private static final String DEVICE_ID = "deviceId";
+    public AuthInfo withNewAccessToken(final String newAccessToken) {
+        return new AuthInfo(newAccessToken, _provider, _deviceId, _userId);
     }
 }
