@@ -1,6 +1,7 @@
 package com.mongodb.stitch.android.auth;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -45,8 +46,13 @@ public class AuthInfo {
      * @return The current access token for this session.
      */
     @JsonProperty(Fields.ACCESS_TOKEN)
-    public String getAccessToken() {
+    private String getAccessToken() {
         return _accessToken;
+    }
+
+    @JsonIgnore
+    public DecodedJWT getDecodedJWT() {
+        return new DecodedJWT(_accessToken);
     }
 
     /**

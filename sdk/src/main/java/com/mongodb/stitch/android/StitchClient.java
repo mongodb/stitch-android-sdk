@@ -24,6 +24,7 @@ import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.auth.AuthInfo;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
+import com.mongodb.stitch.android.auth.DecodedJWT;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
@@ -718,15 +719,21 @@ public class StitchClient {
     ) {
         ensureAuthenticated();
         final String url = getResourcePath(resource);
-        final String token = useRefreshToken ? getRefreshToken() : _auth.getAuthInfo().getAccessToken();
+        final DecodedJWT token = new DecodedJWT(useRefreshToken ? getRefreshToken() :
+                _auth.getAuthInfo().getDecodedJWT().getRawToken());
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
+        if (!useRefreshToken && token.isExpired()) {
+            handleInvalidSession(method, resource, body, future);
+            return future.getTask();
+        }
+
         final AuthenticatedJsonStringRequest request = new AuthenticatedJsonStringRequest(
                 method,
                 url,
                 body,
                 Collections.singletonMap(
                         Headers.AUTHORIZATION,
-                        GetAuthorizationBearer(token)),
+                        GetAuthorizationBearer(token.getRawToken())),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
