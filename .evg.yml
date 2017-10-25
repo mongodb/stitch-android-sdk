@@ -21,11 +21,30 @@ tasks:
       - command: shell.exec
         params:
           script: |
-            set -e
-            cd stitch-android-sdk
-            echo "building SDK"
-            ./gradlew build
+            echo `$ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'`
+	    echo `echo no | $ANDROID_HOME/tools/bin/avdmanager create avd --force -n test -k 'system-images;android-27;google_apis;x86'`
 
+	    $ANDROID_HOME/tools/emulator -avd test -no-skin -no-audio -no-window &
+
+	    set +e
+
+	    echo "Starting wait command"
+	    bootanim=""
+	    failcounter=0
+	    until [[ "$bootanim" =~ "stopped" ]]; do
+   	    	  bootanim=`$ANDROID_HOME/platform-tools/adb -e shell getprop init.svc.bootanim 2>&1`
+   		  echo "$bootanim"
+   		  if [[ "$bootanim" =~ "not found" ]]; then
+      		     let "failcounter += 1"
+      		     if [[ $failcounter -gt 15 ]]; then
+        	     	echo "Failed to start emulator"
+        		exit 1
+      		     fi
+   	           fi
+   		   sleep 1
+	    done
+	    echo "Done"
+	    echo `./gradlew connectedAndroidTest`
   - name: docs_dist
     depends_on:
       - name: run_tests

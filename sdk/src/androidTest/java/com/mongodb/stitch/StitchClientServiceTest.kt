@@ -24,8 +24,7 @@ class StitchClientServiceTest {
     private val stitchClient: StitchClient by lazy {
         StitchClient(
                 instrumentationCtx,
-                "{TEST-APP-NAME}",
-                "http://localhost:8080"
+                "test-uybga"
         )
     }
 
