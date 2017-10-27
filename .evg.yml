@@ -20,31 +20,71 @@ tasks:
       - func: "fetch_source"
       - command: shell.exec
         params:
+          background: true
           script: |
-            echo `$ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;google_apis;x86'`
-	    echo `echo no | $ANDROID_HOME/tools/bin/avdmanager create avd --force -n test -k 'system-images;android-27;google_apis;x86'`
+            set -e
 
-	    $ANDROID_HOME/tools/emulator -avd test -no-skin -no-audio -no-window &
+            export API=21 # 23+ does not work with ARM for now; compileSdkVersion must be the same. (See https://github.com/googlemaps/android-maps-utils/issues/207#issuecomment-144904766)
+            export TAG=google_apis
+            export ABI=armeabi-v7a
+            export ADB_INSTALL_TIMEOUT=20
+            export EMULATOR_IMAGE="system-images;android-$API;$TAG;$ABI"
+            export TOOLS=$ANDROID_HOME/tools
+            export PATH=$ANDROID_HOME:$ANDROID_HOME/emulator:$TOOLS:$TOOLS/bin:$ANDROID_HOME/platform-tools:$PATH
+            echo yes | sdkmanager "tools"
+            echo yes | sdkmanager "platforms;android-21" # Latest platform required by SDK tools
+            echo yes | sdkmanager "extras;android;m2repository"
+            echo yes | sdkmanager "extras;google;m2repository"
+            echo yes | sdkmanager "$EMULATOR_IMAGE" # Install emulator system image
+            echo no | avdmanager create avd -n stitchtest -k "$EMULATOR_IMAGE" -f --abi "$ABI" --tag "$TAG"
+            # Apparently classic is important (https://github.com/OneBusAway/onebusaway-android/issues/720#issuecomment-293204017)
+            emulator -avd stitchtest -engine classic -no-window -camera-back none -camera-front none -verbose -qemu -m 512
 
-	    set +e
+      - command: shell.exec
+        params:
+          script: |
+            set -e
 
-	    echo "Starting wait command"
-	    bootanim=""
-	    failcounter=0
-	    until [[ "$bootanim" =~ "stopped" ]]; do
-   	    	  bootanim=`$ANDROID_HOME/platform-tools/adb -e shell getprop init.svc.bootanim 2>&1`
-   		  echo "$bootanim"
-   		  if [[ "$bootanim" =~ "not found" ]]; then
-      		     let "failcounter += 1"
-      		     if [[ $failcounter -gt 15 ]]; then
-        	     	echo "Failed to start emulator"
-        		exit 1
-      		     fi
-   	           fi
-   		   sleep 1
-	    done
-	    echo "Done"
-	    echo `./gradlew connectedAndroidTest`
+            # Similar to https://github.com/albodelu/constraint-layout/blob/96ddaa8cb48ca0aa1ba8571cc911652094e16b5e/.travis.yml
+            cd stitch-android-sdk
+            export TOOLS=$ANDROID_HOME/tools
+            export PATH=$ANDROID_HOME:$ANDROID_HOME/emulator:$TOOLS:$TOOLS/bin:$ANDROID_HOME/platform-tools:$PATH
+
+            echo "Waiting for emulator to be initialized"
+            adb wait-for-device get-serialno
+
+            bootanim=""
+            failcounter=0
+            timeout_in_sec=600
+
+            echo "Waiting for emulator to be ready"
+            # Wait until boot animation stops (this can take a long time!)
+            until [[ "$bootanim" =~ "stopped" ]]; do
+              bootanim=`adb -e shell getprop init.svc.bootanim 2>&1 &`
+              if [[ "$bootanim" =~ "device not found" || "$bootanim" =~ "device offline"
+                || "$bootanim" =~ "running" ]]; then
+                let "failcounter += 1"
+                echo "Waiting for emulator to start"
+                if [[ $failcounter -gt timeout_in_sec ]]; then
+                  echo "Timeout ($timeout_in_sec seconds) reached; failed to start emulator"
+                  exit 1
+                fi
+              fi
+              sleep 1
+            done
+
+            echo "Emulator is ready"
+
+            # This apparently helps?
+            adb shell settings put global window_animation_scale 0 &
+            adb shell settings put global transition_animation_scale 0 &
+            adb shell settings put global animator_duration_scale 0 &
+            sleep 30
+            adb shell input keyevent 82 &
+
+            # This will take a really long time!
+            ./gradlew check connectedCheck
+
   - name: docs_dist
     depends_on:
       - name: run_tests
