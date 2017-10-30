@@ -45,7 +45,7 @@ public class Auth {
         this._objMapper = CustomObjectMapper.createObjectMapper();
     }
 
-    public AuthInfo getAuthInfo() {
+    AuthInfo getAuthInfo() {
         return this._authInfo;
     }
 

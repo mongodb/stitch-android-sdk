@@ -70,7 +70,7 @@ class StitchClientServiceTest {
         await(this.stitchClient.logout())
         await(this.stitchClient.logInWithProvider(APIKeyProvider(key.key!!)).addOnCompleteListener {
             assertThat(it.isSuccessful, it.exception)
-            assertThat(it.result.decodedJWT != null)
+            assertThat(it.result != null)
         })
     }
 

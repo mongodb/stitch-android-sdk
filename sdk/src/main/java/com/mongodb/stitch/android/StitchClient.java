@@ -158,6 +158,11 @@ public class StitchClient {
     }
 
     /**
+     * @return the current user's ID
+     */
+    public String getUserId() { return _auth.getAuthInfo().getUserId(); }
+
+    /**
      * @return The Android {@link Context} that this client is bound to.
      */
     public Context getContext() {
@@ -234,14 +239,14 @@ public class StitchClient {
      * @param authProvider The provider that will handle the login.
      * @return A task containing an {@link AuthInfo} session that can be resolved on completion of log in.
      */
-    public Task<AuthInfo> logInWithProvider(AuthProvider authProvider) {
+    public Task<String> logInWithProvider(AuthProvider authProvider) {
 
         if (isAuthenticated()) {
             Log.d(TAG, "Already logged in. Returning cached token");
-            return Tasks.forResult(_auth.getAuthInfo());
+            return Tasks.forResult(_auth.getAuthInfo().getUserId());
         }
 
-        final TaskCompletionSource<AuthInfo> future = new TaskCompletionSource<>();
+        final TaskCompletionSource<String> future = new TaskCompletionSource<>();
         final String url = String.format(
                 "%s/%s/%s",
                 getResourcePath(Paths.AUTH),
@@ -264,7 +269,7 @@ public class StitchClient {
                             _preferences.edit().putString(PREF_AUTH_JWT_NAME, response).apply();
                             _preferences.edit().putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken()).apply();
                             _preferences.edit().putString(PREF_DEVICE_ID_NAME, _auth.getAuthInfo().getDeviceId()).apply();
-                            future.setResult(_auth.getAuthInfo());
+                            future.setResult(_auth.getAuthInfo().getUserId());
                             onLogin();
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
