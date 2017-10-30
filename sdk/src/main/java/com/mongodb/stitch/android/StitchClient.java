@@ -160,7 +160,10 @@ public class StitchClient {
     /**
      * @return the current user's ID
      */
-    public String getUserId() { return _auth.getAuthInfo().getUserId(); }
+    @Nullable
+    public String getUserId() {
+        return getAuth().getAuthInfo().getUserId();
+    }
 
     /**
      * @return The Android {@link Context} that this client is bound to.
