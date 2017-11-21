@@ -649,7 +649,6 @@ public class StitchClient {
 
         private final String USER_PROFILE = "auth/profile";
         private final String USER_PROFILE_API_KEYS = USER_PROFILE + "/api_keys";
-        private final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
         private final String FUNCTIONS = String.format("app/%s/functions/call", _clientAppId);
         private final String PUSH = String.format("app/%s/push/providers", _clientAppId);
         private final String USERPASS_REGISTER = "/register";

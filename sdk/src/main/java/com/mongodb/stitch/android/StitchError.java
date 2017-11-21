@@ -103,6 +103,6 @@ public class StitchError {
 
     private static class Fields {
         private static final String ERROR = "error";
-        private static final String ERROR_CODE = "errorCode";
+        private static final String ERROR_CODE = "error_code";
     }
 }
