@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.android.gms.tasks.Task
 import com.mongodb.stitch.android.StitchClient
+import com.mongodb.stitch.android.push.PushClient.SHARED_PREFERENCES_NAME
 import com.mongodb.stitch.android.test.BuildConfig
 import okhttp3.mockwebserver.MockResponse
 import java.util.concurrent.CountDownLatch
@@ -39,7 +40,7 @@ fun clearStitchClient(ctx: Context, stitchClient: StitchClient) {
     }
 
     // clear out the global preferences as well
-    val globPrefPath = String.format(StitchClientTest.SHARED_PREFERENCES_NAME, stitchClient.appId)
+    val globPrefPath = String.format(SHARED_PREFERENCES_NAME, stitchClient.appId)
     val globalPreferences = ctx.getSharedPreferences(
             globPrefPath,
             Context.MODE_PRIVATE
