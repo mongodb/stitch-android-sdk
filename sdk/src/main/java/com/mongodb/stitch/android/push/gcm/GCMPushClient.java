@@ -5,6 +5,9 @@ import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.gcm.GcmPubSub;
@@ -16,7 +19,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.mongodb.stitch.android.StitchClient;
 import com.mongodb.stitch.android.StitchException;
-import com.mongodb.stitch.android.PipelineStage;
+import com.mongodb.stitch.android.http.Volley;
 import com.mongodb.stitch.android.push.PushClient;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -24,8 +27,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.bson.Document;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+
+import static com.mongodb.stitch.android.StitchError.parseRequestError;
 
 /**
  * GCMPushClient is the {@link PushClient} for GCM. It handles the logic of registering and
@@ -300,20 +303,31 @@ public class GCMPushClient extends PushClient {
      * @return A task that can be resolved upon registering the token with Stitch.
      */
     private Task<Void> registerWithServer(final String registrationToken) {
-        final Map<String, Object> request = getRegisterPushDeviceRequest(registrationToken);
-        return getStitchClient().executePipeline(new PipelineStage(
-                Actions.REGISTER_PUSH, request))
-                .continueWith(new Continuation<List<Object>, Void>() {
-                    @Override
-                    public Void then(@NonNull Task<List<Object>> task) throws Exception {
-                        if (!task.isSuccessful()) {
-                            throw task.getException();
-                        }
+        final Document parameters = getRegisterPushDeviceRequest(registrationToken);
 
+        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
+
+        final Volley.JsonStringRequest request = new Volley.JsonStringRequest(
+                Request.Method.PUT,
+                getResourcePath(routes.getPushProvidersRegistartionRoute(this._info.getService())),
+                parameters.toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
                         addInfoToConfigs(_info);
-                        return null;
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while registering push provider with server", error);
+                        future.setException(parseRequestError(error));
                     }
                 });
+        request.setTag(this);
+        queue.add(request);
+
+        return future.getTask();
     }
 
     /**
@@ -322,20 +336,31 @@ public class GCMPushClient extends PushClient {
      * @return A task that can be resolved upon deregistering the device from Stitch.
      */
     private Task<Void> deregisterWithServer() {
-        final Map<String, Object> request = getDeregisterPushDeviceRequest();
-        return getStitchClient().executePipeline(new PipelineStage(
-                Actions.DEREGISTER_PUSH, request))
-                .continueWith(new Continuation<List<Object>, Void>() {
-                    @Override
-                    public Void then(@NonNull Task<List<Object>> task) throws Exception {
-                        if (!task.isSuccessful()) {
-                            throw task.getException();
-                        }
+        final Document parameters = getDeregisterPushDeviceRequest();
 
+        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
+
+        final Volley.JsonStringRequest request = new Volley.JsonStringRequest(
+                Request.Method.DELETE,
+                getResourcePath(routes.getPushProvidersRegistartionRoute(this._info.getService())),
+                parameters.toJson(),
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(final String response) {
                         removeInfoFromConfigs(_info);
-                        return null;
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(final VolleyError error) {
+                        Log.e(TAG, "Error while deregistering push provider with server", error);
+                        future.setException(parseRequestError(error));
                     }
                 });
+        request.setTag(this);
+        queue.add(request);
+
+        return future.getTask();
     }
 
     /**

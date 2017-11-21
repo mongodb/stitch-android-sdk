@@ -11,8 +11,8 @@ import org.bson.Document;
  * EmailPasswordAuthProvider provides a way to authenticate using an email and password.
  */
 public class EmailPasswordAuthProvider implements AuthProvider {
-    private static final String AUTH_TYPE = "local";
-    private static final String AUTH_NAME = "userpass";
+    private static final String AUTH_TYPE = "local-userpass";
+    private static final String AUTH_NAME = "local-userpass";
 
     private static final String KEY_USERNAME = "username";
     private static final String KEY_EMAIL = "email";

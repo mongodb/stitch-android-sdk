@@ -26,8 +26,8 @@ public class Auth {
 
     private static final class Paths {
         private static final String AUTH = "auth";
-        private static final String USER_PROFILE = AUTH + "/me";
-        private static final String USER_PROFILE_API_KEYS = USER_PROFILE + "/api_keys";
+        private static final String USER_PROFILE = AUTH + "/profile";
+        private static final String USER_PROFILE_API_KEYS = AUTH + "/api_keys";
     }
 
     @NonNull

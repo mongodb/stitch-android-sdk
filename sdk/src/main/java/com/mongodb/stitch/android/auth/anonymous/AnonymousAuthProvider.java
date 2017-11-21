@@ -9,8 +9,8 @@ import org.bson.Document;
  */
 public class AnonymousAuthProvider implements AuthProvider {
 
-    private static final String AUTH_TYPE = "anon";
-    private static final String AUTH_NAME = "user";
+    private static final String AUTH_TYPE = "anon-user";
+    private static final String AUTH_NAME = "anon-user";
 
     @Override
     public String getType() {

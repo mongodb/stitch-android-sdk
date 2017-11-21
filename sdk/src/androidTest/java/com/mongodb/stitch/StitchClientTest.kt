@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
 import com.mongodb.stitch.android.AuthListener
-import com.mongodb.stitch.android.PipelineStage
 import com.mongodb.stitch.android.StitchClient
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.android.auth.oauth2.facebook.FacebookAuthProviderInfo
@@ -235,9 +234,9 @@ class StitchClientTest {
             // respective ids
             when (it) {
                 is GoogleAuthProviderInfo ->
-                    assertThat(it.clientId == FAKE_GOOGLE_CLIENT_ID)
+                    assertThat(it.config.clientId == FAKE_GOOGLE_CLIENT_ID)
                 is FacebookAuthProviderInfo ->
-                    assertThat(it.applicationId == FAKE_FACEBOOK_CLIENT_ID)
+                    assertThat(it.config.clientId == FAKE_FACEBOOK_CLIENT_ID)
             }
         }
 
@@ -259,7 +258,7 @@ class StitchClientTest {
             // respective ids
             when (it) {
                 is GoogleAuthProviderInfo ->
-                    assertThat(it.clientId == FAKE_GOOGLE_CLIENT_ID)
+                    assertThat(it.config.clientId == FAKE_GOOGLE_CLIENT_ID)
             }
         }
 
@@ -400,27 +399,5 @@ class StitchClientTest {
         // assert that the global prefs have been properly cleared of the gcm config
         val prefs = Document.parse(globalPreferences.getString(PREF_CONFIGS, "{}"))
         assertThat(prefs.isEmpty())
-    }
-
-    /**
-     * Test pipeline flow
-     */
-    @Test
-    fun testPipeline() {
-        // mock out all calls related to auth
-        matchableCallAuth = RESTMockServer.whenGET(pathEndsWith("auth")).thenReturn(
-                mockResponseBuilder(mockFullProviderData)
-        )
-        // log in anonymously to be able to execute pipelines
-        await(stitchClient.logInWithProvider(AnonymousAuthProvider()))
-
-        // execute a new pipeline and assert that it contains the mocked data
-        val pipelineData = await(stitchClient.executePipeline(PipelineStage("literal", mapOf(
-                "items" to listOf(FAKE_PIPELINE_LITERAL_FOO, FAKE_PIPELINE_LITERAL_BAR)
-        ))))
-
-        assertThat(pipelineData.containsAll(
-                listOf(FAKE_PIPELINE_LITERAL_FOO, FAKE_PIPELINE_LITERAL_BAR))
-        )
     }
 }
