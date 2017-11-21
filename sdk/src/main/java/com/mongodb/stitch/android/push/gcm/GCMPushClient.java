@@ -309,7 +309,7 @@ public class GCMPushClient extends PushClient {
 
         final Volley.JsonStringRequest request = new Volley.JsonStringRequest(
                 Request.Method.PUT,
-                getResourcePath(routes.getPushProvidersRegistartionRoute(this._info.getService())),
+                getResourcePath(routes.getPushProvidersRegistrationRoute(this._info.getService())),
                 parameters.toJson(),
                 new Response.Listener<String>() {
                     @Override
@@ -342,7 +342,7 @@ public class GCMPushClient extends PushClient {
 
         final Volley.JsonStringRequest request = new Volley.JsonStringRequest(
                 Request.Method.DELETE,
-                getResourcePath(routes.getPushProvidersRegistartionRoute(this._info.getService())),
+                getResourcePath(routes.getPushProvidersRegistrationRoute(this._info.getService())),
                 parameters.toJson(),
                 new Response.Listener<String>() {
                     @Override

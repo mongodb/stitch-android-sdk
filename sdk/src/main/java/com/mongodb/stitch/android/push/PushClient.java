@@ -19,7 +19,7 @@ public abstract class PushClient {
         public final String PUSH_PROVIDERS_ROUTE =
                 String.format("app/%s/push/providers", _stitchClient.getAppId());
 
-        public String getPushProvidersRegistartionRoute(String provider) {
+        public String getPushProvidersRegistrationRoute(String provider) {
             return String.format("%s/%s/registration", PUSH_PROVIDERS_ROUTE, provider);
         }
     }

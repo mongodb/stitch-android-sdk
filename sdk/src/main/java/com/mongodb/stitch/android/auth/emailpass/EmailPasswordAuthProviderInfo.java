@@ -26,10 +26,10 @@ public class EmailPasswordAuthProviderInfo extends AuthProviderInfo {
         private String _emailConfirmationUrl;
         private String _resetPasswordUrl;
 
-        public Config(@JsonProperty(Fields.EMAIL_CONFIRMATION_URL)
-                      @NonNull String emailConfirmationUrl,
-                      @JsonProperty(Fields.RESET_PASSWORD_URL)
-                      @NonNull String resetPasswordUrl) {
+        public Config(@JsonProperty(Fields.EMAIL_CONFIRMATION_URL) @NonNull
+                      String emailConfirmationUrl,
+                      @JsonProperty(Fields.RESET_PASSWORD_URL) @NonNull
+                      String resetPasswordUrl) {
             this._emailConfirmationUrl = emailConfirmationUrl;
             this._resetPasswordUrl = resetPasswordUrl;
         }
