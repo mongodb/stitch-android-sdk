@@ -553,7 +553,6 @@ public class StitchClient {
                 new Response.Listener<JSONArray>() {
                     @Override
                     public void onResponse(final JSONArray response) {
-                        System.out.println(response);
                         final AvailableAuthProviders.Builder builder = new AvailableAuthProviders.Builder();
                         for (int i = 0; i < response.length(); i++) {
                             try {
@@ -606,20 +605,18 @@ public class StitchClient {
         return future.getTask();
     }
 
-    public Task<Object> executeFunction(String name, BsonValue... args) {
+    public Task<Object> executeFunction(String name, Object... args) {
         return executeServiceFunction(name, null, args);
     }
 
     public Task<Object> executeServiceFunction(String name, String serviceName, Object... args) {
         ensureAuthenticated();
-        Document doc = new Document("name", name);
-        doc.put("arguments", CustomBsonConverter.fromArray(args));
+        final Document doc = new Document("name", name);
+        doc.put("arguments", new CustomBsonConverter().fromArray(args));
         if (serviceName != null) {
             doc.put("service", serviceName);
         }
 
-        String json = doc.toJson();
-        System.out.println(json);
         return executeRequest(
                 Request.Method.POST,
                 routes.FUNCTIONS,
@@ -647,8 +644,6 @@ public class StitchClient {
             return String.format("app/%s/auth/providers/%s/login", _clientAppId, providerType);
         }
 
-        private final String USER_PROFILE = "auth/profile";
-        private final String USER_PROFILE_API_KEYS = USER_PROFILE + "/api_keys";
         private final String FUNCTIONS = String.format("app/%s/functions/call", _clientAppId);
         private final String PUSH = String.format("app/%s/push/providers", _clientAppId);
         private final String USERPASS_REGISTER = "/register";

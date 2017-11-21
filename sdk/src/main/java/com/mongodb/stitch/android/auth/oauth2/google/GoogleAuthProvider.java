@@ -12,7 +12,6 @@ import static com.mongodb.stitch.android.auth.oauth2.OAuth2.Fields;
  */
 public class GoogleAuthProvider implements AuthProvider {
 
-
     private static final String AUTH_NAME = "google";
 
     private final String _authCode;
@@ -34,11 +33,6 @@ public class GoogleAuthProvider implements AuthProvider {
     @Override
     public String getType() {
         return AUTH_TYPE;
-    }
-
-    @Override
-    public String getName() {
-        return AUTH_NAME;
     }
 
     @Override

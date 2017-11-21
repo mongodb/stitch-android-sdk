@@ -12,7 +12,6 @@ import org.bson.Document;
  */
 public class EmailPasswordAuthProvider implements AuthProvider {
     private static final String AUTH_TYPE = "local-userpass";
-    private static final String AUTH_NAME = "local-userpass";
 
     private static final String KEY_USERNAME = "username";
     private static final String KEY_EMAIL = "email";
@@ -32,11 +31,6 @@ public class EmailPasswordAuthProvider implements AuthProvider {
 
     public String getPassword() {
         return password;
-    }
-
-    @Override
-    public String getName() {
-        return AUTH_NAME;
     }
 
     @Override

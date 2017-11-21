@@ -36,11 +36,6 @@ public class FacebookAuthProvider implements AuthProvider {
     }
 
     @Override
-    public String getName() {
-        return AUTH_NAME;
-    }
-
-    @Override
     public Document getAuthPayload() {
         final Document payload = new Document();
         payload.put(Fields.ACCESS_TOKEN, _accessToken);

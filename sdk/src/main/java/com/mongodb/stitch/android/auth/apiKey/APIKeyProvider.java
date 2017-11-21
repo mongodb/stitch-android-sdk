@@ -11,7 +11,6 @@ import org.bson.Document;
  */
 public class APIKeyProvider implements AuthProvider {
     private static final String AUTH_TYPE = "api-key";
-    private static final String AUTH_NAME = "api-key";
 
     @NonNull
     private final String _key;
@@ -23,11 +22,6 @@ public class APIKeyProvider implements AuthProvider {
     @Override
     public String getType() {
         return AUTH_TYPE;
-    }
-
-    @Override
-    public String getName() {
-        return AUTH_NAME;
     }
 
     @Override

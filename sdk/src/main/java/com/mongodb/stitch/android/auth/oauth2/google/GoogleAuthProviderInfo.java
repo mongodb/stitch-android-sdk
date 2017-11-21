@@ -76,13 +76,11 @@ public class GoogleAuthProviderInfo extends AuthProviderInfo {
     private Config _config;
 
     @JsonCreator
-    public GoogleAuthProviderInfo(@JsonProperty(AuthProviderInfo.Fields.ID) @NonNull final String id,
-                                  @JsonProperty(AuthProviderInfo.Fields.TYPE) @Nullable final String type,
+    public GoogleAuthProviderInfo(@JsonProperty(AuthProviderInfo.Fields.TYPE) @Nullable final String type,
                                   @JsonProperty(AuthProviderInfo.Fields.NAME) @NonNull final String name,
-                                  @JsonProperty(AuthProviderInfo.Fields.DISABLED) final boolean disabled,
                                   @JsonProperty(CONFIG) @NonNull final Config config,
                                   @JsonProperty(METADATA_FIELDS) @NonNull final List<MetadataField> metadataFields) {
-        super(id, type, name, disabled);
+        super(type, name);
         this._config = config;
         this._metadataFields = metadataFields;
     }

@@ -72,12 +72,10 @@ public class FacebookAuthProviderInfo extends AuthProviderInfo {
     private Config _config;
 
     @JsonCreator
-    public FacebookAuthProviderInfo(@JsonProperty(AuthProviderInfo.Fields.ID) @NonNull final String id,
-                                  @JsonProperty(AuthProviderInfo.Fields.TYPE) @Nullable final String type,
-                                  @JsonProperty(AuthProviderInfo.Fields.NAME) @NonNull final String name,
-                                  @JsonProperty(AuthProviderInfo.Fields.DISABLED) final boolean disabled,
-                                  @JsonProperty("config") @NonNull final Config config) {
-        super(id, type, name, disabled);
+    public FacebookAuthProviderInfo(@JsonProperty(AuthProviderInfo.Fields.TYPE) @Nullable final String type,
+                                    @JsonProperty(AuthProviderInfo.Fields.NAME) @NonNull final String name,
+                                    @JsonProperty("config") @NonNull final Config config) {
+        super(type, name);
         this._config = config;
     }
 

@@ -17,7 +17,7 @@ import java.io.IOException;
  * CustomObjectMapper is responsible for handling the serialization and deserialization of JSON
  * objects with special serialization support for {@link Document}s and {@link ObjectId}s
  */
-public class CustomObjectMapper {
+class CustomObjectMapper {
 
     private static ObjectMapper _singleton;
 

@@ -14,11 +14,6 @@ public interface AuthProvider {
     String getType();
 
     /**
-     * @return The name of this provider.
-     */
-    String getName();
-
-    /**
      * @return The JSON payload containing authentication material.
      */
     Document getAuthPayload();

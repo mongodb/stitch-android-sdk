@@ -1,6 +1,5 @@
 package com.mongodb.stitch.android;
 
-import org.bson.BSONException;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -11,7 +10,6 @@ import org.bson.BsonInvalidOperationException;
 import org.bson.BsonNull;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -19,12 +17,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by jasonflax on 11/21/17.
- */
+class CustomBsonConverter {
+    private int _depthCounter = 0;
 
-public class CustomBsonConverter {
-    public static BsonArray fromArray(Object[] array) {
+    BsonArray fromArray(Object[] array) {
         BsonArray bsonArray = new BsonArray();
 
         for (Object o : array) {
@@ -34,7 +30,7 @@ public class CustomBsonConverter {
         return bsonArray;
     }
 
-    public static BsonArray fromList(List list) {
+    BsonArray fromList(List list) {
         BsonArray bsonArray = new BsonArray();
 
         for (Object o : list) {
@@ -44,7 +40,7 @@ public class CustomBsonConverter {
         return bsonArray;
     }
 
-    public static BsonDocument fromMap(Map map) {
+    BsonDocument fromMap(Map map) {
         List<BsonElement> bsonElements = new ArrayList<>();
         for (Object entry : map.entrySet()) {
             if (entry instanceof Map.Entry) {
@@ -64,7 +60,7 @@ public class CustomBsonConverter {
         return new BsonDocument(bsonElements);
     }
 
-    public static BsonValue fromObject(Object arg) {
+    BsonValue fromObject(Object arg) {
         if (arg == null) {
             return new BsonNull();
         } if (arg instanceof Integer) {
@@ -78,6 +74,10 @@ public class CustomBsonConverter {
         } else if (arg instanceof Boolean) {
             return new BsonBoolean((boolean) arg);
         } else if (arg instanceof Map) {
+            _depthCounter++;
+            if (_depthCounter > 100) {
+                throw new BsonInvalidOperationException("Document was too deep");
+            }
             return fromMap((Map)arg);
         } else if (arg instanceof List) {
             return fromList((List)arg);

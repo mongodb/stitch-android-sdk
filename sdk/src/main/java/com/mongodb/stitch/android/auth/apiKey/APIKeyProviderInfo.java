@@ -16,10 +16,8 @@ public class APIKeyProviderInfo extends AuthProviderInfo {
     public static final String FQ_NAME = "api-key";
 
     @JsonCreator
-    public APIKeyProviderInfo(@JsonProperty(Fields.ID) @NonNull final String id,
-                              @JsonProperty(Fields.TYPE) @Nullable final String type,
-                              @JsonProperty(Fields.NAME) @NonNull final String name,
-                              @JsonProperty(Fields.DISABLED) final boolean disabled) {
-        super(id, type, name, disabled);
+    public APIKeyProviderInfo(@JsonProperty(Fields.TYPE) @Nullable final String type,
+                              @JsonProperty(Fields.NAME) @NonNull final String name) {
+        super(type, name);
     }
 }

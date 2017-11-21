@@ -27,8 +27,7 @@ class StitchClientServiceTest {
     private val stitchClient: StitchClient by lazy {
         StitchClient(
                 instrumentationCtx,
-                "android-zgeec",
-                "https://stitch-qa.mongodb.com"
+                "test-uybga"
         )
     }
 
@@ -56,8 +55,7 @@ class StitchClientServiceTest {
 
     @Test
     fun testGetAuthProviders() {
-        val providers = await(this.stitchClient.authProviders)
-        print(providers)
+        await(this.stitchClient.authProviders)
     }
 
     /**
