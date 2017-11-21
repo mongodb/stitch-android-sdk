@@ -901,7 +901,7 @@ public class StitchClient {
      * @return A task that can resolved upon completion of refreshing the access token.
      */
     private Task<Void> refreshAccessToken() {
-        return executeRequest(Request.Method.POST, routes.NEW_ACCESS_TOKEN, null, false, true)
+        return executeRequest(Request.Method.POST, routes.AUTH_SESSION, null, false, true)
                 .continueWith(new Continuation<String, Void>() {
                     @Override
                     public Void then(@NonNull Task<String> task) throws Exception {
