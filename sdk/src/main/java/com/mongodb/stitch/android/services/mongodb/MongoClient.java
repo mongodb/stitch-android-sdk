@@ -195,7 +195,7 @@ public class MongoClient {
          * @param update The update specifier.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<Integer> updateOne(final Document query, final Document update) {
+        public Task<Document> updateOne(final Document query, final Document update) {
             return updateOne(query, update, false);
         }
 
@@ -207,7 +207,9 @@ public class MongoClient {
          * @param upsert Whether or not to upsert if the query matches no documents.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<Integer> updateOne(final Document query, final Document update, final boolean upsert) {
+        public Task<Document> updateOne(final Document query,
+                                        final Document update,
+                                        final boolean upsert) {
             Document doc = new Document(Parameters.QUERY, query);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.COLLECTION, _collName);
@@ -216,12 +218,12 @@ public class MongoClient {
 
             return _database._client._stitchClient.executeServiceFunction(
                     "updateOne", _database._client._service, doc
-            ).continueWith(new Continuation<Object, Integer>() {
+            ).continueWith(new Continuation<Object, Document>() {
                 @Override
-                public Integer then(@NonNull Task<Object> task) throws Exception {
+                public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
                         Object result = task.getResult();
-                        return (int)Document.parse(result.toString()).get("matchedCount");
+                        return Document.parse(result.toString());
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -237,7 +239,7 @@ public class MongoClient {
          * @param update The update specifier.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<Integer> updateMany(final Document query, final Document update) {
+        public Task<Document> updateMany(final Document query, final Document update) {
             return updateMany(query, update, false);
         }
 
@@ -249,7 +251,9 @@ public class MongoClient {
          * @param upsert Whether or not to upsert if the query matches no documents.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<Integer> updateMany(final Document query, final Document update, final boolean upsert) {
+        public Task<Document> updateMany(final Document query,
+                                         final Document update,
+                                         final boolean upsert) {
             Document doc = new Document(Parameters.QUERY, query);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.COLLECTION, _collName);
@@ -259,12 +263,12 @@ public class MongoClient {
 
             return _database._client._stitchClient.executeServiceFunction(
                     "updateMany", _database._client._service, doc
-            ).continueWith(new Continuation<Object, Integer>() {
+            ).continueWith(new Continuation<Object, Document>() {
                 @Override
-                public Integer then(@NonNull Task<Object> task) throws Exception {
+                public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
                         Object result = task.getResult();
-                        return (int)Document.parse(result.toString()).get("matchedCount");
+                        return Document.parse(result.toString());
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -333,7 +337,7 @@ public class MongoClient {
          * @param query The query specifier.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<Integer> deleteOne(final Document query) {
+        public Task<Document> deleteOne(final Document query) {
             Document doc = new Document(Parameters.QUERY, query);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.SINGLE_DOCUMENT, true);
@@ -341,12 +345,12 @@ public class MongoClient {
 
             return _database._client._stitchClient.executeServiceFunction(
                     "deleteOne", _database._client._service, doc
-            ).continueWith(new Continuation<Object, Integer>() {
+            ).continueWith(new Continuation<Object, Document>() {
                 @Override
-                public Integer then(@NonNull Task<Object> task) throws Exception {
+                public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
                         Object result = task.getResult();
-                        return new JsonReader(result.toString()).readInt32();
+                        return Document.parse(result.toString());
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -361,7 +365,7 @@ public class MongoClient {
          * @param query The query specifier.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<Integer> deleteMany(final Document query) {
+        public Task<Document> deleteMany(final Document query) {
             Document doc = new Document(Parameters.QUERY, query);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.COLLECTION, _collName);
@@ -369,26 +373,18 @@ public class MongoClient {
 
             return _database._client._stitchClient.executeServiceFunction(
                     "deleteMany", _database._client._service, doc
-            ).continueWith(new Continuation<Object, Integer>() {
+            ).continueWith(new Continuation<Object, Document>() {
                 @Override
-                public Integer then(@NonNull Task<Object> task) throws Exception {
+                public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
                         Object result = task.getResult();
-                        return (int)Document.parse(result.toString()).get("deletedCount");
+                        return Document.parse(result.toString());
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
                     }
                 }
             });
-        }
-
-        private static class Stages {
-            private static final String FIND = "find";
-            private static final String UPDATE = "update";
-            private static final String INSERT = "insert";
-            private static final String DELETE = "delete";
-
         }
 
         private static class Parameters {

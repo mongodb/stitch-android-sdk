@@ -657,7 +657,6 @@ public class StitchClient {
         private final String USERPASS_CONFIRM_SEND = "local/userpass/confirm/send";
         private final String USERPASS_RESET = "local/userpass/reset";
         private final String USERPASS_RESET_SEND = "local/userpass/reset/send";
-
     }
 
     /**
@@ -767,14 +766,7 @@ public class StitchClient {
         return future.getTask();
     }
 
-    // Pipelines
-
-    private static class PipelineResponseFields {
-        private static final String RESULT = "result";
-    }
-
     // Push
-
     /**
      * @return The manager for {@link PushClient}s.
      */
