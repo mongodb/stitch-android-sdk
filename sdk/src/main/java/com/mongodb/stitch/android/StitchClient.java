@@ -605,10 +605,23 @@ public class StitchClient {
         return future.getTask();
     }
 
+    /**
+     * Execute a named function
+     * @param name name of the function
+     * @param args extended JSON arguments associated with the function
+     * @return return value of associated function
+     */
     public Task<Object> executeFunction(String name, Object... args) {
         return executeServiceFunction(name, null, args);
     }
 
+    /**
+     * Execute a named function associated with a service
+     * @param name name of the function
+     * @param serviceName name of your service
+     * @param args extended JSON arguments associated with the function
+     * @return return value of the associated function
+     */
     public Task<Object> executeServiceFunction(String name, String serviceName, Object... args) {
         ensureAuthenticated();
         final Document doc = new Document("name", name);
