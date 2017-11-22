@@ -11,10 +11,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AuthInfo {
     private static class Fields {
-        private static final String ACCESS_TOKEN = "accessToken";
-        private static final String USER_ID = "userId";
+        private static final String ACCESS_TOKEN = "access_token";
+        private static final String USER_ID = "user_id";
         private static final String PROVIDER = "provider";
-        private static final String DEVICE_ID = "deviceId";
+        private static final String DEVICE_ID = "device_id";
     }
 
     private final String _accessToken;

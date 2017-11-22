@@ -10,8 +10,7 @@ import org.bson.Document;
  * APIKeyProvider provides a way to authenticate using a generated apiKey.
  */
 public class APIKeyProvider implements AuthProvider {
-    private static final String AUTH_TYPE = "api";
-    private static final String AUTH_NAME = "key";
+    private static final String AUTH_TYPE = "api-key";
 
     @NonNull
     private final String _key;
@@ -23,11 +22,6 @@ public class APIKeyProvider implements AuthProvider {
     @Override
     public String getType() {
         return AUTH_TYPE;
-    }
-
-    @Override
-    public String getName() {
-        return AUTH_NAME;
     }
 
     @Override

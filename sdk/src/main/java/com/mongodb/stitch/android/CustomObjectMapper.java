@@ -21,7 +21,7 @@ class CustomObjectMapper {
 
     private static ObjectMapper _singleton;
 
-    static ObjectMapper createObjectMapper() {
+    public static ObjectMapper createObjectMapper() {
         if (_singleton != null) {
             return _singleton;
         }

@@ -29,6 +29,6 @@ public class RefreshTokenHolder {
     }
 
     private static class Fields {
-        private static final String REFRESH_TOKEN = "refreshToken";
+        private static final String REFRESH_TOKEN = "refresh_token";
     }
 }

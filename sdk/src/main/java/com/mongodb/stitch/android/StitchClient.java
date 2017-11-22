@@ -13,7 +13,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.Volley;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.tasks.Continuation;
@@ -38,16 +38,17 @@ import com.mongodb.stitch.android.push.AvailablePushProviders;
 import com.mongodb.stitch.android.push.PushClient;
 import com.mongodb.stitch.android.push.PushManager;
 
+import org.bson.BsonValue;
 import org.bson.Document;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
@@ -85,6 +86,7 @@ public class StitchClient {
     private final SharedPreferences _preferences;
     private final PushManager _pushManager;
     private final List<AuthListener> _authListeners;
+    private final Routes routes;
 
     @Nullable
     private Auth _auth;
@@ -128,6 +130,8 @@ public class StitchClient {
         } else {
             _baseUrl = _properties.getProperty(PROP_BASE_URL);
         }
+
+        routes = new Routes();
     }
 
     /**
@@ -155,6 +159,13 @@ public class StitchClient {
      */
     public String getAppId() {
         return _clientAppId;
+    }
+
+    /**
+     * @return The client's Base Route
+     */
+    public String getBaseUrl() {
+        return _baseUrl;
     }
 
     /**
@@ -224,7 +235,7 @@ public class StitchClient {
         if (!isAuthenticated()) {
             return Tasks.forResult(null);
         }
-        return executeRequest(Request.Method.DELETE, Paths.AUTH, null, false, true).continueWith(new Continuation<String, Void>() {
+        return executeRequest(Request.Method.DELETE, routes.AUTH_SESSION, null, false, true).continueWith(new Continuation<String, Void>() {
             @Override
             public Void then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
@@ -250,15 +261,10 @@ public class StitchClient {
         }
 
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
-        final String url = String.format(
-                "%s/%s/%s",
-                getResourcePath(Paths.AUTH),
-                authProvider.getType(),
-                authProvider.getName());
 
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
-                url,
+                getResourcePath(routes.getAuthProvidersLoginRoute(authProvider.getType())),
                 getAuthRequest(authProvider).toJson(),
                 new Response.Listener<String>() {
                     @Override
@@ -306,9 +312,9 @@ public class StitchClient {
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
         final String url = String.format(
                 "%s/%s/%s",
-                getResourcePath(Paths.AUTH),
+                getResourcePath(routes.AUTH),
                 provider.getType(),
-                Paths.USERPASS_REGISTER
+                routes.USERPASS_REGISTER
         );
 
         final JsonStringRequest request = new JsonStringRequest(
@@ -348,9 +354,9 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s/%s",
-                getResourcePath(Paths.AUTH),
+                getResourcePath(routes.AUTH),
                 "",
-                Paths.USERPASS_CONFIRM
+                routes.USERPASS_CONFIRM
         );
 
         final Document params = new Document();
@@ -394,9 +400,9 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s/%s",
-                getResourcePath(Paths.AUTH),
+                getResourcePath(routes.AUTH),
                 "",
-                Paths.USERPASS_CONFIRM_SEND
+                routes.USERPASS_CONFIRM_SEND
         );
 
         final JsonStringRequest request = new JsonStringRequest(
@@ -436,9 +442,9 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s/%s",
-                getResourcePath(Paths.AUTH),
+                getResourcePath(routes.AUTH),
                 "",
-                Paths.USERPASS_RESET
+                routes.USERPASS_RESET
         );
 
         final Document params = new Document();
@@ -482,9 +488,9 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s/%s",
-                getResourcePath(Paths.AUTH),
+                getResourcePath(routes.AUTH),
                 "",
-                Paths.USERPASS_RESET_SEND
+                routes.USERPASS_RESET_SEND
         );
 
         final JsonStringRequest request = new JsonStringRequest(
@@ -539,24 +545,19 @@ public class StitchClient {
     public Task<AvailableAuthProviders> getAuthProviders() {
 
         final TaskCompletionSource<AvailableAuthProviders> future = new TaskCompletionSource<>();
-        final String url = getResourcePath(Paths.AUTH);
+        final String url = getResourcePath(routes.AUTH_PROVIDERS);
 
-        final JsonObjectRequest request = new JsonObjectRequest(
+        final JsonArrayRequest request = new JsonArrayRequest(
                 Request.Method.GET,
                 url,
-                new Response.Listener<JSONObject>() {
+                new Response.Listener<JSONArray>() {
                     @Override
-                    public void onResponse(final JSONObject response) {
-
+                    public void onResponse(final JSONArray response) {
                         final AvailableAuthProviders.Builder builder = new AvailableAuthProviders.Builder();
-                        // Build provider info
-                        for (final Iterator<String> keyItr = response.keys(); keyItr.hasNext(); ) {
-                            final String authProviderName = keyItr.next();
-
+                        for (int i = 0; i < response.length(); i++) {
                             try {
-                                final JSONObject info = response.getJSONObject(authProviderName);
-
-                                switch (authProviderName) {
+                                JSONObject info = response.getJSONObject(i);
+                                switch (info.getString("type")) {
                                     case FacebookAuthProviderInfo.FQ_NAME:
                                         final FacebookAuthProviderInfo fbInfo =
                                                 _objMapper.readValue(info.toString(), FacebookAuthProviderInfo.class);
@@ -579,10 +580,10 @@ public class StitchClient {
                                         break;
 
                                 }
-                            } catch (final JSONException | IOException e) {
+                            } catch (JSONException | IOException e) {
                                 Log.e(
                                         TAG,
-                                        String.format("Error while getting auth provider info for %s", authProviderName),
+                                        "Error while getting auth provider info",
                                         e);
                                 future.setException(e);
                                 return;
@@ -604,65 +605,52 @@ public class StitchClient {
         return future.getTask();
     }
 
-    // Pipelines
+    public Task<Object> executeFunction(String name, Object... args) {
+        return executeServiceFunction(name, null, args);
+    }
 
-    /**
-     * Executes a pipeline with the current app.
-     *
-     * @param pipeline The pipeline to execute.
-     * @return A task containing the result of the pipeline that can be resolved on completion
-     * of the execution.
-     */
-    @SuppressWarnings("unchecked")
-    public Task<List<Object>> executePipeline(final List<PipelineStage> pipeline) {
+    public Task<Object> executeServiceFunction(String name, String serviceName, Object... args) {
         ensureAuthenticated();
-        final String pipeStr;
-        try {
-            pipeStr = _objMapper.writeValueAsString(pipeline);
-        } catch (final IOException e) {
-            return Tasks.forException(e);
+        final Document doc = new Document("name", name);
+        doc.put("arguments", new CustomBsonConverter().fromArray(args));
+        if (serviceName != null) {
+            doc.put("service", serviceName);
         }
 
-        return executeRequest(Request.Method.POST, Paths.PIPELINE, pipeStr).continueWith(new Continuation<String, List<Object>>() {
+        return executeRequest(
+                Request.Method.POST,
+                routes.FUNCTIONS,
+                doc.toJson()
+        ).continueWith(new Continuation<String, Object>() {
             @Override
-            public List<Object> then(@NonNull final Task<String> task) throws Exception {
+            public Object then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
-                    final Document doc = Document.parse(task.getResult());
-                    return (List<Object>) doc.get(PipelineResponseFields.RESULT);
+                    return new JSONTokener(task.getResult()).nextValue();
                 } else {
-                    Log.e(TAG, "Error while executing pipeline", task.getException());
+                    Log.e(TAG, "Error while executing function", task.getException());
                     throw task.getException();
                 }
             }
         });
     }
 
-    /**
-     * Executes a pipeline with the current app.
-     *
-     * @param stages The stages to execute as a contiguous pipeline.
-     * @return A task containing the result of the pipeline that can be resolved on completion
-     * of the execution.
-     */
-    public Task<List<Object>> executePipeline(final PipelineStage... stages) {
-        return executePipeline(Arrays.asList(stages));
-    }
-
     // Network
+    private class Routes {
+        private final String AUTH = String.format("app/%s/auth", _clientAppId);
+        private final String AUTH_SESSION = "auth/session";
 
-    private static class Paths {
-        private static final String AUTH = "auth";
-        private static final String USER_PROFILE = AUTH + "/me";
-        private static final String USER_PROFILE_API_KEYS = USER_PROFILE + "/api_keys";
-        private static final String NEW_ACCESS_TOKEN = String.format("%s/newAccessToken", AUTH);
-        private static final String PIPELINE = "pipeline";
-        private static final String PUSH = "push";
-        private static final String USERPASS_REGISTER = "userpass/register";
-        private static final String USERPASS_CONFIRM = "local/userpass/confirm";
-        private static final String USERPASS_CONFIRM_SEND = "local/userpass/confirm/send";
-        private static final String USERPASS_RESET = "local/userpass/reset";
-        private static final String USERPASS_RESET_SEND = "local/userpass/reset/send";
+        private final String AUTH_PROVIDERS = String.format("app/%s/auth/providers", _clientAppId);
+        String getAuthProvidersLoginRoute(String providerType) {
+            return String.format("app/%s/auth/providers/%s/login", _clientAppId, providerType);
+        }
 
+        private final String FUNCTIONS = String.format("app/%s/functions/call", _clientAppId);
+        private final String PUSH = String.format("app/%s/push/providers", _clientAppId);
+        private final String USERPASS_REGISTER = "/register";
+        private final String USERPASS_CONFIRM = "local/userpass/confirm";
+        private final String USERPASS_CONFIRM_SEND = "local/userpass/confirm/send";
+        private final String USERPASS_RESET = "local/userpass/reset";
+        private final String USERPASS_RESET_SEND = "local/userpass/reset/send";
     }
 
     /**
@@ -670,7 +658,7 @@ public class StitchClient {
      * @return A path to the given resource.
      */
     private String getResourcePath(final String resource) {
-        return String.format("%s/api/client/v1.0/app/%s/%s", _baseUrl, _clientAppId, resource);
+        return String.format("%s/api/client/v2.0/%s", _baseUrl, resource);
     }
 
     /**
@@ -772,14 +760,7 @@ public class StitchClient {
         return future.getTask();
     }
 
-    // Pipelines
-
-    private static class PipelineResponseFields {
-        private static final String RESULT = "result";
-    }
-
     // Push
-
     /**
      * @return The manager for {@link PushClient}s.
      */
@@ -795,7 +776,7 @@ public class StitchClient {
      */
     public Task<AvailablePushProviders> getPushProviders() {
 
-        return executeRequest(Request.Method.GET, Paths.PUSH).continueWith(new Continuation<String, AvailablePushProviders>() {
+        return executeRequest(Request.Method.GET, routes.PUSH).continueWith(new Continuation<String, AvailablePushProviders>() {
             @Override
             public AvailablePushProviders then(@NonNull final Task<String> task) throws Exception {
                 return AvailablePushProviders.fromQuery(task.getResult());
@@ -914,7 +895,7 @@ public class StitchClient {
      * @return A task that can resolved upon completion of refreshing the access token.
      */
     private Task<Void> refreshAccessToken() {
-        return executeRequest(Request.Method.POST, Paths.NEW_ACCESS_TOKEN, null, false, true)
+        return executeRequest(Request.Method.POST, routes.AUTH_SESSION, null, false, true)
                 .continueWith(new Continuation<String, Void>() {
                     @Override
                     public Void then(@NonNull Task<String> task) throws Exception {
@@ -970,7 +951,7 @@ public class StitchClient {
     }
 
     private static class AuthFields {
-        private static final String ACCESS_TOKEN = "accessToken";
+        private static final String ACCESS_TOKEN = "access_token";
         static final String OPTIONS = "options";
         static final String DEVICE = "device";
     }

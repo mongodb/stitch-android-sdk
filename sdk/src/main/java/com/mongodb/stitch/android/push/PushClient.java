@@ -3,6 +3,8 @@ package com.mongodb.stitch.android.push;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.StitchClient;
 
@@ -13,12 +15,23 @@ import org.bson.Document;
  * sent from Stitch or directly from the provider.
  */
 public abstract class PushClient {
+    protected final class Routes {
+        public final String PUSH_PROVIDERS_ROUTE =
+                String.format("app/%s/push/providers", _stitchClient.getAppId());
+
+        public String getPushProvidersRegistrationRoute(String provider) {
+            return String.format("%s/%s/registration", PUSH_PROVIDERS_ROUTE, provider);
+        }
+    }
 
     static final String TAG = "Stitch-Push";
 
     // Preferences
     public static final String SHARED_PREFERENCES_NAME = "com.mongodb.stitch.sdk.push.SharedPreferences.%s";
     static final String PREF_CONFIGS = "gcm.configs";
+
+    protected final Routes routes;
+    protected final RequestQueue queue;
 
     private final StitchClient _stitchClient;
     private final Context _context;
@@ -34,6 +47,9 @@ public abstract class PushClient {
     ) {
         _stitchClient = stitchClient;
         _context = context;
+
+        queue = Volley.newRequestQueue(context);
+        routes = new Routes();
 
         final String globPrefPath = String.format(SHARED_PREFERENCES_NAME, getStitchClient().getAppId());
         _globalPreferences = context.getSharedPreferences(globPrefPath, Context.MODE_PRIVATE);
@@ -65,6 +81,14 @@ public abstract class PushClient {
      */
     protected StitchClient getStitchClient() {
         return _stitchClient;
+    }
+
+    /**
+     * @param resource The target resource.
+     * @return A path to the given resource.
+     */
+    protected String getResourcePath(final String resource) {
+        return String.format("%s/api/client/v2.0/%s", _stitchClient.getBaseUrl(), resource);
     }
 
     /**
@@ -113,11 +137,6 @@ public abstract class PushClient {
     protected static class DeviceFields {
         static final String SERVICE_NAME = "service";
         public static final String DATA = "data";
-    }
-
-    protected static class Actions {
-        public static final String REGISTER_PUSH = "registerPush";
-        public static final String DEREGISTER_PUSH = "deregisterPush";
     }
 }
 

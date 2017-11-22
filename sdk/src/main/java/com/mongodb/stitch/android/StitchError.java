@@ -14,7 +14,7 @@ import java.util.Map;
 import static com.mongodb.stitch.android.http.ContentTypes.APPLICATION_JSON;
 import static com.mongodb.stitch.android.http.Headers.CONTENT_TYPE;
 
-class StitchError {
+public class StitchError {
 
     /**
      * Parses a network request error, looking for any embedded errors or codes.
@@ -22,7 +22,7 @@ class StitchError {
      * @param error The network error.
      * @return An exception describing the network error.
      */
-    static StitchException.StitchRequestException parseRequestError(final VolleyError error) {
+    public static StitchException.StitchRequestException parseRequestError(final VolleyError error) {
 
         if (error.networkResponse == null) {
             return new StitchException.StitchRequestException(error);
@@ -103,6 +103,6 @@ class StitchError {
 
     private static class Fields {
         private static final String ERROR = "error";
-        private static final String ERROR_CODE = "errorCode";
+        private static final String ERROR_CODE = "error_code";
     }
 }

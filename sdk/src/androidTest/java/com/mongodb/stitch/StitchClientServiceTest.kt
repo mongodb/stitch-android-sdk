@@ -7,10 +7,13 @@ import com.mongodb.stitch.android.StitchClient
 import com.mongodb.stitch.android.auth.apiKey.APIKey
 import com.mongodb.stitch.android.auth.apiKey.APIKeyProvider
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider
+import com.mongodb.stitch.android.services.mongodb.MongoClient
+import org.bson.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertEquals
 
 /**
  * Test public methods of StitchClient, running through authentication
@@ -28,8 +31,8 @@ class StitchClientServiceTest {
         )
     }
 
-    private val email: String = "android_service_test@stitch.com"
-    private val pass: String = "android"
+    private val email: String = "stitch@mongodb.com"
+    private val pass: String = "stitchuser"
 
     @Before
     fun setup() {
@@ -50,6 +53,11 @@ class StitchClientServiceTest {
         }
     }
 
+    @Test
+    fun testGetAuthProviders() {
+        await(this.stitchClient.authProviders)
+    }
+
     /**
      * Test creating and logging in with an api key
      */
@@ -59,7 +67,7 @@ class StitchClientServiceTest {
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
-                auth.createApiKey("selfApiKeyTest").addOnCompleteListener {
+                auth.createApiKey("key_test").addOnCompleteListener {
                     assertThat(it.isSuccessful, it.exception)
                 }
         )
@@ -80,7 +88,7 @@ class StitchClientServiceTest {
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
-                auth.createApiKey("selfApiKeyTest").addOnCompleteListener {
+                auth.createApiKey("key_test").addOnCompleteListener {
                     assertThat(it.isSuccessful, it.exception)
                 }
         )
@@ -123,7 +131,7 @@ class StitchClientServiceTest {
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
-                auth.createApiKey("selfApiKeyTest").addOnCompleteListener {
+                auth.createApiKey("key_test").addOnCompleteListener {
                     assertThat(it.isSuccessful, it.exception)
                 }
         )
@@ -138,5 +146,44 @@ class StitchClientServiceTest {
         await(auth.enableApiKey(key.id))
 
         assertThat(!await(auth.fetchApiKey(key.id)).disabled)
+    }
+
+    @Test
+    fun testMongo() {
+        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+
+        val mongoClient = MongoClient(this.stitchClient, "mongodb-atlas")
+        val coll = mongoClient.getDatabase("todo").getCollection("items")
+
+        await(coll.count(Document()).addOnCompleteListener { assertEquals(it.result, 0) })
+
+        await(coll.insertOne(Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId))))
+
+        await(coll.count(Document()).addOnCompleteListener { assertEquals(it.result, 1) })
+
+        await(coll.insertMany(listOf(
+                Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId)),
+                Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId))
+        )))
+
+        await(coll.find(Document(mapOf("owner_id" to stitchClient.userId)), 10).addOnCompleteListener {
+            assertEquals(it.result.size, 3)
+        })
+
+        await(coll.deleteMany(Document(mapOf("owner_id" to stitchClient.userId))).addOnCompleteListener {
+            assertThat(it.isSuccessful, it.exception)
+        })
+    }
+
+    @Test
+    fun testExecuteFunction() {
+        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        await(this.stitchClient.executeServiceFunction(
+                "send",
+                "tw1",
+                mapOf("from" to "+15005550006", "to" to "+19088392649", "body" to "Fee-fi-fo-fum")
+        ).addOnCompleteListener {
+            assertThat(it.isSuccessful, it.exception)
+        })
     }
 }
