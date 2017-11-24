@@ -66,7 +66,7 @@ public class PushManager implements AuthListener {
      * there may be a period of time where the application will still receive notifications.
      */
     @Override
-    public synchronized void onLogout(final String ignored) {
+    public synchronized void onLogout() {
 
         // Create any missing clients from saved data
         for (final PushProviderInfo info : PushProviderInfo.fromPreferences(_context, _stitchClient.getAppId())) {

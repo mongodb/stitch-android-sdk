@@ -84,14 +84,6 @@ public abstract class PushClient {
     }
 
     /**
-     * @param resource The target resource.
-     * @return A path to the given resource.
-     */
-    protected String getResourcePath(final String resource) {
-        return String.format("%s/api/client/v2.0/%s", _stitchClient.getBaseUrl(), resource);
-    }
-
-    /**
      * @param info The push provider info to persist.
      */
     protected synchronized void addInfoToConfigs(final PushProviderInfo info) {
@@ -107,31 +99,6 @@ public abstract class PushClient {
         final Document configs = Document.parse(_globalPreferences.getString(PREF_CONFIGS, "{}"));
         configs.remove(info.getService());
         _globalPreferences.edit().putString(PREF_CONFIGS, configs.toJson()).apply();
-    }
-
-    /**
-     * @param serviceName The service that will handle push for this client.
-     * @return A generic device registration request.
-     */
-    protected Document getBaseRegisterPushRequest(final String serviceName) {
-        final Document request = new Document();
-
-        request.put(DeviceFields.SERVICE_NAME, serviceName);
-        request.put(DeviceFields.DATA, new Document());
-
-        return request;
-    }
-
-    /**
-     * @param serviceName The service that handles push for this client.
-     * @return A generic device deregistration request.
-     */
-    protected Document getBaseDeregisterPushDeviceRequest(final String serviceName) {
-        final Document request = new Document();
-
-        request.put(DeviceFields.SERVICE_NAME, serviceName);
-
-        return request;
     }
 
     protected static class DeviceFields {

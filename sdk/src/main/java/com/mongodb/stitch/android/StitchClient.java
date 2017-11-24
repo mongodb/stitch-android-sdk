@@ -38,12 +38,10 @@ import com.mongodb.stitch.android.push.AvailablePushProviders;
 import com.mongodb.stitch.android.push.PushClient;
 import com.mongodb.stitch.android.push.PushManager;
 
-import org.bson.BsonValue;
 import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,9 +50,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
+import static com.mongodb.stitch.android.BsonUtils.parseValue;
 import static com.mongodb.stitch.android.StitchError.ErrorCode;
 import static com.mongodb.stitch.android.StitchError.parseRequestError;
 import static com.mongodb.stitch.android.http.Headers.GetAuthorizationBearer;
+import static java.util.Arrays.asList;
 
 /**
  * A StitchClient is responsible for handling the overall interaction with all Stitch services.
@@ -625,7 +625,7 @@ public class StitchClient {
     public Task<Object> executeServiceFunction(String name, String serviceName, Object... args) {
         ensureAuthenticated();
         final Document doc = new Document("name", name);
-        doc.put("arguments", new CustomBsonConverter().fromArray(args));
+        doc.put("arguments", asList(args));
         if (serviceName != null) {
             doc.put("service", serviceName);
         }
@@ -638,7 +638,7 @@ public class StitchClient {
             @Override
             public Object then(@NonNull final Task<String> task) throws Exception {
                 if (task.isSuccessful()) {
-                    return new JSONTokener(task.getResult()).nextValue();
+                    return parseValue(task.getResult());
                 } else {
                     Log.e(TAG, "Error while executing function", task.getException());
                     throw task.getException();
@@ -683,7 +683,7 @@ public class StitchClient {
      * @return A task containing the body of the network response that can be resolved on completion
      * of the network request.
      */
-    Task<String> executeRequest(
+    public Task<String> executeRequest(
             final int method,
             final String resource
     ) {
@@ -700,7 +700,7 @@ public class StitchClient {
      * @return A task containing the body of the network response that can be resolved on completion
      * of the network request.
      */
-    private Task<String> executeRequest(
+    public Task<String> executeRequest(
             final int method,
             final String resource,
             final String body
@@ -831,9 +831,9 @@ public class StitchClient {
     /**
      * Called when a user is logged out from this client.
      */
-    private synchronized void onLogout(final String lastProvider) {
+    private synchronized void onLogout() {
         for (final AuthListener listener : _authListeners) {
-            listener.onLogout(lastProvider);
+            listener.onLogout();
         }
     }
 
@@ -855,12 +855,11 @@ public class StitchClient {
         if (_auth == null) {
             return;
         }
-        final String lastProvider = _auth.getAuthInfo().getProvider();
         _auth = null;
         _preferences.edit().remove(PREF_AUTH_JWT_NAME).apply();
         _preferences.edit().remove(PREF_AUTH_REFRESH_TOKEN_NAME).apply();
         _queue.cancelAll(this);
-        onLogout(lastProvider);
+        onLogout();
     }
 
     /**

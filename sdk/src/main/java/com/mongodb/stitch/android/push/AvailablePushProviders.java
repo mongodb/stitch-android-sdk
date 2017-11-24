@@ -4,7 +4,7 @@ import com.mongodb.stitch.android.push.gcm.GCMPushProviderInfo;
 
 import org.bson.Document;
 
-import java.util.Map;
+import static com.mongodb.stitch.android.BsonUtils.parseIterable;
 
 /**
  * AvailablePushProviders is a collection of available push providers for an app and the information
@@ -42,14 +42,14 @@ public class AvailablePushProviders {
      * @return A manifest of available push providers.
      */
     public static AvailablePushProviders fromQuery(final String json) {
-        final Document doc = Document.parse(json);
-
+        final Iterable providers = parseIterable(json);
         final AvailablePushProviders.Builder builder = new AvailablePushProviders.Builder();
 
         // Build push info
-        for (final Map.Entry<String, Object> configEntry : doc.entrySet()) {
-            final Document info = (Document) configEntry.getValue();
+        for (final Object providerObj : providers) {
+            final Document info = (Document) providerObj;
 
+            final String serviceName = info.getString(PushProviderInfo.Fields.NAME);
             final PushProviderName providerName =
                     PushProviderName.fromTypeName(info.getString(PushProviderInfo.Fields.TYPE));
             final Document config = (Document) info.get(PushProviderInfo.Fields.CONFIG);
@@ -57,7 +57,7 @@ public class AvailablePushProviders {
             switch (providerName) {
                 case GCM:
                     final GCMPushProviderInfo provider =
-                            GCMPushProviderInfo.fromConfig(configEntry.getKey(), config);
+                            GCMPushProviderInfo.fromConfig(serviceName, config);
                     builder.withGCM(provider);
                     break;
             }

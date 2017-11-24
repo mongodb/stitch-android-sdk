@@ -155,11 +155,11 @@ class StitchClientServiceTest {
         val mongoClient = MongoClient(this.stitchClient, "mongodb-atlas")
         val coll = mongoClient.getDatabase("todo").getCollection("items")
 
-        await(coll.count(Document()).addOnCompleteListener { assertEquals(it.result, 0) })
+        val currentCount = await(coll.count(Document()))
 
         await(coll.insertOne(Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId))))
 
-        await(coll.count(Document()).addOnCompleteListener { assertEquals(it.result, 1) })
+        await(coll.count(Document()).addOnCompleteListener { assertEquals(it.result, currentCount+1) })
 
         await(coll.insertMany(listOf(
                 Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId)),
@@ -167,7 +167,7 @@ class StitchClientServiceTest {
         )))
 
         await(coll.find(Document(mapOf("owner_id" to stitchClient.userId)), 10).addOnCompleteListener {
-            assertEquals(it.result.size, 3)
+            assertEquals(it.result.size.toLong(), currentCount+3)
         })
 
         await(coll.deleteMany(Document(mapOf("owner_id" to stitchClient.userId))).addOnCompleteListener {

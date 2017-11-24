@@ -6,12 +6,8 @@ import android.util.Log;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.StitchClient;
-import com.mongodb.stitch.android.StitchException;
 
 import org.bson.Document;
-import org.bson.json.JsonReader;
-import org.bson.types.ObjectId;
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -125,18 +121,12 @@ public class MongoClient {
                 @Override
                 public List<Document> then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        if (result instanceof JSONArray) {
-                            List<Document> docs = new ArrayList<>();
-                            for (int i = 0; i < ((JSONArray) result).length(); i++) {
-                                docs.add(Document.parse(((JSONArray) result).get(i).toString()));
-                            }
-
-                            return docs;
-                        } else {
-                            throw new StitchException.StitchRequestException(result.toString() +
-                                    " was not of type array");
+                        final List<Object> objects = (List<Object>) task.getResult();
+                        final List<Document> docs = new ArrayList<>(objects.size());
+                        for (final Object obj : objects) {
+                            docs.add((Document) obj);
                         }
+                        return docs;
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -152,7 +142,7 @@ public class MongoClient {
          * @return A task containing the number of matched documents that can be resolved upon completion
          * of the request.
          */
-        public Task<Integer> count(final Document query) {
+        public Task<Long> count(final Document query) {
             return count(query, null);
         }
 
@@ -163,7 +153,7 @@ public class MongoClient {
          * @return A task containing the number of matched documents that can be resolved upon completion
          * of the request.
          */
-        public Task<Integer> count(final Document query, final Document projection) {
+        public Task<Long> count(final Document query, final Document projection) {
             Document doc = new Document(Parameters.QUERY, query);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.COLLECTION, _collName);
@@ -174,12 +164,15 @@ public class MongoClient {
 
             return _database._client._stitchClient.executeServiceFunction(
                     "count", _database._client._service, doc
-            ).continueWith(new Continuation<Object, Integer>() {
+            ).continueWith(new Continuation<Object, Long>() {
                 @Override
-                public Integer then(@NonNull Task<Object> task) throws Exception {
+                public Long then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        return new JsonReader(result.toString()).readInt32();
+                        final Object result = task.getResult();
+                        if (result instanceof Integer) {
+                            return Long.valueOf((Integer) result);
+                        }
+                        return (Long) result;
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -222,8 +215,7 @@ public class MongoClient {
                 @Override
                 public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        return Document.parse(result.toString());
+                        return (Document) task.getResult();
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -267,8 +259,7 @@ public class MongoClient {
                 @Override
                 public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        return Document.parse(result.toString());
+                        return (Document) task.getResult();
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -283,19 +274,18 @@ public class MongoClient {
          * @param document The document to insert.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<ObjectId> insertOne(final Document document) {
-            Document doc = new Document("document", document);
+        public Task<Document> insertOne(final Document document) {
+            final Document doc = new Document("document", document);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.COLLECTION, _collName);
 
             return _database._client._stitchClient.executeServiceFunction(
                     "insertOne", _database._client._service, doc
-            ).continueWith(new Continuation<Object, ObjectId>() {
+            ).continueWith(new Continuation<Object, Document>() {
                 @Override
-                public ObjectId then(@NonNull Task<Object> task) throws Exception {
+                public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        return (ObjectId)Document.parse(result.toString()).get("insertedId");
+                        return (Document) task.getResult();
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -310,19 +300,18 @@ public class MongoClient {
          * @param documents The list of documents to insert.
          * @return A task that can be resolved upon completion of the request.
          */
-        public Task<List<ObjectId>> insertMany(final List<Document> documents) {
+        public Task<Document> insertMany(final List<Document> documents) {
             Document doc = new Document("documents", documents);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.COLLECTION, _collName);
 
             return _database._client._stitchClient.executeServiceFunction(
                     "insertMany", _database._client._service, doc
-            ).continueWith(new Continuation<Object, List<ObjectId>>() {
+            ).continueWith(new Continuation<Object, Document>() {
                 @Override
-                public List<ObjectId> then(@NonNull Task<Object> task) throws Exception {
+                public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        return (List<ObjectId>)Document.parse(result.toString()).get("insertedIds");
+                        return (Document) task.getResult();
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -349,8 +338,7 @@ public class MongoClient {
                 @Override
                 public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        return Document.parse(result.toString());
+                        return (Document) task.getResult();
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -366,7 +354,7 @@ public class MongoClient {
          * @return A task that can be resolved upon completion of the request.
          */
         public Task<Document> deleteMany(final Document query) {
-            Document doc = new Document(Parameters.QUERY, query);
+            final Document doc = new Document(Parameters.QUERY, query);
             doc.put(Parameters.DATABASE, _database._dbName);
             doc.put(Parameters.COLLECTION, _collName);
             doc.put(Parameters.SINGLE_DOCUMENT, false);
@@ -377,8 +365,7 @@ public class MongoClient {
                 @Override
                 public Document then(@NonNull Task<Object> task) throws Exception {
                     if (task.isSuccessful()) {
-                        Object result = task.getResult();
-                        return Document.parse(result.toString());
+                        return (Document) task.getResult();
                     } else {
                         Log.e(TAG, "Error while executing function", task.getException());
                         throw task.getException();
@@ -397,7 +384,6 @@ public class MongoClient {
             private static final String PROJECT = "project";
             private static final String SINGLE_DOCUMENT = "singleDoc";
             private static final String LIMIT = "limit";
-            private static final String COUNT = "count";
         }
     }
 }

@@ -304,30 +304,19 @@ public class GCMPushClient extends PushClient {
      */
     private Task<Void> registerWithServer(final String registrationToken) {
         final Document parameters = getRegisterPushDeviceRequest(registrationToken);
-
-        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
-
-        final Volley.JsonStringRequest request = new Volley.JsonStringRequest(
+        return getStitchClient().executeRequest(
                 Request.Method.PUT,
-                getResourcePath(routes.getPushProvidersRegistrationRoute(this._info.getService())),
-                parameters.toJson(),
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(final String response) {
-                        addInfoToConfigs(_info);
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while registering push provider with server", error);
-                        future.setException(parseRequestError(error));
-                    }
-                });
-        request.setTag(this);
-        queue.add(request);
-
-        return future.getTask();
+                routes.getPushProvidersRegistrationRoute(this._info.getService()),
+                parameters.toJson()
+        ).continueWith(new Continuation<String, Void>() {
+            @Override
+            public Void then(@NonNull Task<String> task) throws Exception {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
+                }
+                return null;
+            }
+        });
     }
 
     /**
@@ -336,31 +325,18 @@ public class GCMPushClient extends PushClient {
      * @return A task that can be resolved upon deregistering the device from Stitch.
      */
     private Task<Void> deregisterWithServer() {
-        final Document parameters = getDeregisterPushDeviceRequest();
-
-        final TaskCompletionSource<Void> future = new TaskCompletionSource<>();
-
-        final Volley.JsonStringRequest request = new Volley.JsonStringRequest(
+        return getStitchClient().executeRequest(
                 Request.Method.DELETE,
-                getResourcePath(routes.getPushProvidersRegistrationRoute(this._info.getService())),
-                parameters.toJson(),
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(final String response) {
-                        removeInfoFromConfigs(_info);
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while deregistering push provider with server", error);
-                        future.setException(parseRequestError(error));
-                    }
-                });
-        request.setTag(this);
-        queue.add(request);
-
-        return future.getTask();
+                routes.getPushProvidersRegistrationRoute(this._info.getService())
+        ).continueWith(new Continuation<String, Void>() {
+            @Override
+            public Void then(@NonNull Task<String> task) throws Exception {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
+                }
+                return null;
+            }
+        });
     }
 
     /**
@@ -368,19 +344,7 @@ public class GCMPushClient extends PushClient {
      * @return The request payload for registering for push for GCM.
      */
     private Document getRegisterPushDeviceRequest(final String registrationToken) {
-
-        final Document request = getBaseRegisterPushRequest(_info.getService());
-        final Document data = (Document) request.get(PushClient.DeviceFields.DATA);
-        data.put(DeviceFields.REGISTRATION_TOKEN, registrationToken);
-
-        return request;
-    }
-
-    /**
-     * @return The request payload for deregistering from push for GCM.
-     */
-    private Document getDeregisterPushDeviceRequest() {
-        return getBaseDeregisterPushDeviceRequest(_info.getService());
+        return new Document(DeviceFields.REGISTRATION_TOKEN, registrationToken);
     }
 
     private static class DeviceFields {

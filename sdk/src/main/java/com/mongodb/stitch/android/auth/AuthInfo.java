@@ -13,22 +13,17 @@ public class AuthInfo {
     private static class Fields {
         private static final String ACCESS_TOKEN = "access_token";
         private static final String USER_ID = "user_id";
-        private static final String PROVIDER = "provider";
         private static final String DEVICE_ID = "device_id";
     }
 
     private final String _accessToken;
     private final String _userId;
     private final String _deviceId;
-    private final String _provider;
 
     @JsonCreator
     private AuthInfo(
             @JsonProperty(Fields.ACCESS_TOKEN)
             final String accessToken,
-
-            @JsonProperty(Fields.PROVIDER)
-            final String provider,
 
             @JsonProperty(Fields.DEVICE_ID)
             final String deviceId,
@@ -38,7 +33,6 @@ public class AuthInfo {
     ) {
         _accessToken = accessToken;
         _userId = userId;
-        _provider = provider;
         _deviceId = deviceId;
     }
 
@@ -64,14 +58,6 @@ public class AuthInfo {
     }
 
     /**
-     * @return The provider that authenticated this session.
-     */
-    @JsonProperty(Fields.PROVIDER)
-    public String getProvider() {
-        return _provider;
-    }
-
-    /**
      * @return The user this session was created for.
      */
     @JsonProperty(Fields.DEVICE_ID)
@@ -84,6 +70,6 @@ public class AuthInfo {
      * @return A new session with a fresh access token.
      */
     public AuthInfo withNewAccessToken(final String newAccessToken) {
-        return new AuthInfo(newAccessToken, _provider, _deviceId, _userId);
+        return new AuthInfo(newAccessToken, _deviceId, _userId);
     }
 }
