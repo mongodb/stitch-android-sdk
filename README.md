@@ -15,24 +15,12 @@
 2. Start a new Android Studio project
 	* Note: The minimum supported API level is 19 (Android 4.4 KitKat)
 	* Starting with an empty activity is ideal
-3. In your build.gradle for your app module, add the following block:
-	
-	```
-	repositories {
-		// TODO: Remove once BSON 3.5.0 is released
-		maven {
-            url "https://oss.sonatype.org/content/repositories/snapshots"
-        }
-	}
-	```
-
-4. Also add the following to your dependencies block:
+3. In your build.gradle for your app module, add the following to your dependencies block:
 
 	```
-	compile 'org.mongodb:stitch:0.1.0-SNAPSHOT'
-	```
-
-5. Android Studio will prompt you to sync your changes in your project; hit Sync Now
+    compile 'org.mongodb:stitch:2.0.0'
+    ```
+4. Android Studio will prompt you to sync your changes in your project; hit Sync Now
 
 ### Set up an Android Virtual Device
 
@@ -67,11 +55,11 @@
             public void onSuccess(final AvailableAuthProviders auth) {
                 if (auth.hasAnonymous()) {
                     Log.d("stitch", "logging in anonymously");
-                    _client.logInWithProvider(new AnonymousAuthProvider()).addOnCompleteListener(new OnCompleteListener<Auth>() {
+                    _client.logInWithProvider(new AnonymousAuthProvider()).addOnCompleteListener(new OnCompleteListener<String>() {
                         @Override
-                        public void onComplete(@NonNull final Task<Auth> task) {
+                        public void onComplete(@NonNull final Task<String> task) {
                             if (task.isSuccessful()) {
-                                Log.d("stitch", "logged in anonymously as user " + _client.getAuth().getUserId());
+                                Log.d("stitch", "logged in anonymously as user " + task.getResult());
                             } else {
                                 Log.e("stitch", "failed to log in anonymously", task.getException());
                             }
@@ -91,35 +79,6 @@
 	```
 	03-12 19:16:59.003 6175-6175/? D/stitch: logging in anonymously                                                    	
 	03-12 19:16:59.103 6175-6175/? D/stitch: logged in anonymously as user 58c5d6ebb9ede022a3d75050
-	```
-
-#### Running a Pipeline
-
-1. Once logged in, running a pipeline happens via the client's executePipeline method
-2. To avoid nesting our tasks any further, after logging in we should call some init method that will use the client. We will also place the client as a member of our activity:
-
-	```
-	private StitchClient _client;
-	
-	private void init() {
-        final Map<String, Object> literalArgs = new HashMap<>();
-        literalArgs.put("items", Collections.singletonList("Hello world!"));
-        _client.executePipeline(new PipelineStage("literal", literalArgs)).addOnSuccessListener(new OnSuccessListener<List<Object>>() {
-            @Override
-            public void onSuccess(final List<Object> objects) {
-                Log.d("stitch", "number of results: " + objects.size());
-                for (final Object resultItem : objects) {
-                    Log.d("stitch", resultItem.toString());
-                }
-            }
-        });
-    }
-	```
-3. Call *init()* after logging in and run your app. You should see a messages like:
-
-	```
-	03-12 20:14:15.601 2592-2592/com.mongodb.stitch.myapplication D/stitch: number of results: 1
-03-12 20:14:15.601 2592-2592/com.mongodb.stitch.myapplication D/stitch: Hello world!
 	```
 
 #### Set up Push Notifications (GCM)
