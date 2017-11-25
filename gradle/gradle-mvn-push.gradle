@@ -72,17 +72,6 @@ task androidSourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs
 }
 
-// These will be uploaded but Android Studio does not know how to use them
-artifacts {
-    archives androidSourcesJar
-    archives androidJavadocsJar
-}
-
 task copyDocsToS3(type: Exec) {
     commandLine 'aws', 's3', 'cp', '--acl', 'public-read', '--recursive', getDocsOutputDir(), getDocsDestUrl()
-}
-
-artifacts {
-    archives androidSourcesJar
-    archives androidJavadocsJar
 }

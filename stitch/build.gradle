@@ -2,6 +2,30 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'maven-publish'
 
+ext {
+    bintrayRepo = 'MongoDB'
+    bintrayName = 'stitch-android-sdk'
+
+    publishedGroupId = 'org.mongodb'
+    libraryName = 'Stitch Android SDK'
+    artifact = 'stitch'
+
+    libraryDescription = 'The MongoDB Stitch Android SDK'
+
+    siteUrl = 'https://www.mongodb.com/cloud/stitch'
+    gitUrl = 'https://github.com/mongodb/stitch-android-sdk.git'
+
+    libraryVersion = '2.0.2'
+
+    developerId = 'edaniels'
+    developerName = 'Eric Daniels'
+    developerEmail = 'eric.daniels@mongodb.com'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
 if (rootProject.file('gradle/gradle-mvn-push.gradle').exists()) {
     apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
 }
@@ -45,6 +69,7 @@ android {
 repositories {
     mavenCentral()
     jcenter()
+    google()
 }
 
 configurations.all {
@@ -74,11 +99,14 @@ dependencies {
 
     compile 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
     compile 'org.apache.commons:commons-lang3:3.5'
-    compile 'com.google.android.gms:play-services-base:11.0.4'
-    compile "com.google.android.gms:play-services-gcm:11.0.4"
+    compile 'com.google.android.gms:play-services-base:11.6.0'
+    compile "com.google.android.gms:play-services-gcm:11.6.0"
 
     compile 'org.mongodb:bson:3.5.0'
 
     // TODO: Using fork with fixes until https://code.google.com/p/android/issues/detail?id=209471 is resolved
     compile 'com.mcxiaoke.volley:library:1.0.19'
 }
+
+apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle'
