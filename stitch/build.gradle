@@ -64,6 +64,10 @@ android {
             }
         }
     }
+    adbOptions {
+        timeOutInMs 10 * 60 * 1000  // 10 minutes
+        installOptions "-d","-t"
+    }
 }
 
 repositories {
@@ -107,7 +111,6 @@ dependencies {
     // TODO: Using fork with fixes until https://code.google.com/p/android/issues/detail?id=209471 is resolved
     compile 'com.mcxiaoke.volley:library:1.0.19'
 }
-
 
 if (rootProject.file('local.properties').exists()) {
     apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
