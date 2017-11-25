@@ -2,11 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/android.iml" filepath="$PROJECT_DIR$/android.iml" />
       <module fileurl="file://$PROJECT_DIR$/android-sdk.iml" filepath="$PROJECT_DIR$/android-sdk.iml" />
-      <module fileurl="file://$PROJECT_DIR$/stitch/sdk.iml" filepath="$PROJECT_DIR$/stitch/sdk.iml" />
       <module fileurl="file://$PROJECT_DIR$/stitch/stitch.iml" filepath="$PROJECT_DIR$/stitch/stitch.iml" />
-      <module fileurl="file://$PROJECT_DIR$/stitch-android-sdk.iml" filepath="$PROJECT_DIR$/stitch-android-sdk.iml" />
     </modules>
   </component>
 </project>
