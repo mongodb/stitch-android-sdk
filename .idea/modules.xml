@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/android-sdk.iml" filepath="$PROJECT_DIR$/android-sdk.iml" />
       <module fileurl="file://$PROJECT_DIR$/stitch/stitch.iml" filepath="$PROJECT_DIR$/stitch/stitch.iml" />
+      <module fileurl="file://$PROJECT_DIR$/stitch-android-sdk.iml" filepath="$PROJECT_DIR$/stitch-android-sdk.iml" />
     </modules>
   </component>
 </project>

@@ -25,6 +25,7 @@ import com.mongodb.stitch.android.auth.AuthInfo;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
 import com.mongodb.stitch.android.auth.DecodedJWT;
+import com.mongodb.stitch.android.auth.custom.CustomAuthProviderInfo;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.RefreshTokenHolder;
@@ -578,7 +579,10 @@ public class StitchClient {
                                                 _objMapper.readValue(info.toString(), EmailPasswordAuthProviderInfo.class);
                                         builder.withEmailPass(emailPassInfo);
                                         break;
-
+                                    case CustomAuthProviderInfo.FQ_NAME:
+                                        final CustomAuthProviderInfo customAuthProviderInfo =
+                                                _objMapper.readValue(info.toString(), CustomAuthProviderInfo.class);
+                                        builder.withCustomAuth(customAuthProviderInfo);
                                 }
                             } catch (JSONException | IOException e) {
                                 Log.e(
