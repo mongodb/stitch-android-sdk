@@ -3,25 +3,22 @@ package com.mongodb.stitch
 import android.content.Context
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
-import android.util.Base64
 import com.mongodb.stitch.android.StitchClient
 import com.mongodb.stitch.android.auth.apiKey.APIKey
 import com.mongodb.stitch.android.auth.apiKey.APIKeyProvider
 import com.mongodb.stitch.android.auth.custom.CustomAuthProvider
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider
 import com.mongodb.stitch.android.services.mongodb.MongoClient
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.*
-import org.bson.json.JsonMode
-import org.bson.json.JsonWriterSettings
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.Instant
 import java.util.*
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 import kotlin.test.assertEquals
-
 
 /**
  * Test public methods of StitchClient, running through authentication
@@ -35,8 +32,7 @@ class StitchClientServiceTest {
     private val stitchClient: StitchClient by lazy {
         StitchClient(
                 instrumentationCtx,
-                "test-jsf-fpleb",
-                "https://stitch-dev.mongodb.com"
+                "test-uybga"
         )
     }
 
@@ -66,7 +62,7 @@ class StitchClientServiceTest {
     fun testGetAuthProviders() {
         val authProviders = await(this.stitchClient.authProviders)
 
-        assertThat(authProviders.customAuths?.count() == 1)
+        assertThat(authProviders.customAuth != null)
     }
 
     /**
@@ -198,49 +194,30 @@ class StitchClientServiceTest {
         })
     }
 
-    /**
-     * Generates a HMAC for the given [data] with the given [key] using HMAC-SHA256.
-     *
-     * @returns HMAC
-     */
-    private fun createHmac(data: ByteArray, key: ByteArray): ByteArray {
-        val keySpec = SecretKeySpec(key, "HmacSHA256")
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(keySpec)
-
-        val hmac = mac.doFinal(data)
-        return hmac
-    }
-
     @Test
     fun testCustomAuth() {
-        val headers = Base64.encodeToString(Document(mapOf(
-                "alg" to "HS256",
-                "typ" to "JWT"
-        )).toJson(JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build()).toByteArray(),
-                (Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP))
+        val jwt = Jwts.builder()
+                .setHeader(
+                        mapOf(
+                                "alg" to "HS256",
+                                "typ" to "JWT"
+                        ))
+                .claim("stitch_meta",
+                        mapOf(
+                                "email" to "name@example.com",
+                                "name" to "Joe Bloggs",
+                                "picture" to "https://goo.gl/xqR6Jd"
+                        ))
+                .setIssuedAt(Date())
+                .setNotBefore(Date())
+                .setAudience("test-uybga")
+                .setSubject("uniqueUserID")
+                .setExpiration(Date(Instant.now().plusSeconds(5 * 60).toEpochMilli()))
+                .signWith(SignatureAlgorithm.HS256,
+                        "abcdefghijklmnopqrstuvwxyz1234567890".toByteArray())
+                .compact()
 
-        val payload = Base64.encodeToString(Document(mapOf(
-                "exp" to ((Date().time / 1000) + (5 * 60)),
-                "iat" to (Date().time / 1000),
-                "nbf" to (Date().time / 1000),
-                "stitch_meta" to mapOf(
-                        "email" to "name@example.com",
-                        "name" to "Joe Bloggs",
-                        "picture" to "https://goo.gl/xqR6Jd"
-                ),
-                "aud" to "test-jsf-fpleb",
-                "sub" to "uniqueUserID"
-        )).toJson(JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build()).toByteArray(),
-                (Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP))
 
-        val signature = Base64.encodeToString(
-                createHmac("$headers.$payload".toByteArray(),
-                           "abcdefghijklmnopqrstuvwxyz1234567890".toByteArray()),
-                Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
-        )
-
-        val jwt = "$headers.$payload.$signature"
         val userId = await(stitchClient.logInWithProvider(CustomAuthProvider(jwt)))
 
         assertThat(userId != null)

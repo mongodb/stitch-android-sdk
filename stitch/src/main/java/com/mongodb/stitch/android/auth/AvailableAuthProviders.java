@@ -21,8 +21,7 @@ public class AvailableAuthProviders {
     private final GoogleAuthProviderInfo _google;
     private final AnonymousAuthProviderInfo _anon;
     private final EmailPasswordAuthProviderInfo _emailPass;
-    @NonNull
-    private final List<CustomAuthProviderInfo> _customAuths;
+    private final CustomAuthProviderInfo _customAuth;
 
     public AvailableAuthProviders() {
         this(null, null, null, null, null);
@@ -33,13 +32,13 @@ public class AvailableAuthProviders {
             final GoogleAuthProviderInfo google,
             final AnonymousAuthProviderInfo anon,
             final EmailPasswordAuthProviderInfo emailPass,
-            final List<CustomAuthProviderInfo> customAuths
+            final CustomAuthProviderInfo customAuth
     ) {
         _fb = fb;
         _google = google;
         _anon = anon;
         _emailPass = emailPass;
-        _customAuths = customAuths != null ? customAuths : new ArrayList<CustomAuthProviderInfo>();
+        _customAuth = customAuth;
     }
 
     /**
@@ -106,8 +105,8 @@ public class AvailableAuthProviders {
      * @return The email/password provider information.
      */
     @Nullable
-    public List<CustomAuthProviderInfo> getCustomAuths() {
-        return _customAuths;
+    public CustomAuthProviderInfo getCustomAuth() {
+        return _customAuth;
     }
 
     public static class Builder {
@@ -115,10 +114,10 @@ public class AvailableAuthProviders {
         private GoogleAuthProviderInfo _google;
         private AnonymousAuthProviderInfo _anon;
         private EmailPasswordAuthProviderInfo _emailPass;
-        private List<CustomAuthProviderInfo> _customAuths = new ArrayList<>();
+        private CustomAuthProviderInfo _customAuth;
 
         public AvailableAuthProviders build() {
-            return new AvailableAuthProviders(_fb, _google, _anon, _emailPass, _customAuths);
+            return new AvailableAuthProviders(_fb, _google, _anon, _emailPass, _customAuth);
         }
 
         public void withFacebook(final FacebookAuthProviderInfo fbAuthProv) {
@@ -137,8 +136,8 @@ public class AvailableAuthProviders {
             _emailPass = emailPassAuthProv;
         }
 
-        public void withCustomAuth(final CustomAuthProviderInfo customAuthProvs) {
-            _customAuths.add(customAuthProvs);
+        public void withCustomAuth(final CustomAuthProviderInfo customAuthProv) {
+            _customAuth = customAuthProv;
         }
     }
 }

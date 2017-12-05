@@ -7,10 +7,6 @@ import com.mongodb.stitch.android.auth.AuthProvider;
 
 import org.bson.Document;
 
-/**
- * Created by jasonflax on 12/1/17.
- */
-
 public class CustomAuthProvider implements AuthProvider {
     private static final String AUTH_TYPE = "custom-token";
 
@@ -33,10 +29,6 @@ public class CustomAuthProvider implements AuthProvider {
 
     @Override
     public Document getAuthPayload() {
-        final Document document = new Document();
-
-        document.put(KEY_TOKEN, this.jwt);
-
-        return document;
+        return new Document(KEY_TOKEN, this.jwt);
     }
 }

@@ -7,13 +7,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mongodb.stitch.android.auth.AuthProviderInfo;
-import com.mongodb.stitch.android.auth.oauth2.google.GoogleAuthProviderInfo;
 
 import java.util.List;
-
-/**
- * Created by jasonflax on 12/4/17.
- */
 
 public class CustomAuthProviderInfo extends AuthProviderInfo {
     public static final String FQ_NAME = "custom-token";
