@@ -1,11 +1,16 @@
 package com.mongodb.stitch.android.auth;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProviderInfo;
+import com.mongodb.stitch.android.auth.custom.CustomAuthProviderInfo;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
 import com.mongodb.stitch.android.auth.oauth2.facebook.FacebookAuthProviderInfo;
 import com.mongodb.stitch.android.auth.oauth2.google.GoogleAuthProviderInfo;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * AvailableAuthProviders is a collection of available auth providers for an app and the information
@@ -16,21 +21,24 @@ public class AvailableAuthProviders {
     private final GoogleAuthProviderInfo _google;
     private final AnonymousAuthProviderInfo _anon;
     private final EmailPasswordAuthProviderInfo _emailPass;
+    private final CustomAuthProviderInfo _customAuth;
 
     public AvailableAuthProviders() {
-        this(null, null, null, null);
+        this(null, null, null, null, null);
     }
 
     public AvailableAuthProviders(
             final FacebookAuthProviderInfo fb,
             final GoogleAuthProviderInfo google,
             final AnonymousAuthProviderInfo anon,
-            final EmailPasswordAuthProviderInfo emailPass
+            final EmailPasswordAuthProviderInfo emailPass,
+            final CustomAuthProviderInfo customAuth
     ) {
         _fb = fb;
         _google = google;
         _anon = anon;
         _emailPass = emailPass;
+        _customAuth = customAuth;
     }
 
     /**
@@ -93,14 +101,23 @@ public class AvailableAuthProviders {
         return _emailPass;
     }
 
+    /**
+     * @return The email/password provider information.
+     */
+    @Nullable
+    public CustomAuthProviderInfo getCustomAuth() {
+        return _customAuth;
+    }
+
     public static class Builder {
         private FacebookAuthProviderInfo _fb;
         private GoogleAuthProviderInfo _google;
         private AnonymousAuthProviderInfo _anon;
         private EmailPasswordAuthProviderInfo _emailPass;
+        private CustomAuthProviderInfo _customAuth;
 
         public AvailableAuthProviders build() {
-            return new AvailableAuthProviders(_fb, _google, _anon, _emailPass);
+            return new AvailableAuthProviders(_fb, _google, _anon, _emailPass, _customAuth);
         }
 
         public void withFacebook(final FacebookAuthProviderInfo fbAuthProv) {
@@ -117,6 +134,10 @@ public class AvailableAuthProviders {
 
         public void withEmailPass(final EmailPasswordAuthProviderInfo emailPassAuthProv) {
             _emailPass = emailPassAuthProv;
+        }
+
+        public void withCustomAuth(final CustomAuthProviderInfo customAuthProv) {
+            _customAuth = customAuthProv;
         }
     }
 }
