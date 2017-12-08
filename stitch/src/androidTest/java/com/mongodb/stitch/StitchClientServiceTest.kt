@@ -16,7 +16,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -212,7 +211,7 @@ class StitchClientServiceTest {
                 .setNotBefore(Date())
                 .setAudience("test-uybga")
                 .setSubject("uniqueUserID")
-                .setExpiration(Date(Instant.now().plusSeconds(5 * 60).toEpochMilli()))
+                .setExpiration(Date(((Calendar.getInstance().timeInMillis + (5*60*1000)))))
                 .signWith(SignatureAlgorithm.HS256,
                         "abcdefghijklmnopqrstuvwxyz1234567890".toByteArray())
                 .compact()

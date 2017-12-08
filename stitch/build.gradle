@@ -31,12 +31,12 @@ if (rootProject.file('gradle/gradle-mvn-push.gradle').exists()) {
 }
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 21
     buildToolsVersion '26.0.2'
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 26
+        targetSdkVersion 21
         versionCode 20170505
         versionName "2.0.0"
 
