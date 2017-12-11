@@ -31,14 +31,14 @@ if (rootProject.file('gradle/gradle-mvn-push.gradle').exists()) {
 }
 
 android {
-    compileSdkVersion 21
+    compileSdkVersion 27
     buildToolsVersion '26.0.2'
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 21
-        versionCode 20170505
-        versionName "2.0.0"
+        targetSdkVersion 27
+        versionCode 20171211
+        versionName "2.1.0"
 
         multiDexEnabled true
         testInstrumentationRunner 'io.appflate.restmock.android.RESTMockTestRunner'
