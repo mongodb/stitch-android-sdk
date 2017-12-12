@@ -53,7 +53,8 @@ tasks:
             export AWS_SECRET_ACCESS_KEY=${sdks_aws_secret}
             cd stitch-android-sdk
             echo "building docs"
-            ./gradlew generateReleaseJavadoc copyDocsToS3
+            ./gradlew generateReleaseJavadoc < /dev/null
+            ./gradlew stitch:copyDocsToS3
 
 buildvariants:
 - name: linux-64
