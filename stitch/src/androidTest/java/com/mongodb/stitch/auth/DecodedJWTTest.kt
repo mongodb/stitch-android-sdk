@@ -24,7 +24,7 @@ class DecodedJWTTest {
     @Test
     fun testValidAccessToken() {
         val decodedToken = DecodedJWT(VALID_ACCESS_TOKEN)
-        assertEquals(32503698000, decodedToken.expiration)
+        assertEquals(32503699100, decodedToken.expiration)
         assertEquals("test-jwt-token", decodedToken.name)
     }
 
