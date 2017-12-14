@@ -312,9 +312,8 @@ public class StitchClient {
 
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
         final String url = String.format(
-                "%s/%s/%s",
+                "%s/%s",
                 getResourcePath(routes.AUTH),
-                provider.getType(),
                 routes.USERPASS_REGISTER
         );
 
@@ -354,9 +353,8 @@ public class StitchClient {
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
 
         final String url = String.format(
-                "%s/%s/%s",
+                "%s/%s",
                 getResourcePath(routes.AUTH),
-                "",
                 routes.USERPASS_CONFIRM
         );
 
@@ -400,9 +398,8 @@ public class StitchClient {
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
 
         final String url = String.format(
-                "%s/%s/%s",
+                "%s/%s",
                 getResourcePath(routes.AUTH),
-                "",
                 routes.USERPASS_CONFIRM_SEND
         );
 
@@ -442,9 +439,8 @@ public class StitchClient {
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
 
         final String url = String.format(
-                "%s/%s/%s",
+                "%s/%s",
                 getResourcePath(routes.AUTH),
-                "",
                 routes.USERPASS_RESET
         );
 
@@ -488,9 +484,8 @@ public class StitchClient {
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
 
         final String url = String.format(
-                "%s/%s/%s",
+                "%s/%s",
                 getResourcePath(routes.AUTH),
-                "",
                 routes.USERPASS_RESET_SEND
         );
 
@@ -663,11 +658,14 @@ public class StitchClient {
 
         private final String FUNCTIONS = String.format("app/%s/functions/call", _clientAppId);
         private final String PUSH = String.format("app/%s/push/providers", _clientAppId);
-        private final String USERPASS_REGISTER = "/register";
-        private final String USERPASS_CONFIRM = "local/userpass/confirm";
-        private final String USERPASS_CONFIRM_SEND = "local/userpass/confirm/send";
-        private final String USERPASS_RESET = "local/userpass/reset";
-        private final String USERPASS_RESET_SEND = "local/userpass/reset/send";
+
+        private final String USERPASS = "local-userpass/";
+
+        private final String USERPASS_REGISTER = USERPASS + "register";
+        private final String USERPASS_CONFIRM = USERPASS + "confirm";
+        private final String USERPASS_CONFIRM_SEND = USERPASS + "confirm/send";
+        private final String USERPASS_RESET = USERPASS + "reset";
+        private final String USERPASS_RESET_SEND = USERPASS + "reset/send";
     }
 
     /**
