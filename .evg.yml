@@ -83,6 +83,7 @@ tasks:
 
             echo "running test apk"
             RESULT=`cat $APK_FILE_PATH | curl $URL -H "Authorization: ${device_farm_secret}" --data-binary @-`
+            echo $RESULT
             echo $RESULT | grep -P "OK \(\d+ tests\)"
 
   - name: docs_dist
