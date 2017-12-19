@@ -435,7 +435,9 @@ public class StitchClient {
      * @param tokenId id of the token associated with this user
      * @return A task containing whether or not the reset was successful
      */
-    public Task<Boolean> resetPassword(@NonNull final String token, @NonNull final String tokenId) {
+    public Task<Boolean> resetPassword(@NonNull final String token,
+                                       @NonNull final String tokenId,
+                                       @NonNull final String password) {
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
 
         final String url = String.format(
@@ -448,6 +450,7 @@ public class StitchClient {
 
         params.put(RegistrationFields.TOKEN, token);
         params.put(RegistrationFields.TOKEN_ID, tokenId);
+        params.put(RegistrationFields.PASSWORD, password);
 
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
@@ -1018,6 +1021,7 @@ public class StitchClient {
     private static class RegistrationFields {
         private static final String TOKEN = "token";
         private static final String TOKEN_ID = "tokenId";
+        private static final String PASSWORD = "password";
     }
 
     private static class DeviceFields {
