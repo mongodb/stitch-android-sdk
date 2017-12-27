@@ -732,12 +732,15 @@ public class StitchClient {
     ) {
         ensureAuthenticated();
         final String url = getResourcePath(resource);
-        final DecodedJWT token = new DecodedJWT(useRefreshToken ? getRefreshToken() :
-                _auth.getAuthInfo().getDecodedJWT().getRawToken());
+        final String rawToken = useRefreshToken ? getRefreshToken() :
+                _auth.getAuthInfo().getAccessToken();
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
-        if (!useRefreshToken && token.isExpired()) {
-            handleInvalidSession(method, resource, body, future);
-            return future.getTask();
+        if (!useRefreshToken) {
+            final DecodedJWT token = new DecodedJWT(rawToken);
+            if (token.isExpired()) {
+                handleInvalidSession(method, resource, body, future);
+                return future.getTask();
+            }
         }
 
         final AuthenticatedJsonStringRequest request = new AuthenticatedJsonStringRequest(
@@ -746,7 +749,7 @@ public class StitchClient {
                 body,
                 Collections.singletonMap(
                         Headers.AUTHORIZATION,
-                        GetAuthorizationBearer(token.getRawToken())),
+                        GetAuthorizationBearer(rawToken)),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {

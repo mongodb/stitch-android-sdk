@@ -40,13 +40,8 @@ public class AuthInfo {
      * @return The current access token for this session.
      */
     @JsonProperty(Fields.ACCESS_TOKEN)
-    private String getAccessToken() {
+    public String getAccessToken() {
         return _accessToken;
-    }
-
-    @JsonIgnore
-    public DecodedJWT getDecodedJWT() {
-        return new DecodedJWT(_accessToken);
     }
 
     /**
