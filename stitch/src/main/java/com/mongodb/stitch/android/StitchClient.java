@@ -220,7 +220,6 @@ public class StitchClient {
             } catch (final IOException e) {
                 throw new StitchException(e);
             }
-            onLogin();
             return true;
         }
 
