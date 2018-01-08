@@ -1,10 +1,10 @@
 package com.mongodb.stitch.android.auth.oauth2.google;
 
 import com.mongodb.stitch.android.auth.AuthProvider;
+import com.mongodb.stitch.android.auth.oauth2.OAuth2;
 
 import org.bson.Document;
 
-import static com.mongodb.stitch.android.auth.oauth2.OAuth2.AUTH_TYPE;
 import static com.mongodb.stitch.android.auth.oauth2.OAuth2.Fields;
 
 /**
@@ -12,7 +12,7 @@ import static com.mongodb.stitch.android.auth.oauth2.OAuth2.Fields;
  */
 public class GoogleAuthProvider implements AuthProvider {
 
-    private static final String AUTH_NAME = "google";
+    private static final String AUTH_TYPE = String.format("%s-google", OAuth2.AUTH_TYPE);
 
     private final String _authCode;
 
