@@ -7,7 +7,7 @@ This project follows [Semantic Versioning 2.0](https://semver.org/). In general,
 ### Publishing a New SDK version
 ```bash
 # run bump_version.bash with either patch, minor, or major
-./bump_version <patch|minor|major>
+./bump_version.bash <patch|minor|major>
 
 # make live
 git push upstream && git push upstream --tags
