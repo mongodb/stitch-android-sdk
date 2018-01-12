@@ -16,7 +16,8 @@ import java.util.List;
 public class FacebookAuthProviderInfo extends AuthProviderInfo {
     public static final String FQ_NAME = "oauth2-facebook";
 
-    static final String METADATA_FIELDS = "metadata_fields";
+    private static final String METADATA_FIELDS = "metadata_fields";
+    private static final String CONFIG = "config";
 
     public static class MetadataField {
         class Fields {
@@ -76,13 +77,14 @@ public class FacebookAuthProviderInfo extends AuthProviderInfo {
                                     final String type,
                                     @JsonProperty(AuthProviderInfo.Fields.NAME) @NonNull
                                     final String name,
-                                    @JsonProperty("config") @NonNull
-                                    final Config config) {
+                                    @JsonProperty(CONFIG) @NonNull final Config config,
+                                    @JsonProperty(METADATA_FIELDS) @NonNull final List<MetadataField> metadataFields) {
         super(type, name);
         this._config = config;
+        this._metadataFields = metadataFields;
     }
 
-    @JsonProperty("config")
+    @JsonProperty(CONFIG)
     @NonNull
     public Config getConfig() {
         return this._config;
