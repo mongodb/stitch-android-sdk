@@ -14,7 +14,7 @@ git push upstream && git push upstream --tags
 ./gradlew bintrayUpload
 # sync the package with Maven Central on Bintray
 
-# send an email detailing the changes to the stitch-users@mongodb.com mailing list
+# send an email detailing the changes to the https://groups.google.com/d/forum/mongodb-stitch-announce mailing list
 ```
 
 ### Patch Versions

@@ -1,6 +1,8 @@
 # Android SDK
 
 [![Join the chat at https://gitter.im/mongodb/stitch](https://badges.gitter.im/mongodb/stitch.svg)](https://gitter.im/mongodb/stitch?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[MongoDB Stitch Users - Google Group](https://groups.google.com/d/forum/mongodb-stitch-users)
+[MongoDB Stitch Announcements - Google Group](https://groups.google.com/d/forum/mongodb-stitch-announce)
 
 ## Creating a new app with the SDK
 
