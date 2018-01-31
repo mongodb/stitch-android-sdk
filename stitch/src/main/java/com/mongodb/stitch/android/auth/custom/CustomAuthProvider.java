@@ -8,7 +8,7 @@ import com.mongodb.stitch.android.auth.AuthProvider;
 import org.bson.Document;
 
 public class CustomAuthProvider implements AuthProvider {
-    private static final String AUTH_TYPE = "custom-token";
+    public static final String AUTH_TYPE = "custom-token";
 
     private static final String KEY_TOKEN = "token";
 

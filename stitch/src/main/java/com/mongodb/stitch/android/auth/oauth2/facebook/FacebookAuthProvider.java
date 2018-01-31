@@ -12,7 +12,7 @@ import static com.mongodb.stitch.android.auth.oauth2.OAuth2.Fields;
  */
 public class FacebookAuthProvider implements AuthProvider {
 
-    private static final String AUTH_TYPE = String.format("%s-facebook", OAuth2.AUTH_TYPE);
+    public static final String AUTH_TYPE = String.format("%s-facebook", OAuth2.AUTH_TYPE);
 
     private final String _accessToken;
 
