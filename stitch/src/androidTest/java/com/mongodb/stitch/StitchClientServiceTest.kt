@@ -271,4 +271,27 @@ class StitchClientServiceTest {
         assertFalse(mlsStitchClient.isAuthenticated)
         assertEquals(mlsStitchClient.loggedInProviderType, "")
     }
+
+    // NOTE: This test works locally when logging in with an email identity not associated with a Stitch user, but with our
+    // current testing framework we cannot dynamically create identities to test this functionality. Once we have the
+    // appropriate framework we can re-enable this test.
+    /*
+    @Test
+    fun testIdentityLinking() {
+        val ilStitchClient = StitchClient(instrumentationCtx, "stitch-tests-android-sdk-rqopr")
+
+        val anonUserId = await(ilStitchClient.logInWithProvider(AnonymousAuthProvider()))
+        assertThat(anonUserId != null)
+        assertEquals(ilStitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
+
+        assertEquals(anonUserId, await(ilStitchClient.linkWithProvider(EmailPasswordAuthProvider("link_test@10gen.com", "hunter2"))))
+        assertEquals(ilStitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
+
+        val userProfile = await(ilStitchClient.auth!!.userProfile)
+        assertEquals(userProfile.identities.size, 2)
+
+        await(ilStitchClient.logout())
+        assertFalse(ilStitchClient.isAuthenticated)
+    }
+    */
 }

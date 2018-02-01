@@ -14,6 +14,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.Volley;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.tasks.Continuation;
@@ -25,6 +26,7 @@ import com.mongodb.stitch.android.auth.AuthInfo;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
 import com.mongodb.stitch.android.auth.DecodedJWT;
+import com.mongodb.stitch.android.auth.LinkInfo;
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProvider;
 import com.mongodb.stitch.android.auth.custom.CustomAuthProviderInfo;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
@@ -221,7 +223,8 @@ public class StitchClient {
     }
 
     /**
-     * @return The type of the authentication provider used to log into the current session. Empty string when not logged in.
+     * @return The type of the authentication provider used to log into the current session, or the
+     * most recent provider linked. Empty string when not logged in.
      */
     public String getLoggedInProviderType() {
         return _preferences.getString(PREF_AUTH_PT_NAME, "");
@@ -252,12 +255,12 @@ public class StitchClient {
      * Logs the current user in using a specific auth provider.
      *
      * @param authProvider The provider that will handle the login.
-     * @return A task containing an {@link AuthInfo} session that can be resolved on completion of log in.
+     * @return A task containing the ID of the logged in user.
      */
     public Task<String> logInWithProvider(final AuthProvider authProvider) {
         if (!isAuthenticated()) {
             // Not currently authenticated, perform login.
-            return doLoginRequest(authProvider);
+            return doAuthRequest(authProvider, false);
         }
 
         // Check if logging in as anonymous user while already logged in as anonymous user.
@@ -272,52 +275,101 @@ public class StitchClient {
         return logout().continueWithTask(new Continuation<Void, Task<String>>() {
             @Override
             public Task<String> then(@NonNull Task<Void> task) throws Exception {
-                return doLoginRequest(authProvider);
+                return doAuthRequest(authProvider,false);
             }
         });
 
     }
 
-    private Task<String> doLoginRequest(final AuthProvider authProvider) {
+    /**
+     * Links the current user to another identity.
+     *
+     * @param authProvider: The authentication provider which will provide the new identity
+     * @return A task containing the user ID of the current, original user
+     */
+    public Task<String> linkWithProvider(final AuthProvider authProvider) {
+        if (!isAuthenticated()) {
+            return Tasks.forException(
+                    new StitchException.StitchClientException(
+                            "Must be authenticated to link a user to new identity."
+                    )
+            );
+        }
+
+        return doAuthRequest(authProvider, true);
+    }
+
+    private Task<String> doAuthRequest(final AuthProvider authProvider, final boolean linking) {
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
 
-        final JsonStringRequest request = new JsonStringRequest(
-                Request.Method.POST,
-                getResourcePath(routes.getAuthProvidersLoginRoute(authProvider.getType())),
-                getAuthRequest(authProvider).toJson(),
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(final String response) {
-                        try {
-                            _auth = new Auth(
-                                    StitchClient.this,
-                                    _objMapper.readValue(response, AuthInfo.class));
-                            final RefreshTokenHolder refreshToken =
-                                    _objMapper.readValue(response, RefreshTokenHolder.class);
+        final String authRoute = getResourcePath(
+                routes.getAuthProvidersLoginRoute(authProvider.getType())
+        ) + (linking ? "?link=true" : "");
 
-                            final SharedPreferences.Editor sharedPrefEditor = _preferences.edit();
-                            sharedPrefEditor.putString(PREF_AUTH_JWT_NAME, response);
-                            sharedPrefEditor.putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken());
-                            sharedPrefEditor.putString(PREF_DEVICE_ID_NAME, _auth.getAuthInfo().getDeviceId());
-                            sharedPrefEditor.putString(PREF_AUTH_PT_NAME, authProvider.getType());
-                            sharedPrefEditor.apply();
+        final String authRequest = getAuthRequest(authProvider).toJson();
 
-                            future.setResult(_auth.getAuthInfo().getUserId());
+        final Response.Listener<String> responseListener = new Response.Listener<String>() {
+            @Override
+            public void onResponse(final String response) {
+                try {
+                    if (!linking) {
+                        _auth = new Auth(
+                                StitchClient.this,
+                                _objMapper.readValue(response, AuthInfo.class));
+                        final RefreshTokenHolder refreshToken =
+                                _objMapper.readValue(response, RefreshTokenHolder.class);
 
-                            onLogin();
-                        } catch (final IOException e) {
-                            Log.e(TAG, "Error parsing auth response", e);
-                            future.setException(new StitchException(e));
-                        }
+                        final SharedPreferences.Editor sharedPrefEditor = _preferences.edit();
+                        sharedPrefEditor.putString(PREF_AUTH_JWT_NAME, response);
+                        sharedPrefEditor.putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken());
+                        sharedPrefEditor.putString(PREF_DEVICE_ID_NAME, _auth.getAuthInfo().getDeviceId());
+                        sharedPrefEditor.putString(PREF_AUTH_PT_NAME, authProvider.getType());
+                        sharedPrefEditor.apply();
+
+                        future.setResult(_auth.getAuthInfo().getUserId());
+
+                        onLogin();
+                    } else {
+                        _preferences.edit().putString(PREF_AUTH_PT_NAME, authProvider.getType()).apply();
+                        future.setResult(_objMapper.readValue(response, LinkInfo.class).getUserId());
                     }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while logging in with auth provider", error);
-                        future.setException(parseRequestError(error));
-                    }
-                });
+
+                } catch (final IOException e) {
+                    Log.e(TAG, "Error parsing auth response", e);
+                    future.setException(new StitchException(e));
+                }
+            }
+        };
+
+        final Response.ErrorListener responseErrorListener = new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(final VolleyError error) {
+                Log.e(TAG, "Error while " + (linking ? "linking" : "logging in") + " with auth provider", error);
+                future.setException(parseRequestError(error));
+            }
+        };
+
+        JsonRequest<String> request;
+        if (!linking) {
+            request = new JsonStringRequest(
+                    Request.Method.POST,
+                    authRoute,
+                    authRequest,
+                    responseListener,
+                    responseErrorListener
+            );
+        } else {
+            request = new AuthenticatedJsonStringRequest(
+                    Request.Method.POST,
+                    authRoute,
+                    authRequest,
+                    Collections.singletonMap(
+                            Headers.AUTHORIZATION,
+                            GetAuthorizationBearer(_auth.getAuthInfo().getAccessToken())),
+                    responseListener,
+                    responseErrorListener
+            );
+        }
 
         request.setTag(this);
         _queue.add(request);
