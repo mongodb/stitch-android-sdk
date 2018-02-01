@@ -25,6 +25,7 @@ import com.mongodb.stitch.android.auth.AuthInfo;
 import com.mongodb.stitch.android.auth.AuthProvider;
 import com.mongodb.stitch.android.auth.AvailableAuthProviders;
 import com.mongodb.stitch.android.auth.DecodedJWT;
+import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProvider;
 import com.mongodb.stitch.android.auth.custom.CustomAuthProviderInfo;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider;
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProviderInfo;
@@ -75,6 +76,7 @@ public class StitchClient {
     private static final String SHARED_PREFERENCES_NAME = "com.mongodb.stitch.sdk.SharedPreferences.%s";
     private static final String PREF_AUTH_JWT_NAME = "auth_token";
     private static final String PREF_AUTH_REFRESH_TOKEN_NAME = "refresh_token";
+    private static final String PREF_AUTH_PT_NAME = "provider_type";
     private static final String PREF_DEVICE_ID_NAME = "deviceId";
     private final Properties _properties;
 
@@ -227,6 +229,13 @@ public class StitchClient {
     }
 
     /**
+     * @return The type of the authentication provider used to log into the current session. Empty string when not logged in.
+     */
+    public String getLoggedInProviderType() {
+        return _preferences.getString(PREF_AUTH_PT_NAME, "");
+    }
+
+    /**
      * Logs out the current user.
      *
      * @return A task that can be resolved upon completion of logout.
@@ -237,12 +246,12 @@ public class StitchClient {
         }
         return executeRequest(Request.Method.DELETE, routes.AUTH_SESSION, null, false, true).continueWith(new Continuation<String, Void>() {
             @Override
-            public Void then(@NonNull final Task<String> task) throws Exception {
-                if (task.isSuccessful()) {
-                    clearAuth();
-                    return null;
+            public Void then(@NonNull final Task<String> task) {
+                if(!task.isSuccessful()) {
+                    Log.d(TAG, "Logout request to Stitch resulted in error. Clearing locally stored tokens anyway.");
                 }
-                throw task.getException();
+                clearAuth();
+                return null;
             }
         });
     }
@@ -253,13 +262,31 @@ public class StitchClient {
      * @param authProvider The provider that will handle the login.
      * @return A task containing an {@link AuthInfo} session that can be resolved on completion of log in.
      */
-    public Task<String> logInWithProvider(AuthProvider authProvider) {
+    public Task<String> logInWithProvider(final AuthProvider authProvider) {
+        if (!isAuthenticated()) {
+            // Not currently authenticated, perform login.
+            return doLoginRequest(authProvider);
+        }
 
-        if (isAuthenticated()) {
-            Log.d(TAG, "Already logged in. Returning cached token");
+        // Check if logging in as anonymous user while already logged in as anonymous user.
+        if (authProvider.getType().equals(AnonymousAuthProvider.AUTH_TYPE) &&
+                this.getLoggedInProviderType().equals(AnonymousAuthProvider.AUTH_TYPE)) {
+            Log.d(TAG, "Already logged in as anonymous user, using cached token.");
             return Tasks.forResult(_auth.getAuthInfo().getUserId());
         }
 
+        // Using a different provider, so log out then perform login.
+        Log.d(TAG, "Already logged in, logging out of existing session.");
+        return logout().continueWithTask(new Continuation<Void, Task<String>>() {
+            @Override
+            public Task<String> then(@NonNull Task<Void> task) throws Exception {
+                return doLoginRequest(authProvider);
+            }
+        });
+
+    }
+
+    private Task<String> doLoginRequest(final AuthProvider authProvider) {
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
 
         final JsonStringRequest request = new JsonStringRequest(
@@ -275,10 +302,16 @@ public class StitchClient {
                                     _objMapper.readValue(response, AuthInfo.class));
                             final RefreshTokenHolder refreshToken =
                                     _objMapper.readValue(response, RefreshTokenHolder.class);
-                            _preferences.edit().putString(PREF_AUTH_JWT_NAME, response).apply();
-                            _preferences.edit().putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken()).apply();
-                            _preferences.edit().putString(PREF_DEVICE_ID_NAME, _auth.getAuthInfo().getDeviceId()).apply();
+
+                            final SharedPreferences.Editor sharedPrefEditor = _preferences.edit();
+                            sharedPrefEditor.putString(PREF_AUTH_JWT_NAME, response);
+                            sharedPrefEditor.putString(PREF_AUTH_REFRESH_TOKEN_NAME, refreshToken.getToken());
+                            sharedPrefEditor.putString(PREF_DEVICE_ID_NAME, _auth.getAuthInfo().getDeviceId());
+                            sharedPrefEditor.putString(PREF_AUTH_PT_NAME, authProvider.getType());
+                            sharedPrefEditor.apply();
+
                             future.setResult(_auth.getAuthInfo().getUserId());
+
                             onLogin();
                         } catch (final IOException e) {
                             Log.e(TAG, "Error parsing auth response", e);
@@ -293,9 +326,9 @@ public class StitchClient {
                         future.setException(parseRequestError(error));
                     }
                 });
+
         request.setTag(this);
         _queue.add(request);
-
         return future.getTask();
     }
 
@@ -863,8 +896,13 @@ public class StitchClient {
             return;
         }
         _auth = null;
-        _preferences.edit().remove(PREF_AUTH_JWT_NAME).apply();
-        _preferences.edit().remove(PREF_AUTH_REFRESH_TOKEN_NAME).apply();
+
+        final SharedPreferences.Editor sharedPrefEditor = _preferences.edit();
+        sharedPrefEditor.remove(PREF_AUTH_JWT_NAME);
+        sharedPrefEditor.remove(PREF_AUTH_REFRESH_TOKEN_NAME);
+        sharedPrefEditor.remove(PREF_AUTH_PT_NAME);
+        sharedPrefEditor.apply();
+
         _queue.cancelAll(this);
         onLogout();
     }

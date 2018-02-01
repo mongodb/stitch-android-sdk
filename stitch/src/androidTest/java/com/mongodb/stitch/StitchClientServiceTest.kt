@@ -4,6 +4,7 @@ import android.content.Context
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
 import com.mongodb.stitch.android.StitchClient
+import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.android.auth.apiKey.APIKey
 import com.mongodb.stitch.android.auth.apiKey.APIKeyProvider
 import com.mongodb.stitch.android.auth.custom.CustomAuthProvider
@@ -18,6 +19,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 /**
  * Test public methods of StitchClient, running through authentication
@@ -220,5 +224,50 @@ class StitchClientServiceTest {
         val userId = await(stitchClient.logInWithProvider(CustomAuthProvider(jwt)))
 
         assertThat(userId != null)
+    }
+
+    @Test
+    fun testMultipleLoginSemantics() {
+        val mlsStitchClient = StitchClient(instrumentationCtx, "stitch-tests-android-sdk-rqopr")
+        clearStitchClient(instrumentationCtx, mlsStitchClient)
+
+        // check storage
+        assertFalse(mlsStitchClient.isAuthenticated)
+        assertEquals(mlsStitchClient.loggedInProviderType, "")
+
+        // login anonymously
+        val anonUserId = await(mlsStitchClient.logInWithProvider(AnonymousAuthProvider()))
+        assertThat(anonUserId != null)
+
+        // check storage
+        assertTrue(mlsStitchClient.isAuthenticated)
+        assertEquals(mlsStitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
+
+        // login anonymously again and make sure user ID is the same
+        assertEquals(anonUserId, await(mlsStitchClient.logInWithProvider(AnonymousAuthProvider())))
+
+        // check storage
+        assertTrue(mlsStitchClient.isAuthenticated)
+        assertEquals(mlsStitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
+
+        // login with email provider and make sure user ID is updated
+        val emailUserId = await(mlsStitchClient.logInWithProvider(EmailPasswordAuthProvider("test1@example.com", "hunter1")))
+        assertNotEquals(emailUserId, anonUserId);
+
+        // check storage
+        assertTrue(mlsStitchClient.isAuthenticated)
+        assertEquals(mlsStitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
+
+        // login with email provider under different user and make sure user ID is updated
+        assertNotEquals(emailUserId, await(mlsStitchClient.logInWithProvider(EmailPasswordAuthProvider("test2@example.com", "hunter2"))))
+
+        // check storage
+        assertTrue(mlsStitchClient.isAuthenticated)
+        assertEquals(mlsStitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
+
+        // Verify that logout clears storage
+        await(mlsStitchClient.logout())
+        assertFalse(mlsStitchClient.isAuthenticated)
+        assertEquals(mlsStitchClient.loggedInProviderType, "")
     }
 }
