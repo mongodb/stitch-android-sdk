@@ -64,18 +64,22 @@ public class UserProfile {
 
         private final String _id;
         private final String _provider;
+        private final String _provider_id;
 
         @JsonCreator
         public Identity(
-
                 @JsonProperty(Fields.ID)
                 final String id,
 
                 @JsonProperty(Fields.PROVIDER)
-                final String provider
+                final String provider,
+
+                @JsonProperty(Fields.PROVIDER_ID)
+                final String provider_id
         ) {
             _id = id;
             _provider = provider;
+            _provider_id = provider_id;
         }
 
         /**
@@ -94,9 +98,18 @@ public class UserProfile {
             return _provider;
         }
 
+        /**
+         * @return The ID of the provider of this identity.
+         */
+        @JsonProperty(Fields.PROVIDER_ID)
+        public String getProviderID() {
+            return _provider_id;
+        }
+
         private static class Fields {
             private static final String ID = "id";
-            private static final String PROVIDER = "provider";
+            private static final String PROVIDER = "provider_type";
+            private static final String PROVIDER_ID = "provider_id";
         }
     }
 
