@@ -99,7 +99,7 @@ public class StitchClient {
      * @param clientAppId The App ID for the Stitch app.
      * @param baseUrl     The base URL of the Stitch Client API server.
      */
-    public StitchClient(final Context context, final String clientAppId, final String baseUrl) {
+    StitchClient(final Context context, final String clientAppId, final String baseUrl) {
         _context = context;
         _queue = Volley.newRequestQueue(context);
         _objMapper = CustomObjectMapper.createObjectMapper();
@@ -141,16 +141,8 @@ public class StitchClient {
      * @param context     The Android {@link Context} that this client should be bound to.
      * @param clientAppId The App ID for the Stitch app.
      */
-    public StitchClient(final Context context, final String clientAppId) {
+    StitchClient(final Context context, final String clientAppId) {
         this(context, clientAppId, DEFAULT_BASE_URL);
-    }
-
-    /**
-     * @param context The Android {@link Context} that this client should be bound to.
-     * @return A client derived from the properties file.
-     */
-    public static StitchClient fromProperties(final Context context) {
-        return new StitchClient(context, null, null);
     }
 
     // Public Methods

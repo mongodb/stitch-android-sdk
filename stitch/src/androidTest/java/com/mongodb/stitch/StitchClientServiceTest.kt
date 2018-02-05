@@ -4,6 +4,7 @@ import android.content.Context
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
 import com.mongodb.stitch.android.StitchClient
+import com.mongodb.stitch.android.StitchClientFactory
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.android.auth.apiKey.APIKey
 import com.mongodb.stitch.android.auth.apiKey.APIKeyProvider
@@ -33,10 +34,10 @@ class StitchClientServiceTest {
     private val instrumentationCtx: Context by lazy { InstrumentationRegistry.getContext() }
     /** [StitchClient] for this test */
     private val stitchClient: StitchClient by lazy {
-        StitchClient(
+        await(StitchClientFactory.create(
                 instrumentationCtx,
                 "test-uybga"
-        )
+        ))
     }
 
     private val email: String = "stitch@mongodb.com"
@@ -228,7 +229,7 @@ class StitchClientServiceTest {
 
     @Test
     fun testMultipleLoginSemantics() {
-        val mlsStitchClient = StitchClient(instrumentationCtx, "stitch-tests-android-sdk-rqopr")
+        val mlsStitchClient = await(StitchClientFactory.create(instrumentationCtx, "stitch-tests-android-sdk-rqopr"))
         clearStitchClient(instrumentationCtx, mlsStitchClient)
 
         // check storage
