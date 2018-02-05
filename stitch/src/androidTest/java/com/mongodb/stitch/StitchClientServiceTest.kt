@@ -272,7 +272,7 @@ class StitchClientServiceTest {
         assertEquals(mlsStitchClient.loggedInProviderType, "")
     }
 
-    // NOTE: This test works locally when logging in with an email identity not associated with a Stitch user, but with our
+    // TODO: This test works locally when logging in with an email identity not associated with a Stitch user, but with our
     // current testing framework we cannot dynamically create identities to test this functionality. Once we have the
     // appropriate framework we can re-enable this test.
     /*

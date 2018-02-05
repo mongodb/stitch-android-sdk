@@ -275,7 +275,7 @@ public class StitchClient {
         return logout().continueWithTask(new Continuation<Void, Task<String>>() {
             @Override
             public Task<String> then(@NonNull Task<Void> task) throws Exception {
-                return doAuthRequest(authProvider,false);
+                return doAuthRequest(authProvider, false);
             }
         });
 
@@ -299,12 +299,12 @@ public class StitchClient {
         return doAuthRequest(authProvider, true);
     }
 
-    private Task<String> doAuthRequest(final AuthProvider authProvider, final boolean linking) {
+    private Task<String> doAuthRequest(final AuthProvider authProvider, final boolean shouldLink) {
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
 
         final String authRoute = getResourcePath(
                 routes.getAuthProvidersLoginRoute(authProvider.getType())
-        ) + (linking ? "?link=true" : "");
+        ) + (shouldLink ? "?link=true" : "");
 
         final String authRequest = getAuthRequest(authProvider).toJson();
 
@@ -312,7 +312,7 @@ public class StitchClient {
             @Override
             public void onResponse(final String response) {
                 try {
-                    if (!linking) {
+                    if (!shouldLink) {
                         _auth = new Auth(
                                 StitchClient.this,
                                 _objMapper.readValue(response, AuthInfo.class));
@@ -344,13 +344,13 @@ public class StitchClient {
         final Response.ErrorListener responseErrorListener = new Response.ErrorListener() {
             @Override
             public void onErrorResponse(final VolleyError error) {
-                Log.e(TAG, "Error while " + (linking ? "linking" : "logging in") + " with auth provider", error);
+                Log.e(TAG, "Error while " + (shouldLink ? "linking" : "logging in") + " with auth provider", error);
                 future.setException(parseRequestError(error));
             }
         };
 
         JsonRequest<String> request;
-        if (!linking) {
+        if (!shouldLink) {
             request = new JsonStringRequest(
                     Request.Method.POST,
                     authRoute,
