@@ -745,7 +745,7 @@ public class StitchClient {
      *
      * @param request The request to be added to the queue.
      */
-    private void enqueueRequest(Request request) {
+    private void enqueueRequest(final Request request) {
         request.setTag(this);
         request.setRetryPolicy(new DefaultRetryPolicy(
                 DEFAULT_TIMEOUT_MS,
