@@ -9,6 +9,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -81,6 +82,9 @@ public class StitchClient {
     private static final String PREF_AUTH_PT_NAME = "provider_type";
     private static final String PREF_DEVICE_ID_NAME = "deviceId";
     private final Properties _properties;
+
+    // Default Network Settings
+    private static final int DEFAULT_TIMEOUT_MS = 15000;
 
     // Members
     private final Context _context;
@@ -371,8 +375,7 @@ public class StitchClient {
             );
         }
 
-        request.setTag(this);
-        _queue.add(request);
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
@@ -412,9 +415,7 @@ public class StitchClient {
                 }
         );
 
-        request.setTag(this);
-        _queue.add(request);
-
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
@@ -458,9 +459,7 @@ public class StitchClient {
                 }
         );
 
-        request.setTag(this);
-        _queue.add(request);
-
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
@@ -498,9 +497,7 @@ public class StitchClient {
                 }
         );
 
-        request.setTag(this);
-        _queue.add(request);
-
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
@@ -547,9 +544,7 @@ public class StitchClient {
                 }
         );
 
-        request.setTag(this);
-        _queue.add(request);
-
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
@@ -587,9 +582,7 @@ public class StitchClient {
                 }
         );
 
-        request.setTag(this);
-        _queue.add(request);
-
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
@@ -677,9 +670,8 @@ public class StitchClient {
                         future.setException(parseRequestError(error));
                     }
                 });
-        request.setTag(this);
-        _queue.add(request);
 
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
@@ -745,6 +737,21 @@ public class StitchClient {
         private final String USERPASS_CONFIRM_SEND = USERPASS + "confirm/send";
         private final String USERPASS_RESET = USERPASS + "reset";
         private final String USERPASS_RESET_SEND = USERPASS + "reset/send";
+    }
+
+    /**
+     * Adds a cancellable request to the Volley queue for this StitchClient. The request will
+     * timeout if it does not complete in DEFAULT_TIMEOUT_MS milliseconds.
+     *
+     * @param request The request to be added to the queue.
+     */
+    private void enqueueRequest(Request request) {
+        request.setTag(this);
+        request.setRetryPolicy(new DefaultRetryPolicy(
+                DEFAULT_TIMEOUT_MS,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        _queue.add(request);
     }
 
     /**
@@ -851,9 +858,8 @@ public class StitchClient {
                         future.setException(e);
                     }
                 });
-        request.setTag(this);
-        _queue.add(request);
 
+        this.enqueueRequest(request);
         return future.getTask();
     }
 
