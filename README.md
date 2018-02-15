@@ -41,14 +41,18 @@
 1. To initialize our connection to Stitch, go to your **MainActivity.java** and within your *onCreate* method, add the following line and replace your-app-id with the app ID you took note of when setting up the application in Stitch:
 
 	```
-	final StitchClient _client = new StitchClient(this, "your-app-id");
-	```
-	
-	* Note: To create a StitchClient using properties, make sure to set the **appId** property in your **stitch.properties** and use the following factory method:
+	StitchClient _client;
 
-		```
-		final StitchClient _client = StitchClient.fromProperties(this);
-		```
+	void onCreate (Bundle savedInstanceState) {
+	    StitchClientFactory.create(this, "<appId>")
+	    	.addOnSuccessListener(new OnSuccessListener<Task<StitchClient>>() {
+		    @Override
+		    public void onSuccess(Task<StitchClient> clientTask) {
+			this._client = clientTask.getResult();
+		    }
+		});
+	}
+	```
 
 2. This will only instantiate a client but will not make any outgoing connection to Stitch
 3. Since we enabled anonymous log in, let's log in with it; add the following after your new _client:
