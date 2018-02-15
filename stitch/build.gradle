@@ -16,7 +16,7 @@ ext {
     siteUrl = 'https://www.mongodb.com/cloud/stitch'
     gitUrl = 'https://github.com/mongodb/stitch-android-sdk.git'
 
-    libraryVersion = '2.1.7'
+    libraryVersion = '3.0.0'
 
     developerId = 'mongodb'
     developerName = 'MongoDB, Inc.'
@@ -38,8 +38,8 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 27
-        versionCode 20180112
-        versionName "2.1.7"
+        versionCode 20180215
+        versionName "3.0.0"
 
         multiDexEnabled true
         testInstrumentationRunner 'io.appflate.restmock.android.RESTMockTestRunner'
