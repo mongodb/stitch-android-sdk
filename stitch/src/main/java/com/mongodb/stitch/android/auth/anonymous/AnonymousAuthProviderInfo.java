@@ -13,7 +13,7 @@ import com.mongodb.stitch.android.auth.AuthProviderInfo;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AnonymousAuthProviderInfo extends AuthProviderInfo {
-    public static final String FQ_NAME = "anon/user";
+    public static final String FQ_NAME = "anon-user";
 
     @JsonCreator
     public AnonymousAuthProviderInfo(@JsonProperty(Fields.TYPE) @Nullable final String type,
