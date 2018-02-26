@@ -1,10 +1,11 @@
 package com.mongodb.stitch
 
-import android.content.Context
-import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
-import com.mongodb.stitch.android.StitchClient
-import com.mongodb.stitch.android.StitchClientFactory
+import com.mongodb.stitch.admin.create
+import com.mongodb.stitch.admin.services.ServiceConfigWrapper
+import com.mongodb.stitch.admin.services.ServiceConfigs
+import com.mongodb.stitch.admin.services.service
+import com.mongodb.stitch.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.android.auth.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.android.auth.apiKey.APIKey
 import com.mongodb.stitch.android.auth.apiKey.APIKeyProvider
@@ -14,59 +15,30 @@ import com.mongodb.stitch.android.services.mongodb.MongoClient
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.*
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import junit.framework.Assert.*
+import org.bson.types.ObjectId
+import org.junit.Ignore
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 /**
  * Test public methods of StitchClient, running through authentication
  * and pipeline flows. Full service test.
  */
 @RunWith(AndroidJUnit4::class)
-class StitchClientServiceTest {
-    /** Base context from test runner */
-    private val instrumentationCtx: Context by lazy { InstrumentationRegistry.getContext() }
-    /** [StitchClient] for this test */
-    private val stitchClient: StitchClient by lazy {
-        await(StitchClientFactory.create(
-                instrumentationCtx,
-                "test-uybga"
-        ))
-    }
-
-    private val email: String = "stitch@mongodb.com"
-    private val pass: String = "stitchuser"
-
-    @Before
-    fun setup() {
-        clearStitchClient(instrumentationCtx, stitchClient)
-    }
-
-    @After
-    fun clear() {
-        if (!stitchClient.isAuthenticated) {
-            return
-        }
-
-        await(stitchClient.logout())
-        await(stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
-        val auth = stitchClient.auth!!
-        await(auth.fetchApiKeys()).forEach {
-            await(auth.deleteApiKey(it.id))
-        }
-    }
-
+class StitchClientServiceTest: StitchTestCase() {
     @Test
-    fun testGetAuthProviders() {
-        val authProviders = await(this.stitchClient.authProviders)
+    fun testFetchAuthProviders() {
+        harness.addDefaultCustomTokenProvider()
+        val authInfo = await(stitchClient.authProviders)
 
-        assertThat(authProviders.customAuth != null)
+        assertThat(authInfo.hasEmailPassword())
+        assertThat(authInfo.emailPassword!!.config.emailConfirmationUrl == "http://emailConfirmURL.com")
+        assertThat(authInfo.emailPassword!!.config.resetPasswordUrl == "http://resetPasswordURL.com")
+
+        assertThat(authInfo.customAuth != null)
     }
 
     /**
@@ -74,7 +46,8 @@ class StitchClientServiceTest {
      */
     @Test
     fun testCreateSelfApiKey() {
-        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        harness.addDefaultApiKeyProvider()
+        registerAndLogin()
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
@@ -95,7 +68,8 @@ class StitchClientServiceTest {
 
     @Test
     fun testFetchApiKey() {
-        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        harness.addDefaultApiKeyProvider()
+        registerAndLogin()
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
@@ -115,7 +89,8 @@ class StitchClientServiceTest {
 
     @Test
     fun testFetchApiKeys() {
-        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        harness.addDefaultApiKeyProvider()
+        registerAndLogin()
         val auth = stitchClient.auth?.let { it } ?: return
 
         val keys: List<APIKey> = (0..3).map {
@@ -138,7 +113,8 @@ class StitchClientServiceTest {
 
     @Test
     fun testEnableDisableApiKey() {
-        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        harness.addDefaultApiKeyProvider()
+        registerAndLogin()
         val auth = stitchClient.auth?.let { it } ?: return
 
         val key = await(
@@ -159,22 +135,48 @@ class StitchClientServiceTest {
         assertThat(!await(auth.fetchApiKey(key.id)).disabled)
     }
 
+    val TEST_DB = ObjectId().toString()
+    val TEST_COLLECTION = ObjectId().toString()
+
     @Test
     fun testMongo() {
-        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
-
-        val mongoClient = MongoClient(this.stitchClient, "mongodb-atlas")
-        val coll = mongoClient.getDatabase("todo").getCollection("items")
+        registerAndLogin()
+        val mongodbService = await(
+                harness.app.services.create(data = ServiceConfigWrapper(
+                        name = "mdb",
+                        type = "mongodb",
+                        config = ServiceConfigs.Mongo(uri = "mongodb://localhost:26000"))
+                )
+        )
+        await(harness.app.services.service(mongodbService.id).rules.create(
+                Document(mapOf(
+                        "name" to "testRule",
+                        "namespace" to "$TEST_DB.$TEST_COLLECTION",
+                        "read" to mapOf("%%true" to true),
+                        "write" to mapOf("%%true" to true),
+                        "valid" to mapOf("%%true" to true),
+                        "fields" to mapOf<String, Map<String, String>>(
+                                "_id" to emptyMap(),
+                                "owner_id" to emptyMap(),
+                                "a" to emptyMap(),
+                                "b" to emptyMap(),
+                                "c" to emptyMap(),
+                                "d" to emptyMap()
+                        )
+                ))
+        ))
+        val mongoClient = MongoClient(this.stitchClient, "mdb")
+        val coll = mongoClient.getDatabase(TEST_DB).getCollection(TEST_COLLECTION)
 
         val currentCount = await(coll.count(Document()))
 
-        await(coll.insertOne(Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId))))
+        await(coll.insertOne(Document(mapOf("a" to 1, "b" to 2, "c" to 3, "owner_id" to stitchClient.userId))))
 
         await(coll.count(Document()).addOnCompleteListener { assertEquals(it.result, currentCount + 1) })
 
         await(coll.insertMany(listOf(
-                Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId)),
-                Document(mapOf("bill" to "jones", "owner_id" to stitchClient.userId))
+                Document(mapOf("a" to 1, "owner_id" to stitchClient.userId)),
+                Document(mapOf("a" to 1, "owner_id" to stitchClient.userId))
         )))
 
         await(coll.find(Document(mapOf("owner_id" to stitchClient.userId)), 10).addOnCompleteListener {
@@ -187,19 +189,9 @@ class StitchClientServiceTest {
     }
 
     @Test
-    fun testExecuteFunction() {
-        await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
-        await(this.stitchClient.executeServiceFunction(
-                "send",
-                "tw1",
-                mapOf("from" to "+15005550006", "to" to "+19088392649", "body" to "Fee-fi-fo-fum")
-        ).addOnCompleteListener {
-            assertThat(it.isSuccessful, it.exception)
-        })
-    }
-
-    @Test
     fun testCustomAuth() {
+        harness.addDefaultCustomTokenProvider()
+        registerAndLogin()
         val jwt = Jwts.builder()
                 .setHeader(
                         mapOf(
@@ -214,7 +206,7 @@ class StitchClientServiceTest {
                         ))
                 .setIssuedAt(Date())
                 .setNotBefore(Date())
-                .setAudience("test-uybga")
+                .setAudience(stitchClient.appId)
                 .setSubject("uniqueUserID")
                 .setExpiration(Date(((Calendar.getInstance().timeInMillis + (5*60*1000)))))
                 .signWith(SignatureAlgorithm.HS256,
@@ -229,69 +221,67 @@ class StitchClientServiceTest {
 
     @Test
     fun testMultipleLoginSemantics() {
-        val mlsStitchClient = await(StitchClientFactory.create(instrumentationCtx, "stitch-tests-android-sdk-rqopr"))
-        clearStitchClient(instrumentationCtx, mlsStitchClient)
+        await(stitchClient.logout())
 
         // check storage
-        assertFalse(mlsStitchClient.isAuthenticated)
-        assertEquals(mlsStitchClient.loggedInProviderType, "")
+        assertFalse(stitchClient.isAuthenticated)
+        assertEquals(stitchClient.loggedInProviderType, "")
 
         // login anonymously
-        val anonUserId = await(mlsStitchClient.logInWithProvider(AnonymousAuthProvider()))
+        val anonUserId = await(stitchClient.logInWithProvider(AnonymousAuthProvider()))
         assertThat(anonUserId != null)
 
         // check storage
-        assertTrue(mlsStitchClient.isAuthenticated)
-        assertEquals(mlsStitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
+        assertTrue(stitchClient.isAuthenticated)
+        assertEquals(stitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
 
         // login anonymously again and make sure user ID is the same
-        assertEquals(anonUserId, await(mlsStitchClient.logInWithProvider(AnonymousAuthProvider())))
+        assertEquals(anonUserId, await(stitchClient.logInWithProvider(AnonymousAuthProvider())))
 
         // check storage
-        assertTrue(mlsStitchClient.isAuthenticated)
-        assertEquals(mlsStitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
+        assertTrue(stitchClient.isAuthenticated)
+        assertEquals(stitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
 
         // login with email provider and make sure user ID is updated
-        val emailUserId = await(mlsStitchClient.logInWithProvider(EmailPasswordAuthProvider("test1@example.com", "hunter1")))
-        assertNotEquals(emailUserId, anonUserId);
+        val emailUserId = registerAndLogin()
+        assertNotEquals(emailUserId, anonUserId)
 
         // check storage
-        assertTrue(mlsStitchClient.isAuthenticated)
-        assertEquals(mlsStitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
+        assertTrue(stitchClient.isAuthenticated)
+        assertEquals(stitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
 
         // login with email provider under different user and make sure user ID is updated
-        assertNotEquals(emailUserId, await(mlsStitchClient.logInWithProvider(EmailPasswordAuthProvider("test2@example.com", "hunter2"))))
+        val id2 = registerAndLogin(email = "test2@10gen.com", pass = "hunter2")
+        assertNotEquals(emailUserId, id2)
 
         // check storage
-        assertTrue(mlsStitchClient.isAuthenticated)
-        assertEquals(mlsStitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
+        assertTrue(stitchClient.isAuthenticated)
+        assertEquals(stitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
 
         // Verify that logout clears storage
-        await(mlsStitchClient.logout())
-        assertFalse(mlsStitchClient.isAuthenticated)
-        assertEquals(mlsStitchClient.loggedInProviderType, "")
+        await(stitchClient.logout())
+        assertFalse(stitchClient.isAuthenticated)
+        assertEquals(stitchClient.loggedInProviderType, "")
     }
 
-    // TODO: This test works locally when logging in with an email identity not associated with a Stitch user, but with our
     // current testing framework we cannot dynamically create identities to test this functionality. Once we have the
     // appropriate framework we can re-enable this test.
-    /*
     @Test
     fun testIdentityLinking() {
-        val ilStitchClient = StitchClient(instrumentationCtx, "stitch-tests-android-sdk-rqopr")
-
-        val anonUserId = await(ilStitchClient.logInWithProvider(AnonymousAuthProvider()))
+        await(this.stitchClient.register(email, pass))
+        val conf = await(this.harness.app.userRegistrations.sendConfirmation(email))
+        await(this.stitchClient.emailConfirm(conf.token, conf.tokenId))
+        val anonUserId = await(stitchClient.logInWithProvider(AnonymousAuthProvider()))
         assertThat(anonUserId != null)
-        assertEquals(ilStitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
+        assertEquals(stitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
 
-        assertEquals(anonUserId, await(ilStitchClient.linkWithProvider(EmailPasswordAuthProvider("link_test@10gen.com", "hunter2"))))
-        assertEquals(ilStitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
+        assertEquals(anonUserId, await(stitchClient.linkWithProvider(EmailPasswordAuthProvider(email, pass))))
+        assertEquals(stitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
 
-        val userProfile = await(ilStitchClient.auth!!.userProfile)
+        val userProfile = await(stitchClient.auth!!.userProfile)
         assertEquals(userProfile.identities.size, 2)
 
-        await(ilStitchClient.logout())
-        assertFalse(ilStitchClient.isAuthenticated)
+        await(stitchClient.logout())
+        assertFalse(stitchClient.isAuthenticated)
     }
-    */
 }

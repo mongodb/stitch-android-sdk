@@ -15,6 +15,7 @@ public class UserProfile {
 
     private final String _userId;
     private final List<Identity> _identities;
+    private final List<Role> _roles;
     private final Map<String, Object> _data;
 
     @JsonCreator
@@ -25,11 +26,15 @@ public class UserProfile {
             @JsonProperty(Fields.IDENTITIES)
             final List<Identity> identities,
 
+            @JsonProperty(Fields.ROLES)
+            final List<Role> roles,
+
             @JsonProperty(Fields.DATA)
             final Map<String, Object> data
     ) {
         _userId = userId;
         _identities = identities;
+        _roles = roles;
         _data = data;
     }
 
@@ -49,12 +54,48 @@ public class UserProfile {
         return _identities;
     }
 
+    @JsonProperty(Fields.ROLES)
+    public List<Role> getRoles() {
+        return _roles;
+    }
+
     /**
      * @return The extra data associated with this user.
      */
     @JsonProperty(Fields.DATA)
     public Map<String, Object> getData() {
         return _data;
+    }
+
+    public static class Role {
+        private final String _roleName;
+        private final String _groupId;
+
+        public Role(
+                @JsonProperty(Fields.ROLE_NAME)
+                final String roleName,
+
+                @JsonProperty(Fields.GROUP_ID)
+                final String groupId
+        ) {
+            this._roleName = roleName;
+            this._groupId = groupId;
+        }
+
+        @JsonProperty(Fields.ROLE_NAME)
+        public String getRoleName() {
+            return this._roleName;
+        }
+
+        @JsonProperty(Fields.GROUP_ID)
+        public String getGroupId() {
+            return this._groupId;
+        }
+
+        private static class Fields {
+            private static final String ROLE_NAME = "role_name";
+            private static final String GROUP_ID = "group_id";
+        }
     }
 
     /**
@@ -116,6 +157,7 @@ public class UserProfile {
     private static class Fields {
         private static final String ID = "userId";
         private static final String IDENTITIES = "identities";
+        private static final String ROLES = "roles";
         private static final String DATA = "data";
     }
 }
