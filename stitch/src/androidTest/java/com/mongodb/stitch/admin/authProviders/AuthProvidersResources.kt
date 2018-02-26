@@ -5,7 +5,7 @@ import com.mongodb.stitch.admin.Apps
 
 /// View into a specific auth provider
 data class AuthProvidersResponse(@JsonProperty("_id") val id: String,
-                                 @JsonProperty("disabled") val disabled: Int,
+                                 @JsonProperty("disabled") val disabled: Boolean,
                                  @JsonProperty("name") val name: String,
                                  @JsonProperty("type") val type: String)
 

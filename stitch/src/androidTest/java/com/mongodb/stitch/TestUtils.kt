@@ -2,11 +2,20 @@ package com.mongodb.stitch
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.support.test.InstrumentationRegistry
+import android.support.test.runner.AndroidJUnit4
 import com.google.android.gms.tasks.Task
+import com.mongodb.stitch.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.android.StitchClient
+import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider
 import com.mongodb.stitch.android.push.PushClient.SHARED_PREFERENCES_NAME
 import com.mongodb.stitch.android.test.BuildConfig
+import com.mongodb.stitch.testHarness.TestHarness
+import com.mongodb.stitch.testHarness.buildClientTestHarness
 import okhttp3.mockwebserver.MockResponse
+import org.junit.After
+import org.junit.Before
+import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
@@ -97,4 +106,36 @@ fun mockResponseBuilder(body: String,
     mockResponse.setHeader("Content-Type", contentType)
     mockResponse.block()
     return mockResponse
+}
+
+@RunWith(AndroidJUnit4::class)
+open class StitchTestCase {
+    internal val instrumentationCtx: Context by lazy { InstrumentationRegistry.getContext() }
+
+    internal var harness = buildClientTestHarness(context = instrumentationCtx)
+    internal var stitchClient: StitchClient = harness.stitchClient!!
+    internal val email: String = "stitch@10gen.com"
+    internal val pass: String = "stitchuser"
+
+    @Before
+    fun setup() {
+        this.harness = buildClientTestHarness(context = instrumentationCtx)
+        this.stitchClient = harness.stitchClient!!
+        await(this.stitchClient.logout())
+    }
+
+    @After
+    fun clear() {
+        await(this.stitchClient.logout())
+        await(this.harness.teardown())
+    }
+
+    fun registerAndLogin(stitchClient: StitchClient = this.stitchClient,
+                         email: String = this.email,
+                         pass: String = this.pass): String {
+        await(stitchClient.register(email, pass))
+        val conf = await(this.harness.app.userRegistrations.sendConfirmation(email))
+        await(stitchClient.emailConfirm(conf.token, conf.tokenId))
+        return await(stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+    }
 }

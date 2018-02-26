@@ -69,7 +69,7 @@ public class StitchClient {
     private static final String PLATFORM = "android";
     private static final String TAG = "Stitch";
     private static final String DEFAULT_BASE_URL = "https://stitch.mongodb.com";
-
+    private static final String DEFAULT_API_PATH = "api/client/v2.0";
     // Properties
     private static final String STITCH_PROPERTIES_FILE_NAME = "stitch.properties";
     private static final String PROP_APP_ID = "appId";
@@ -89,6 +89,7 @@ public class StitchClient {
     // Members
     private final Context _context;
     private final String _baseUrl;
+    private final String _apiPath;
     private final String _clientAppId;
     private final RequestQueue _queue;
     private final ObjectMapper _objMapper;
@@ -105,7 +106,10 @@ public class StitchClient {
      * @param clientAppId The App ID for the Stitch app.
      * @param baseUrl     The base URL of the Stitch Client API server.
      */
-    StitchClient(final Context context, final String clientAppId, final String baseUrl) {
+    StitchClient(final Context context,
+                 final String clientAppId,
+                 final String baseUrl,
+                 final String apiPath) {
         _context = context;
         _queue = Volley.newRequestQueue(context);
         _objMapper = CustomObjectMapper.createObjectMapper();
@@ -140,6 +144,11 @@ public class StitchClient {
             _baseUrl = _properties.getProperty(PROP_BASE_URL);
         }
 
+        if (apiPath != null) {
+            _apiPath = apiPath;
+        } else  {
+            _apiPath = DEFAULT_API_PATH;
+        }
         routes = new Routes();
     }
 
@@ -148,7 +157,7 @@ public class StitchClient {
      * @param clientAppId The App ID for the Stitch app.
      */
     StitchClient(final Context context, final String clientAppId) {
-        this(context, clientAppId, DEFAULT_BASE_URL);
+        this(context, clientAppId, DEFAULT_BASE_URL, DEFAULT_API_PATH);
     }
 
     // Public Methods
@@ -282,7 +291,6 @@ public class StitchClient {
                 return doAuthRequest(authProvider, false);
             }
         });
-
     }
 
     /**
@@ -306,10 +314,14 @@ public class StitchClient {
     private Task<String> doAuthRequest(final AuthProvider authProvider, final boolean shouldLink) {
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
 
-        final String authRoute = getResourcePath(
-                routes.getAuthProvidersLoginRoute(authProvider.getType())
-        ) + (shouldLink ? "?link=true" : "");
-
+        String authRoute;
+        if (_apiPath.contains("admin")) {
+            authRoute = _baseUrl + "/" + _apiPath + "/" + "auth/providers/" + authProvider.getType() + "/login";
+        } else {
+            authRoute = getResourcePath(
+                    routes.getAuthProvidersLoginRoute(authProvider.getType())
+            ) + (shouldLink ? "?link=true" : "");
+        }
         final String authRequest = getAuthRequest(authProvider).toJson();
 
         final Response.Listener<String> responseListener = new Response.Listener<String>() {
@@ -392,7 +404,7 @@ public class StitchClient {
         final TaskCompletionSource<Boolean> future = new TaskCompletionSource<>();
         final String url = String.format(
                 "%s/%s",
-                getResourcePath(routes.AUTH),
+                getResourcePath(routes.AUTH_PROVIDERS),
                 routes.USERPASS_REGISTER
         );
 
@@ -431,7 +443,7 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s",
-                getResourcePath(routes.AUTH),
+                getResourcePath(routes.AUTH_PROVIDERS),
                 routes.USERPASS_CONFIRM
         );
 
@@ -759,7 +771,7 @@ public class StitchClient {
      * @return A path to the given resource.
      */
     private String getResourcePath(final String resource) {
-        return String.format("%s/api/client/v2.0/%s", _baseUrl, resource);
+        return String.format("%s/%s/%s", _baseUrl, _apiPath, resource);
     }
 
     /**

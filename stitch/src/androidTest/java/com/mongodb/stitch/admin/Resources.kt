@@ -6,14 +6,18 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.android.gms.tasks.Task
 import com.mongodb.stitch.admin.apps.AppResponse
 import com.mongodb.stitch.admin.authProviders.AuthProvidersResponse
+import com.mongodb.stitch.admin.authProviders.ProviderConfigWrapper
 import com.mongodb.stitch.admin.authProviders.ProviderConfigs
+import com.mongodb.stitch.admin.services.ServiceConfigWrapper
 import com.mongodb.stitch.admin.services.ServiceConfigs
 import com.mongodb.stitch.admin.services.ServiceResponse
-import com.mongodb.stitch.admin.services.rules.RuleCreator
 import com.mongodb.stitch.admin.services.rules.RuleResponse
+import com.mongodb.stitch.admin.users.UserCreator
+import com.mongodb.stitch.admin.users.UserResponse
 import com.mongodb.stitch.android.StitchClient
 import org.bson.Document
 import org.bson.json.JsonMode
@@ -21,45 +25,8 @@ import org.bson.json.JsonWriterSettings
 import org.bson.types.ObjectId
 import java.io.IOException
 
-/**
- * CustomObjectMapper is responsible for handling the serialization and deserialization of JSON
- * objects with special serialization support for [Document]s and [ObjectId]s
- */
-internal object CustomObjectMapper {
-
-    private var _singleton: ObjectMapper? = null
-
-    fun createObjectMapper(): ObjectMapper? {
-        if (_singleton != null) {
-            return _singleton
-        }
-        _singleton = ObjectMapper().registerModule(SimpleModule("stitchModule")
-                .addSerializer(Document::class.java, object : JsonSerializer<Document>() {
-                    @Throws(IOException::class)
-                    override fun serialize(
-                            value: Document,
-                            jsonGenerator: JsonGenerator,
-                            provider: SerializerProvider
-                    ) {
-                        val writerSettings = JsonWriterSettings.builder().outputMode(JsonMode.EXTENDED).build()
-                        jsonGenerator.writeRawValue(value.toJson(writerSettings))
-                    }
-                })
-                .addSerializer(ObjectId::class.java, object : JsonSerializer<ObjectId>() {
-                    @Throws(IOException::class)
-                    override fun serialize(
-                            value: ObjectId,
-                            jsonGenerator: JsonGenerator,
-                            provider: SerializerProvider
-                    ) {
-                        jsonGenerator.writeString(value.toString())
-                    }
-                }))
-        return _singleton
-    }
-}
-
-val objMapper = CustomObjectMapper.createObjectMapper()!!
+val objMapper = jacksonObjectMapper()
+val writer = objMapper.writer()
 
 /// Any endpoint that can be described with basic
 /// CRUD operations
@@ -117,10 +84,11 @@ internal fun Removable.remove(): Task<Unit> {
 /// Adds an endpoint method that POSTs new data
 internal interface Creatable<Creator, T>: Resource
 internal inline fun <Creator, reified T> Creatable<Creator, T>.create(data: Creator): Task<T> {
+    val dat = writer.writeValueAsString(data)
     return this.httpClient.executeRequest(
             POST,
             this.url,
-            objMapper.writeValueAsString(data)
+            writer.writeValueAsString(data)
     ).continueWith { task ->
         if (!task.isSuccessful) {
             throw task.exception!!
@@ -139,7 +107,7 @@ internal inline fun <reified T> Updatable<T>.update(data: T): Task<T> {
     return this.httpClient.executeRequest(
             PUT,
             this.url,
-            objMapper.writeValueAsString(data)
+            writer.writeValueAsString(data)
     ).continueWith { task ->
         if (!task.isSuccessful) {
             throw task.exception!!
@@ -170,7 +138,7 @@ internal class Apps(httpClient: StitchClient, url: String):
             BasicResource(httpClient, url), Gettable<AppResponse>, Removable {
         /// Resource for listing the auth providers of an application
         internal class AuthProviders(httpClient: StitchClient, url: String):
-                BasicResource(httpClient, url), Listable<AuthProvidersResponse>, Creatable<ProviderConfigs, AuthProvidersResponse> {
+                BasicResource(httpClient, url), Listable<AuthProvidersResponse>, Creatable<ProviderConfigWrapper, AuthProvidersResponse> {
             /// Resource for a specific auth provider of an application
             internal class AuthProvider(httpClient: StitchClient, url: String):
                     BasicResource(httpClient, url),
@@ -181,11 +149,25 @@ internal class Apps(httpClient: StitchClient, url: String):
                     Disablable
         }
 
+        /// Resource for user registrations of an application
+        internal class UserRegistrations(httpClient: StitchClient, url: String):
+                BasicResource(httpClient, url)
+
+        /// Resource for a list of users of an application
+        internal class Users(httpClient: StitchClient, url: String):
+                BasicResource(httpClient, url),
+                Listable<UserResponse>,
+                Creatable<UserCreator, UserResponse> {
+            /// Resource for a single user of an application
+            internal class User(httpClient: StitchClient, url: String):
+                    BasicResource(httpClient, url), Gettable<UserResponse>, Removable
+        }
+
         /// Resource for listing services of an application
         internal class Services(httpClient: StitchClient, url: String):
                 BasicResource(httpClient, url),
                 Listable<ServiceResponse>,
-                Creatable<ServiceConfigs, ServiceResponse> {
+                Creatable<ServiceConfigWrapper, ServiceResponse> {
 
             /// Resource for a specific service of an application. Can fetch rules
             /// of the service
@@ -197,7 +179,7 @@ internal class Apps(httpClient: StitchClient, url: String):
                 internal class Rules(httpClient: StitchClient, url: String):
                         BasicResource(httpClient, url),
                         Listable<RuleResponse>,
-                        Creatable<RuleCreator, RuleResponse> {
+                        Creatable<Document, RuleResponse> {
                     /// Resource for a specific rule of a service
                     internal class Rule(httpClient: StitchClient, url: String):
                             BasicResource(httpClient, url),
@@ -210,6 +192,7 @@ internal class Apps(httpClient: StitchClient, url: String):
 
         val authProviders by lazy { AuthProviders(this.httpClient, "$url/auth_providers") }
         val services by lazy { Services(this.httpClient, "$url/services") }
-
+        val users by lazy { Users(this.httpClient, "$url/users") }
+        val userRegistrations by lazy { UserRegistrations(this.httpClient, "$url/user_registrations") }
     }
 }

@@ -1,5 +1,7 @@
 package com.mongodb.stitch.admin.services.rules
 import com.android.volley.Request
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 import org.bson.Document
 
@@ -17,8 +19,5 @@ internal sealed class RuleActionsCreator {
     class AwsSes(vararg actions: AwsSesActions): RuleActionsCreator()
 }
 
-internal data class RuleCreator(val name: String,
-                                val actions: RuleActionsCreator,
-                                val `when`: Document)
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 class RuleResponse
