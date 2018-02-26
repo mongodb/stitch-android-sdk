@@ -22,7 +22,7 @@
 3. In your build.gradle for your app module, add the following to your dependencies block:
 
 	```
-    compile 'org.mongodb:stitch:2.0.0'
+    compile 'org.mongodb:stitch:3.0.0'
     ```
 4. Android Studio will prompt you to sync your changes in your project; hit Sync Now
 
@@ -54,8 +54,11 @@
 	}
 	```
 
-2. This will only instantiate a client but will not make any outgoing connection to Stitch
-3. Since we enabled anonymous log in, let's log in with it; add the following after your new _client:
+    This will only instantiate a client but will not make any outgoing connection to Stitch
+
+2. For guidance on initializing and maintaining a single StitchClient instance across an entire Android application, see the page [Initialize StitchClient](https://docs.mongodb.com/stitch/getting-started/init-stitchclient/#android-sdk) in the MongoDB Stitch documentation.
+
+3. Since we enabled anonymous log in, let's log in with it; add the following after your new ``_client``:
 
 	```
 	 _client.getAuthProviders().addOnSuccessListener(new OnSuccessListener<AvailableAuthProviders>() {
