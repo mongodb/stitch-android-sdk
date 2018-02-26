@@ -58,15 +58,15 @@
 
 2. For guidance on initializing and maintaining a single StitchClient instance across an entire Android application, see the page [Initialize StitchClient](https://docs.mongodb.com/stitch/getting-started/init-stitchclient/#android-sdk) in the MongoDB Stitch documentation.
 
-3. Since we enabled anonymous log in, let's log in with it; add the following after your new ``_client``:
+3. Since we enabled anonymous log in, let's log in with it; add the following using your new ``_client``:
 
 	```
-	 _client.getAuthProviders().addOnSuccessListener(new OnSuccessListener<AvailableAuthProviders>() {
+	 this._client.getAuthProviders().addOnSuccessListener(new OnSuccessListener<AvailableAuthProviders>() {
             @Override
             public void onSuccess(final AvailableAuthProviders auth) {
                 if (auth.hasAnonymous()) {
                     Log.d("stitch", "logging in anonymously");
-                    _client.logInWithProvider(new AnonymousAuthProvider()).addOnCompleteListener(new OnCompleteListener<String>() {
+                    this._client.logInWithProvider(new AnonymousAuthProvider()).addOnCompleteListener(new OnCompleteListener<String>() {
                         @Override
                         public void onComplete(@NonNull final Task<String> task) {
                             if (task.isSuccessful()) {
@@ -85,7 +85,7 @@
 
 4. Now run your app in Android Studio by going to run, Run 'app'. Use the Android Virtual Device you created previously
 5. Once the app is running, open up the Android Monitor by going to View, Tool Windows, Android Monitor
-6. You should see log messages with stitch as a tag showing messages like:
+6. If you've executed the code in step 3, you should see log messages with "stitch" as a tag showing messages like:
 
 	```
 	03-12 19:16:59.003 6175-6175/? D/stitch: logging in anonymously                                                    	
