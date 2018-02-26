@@ -15,6 +15,7 @@ import com.mongodb.stitch.testHarness.buildClientTestHarness
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
 import kotlin.reflect.full.declaredMemberProperties
@@ -108,6 +109,7 @@ fun mockResponseBuilder(body: String,
     return mockResponse
 }
 
+@Ignore
 @RunWith(AndroidJUnit4::class)
 open class StitchTestCase {
     internal val instrumentationCtx: Context by lazy { InstrumentationRegistry.getContext() }

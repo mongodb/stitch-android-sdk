@@ -46,10 +46,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            testCoverageEnabled true
+        }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'proguard-rules.pro'
+            testCoverageEnabled true
         }
     }
     lintOptions {
@@ -70,9 +74,9 @@ android {
         installOptions "-d","-t"
     }
 
-    packagingOptions {
-        pickFirst 'protobuf.meta'
-    }
+//    packagingOptions {
+//        pickFirst 'protobuf.meta'
+//    }
 }
 
 repositories {
@@ -120,8 +124,8 @@ dependencies {
 }
 
 
-//if (rootProject.file('local.properties').exists()) {
-//    apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
-//    apply from: 'https://gist.githubusercontent.com/edaniels/c9e9da05491cfda34151a9275df3eb2f/raw/4acaa3de0ba08ea62d0e05cd1803e044e1bdb80f/bintrayv1.gradle'
-//}
+if (rootProject.file('local.properties').exists()) {
+    apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+    apply from: 'https://gist.githubusercontent.com/edaniels/c9e9da05491cfda34151a9275df3eb2f/raw/4acaa3de0ba08ea62d0e05cd1803e044e1bdb80f/bintrayv1.gradle'
+}
 

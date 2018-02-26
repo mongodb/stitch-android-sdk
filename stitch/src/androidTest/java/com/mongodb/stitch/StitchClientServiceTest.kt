@@ -17,9 +17,9 @@ import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.*
 import org.junit.Test
 import org.junit.runner.RunWith
-import com.mongodb.stitch.testHarness.buildClientTestHarness
 import junit.framework.Assert.*
 import org.bson.types.ObjectId
+import org.junit.Ignore
 import java.util.*
 import kotlin.test.assertNotEquals
 
