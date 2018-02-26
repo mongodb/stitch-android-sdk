@@ -70,6 +70,8 @@ public class StitchClient {
     private static final String TAG = "Stitch";
     private static final String DEFAULT_BASE_URL = "https://stitch.mongodb.com";
     private static final String DEFAULT_API_PATH = "api/client/v2.0";
+    private static final String DEFAULT_ADMIN_API_PATH = "api/admin/v3.0";
+
     // Properties
     private static final String STITCH_PROPERTIES_FILE_NAME = "stitch.properties";
     private static final String PROP_APP_ID = "appId";
@@ -100,16 +102,18 @@ public class StitchClient {
 
     @Nullable
     private Auth _auth;
+    private boolean _isAdmin;
 
     /**
      * @param context     The Android {@link Context} that this client should be bound to.
      * @param clientAppId The App ID for the Stitch app.
      * @param baseUrl     The base URL of the Stitch Client API server.
+     * @param isAdmin     Whether or not this is an admin client
      */
-    StitchClient(final Context context,
-                 final String clientAppId,
-                 final String baseUrl,
-                 final String apiPath) {
+    private StitchClient(final Context context,
+                         final String clientAppId,
+                         final String baseUrl,
+                         final boolean isAdmin) {
         _context = context;
         _queue = Volley.newRequestQueue(context);
         _objMapper = CustomObjectMapper.createObjectMapper();
@@ -144,8 +148,9 @@ public class StitchClient {
             _baseUrl = _properties.getProperty(PROP_BASE_URL);
         }
 
-        if (apiPath != null) {
-            _apiPath = apiPath;
+        this._isAdmin = isAdmin;
+        if (isAdmin) {
+            _apiPath = "api/admin/v3.0";
         } else  {
             _apiPath = DEFAULT_API_PATH;
         }
@@ -155,9 +160,18 @@ public class StitchClient {
     /**
      * @param context     The Android {@link Context} that this client should be bound to.
      * @param clientAppId The App ID for the Stitch app.
+     * @param baseUrl     The base URL of the Stitch Client API server.
+     */
+    StitchClient(final Context context, final String clientAppId, String baseUrl) {
+        this(context, clientAppId, baseUrl, false);
+    }
+
+    /**
+     * @param context     The Android {@link Context} that this client should be bound to.
+     * @param clientAppId The App ID for the Stitch app.
      */
     StitchClient(final Context context, final String clientAppId) {
-        this(context, clientAppId, DEFAULT_BASE_URL, DEFAULT_API_PATH);
+        this(context, clientAppId, DEFAULT_BASE_URL, false);
     }
 
     // Public Methods
@@ -315,8 +329,14 @@ public class StitchClient {
         final TaskCompletionSource<String> future = new TaskCompletionSource<>();
 
         String authRoute;
-        if (_apiPath.contains("admin")) {
-            authRoute = _baseUrl + "/" + _apiPath + "/" + "auth/providers/" + authProvider.getType() + "/login";
+        if (_isAdmin) {
+            authRoute = String.format(
+                    "%s/%s/auth/providers/%s/login",
+                    _baseUrl,
+                    _apiPath,
+                    authProvider.getType()
+
+            );
         } else {
             authRoute = getResourcePath(
                     routes.getAuthProvidersLoginRoute(authProvider.getType())

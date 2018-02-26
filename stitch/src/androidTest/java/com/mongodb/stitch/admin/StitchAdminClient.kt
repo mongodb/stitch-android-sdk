@@ -7,11 +7,9 @@ import android.util.Log
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.TaskCompletionSource
 import com.mongodb.stitch.android.StitchClient
-import com.mongodb.stitch.android.StitchClientFactory
 import com.mongodb.stitch.android.StitchException
 import com.mongodb.stitch.android.auth.AuthProvider
 import com.mongodb.stitch.android.auth.UserProfile
-import com.mongodb.stitch.await
 import com.mongodb.stitch.testHarness.defaultServerUrl
 import org.bson.Document
 
@@ -33,7 +31,14 @@ internal class StitchAdminClient private constructor(private val context: Contex
     }
 
     private val httpClient: StitchClient by lazy {
-        await(StitchClientFactory.create(context, "", baseUrl, "api/admin/v3.0"))
+        val adminConstructor = StitchClient::class.java.getDeclaredConstructor(
+                Context::class.java,
+                String::class.java,
+                String::class.java,
+                Boolean::class.java
+        )
+        adminConstructor.isAccessible = true
+        adminConstructor.newInstance(context, "", baseUrl, true)
     }
 
     private val _preferences = context.getSharedPreferences(

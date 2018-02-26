@@ -84,7 +84,6 @@ internal fun Removable.remove(): Task<Unit> {
 /// Adds an endpoint method that POSTs new data
 internal interface Creatable<Creator, T>: Resource
 internal inline fun <Creator, reified T> Creatable<Creator, T>.create(data: Creator): Task<T> {
-    val dat = writer.writeValueAsString(data)
     return this.httpClient.executeRequest(
             POST,
             this.url,

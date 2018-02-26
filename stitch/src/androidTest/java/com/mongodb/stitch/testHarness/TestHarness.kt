@@ -8,7 +8,6 @@ import com.mongodb.stitch.admin.apps.app
 import com.mongodb.stitch.admin.apps.create
 import com.mongodb.stitch.admin.authProviders.AuthProvidersResponse
 import com.mongodb.stitch.admin.authProviders.ProviderConfigs
-import com.mongodb.stitch.admin.services.ServiceConfigs
 import com.mongodb.stitch.admin.services.ServiceResponse
 import com.mongodb.stitch.admin.services.service
 import com.mongodb.stitch.admin.users.UserCreator
@@ -18,31 +17,15 @@ import com.mongodb.stitch.android.StitchClientFactory
 import com.mongodb.stitch.android.auth.emailpass.EmailPasswordAuthProvider
 import com.mongodb.stitch.await
 import org.bson.types.ObjectId
-import android.content.Context.WIFI_SERVICE
-import android.net.wifi.WifiManager
-import android.os.Build
-import android.support.test.InstrumentationRegistry
-import android.text.format.Formatter
-import android.util.Log
 import com.mongodb.stitch.admin.*
 import com.mongodb.stitch.admin.authProviders.ProviderConfigWrapper
 import com.mongodb.stitch.admin.authProviders.authProvider
 import com.mongodb.stitch.admin.services.ServiceConfigWrapper
 import org.bson.Document
-import java.net.InetAddress
-import java.net.NetworkInterface
 
 
 internal val defaultServerUrl by lazy {
-    var str = ""
-    NetworkInterface.getNetworkInterfaces().toList().forEach { intf ->
-        intf.inetAddresses.toList().forEach { inetAddress ->
-            if (!inetAddress.isLoopbackAddress()) {
-                str = inetAddress.getHostAddress().toString()
-            }
-        }
-    }
-    "http://10.7.25.220:9090"
+    "http://10.0.2.2:9090" // special alias for host's loopack interface
 }
 
 internal fun buildAdminTestHarness(seedTestApp: Boolean = false,
