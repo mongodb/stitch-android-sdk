@@ -12,6 +12,8 @@ import com.mongodb.stitch.admin.apps.AppResponse
 import com.mongodb.stitch.admin.authProviders.AuthProvidersResponse
 import com.mongodb.stitch.admin.authProviders.ProviderConfigWrapper
 import com.mongodb.stitch.admin.authProviders.ProviderConfigs
+import com.mongodb.stitch.admin.pushNotifications.PushNotificationsCreate
+import com.mongodb.stitch.admin.pushNotifications.PushNotificationsResponse
 import com.mongodb.stitch.admin.services.ServiceConfigWrapper
 import com.mongodb.stitch.admin.services.ServiceConfigs
 import com.mongodb.stitch.admin.services.ServiceResponse
@@ -189,7 +191,13 @@ internal class Apps(httpClient: StitchClient, url: String):
             }
         }
 
+        internal class PushNotifications(httpClient: StitchClient, url: String):
+                BasicResource(httpClient, url),
+                Listable<PushNotificationsResponse>,
+                Creatable<PushNotificationsCreate, PushNotificationsResponse>
+
         val authProviders by lazy { AuthProviders(this.httpClient, "$url/auth_providers") }
+        val pushNotifications by lazy { PushNotifications(this.httpClient, "$url/push/notifications") }
         val services by lazy { Services(this.httpClient, "$url/services") }
         val users by lazy { Users(this.httpClient, "$url/users") }
         val userRegistrations by lazy { UserRegistrations(this.httpClient, "$url/user_registrations") }

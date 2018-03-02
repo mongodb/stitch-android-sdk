@@ -1,5 +1,7 @@
 package com.mongodb.stitch.android.push;
 
+import android.util.Log;
+
 import com.mongodb.stitch.android.push.gcm.GCMPushProviderInfo;
 
 import org.bson.Document;

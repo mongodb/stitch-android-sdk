@@ -13,10 +13,15 @@ internal enum class AwsSesActions {
     Send
 }
 
+internal enum class GcmActions {
+    Send
+}
+
 internal sealed class RuleActionsCreator {
     class Http(vararg actions: Request.Method): RuleActionsCreator()
     class Twilio(vararg actions: TwilioActions): RuleActionsCreator()
     class AwsSes(vararg actions: AwsSesActions): RuleActionsCreator()
+    class Gcm(vararg actions: GcmActions): RuleActionsCreator()
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)

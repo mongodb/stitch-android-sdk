@@ -13,7 +13,6 @@ sealed class ProviderConfigs(@JsonIgnore val type: String) {
                         @JsonProperty("resetPasswordSubject") val resetPasswordSubject: String): ProviderConfigs("local-userpass")
     data class Custom(@JsonProperty("signingKey") val signingKey: String): ProviderConfigs("custom-token")
 
-
 }
 
 internal data class ProviderConfigWrapper(@JsonProperty("config")

@@ -90,4 +90,15 @@ public class PushMessage {
     public Bundle getRawData() {
         return _rawData;
     }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "PushMessage[{appId=%s, providerId=%s, data=%s, rawData=%s}]",
+                _appId,
+                _providerId,
+                _data,
+                _rawData
+        );
+    }
 }

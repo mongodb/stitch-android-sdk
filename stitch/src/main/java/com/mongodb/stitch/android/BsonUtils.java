@@ -26,6 +26,8 @@ public class BsonUtils extends RuntimeException {
     private static final BsonTypeCodecMap DEFAULT_BSON_TYPE_CODEC_MAP =
             new BsonTypeCodecMap(DEFAULT_BSON_TYPE_CLASS_MAP, DEFAULT_CODEC_REGISTRY);
 
+    private BsonUtils() {}
+
     public static Iterable parseIterable(final String json) {
         final JsonReader bsonReader = new JsonReader(json);
         final Object decoded = DEFAULT_BSON_TYPE_CODEC_MAP.get(BsonType.ARRAY).decode(bsonReader, DecoderContext.builder().build());

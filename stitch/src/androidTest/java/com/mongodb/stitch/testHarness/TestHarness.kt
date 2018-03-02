@@ -145,13 +145,17 @@ internal class TestHarness(private val context: Context,
         ).enable())
     }
 
-    fun addDefaultUserpassProvider(): AuthProvidersResponse {
-        return this.addProvider(config = ProviderConfigs.Userpass(
+    companion object {
+        val defaultUserPassConfig = ProviderConfigs.Userpass(
                 emailConfirmationUrl = "http://emailConfirmURL.com",
                 resetPasswordUrl = "http://resetPasswordURL.com",
                 confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
+                resetPasswordSubject = "password subject"
         )
+    }
+
+    fun addDefaultUserpassProvider(): AuthProvidersResponse {
+        return this.addProvider(config = defaultUserPassConfig)
     }
 
     fun addDefaultAnonProvider() {

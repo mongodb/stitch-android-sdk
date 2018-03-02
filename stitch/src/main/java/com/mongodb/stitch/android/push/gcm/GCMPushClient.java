@@ -58,6 +58,7 @@ public class GCMPushClient extends PushClient {
     ) {
         super(context, stitchClient);
 
+
         final GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
         if (apiAvailability.isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS) {
             throw new StitchException.StitchClientException(

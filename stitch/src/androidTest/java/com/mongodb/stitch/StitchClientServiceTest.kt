@@ -263,25 +263,4 @@ class StitchClientServiceTest: StitchTestCase() {
         assertFalse(stitchClient.isAuthenticated)
         assertEquals(stitchClient.loggedInProviderType, "")
     }
-
-    // current testing framework we cannot dynamically create identities to test this functionality. Once we have the
-    // appropriate framework we can re-enable this test.
-    @Test
-    fun testIdentityLinking() {
-        await(this.stitchClient.register(email, pass))
-        val conf = await(this.harness.app.userRegistrations.sendConfirmation(email))
-        await(this.stitchClient.emailConfirm(conf.token, conf.tokenId))
-        val anonUserId = await(stitchClient.logInWithProvider(AnonymousAuthProvider()))
-        assertThat(anonUserId != null)
-        assertEquals(stitchClient.loggedInProviderType, AnonymousAuthProvider.AUTH_TYPE)
-
-        assertEquals(anonUserId, await(stitchClient.linkWithProvider(EmailPasswordAuthProvider(email, pass))))
-        assertEquals(stitchClient.loggedInProviderType, EmailPasswordAuthProvider.AUTH_TYPE)
-
-        val userProfile = await(stitchClient.auth!!.userProfile)
-        assertEquals(userProfile.identities.size, 2)
-
-        await(stitchClient.logout())
-        assertFalse(stitchClient.isAuthenticated)
-    }
 }
