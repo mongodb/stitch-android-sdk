@@ -34,7 +34,6 @@ if (rootProject.file('gradle/gradle-mvn-push.gradle').exists()) {
 android {
     compileSdkVersion 27
     buildToolsVersion '26.0.2'
-    //testBuildType "debug"
 
     defaultConfig {
         minSdkVersion 19
@@ -44,7 +43,6 @@ android {
 
         multiDexEnabled true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        //testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
 
     buildTypes {
@@ -53,9 +51,7 @@ android {
             testCoverageEnabled true
             sourceSets {
                 androidTest {
-                    //signingConfig signingConfigs.debug
                     manifest.srcFile 'src/androidTest/AndroidTestManifest.xml'
-                    //java.srcDirs = ['src/main/java', 'src/androidTest/java']
                 }
             }
         }
