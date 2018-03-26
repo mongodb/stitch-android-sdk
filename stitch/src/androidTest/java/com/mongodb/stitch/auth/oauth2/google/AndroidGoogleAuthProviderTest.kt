@@ -13,7 +13,7 @@ import kotlin.test.assertNull
 
 @RunWith(AndroidJUnit4::class)
 class AndroidGoogleAuthProviderTest: StitchTestCase() {
-    private val clientId = "405021717222-ijhi51r06t2t72u1rbdaqstc73hncjes.apps.googleusercontent.com"
+    private val clientId = System.getenv("ANDROID_GOOGLE_TEST_CLIENT_ID")
 
     override fun setup() {
         super.setup()

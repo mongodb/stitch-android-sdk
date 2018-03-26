@@ -82,13 +82,6 @@ fun <T> await(task: Task<T>): T {
     return task.result
 }
 
-fun <T> safeAwait(task: Task<T>): Task<T> {
-    latch { task.addOnCompleteListener { this.countDown() } }
-
-    // return task result
-    return task
-}
-
 /**
  * Custom assertion for arbitrary booleans and exceptions.
  *

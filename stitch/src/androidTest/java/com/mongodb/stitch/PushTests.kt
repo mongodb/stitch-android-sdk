@@ -47,7 +47,7 @@ class PushTests: StitchTestCase() {
                 type = "gcm",
                 config = ServiceConfigs.GCM(
                         senderId = senderId,
-                        apiKey = "AIzaSyDLW2UlIbT6wZQev8x_tUX_YlHZIECrzZc"
+                        apiKey = System.getenv("ANDROID_GCM_TEST_API_KEY")
                 )),
                 rules = Document(mapOf(
                         "name" to "testRule",

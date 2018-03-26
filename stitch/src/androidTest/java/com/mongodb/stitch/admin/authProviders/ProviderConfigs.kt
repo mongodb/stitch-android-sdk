@@ -13,9 +13,6 @@ sealed class ProviderConfigs(@JsonIgnore val type: String) {
     object ApiKey: ProviderConfigs("api-key")
     data class Google(@JsonProperty("clientId") val clientId: String,
                       @JsonProperty("clientSecret") val clientSecret: String):
-//                      @JsonProperty("redirectURIs") val redirectURIs: List<String>,
-//                      @JsonProperty("domainRestrictions") val domainRestrictions: List<String> = listOf(),
-//                      @JsonProperty("metadataFields") val metadataFields: List<GoogleMetadataFields>):
             ProviderConfigs("oauth2-google")
     data class Userpass(@JsonProperty("emailConfirmationUrl") val emailConfirmationUrl: String,
                         @JsonProperty("resetPasswordUrl") val resetPasswordUrl: String,
