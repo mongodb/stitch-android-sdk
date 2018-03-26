@@ -16,7 +16,7 @@ ext {
     siteUrl = 'https://www.mongodb.com/cloud/stitch'
     gitUrl = 'https://github.com/mongodb/stitch-android-sdk.git'
 
-    libraryVersion = '3.0.1'
+    libraryVersion = '3.0.2'
 
     developerId = 'mongodb'
     developerName = 'MongoDB, Inc.'
@@ -39,7 +39,7 @@ android {
         minSdkVersion 19
         targetSdkVersion 27
         versionCode 20180326
-        versionName "3.0.1"
+        versionName "3.0.2"
 
         multiDexEnabled true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
