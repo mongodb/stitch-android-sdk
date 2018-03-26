@@ -18,8 +18,17 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.KProperty
+import kotlin.reflect.KVisibility
+import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.staticProperties
 import kotlin.reflect.jvm.isAccessible
+import kotlin.test.assertNotNull
 
 /**
  * Convenience method that allows suspension using a [CountDownLatch].
@@ -29,13 +38,13 @@ import kotlin.reflect.jvm.isAccessible
  *
  * @return block result
  */
-inline fun <R> latch(count: Int = 1, block: CountDownLatch.() -> R): R {
+inline fun <R> latch(count: Int = 1, timeout: Long = 5000, block: CountDownLatch.() -> R): R {
     // instantiate a new latch with the count arg
     val latch = CountDownLatch(count)
     // call the block arg on the latch object
     val r = latch.block()
     // wait until the latch has been counted down
-    latch.await()
+    latch.await(timeout, TimeUnit.MILLISECONDS)
     // return the result of the block
     return r
 }
@@ -109,6 +118,39 @@ fun mockResponseBuilder(body: String,
     return mockResponse
 }
 
+fun privateInnerClassFor(kClass: KClass<*>, name: String): KClass<*> {
+    val kClass = kClass.nestedClasses.firstOrNull { it.simpleName == name }
+
+    assertNotNull(kClass)
+
+    return kClass!!
+}
+
+fun privateStaticPropertyFor(kClass: KClass<*>, name: String): KProperty<*> {
+    val prop = kClass.staticProperties.firstOrNull { it.name == name }
+
+    assertNotNull(prop)
+    prop!!.isAccessible = true
+    return prop
+}
+
+fun privateMemberPropertyFor(kClass: KClass<*>, name: String): KProperty<*> {
+    val prop = kClass.declaredMemberProperties.firstOrNull { it.name == name }
+
+    assertNotNull(prop)
+    prop!!.isAccessible = true
+    return prop
+}
+
+fun privateFunctionFor(kClass: KClass<*>, name: String): KFunction<*> {
+    val func = kClass.declaredFunctions.firstOrNull { it.name == name }
+
+    assertNotNull(func)
+
+    func!!.isAccessible = true
+    return func
+}
+
 @Ignore
 @RunWith(AndroidJUnit4::class)
 open class StitchTestCase {
@@ -120,24 +162,23 @@ open class StitchTestCase {
     internal val pass: String = "stitchuser"
 
     @Before
-    fun setup() {
+    open fun setup() {
         this.harness = buildClientTestHarness(context = instrumentationCtx)
         this.stitchClient = harness.stitchClient!!
         await(this.stitchClient.logout())
     }
 
     @After
-    fun clear() {
+    open fun clear() {
         await(this.stitchClient.logout())
         await(this.harness.teardown())
     }
 
-    fun registerAndLogin(stitchClient: StitchClient = this.stitchClient,
-                         email: String = this.email,
+    fun registerAndLogin(email: String = this.email,
                          pass: String = this.pass): String {
-        await(stitchClient.register(email, pass))
+        await(this.stitchClient.register(email, pass))
         val conf = await(this.harness.app.userRegistrations.sendConfirmation(email))
-        await(stitchClient.emailConfirm(conf.token, conf.tokenId))
-        return await(stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
+        await(this.stitchClient.emailConfirm(conf.token, conf.tokenId))
+        return await(this.stitchClient.logInWithProvider(EmailPasswordAuthProvider(email, pass)))
     }
 }

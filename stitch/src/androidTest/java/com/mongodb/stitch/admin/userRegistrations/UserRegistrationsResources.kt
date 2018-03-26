@@ -24,3 +24,16 @@ internal fun Apps.App.UserRegistrations.sendConfirmation(email: String): Task<Co
         objMapper.readValue(task.result, ConfirmationEmail::class.java)
     }
 }
+
+/// GET confirmation email token and tokenId
+/// - parameter email: email that the confirmation email was sent to
+internal fun Apps.App.UserRegistrations.sendResetPassword(email: String): Task<ConfirmationEmail> {
+    return this.httpClient.executeRequest(POST, "$url/by_email/$email/send_reset_password")
+            .continueWith { task ->
+                if (!task.isSuccessful) {
+                    throw task.exception!!
+                }
+
+                objMapper.readValue(task.result, ConfirmationEmail::class.java)
+            }
+}

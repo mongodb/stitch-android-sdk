@@ -506,7 +506,7 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s",
-                getResourcePath(routes.AUTH),
+                getResourcePath(routes.AUTH_PROVIDERS),
                 routes.USERPASS_CONFIRM_SEND
         );
 
@@ -538,6 +538,7 @@ public class StitchClient {
      *
      * @param token token associated with this user
      * @param tokenId id of the token associated with this user
+     * @param password new password
      * @return A task containing whether or not the reset was successful
      */
     public Task<Boolean> resetPassword(@NonNull final String token,
@@ -547,7 +548,7 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s",
-                getResourcePath(routes.AUTH),
+                getResourcePath(routes.AUTH_PROVIDERS),
                 routes.USERPASS_RESET
         );
 
@@ -570,7 +571,7 @@ public class StitchClient {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(final VolleyError error) {
-                        Log.e(TAG, "Error while reseting password", error);
+                        Log.e(TAG, "Error while resetting password", error);
                         future.setException(parseRequestError(error));
                     }
                 }
@@ -591,7 +592,7 @@ public class StitchClient {
 
         final String url = String.format(
                 "%s/%s",
-                getResourcePath(routes.AUTH),
+                getResourcePath(routes.AUTH_PROVIDERS),
                 routes.USERPASS_RESET_SEND
         );
 
