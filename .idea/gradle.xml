@@ -8,7 +8,15 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/stitch" />
+            <option value="$PROJECT_DIR$/android" />
+            <option value="$PROJECT_DIR$/android-core" />
+            <option value="$PROJECT_DIR$/android-mongodb-local" />
+            <option value="$PROJECT_DIR$/android-mongodb-stitch" />
+            <option value="$PROJECT_DIR$/core" />
+            <option value="$PROJECT_DIR$/core-admin-client" />
+            <option value="$PROJECT_DIR$/example1" />
+            <option value="$PROJECT_DIR$/server" />
+            <option value="$PROJECT_DIR$/todo" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

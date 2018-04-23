@@ -1,0 +1,71 @@
+package com.mongodb.stitch.core.internal.net;
+
+import com.mongodb.stitch.core.StitchClientException;
+import com.mongodb.stitch.core.StitchRequestException;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import okhttp3.Headers;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.RequestBody;
+import okhttp3.ResponseBody;
+
+public final class OkHttpTransport implements Transport {
+
+  private final OkHttpClient client;
+
+  public OkHttpTransport() {
+    this.client = new OkHttpClient();
+  }
+
+  private static okhttp3.Request buildRequest(final Request request) {
+    final okhttp3.Request.Builder reqBuilder =
+        new okhttp3.Request.Builder().url(request.url).headers(Headers.of(request.headers));
+    if (request.body != null) {
+      String contentType =
+          request.headers.get(com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE);
+      contentType = contentType == null ? "" : contentType;
+      final RequestBody body = RequestBody.create(MediaType.parse(contentType), request.body);
+      reqBuilder.method(request.method.toString(), body);
+    } else {
+      switch (request.method) {
+        case POST:
+        case PUT:
+        case PATCH:
+          reqBuilder.method(request.method.toString(), RequestBody.create(null, ""));
+          break;
+        default:
+          reqBuilder.method(request.method.toString(), null);
+          break;
+      }
+    }
+
+    return reqBuilder.build();
+  }
+
+  private static Response handleResponse(final okhttp3.Response response) {
+    final ResponseBody body = response.body();
+    final InputStream bodyStream;
+    if (body != null) {
+      bodyStream = body.byteStream();
+    } else {
+      bodyStream = null;
+    }
+    final Integer statusCode = response.code();
+    final Map<String, String> headers = new HashMap<>();
+    for (Map.Entry<String, List<String>> entry : response.headers().toMultimap().entrySet()) {
+      headers.put(entry.getKey(), entry.getValue().get(0));
+    }
+    return new Response(statusCode, headers, bodyStream);
+  }
+
+  @Override
+  // This executes a request synchronously
+  public Response roundTrip(final Request request) throws IOException {
+    return handleResponse(client.newCall(buildRequest(request)).execute());
+  }
+}

@@ -2,9 +2,16 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/android-sdk.iml" filepath="$PROJECT_DIR$/android-sdk.iml" />
-      <module fileurl="file://$PROJECT_DIR$/stitch/stitch.iml" filepath="$PROJECT_DIR$/stitch/stitch.iml" />
-      <module fileurl="file://$PROJECT_DIR$/stitch-android-sdk.iml" filepath="$PROJECT_DIR$/stitch-android-sdk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Stitch SDK.iml" filepath="$PROJECT_DIR$/Stitch SDK.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/android.iml" filepath="$PROJECT_DIR$/android/android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android-core/android-core.iml" filepath="$PROJECT_DIR$/android-core/android-core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android-mongodb-local/android-mongodb-local.iml" filepath="$PROJECT_DIR$/android-mongodb-local/android-mongodb-local.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android-mongodb-stitch/android-mongodb-stitch.iml" filepath="$PROJECT_DIR$/android-mongodb-stitch/android-mongodb-stitch.iml" />
+      <module fileurl="file://$PROJECT_DIR$/core/core.iml" filepath="$PROJECT_DIR$/core/core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/core-admin-client/core-admin-client.iml" filepath="$PROJECT_DIR$/core-admin-client/core-admin-client.iml" />
+      <module fileurl="file://$PROJECT_DIR$/example1/example1.iml" filepath="$PROJECT_DIR$/example1/example1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/server/server.iml" filepath="$PROJECT_DIR$/server/server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/todo/todo.iml" filepath="$PROJECT_DIR$/todo/todo.iml" />
     </modules>
   </component>
 </project>

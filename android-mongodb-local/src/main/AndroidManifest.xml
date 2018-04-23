@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="com.mongodb.stitch.android.services.mongodb.local">
+
+  <application>
+    <!-- MongoDBMobileProvider initialize MongoDB Mobile for future usage -->
+    <provider
+      android:authorities="${applicationId}.StitchMongoDBMobileProvider"
+      android:exported="false"
+      android:name=".internal.MongoDBMobileProvider"/>
+  </application>
+</manifest>
