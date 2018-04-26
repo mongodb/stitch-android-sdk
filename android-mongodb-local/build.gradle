@@ -41,7 +41,7 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation project(':android-core')
-    api('org.mongodb:mongodb-driver-embedded:3.7.0-SNAPSHOT') {
+    api('org.mongodb:mongodb-driver-embedded:3.8.0-SNAPSHOT') {
 //        exclude(group: 'org.mongodb', module: 'bson')
     } // TODO: REPLACE WITH ACTUAL 3.8.0
 }

@@ -388,6 +388,9 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     try {
       newAuthInfo.writeToStorage(storage);
     } catch (final IOException e) {
+      // Back out of setting authInfo
+      authInfo = oldInfo;
+      currentUser = null;
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
     }
 
