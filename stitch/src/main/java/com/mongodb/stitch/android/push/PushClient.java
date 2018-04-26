@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 import com.google.android.gms.tasks.Task;
+import com.mongodb.stitch.android.BsonUtils;
 import com.mongodb.stitch.android.StitchClient;
 
 import org.bson.Document;
@@ -88,8 +89,8 @@ public abstract class PushClient {
      */
     protected synchronized void addInfoToConfigs(final PushProviderInfo info) {
         final Document configs = Document.parse(_globalPreferences.getString(PREF_CONFIGS, "{}"));
-        configs.put(info.getService(), info.toDocument().toJson());
-        _globalPreferences.edit().putString(PREF_CONFIGS, configs.toJson()).apply();
+        configs.put(info.getService(), info.toDocument().toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS));
+        _globalPreferences.edit().putString(PREF_CONFIGS, configs.toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS)).apply();
     }
 
     /**
@@ -98,7 +99,7 @@ public abstract class PushClient {
     protected synchronized void removeInfoFromConfigs(final PushProviderInfo info) {
         final Document configs = Document.parse(_globalPreferences.getString(PREF_CONFIGS, "{}"));
         configs.remove(info.getService());
-        _globalPreferences.edit().putString(PREF_CONFIGS, configs.toJson()).apply();
+        _globalPreferences.edit().putString(PREF_CONFIGS, configs.toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS)).apply();
     }
 
     protected static class DeviceFields {

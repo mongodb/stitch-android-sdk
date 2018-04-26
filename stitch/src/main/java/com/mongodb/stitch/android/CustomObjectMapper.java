@@ -33,9 +33,9 @@ class CustomObjectMapper {
                             final JsonGenerator jsonGenerator,
                             final SerializerProvider provider
                     ) throws IOException {
-                        final JsonWriterSettings writerSettings =
-                                JsonWriterSettings.builder().outputMode(JsonMode.EXTENDED).build();
-                        jsonGenerator.writeRawValue(value.toJson(writerSettings));
+                        jsonGenerator.writeRawValue(value.toJson(
+                                BsonUtils.EXTENDED_JSON_WRITER_SETTINGS
+                        ));
                     }
                 })
                 .addSerializer(ObjectId.class, new JsonSerializer<ObjectId>() {

@@ -86,7 +86,7 @@ public class Auth {
         return _stitchClient.executeRequest(
                 Request.Method.POST,
                 Paths.USER_PROFILE_API_KEYS,
-                new Document("name", name).toJson(),
+                new Document("name", name).toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS),
                 true,
                 true
         ).continueWith(new Continuation<String, APIKey>() {
