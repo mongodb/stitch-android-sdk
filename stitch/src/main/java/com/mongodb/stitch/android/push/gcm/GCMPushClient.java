@@ -17,6 +17,7 @@ import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
+import com.mongodb.stitch.android.BsonUtils;
 import com.mongodb.stitch.android.StitchClient;
 import com.mongodb.stitch.android.StitchException;
 import com.mongodb.stitch.android.http.Volley;
@@ -307,7 +308,7 @@ public class GCMPushClient extends PushClient {
         return getStitchClient().executeRequest(
                 Request.Method.PUT,
                 routes.getPushProvidersRegistrationRoute(this._info.getService()),
-                parameters.toJson()
+                parameters.toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS)
         ).continueWith(new Continuation<String, Void>() {
             @Override
             public Void then(@NonNull Task<String> task) throws Exception {

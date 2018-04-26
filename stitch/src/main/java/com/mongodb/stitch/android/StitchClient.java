@@ -44,6 +44,8 @@ import com.mongodb.stitch.android.push.PushClient;
 import com.mongodb.stitch.android.push.PushManager;
 
 import org.bson.Document;
+import org.bson.json.JsonMode;
+import org.bson.json.JsonWriterSettings;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -342,7 +344,9 @@ public class StitchClient {
                     routes.getAuthProvidersLoginRoute(authProvider.getType())
             ) + (shouldLink ? "?link=true" : "");
         }
-        final String authRequest = getAuthRequest(authProvider).toJson();
+        final String authRequest = getAuthRequest(authProvider).toJson(
+                BsonUtils.EXTENDED_JSON_WRITER_SETTINGS
+        );
 
         final Response.Listener<String> responseListener = new Response.Listener<String>() {
             @Override
@@ -431,7 +435,9 @@ public class StitchClient {
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
                 url,
-                getAuthRequest(provider.getRegistrationPayload()).toJson(),
+                getAuthRequest(provider.getRegistrationPayload()).toJson(
+                        BsonUtils.EXTENDED_JSON_WRITER_SETTINGS
+                ),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -475,7 +481,7 @@ public class StitchClient {
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
                 url,
-                params.toJson(),
+                params.toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -513,7 +519,7 @@ public class StitchClient {
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
                 url,
-                new Document("email", email).toJson(),
+                new Document("email", email).toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -561,7 +567,7 @@ public class StitchClient {
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
                 url,
-                params.toJson(),
+                params.toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -599,7 +605,7 @@ public class StitchClient {
         final JsonStringRequest request = new JsonStringRequest(
                 Request.Method.POST,
                 url,
-                new Document("email", email).toJson(),
+                new Document("email", email).toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS),
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(final String response) {
@@ -736,7 +742,7 @@ public class StitchClient {
         return executeRequest(
                 Request.Method.POST,
                 routes.FUNCTIONS,
-                doc.toJson()
+                doc.toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS)
         ).continueWith(new Continuation<String, Object>() {
             @Override
             public Object then(@NonNull final Task<String> task) throws Exception {

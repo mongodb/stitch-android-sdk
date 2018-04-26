@@ -1,6 +1,7 @@
 package com.mongodb.stitch.android;
 
 import org.bson.BsonType;
+import org.bson.BsonWriterSettings;
 import org.bson.codecs.BsonTypeClassMap;
 import org.bson.codecs.BsonTypeCodecMap;
 import org.bson.codecs.BsonValueCodecProvider;
@@ -9,7 +10,9 @@ import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.IterableCodecProvider;
 import org.bson.codecs.ValueCodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.json.JsonMode;
 import org.bson.json.JsonReader;
+import org.bson.json.JsonWriterSettings;
 
 import java.util.List;
 
@@ -27,6 +30,9 @@ public class BsonUtils extends RuntimeException {
             new BsonTypeCodecMap(DEFAULT_BSON_TYPE_CLASS_MAP, DEFAULT_CODEC_REGISTRY);
 
     private BsonUtils() {}
+
+    public static final JsonWriterSettings EXTENDED_JSON_WRITER_SETTINGS =
+            JsonWriterSettings.builder().outputMode(JsonMode.EXTENDED).build();
 
     public static Iterable parseIterable(final String json) {
         final JsonReader bsonReader = new JsonReader(json);

@@ -5,7 +5,8 @@ import com.mongodb.stitch.admin.Apps
 
 internal data class ServiceResponse(@JsonProperty("_id") val id: String,
                                     @JsonProperty("name") val name: String,
-                                    @JsonProperty("type") val type: String)
+                                    @JsonProperty("type") val type: String,
+                                    @JsonProperty("version") val version: Int)
 
 /// GET a service
 /// - parameter id: id of the requested service

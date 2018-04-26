@@ -1,10 +1,12 @@
 package com.mongodb.stitch
 
 import android.support.test.runner.AndroidJUnit4
+import android.util.Log
 import com.mongodb.stitch.android.BsonUtils
 import org.bson.Document
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 class AndroidBsonUtilsTest {
@@ -68,5 +70,23 @@ class AndroidBsonUtilsTest {
         assertThat(array[0] == 1)
         assertThat(array[1] == 2)
         assertThat(array[2] == 3)
+    }
+
+    @Test
+    fun testBinaryToJson() {
+        val data = ByteArray(10)
+        data[0] = 42
+        data[4] = 42
+        data[9] = 42
+
+        val testBytes = org.bson.types.Binary(data)
+        val doc = Document()
+        doc["data"] = testBytes
+
+        val json = doc.toJson(BsonUtils.EXTENDED_JSON_WRITER_SETTINGS)
+        assertThat(
+                "{ \"data\" : { \"\$binary\" : { \"base64\" : \"KgAAACoAAAAAKg==\", \"subType\" : \"00\" } } }"
+                        .equals(json)
+        )
     }
 }
