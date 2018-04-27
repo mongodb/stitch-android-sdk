@@ -17,6 +17,14 @@ git push upstream && git push upstream --tags
 # send an email detailing the changes to the https://groups.google.com/d/forum/mongodb-stitch-announce mailing list
 ```
 
+#### Configuring Bintray Upload
+For the `./gradlew bintrayUpload` command to work properly, you must locally specify your Bintray credentials. You can do this by adding the following two lines to your `local.properties` file:
+
+```
+bintray.user=<bintray_username>
+bintray.apikey=<bintray_apikey>
+```
+
 ### Patch Versions
 
 The work for a patch version should happen on a "support branch" (e.g. 1.2.x). The purpose of this is to be able to support a minor release while excluding changes from the mainstream (`master`) branch. If the changes in the patch are relevant to other branches, including `master`, they should be backported there. The general publishing flow can be followed using `patch` as the bump type in `bump_version`.
