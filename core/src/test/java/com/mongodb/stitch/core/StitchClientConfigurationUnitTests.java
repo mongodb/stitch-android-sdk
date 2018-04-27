@@ -28,6 +28,7 @@ class StitchClientConfigurationUnitTests {
     private final Storage storage = new MemoryStorage();
     private final Transport transport = (Request request) ->
             new Response(200, null, null);
+    private final Long transportTimeout = 15000L;
 
     @Test
     void testStitchClientConfigurationBuilderImplInit() {
@@ -46,11 +47,16 @@ class StitchClientConfigurationUnitTests {
 
         builder.withTransport(this.transport);
 
+        assertThrows(IllegalArgumentException.class, builder::build);
+
+        builder.withTransportTimeout(this.transportTimeout);
+
         final StitchClientConfiguration config = builder.build();
 
         assertEquals(config.getBaseURL(), this.baseURL);
         assertEquals(config.getStorage(), this.storage);
         assertEquals(config.getTransport(), this.transport);
+        assertEquals(config.getTransportTimeout(), this.transportTimeout);
         assertEquals(config.getCodecRegistry(), null);
     }
 
@@ -71,6 +77,10 @@ class StitchClientConfigurationUnitTests {
 
         builder.withTransport(this.transport);
 
+        assertThrows(IllegalArgumentException.class, builder::build);
+
+        builder.withTransportTimeout(this.transportTimeout);
+
         CustomType.Codec customTypeCodec = new CustomType.Codec();
 
         builder.withCustomCodecs(CodecRegistries.fromCodecs(
@@ -82,6 +92,7 @@ class StitchClientConfigurationUnitTests {
         assertEquals(config.getBaseURL(), this.baseURL);
         assertEquals(config.getStorage(), this.storage);
         assertEquals(config.getTransport(), this.transport);
+        assertEquals(config.getTransportTimeout(), this.transportTimeout);
 
         // Ensure that there is a codec for our custom type.
         assertEquals(config.getCodecRegistry().get(CustomType.class), customTypeCodec);

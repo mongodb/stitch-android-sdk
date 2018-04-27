@@ -1,8 +1,10 @@
 package com.mongodb.stitch.core.internal.net;
 
+import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
+import com.mongodb.stitch.core.testutil.Constants;
 
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class StitchRequestClientUnitTests {
     private static final String BASE_URL = "http://localhost:9090";
@@ -36,6 +39,7 @@ class StitchRequestClientUnitTests {
     private static final String GET_ENDPOINT = "/get";
     private static final String NOT_GET_ENDPOINT = "/notget";
     private static final String BAD_REQUEST_ENDPOINT = "/badreq";
+    private static final String TIMEOUT_ENDPOINT = "/timeout";
 
     @Test
     void testDoRequest() throws Exception {
@@ -60,7 +64,8 @@ class StitchRequestClientUnitTests {
                         e.printStackTrace();
                         return null;
                     }
-                }
+                },
+                Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS
         );
 
         final StitchRequest.Builder builder = new StitchRequest.Builder()
@@ -85,6 +90,30 @@ class StitchRequestClientUnitTests {
     }
 
     @Test
+    void testDoRequestWithTimeout() throws Exception {
+        final StitchRequestClient stitchRequestClient = new StitchRequestClient(
+                BASE_URL,
+                (Request request) -> {
+                    Thread.sleep(20000L); // sleep for 20 seconds
+                    return new Response(204, HEADERS, null);
+                },
+                3000L // timeout after 3 seconds
+        );
+
+        final StitchRequest.Builder builder = new StitchRequest.Builder()
+                .withPath(TIMEOUT_ENDPOINT)
+                .withMethod(Method.GET);
+
+        try {
+            stitchRequestClient.doRequest(builder.build());
+        } catch (StitchRequestException e) {
+            assertEquals(e.getErrorCode(), StitchRequestErrorCode.TRANSPORT_TIMEOUT_ERROR);
+            return;
+        }
+        fail("no timeout error");
+    }
+
+    @Test
     void testDoJSONRequestRaw() throws Exception {
         final StitchRequestClient stitchRequestClient = new StitchRequestClient(
                 BASE_URL,
@@ -103,7 +132,8 @@ class StitchRequestClientUnitTests {
                         e.printStackTrace();
                         return null;
                     }
-                }
+                },
+                Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS
         );
 
         final StitchDocRequest.Builder builder = new StitchDocRequest.Builder();

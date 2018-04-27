@@ -7,6 +7,7 @@ import com.mongodb.stitch.core.internal.net.Request;
 import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
+import com.mongodb.stitch.core.testutil.Constants;
 
 import org.bson.Document;
 import org.junit.jupiter.api.Test;
@@ -64,7 +65,8 @@ class CoreUserPasswordAuthProviderClientUnitTests {
                     e.printStackTrace();
                     return null;
                 }
-            }),
+            },
+            Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS),
             this.routes.getAuthRoutes()
     ) { };
 

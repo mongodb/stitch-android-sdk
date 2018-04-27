@@ -14,6 +14,7 @@ import com.mongodb.stitch.core.internal.net.StitchDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.core.mock.MockCoreAnonymousAuthProviderClient;
+import com.mongodb.stitch.core.testutil.Constants;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -188,7 +189,9 @@ class AccessTokenRefreshUnitTests {
         };
 
         MockRequestClient() {
-            super("http://localhost:8080", null);
+            super("http://localhost:8080",
+                    null,
+                    Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
         }
 
         void setHandleAuthProviderLoginRoute(Function<StitchRequest, Response> handleAuthProviderLoginRoute) {

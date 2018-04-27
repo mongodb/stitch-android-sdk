@@ -7,6 +7,7 @@ import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
+import com.mongodb.stitch.core.testutil.Constants;
 
 import org.bson.types.ObjectId;
 
@@ -51,7 +52,9 @@ public final class MockRequestClientForCodecTests extends StitchRequestClient {
     public static final String LIST_VALUE_TEST_ROUTE = "http://localhost:8080/list_value";
 
     public MockRequestClientForCodecTests() {
-        super("http://localhost:8080", null);
+        super("http://localhost:8080",
+                null,
+                Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
     }
 
     private Response handleRequest(StitchRequest request) {
