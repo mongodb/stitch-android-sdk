@@ -7,16 +7,16 @@ import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.internal.net.Transport;
 import com.mongodb.stitch.core.testutil.CustomType;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import org.bson.Document;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecRegistries;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-class StitchAppClientConfigurationUnitTests {
+public class StitchAppClientConfigurationUnitTests {
     private static final String CLIENT_APP_ID = "foo";
     private static final String LOCAL_APP_VERSION = "bar";
     private static final String LOCAL_APP_NAME = "baz";
@@ -26,25 +26,37 @@ class StitchAppClientConfigurationUnitTests {
         new Response(200, null, null);
 
     @Test
-    void testStitchAppClientConfigurationBuilderInit() {
+    public void testStitchAppClientConfigurationBuilderInit() {
         final StitchAppClientConfiguration.Builder builder =
                 new StitchAppClientConfiguration.Builder();
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withClientAppId(CLIENT_APP_ID)
                 .withLocalAppVersion(LOCAL_APP_VERSION)
                 .withLocalAppName(LOCAL_APP_NAME);
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withBaseURL(BASE_URL);
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withStorage(STORAGE);
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withTransport(TRANSPORT);
 
@@ -60,25 +72,37 @@ class StitchAppClientConfigurationUnitTests {
     }
 
     @Test
-    void testStitchAppClientConfigurationBuilderInitWithCodecRegistry() {
+    public void testStitchAppClientConfigurationBuilderInitWithCodecRegistry() {
         final StitchAppClientConfiguration.Builder builder =
                 new StitchAppClientConfiguration.Builder();
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withClientAppId(CLIENT_APP_ID)
                 .withLocalAppVersion(LOCAL_APP_VERSION)
                 .withLocalAppName(LOCAL_APP_NAME);
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withBaseURL(BASE_URL);
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withStorage(STORAGE);
 
-        assertThrows(IllegalArgumentException.class, builder::build);
+        try {
+            builder.build();
+            fail();
+        } catch (final IllegalArgumentException ignored) {}
 
         builder.withTransport(TRANSPORT);
 

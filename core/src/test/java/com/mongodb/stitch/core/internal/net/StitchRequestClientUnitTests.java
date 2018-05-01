@@ -1,36 +1,25 @@
 package com.mongodb.stitch.core.internal.net;
 
-import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 
 import org.bson.Document;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-class StitchRequestClientUnitTests {
-    private static final String BASE_URL = "http://localhost:9090";
-    private static final String HEADER_KEY = "bar";
-    private static final String HEADER_VALUE = "baz";
-    private static final Map<String, String> HEADERS;
+public class StitchRequestClientUnitTests {
+    private static final Map<String, String> HEADERS = new HashMap<>();
+    private static final Map<String, Object> TEST_DOC = new HashMap<>();
     static {
-        Map<String, String> map = new HashMap<>();
-        map.put(HEADER_KEY, HEADER_VALUE);
-        HEADERS = map;
-    }
-
-    private static final Map<String, Object> TEST_DOC;
-    static {
-        Map<String, Object> map = new HashMap<>();
-        map.put("qux", "quux");
-        TEST_DOC = map;
+        HEADERS.put("bar", "baz");
+        TEST_DOC.put("qux", "quux");
     }
 
     private static final String GET_ENDPOINT = "/get";
@@ -38,9 +27,9 @@ class StitchRequestClientUnitTests {
     private static final String BAD_REQUEST_ENDPOINT = "/badreq";
 
     @Test
-    void testDoRequest() throws Exception {
+    public void testDoRequest() throws Exception {
         final StitchRequestClient stitchRequestClient = new StitchRequestClient(
-                BASE_URL,
+                "http://domain.com",
                 (Request request) -> {
                     if (request.url.contains(BAD_REQUEST_ENDPOINT)) {
                         return new Response(500, HEADERS, null);
@@ -56,8 +45,8 @@ class StitchRequestClientUnitTests {
                                         )
                                 )
                         );
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                    } catch (final Exception e) {
+                        fail(e.getMessage());
                         return null;
                     }
                 }
@@ -67,10 +56,10 @@ class StitchRequestClientUnitTests {
                 .withPath(BAD_REQUEST_ENDPOINT)
                 .withMethod(Method.GET);
 
-        assertThrows(
-                StitchServiceException.class,
-                () -> stitchRequestClient.doRequest(builder.build())
-        );
+        try {
+            stitchRequestClient.doRequest(builder.build());
+            fail();
+        } catch (final StitchServiceException ignored) {}
 
 
         builder.withPath(GET_ENDPOINT);
@@ -85,9 +74,9 @@ class StitchRequestClientUnitTests {
     }
 
     @Test
-    void testDoJSONRequestRaw() throws Exception {
+    public void testDoJSONRequestRaw() throws Exception {
         final StitchRequestClient stitchRequestClient = new StitchRequestClient(
-                BASE_URL,
+                "http://domain.com",
                 (Request request) -> {
                     if (request.url.contains(BAD_REQUEST_ENDPOINT)) {
                         return new Response(500, HEADERS, null);
@@ -99,8 +88,8 @@ class StitchRequestClientUnitTests {
                                 HEADERS,
                                 new ByteArrayInputStream(request.body)
                         );
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                    } catch (final Exception e) {
+                        fail(e.getMessage());
                         return null;
                     }
                 }
@@ -110,10 +99,10 @@ class StitchRequestClientUnitTests {
         builder.withPath(BAD_REQUEST_ENDPOINT)
                 .withMethod(Method.POST);
 
-        assertThrows(
-                NullPointerException.class,
-                () -> stitchRequestClient.doJSONRequestRaw(builder.build())
-        );
+        try {
+            stitchRequestClient.doJSONRequestRaw(builder.build());
+            fail();
+        } catch (final NullPointerException ignored) {}
 
         builder.withPath(NOT_GET_ENDPOINT);
         builder.withDocument(new Document(TEST_DOC));

@@ -4,7 +4,7 @@ public class StitchUserIdentity {
   protected final String id;
   protected final String providerType;
 
-  protected StitchUserIdentity(final String id, final String providerType) {
+  public StitchUserIdentity(final String id, final String providerType) {
     this.id = id;
     this.providerType = providerType;
   }

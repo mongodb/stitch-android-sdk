@@ -3,18 +3,18 @@ package com.mongodb.stitch.core;
 import com.mongodb.stitch.core.internal.common.BSONUtils;
 
 import org.bson.codecs.configuration.CodecRegistry;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
-class StitchAppClientInfoUnitTests {
+public class StitchAppClientInfoUnitTests {
     private static final String CLIENT_APP_ID = "foo";
     private static final String DATA_DIRECTORY = "bar";
     private static final String LOCAL_APP_NAME = "baz";
     private static final String LOCAL_APP_VERSION = "qux";
 
     @Test
-    void testStitchAppClientInfoInit() {
+    public void testStitchAppClientInfoInit() {
         final StitchAppClientInfo stitchAppClientInfo = new StitchAppClientInfo(
                 CLIENT_APP_ID,
                 DATA_DIRECTORY,

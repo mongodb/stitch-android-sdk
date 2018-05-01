@@ -13,7 +13,7 @@ class StitchAdminClient private constructor(
 ) {
     companion object {
         const val apiPath = "/api/admin/v3.0"
-        private const val defaultServerUrl = "http://localhost:9090"
+        private const val defaultServerUrl = "https://stitch.mongodb.com"
 
         fun create(baseUrl: String = defaultServerUrl): StitchAdminClient {
             val requestClient = StitchRequestClient(baseUrl, OkHttpTransport())

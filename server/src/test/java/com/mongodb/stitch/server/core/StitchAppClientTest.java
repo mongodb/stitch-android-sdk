@@ -1,13 +1,13 @@
 package com.mongodb.stitch.server.core;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.server.core.auth.StitchUser;
 import com.mongodb.stitch.server.core.auth.providers.anonymous.AnonymousAuthProvider;
 import com.mongodb.stitch.server.core.auth.providers.anonymous.AnonymousAuthProviderClient;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 class StitchAppClientTest {
 

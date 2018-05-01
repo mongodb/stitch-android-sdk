@@ -20,7 +20,8 @@ class StitchAdminAuth(
                 requestClient,
                 authRoutes,
                 storage,
-                null
+                null,
+                true
         ) {
 
     override fun getUserFactory(): StitchUserFactory<StitchAdminUser> {

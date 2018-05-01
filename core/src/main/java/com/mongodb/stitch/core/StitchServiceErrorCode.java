@@ -109,6 +109,10 @@ public enum StitchServiceErrorCode {
 
   private final String _code;
 
+  public String getCodeName() {
+    return _code;
+  }
+
   StitchServiceErrorCode(final String codeName) {
     _code = codeName;
   }

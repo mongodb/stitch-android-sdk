@@ -1,7 +1,12 @@
-rootProject.name = 'Stitch SDK'
+rootProject.name = 'Stitch-SDK'
 
-include ':core', ':android', ':server', ':todo', ':core-admin-client',
+include ':core',
+        ':core-admin-client',
+
+        ':server',
+        ':android',
         ':android-core',
         ':android-mongodb-local',
         ':android-mongodb-stitch',
-        ':example1'
+
+        ':todo'

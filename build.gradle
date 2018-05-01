@@ -5,7 +5,50 @@ allprojects {
         google()
         jcenter()
         mavenLocal()
+        mavenCentral()
     }
+    buildscript {
+        ext {
+            kotlin_version = '1.2.30'
+            architecture_components_version = '1.1.1'
+        }
+//        dependencies {
+//            classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+//        }
+    }
+}
+
+//configure([
+// ':core',
+//// ':android',
+//// ':server',
+//// ':todo',
+//// ':core-admin-client',
+//// ':android-core',
+//// ':android-mongodb-local',
+//// ':android-mongodb-stitch',
+//// ':example1'
+//]) {
+//        apply plugin: 'java'
+//        dependencies {
+//            testCompile(
+//                    'org.junit.jupiter:junit-jupiter-api:5.2.0'
+//            )
+////            testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+//            testRuntimeOnly(
+//                    'org.junit.jupiter:junit-jupiter-engine:5.2.0'
+//            )
+//        }
+////        test {
+////            useJUnitPlatform()
+////        }
+//    }
+
+subprojects {
+//    test {
+//        useJUnitPlatform()
+//    }
+
 }
 
 task clean(type: Delete) {

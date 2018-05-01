@@ -2,7 +2,6 @@ package com.mongodb.stitch.core.auth.internal;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.mongodb.stitch.core.StitchClientException;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import java.io.IOException;
 import org.bson.internal.Base64;

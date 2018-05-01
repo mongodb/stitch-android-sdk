@@ -9,30 +9,28 @@ import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
 import org.bson.Document;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-class CoreUserPasswordAuthProviderClientUnitTests {
-    private final String baseURL = "";
-    private final StitchAppRoutes routes = new StitchAppRoutes("<app-id>");
+public class CoreUserPasswordAuthProviderClientUnitTests {
+    private static final String baseURL = "";
+    private static final StitchAppRoutes routes = new StitchAppRoutes("<app-id>");
 
-    private final String providerName = "local-userpass";
-    private static final Map<String, String> BASE_JSON_HEADERS;
+    private static final String providerName = "local-userpass";
+    private static final Map<String, String> BASE_JSON_HEADERS = new HashMap<>();
     static {
-        final HashMap<String, String> map = new HashMap<>();
-        map.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
-        BASE_JSON_HEADERS = map;
+        BASE_JSON_HEADERS.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
     }
 
     private final CoreUserPasswordAuthProviderClient core = new CoreUserPasswordAuthProviderClient(
-            this.providerName,
-            new StitchRequestClient(this.baseURL, (Request request) -> {
+            providerName,
+            new StitchRequestClient(baseURL, (Request request) -> {
                 try {
                     final Document body = StitchObjectMapper.getInstance().readValue(
                             request.body,
@@ -60,12 +58,12 @@ class CoreUserPasswordAuthProviderClientUnitTests {
                                     )
                             )
                     );
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (final Exception e) {
+                    fail(e.getMessage());
                     return null;
                 }
             }),
-            this.routes.getAuthRoutes()
+            routes.getAuthRoutes()
     ) { };
 
 
@@ -73,13 +71,13 @@ class CoreUserPasswordAuthProviderClientUnitTests {
     private final String password = "password";
 
     @Test
-    void testCredential() {
+    public void testCredential() {
         final UserPasswordCredential credential = core.getCredential(
                 this.username,
                 this.password
         );
 
-        assertEquals(this.providerName, credential.getProviderName());
+        assertEquals(providerName, credential.getProviderName());
 
         assertEquals(this.username, credential.getMaterial().get("username"));
         assertEquals(this.password, credential.getMaterial().get("password"));
@@ -87,20 +85,20 @@ class CoreUserPasswordAuthProviderClientUnitTests {
     }
 
     @Test
-    void testRegister() {
-        assertAll(() -> core.registerWithEmailInternal(
+    public void testRegister() {
+        core.registerWithEmailInternal(
                 this.username,
                 this.password
-        ));
+        );
     }
 
     @Test
-    void testConfirmUser() {
-        assertAll(() -> core.confirmUserInternal("token", "tokenId"));
+    public void testConfirmUser() {
+        core.confirmUserInternal("token", "tokenId");
     }
 
     @Test
-    void testResendConfirmation() {
-        assertAll(() -> core.resendConfirmationEmailInternal(this.username));
+    public void testResendConfirmation() {
+        core.resendConfirmationEmailInternal(this.username);
     }
 }

@@ -25,7 +25,7 @@ import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
 import org.bson.Document
 import org.bson.types.ObjectId
 
-const val defaultServerUrl = "http://10.0.2.2:9090" // special alias for host's loopback interface
+val defaultServerUrl = StitchAppClientIntegrationTests.getStitchBaseURL()
 
 internal fun buildAdminTestHarness(seedTestApp: Boolean = false,
                                    context: Context,

@@ -15,6 +15,11 @@ public final class StitchServiceException extends StitchException {
 
   private final StitchServiceErrorCode _errorCode;
 
+  public StitchServiceException(final StitchServiceErrorCode errorCode) {
+    super(errorCode.getCodeName());
+    _errorCode = errorCode;
+  }
+
   public StitchServiceException(final String message, final StitchServiceErrorCode errorCode) {
     super(message);
     _errorCode = errorCode;

@@ -1,36 +1,55 @@
 package com.mongodb.stitch.core.auth.internal.model;
 
 import com.mongodb.stitch.core.auth.StitchUserIdentity;
-import com.mongodb.stitch.core.auth.StitchUserProfileUnitTests;
 import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl;
 import com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo;
 import com.mongodb.stitch.core.internal.common.BSONUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
-import com.mongodb.stitch.core.mock.MockStitchUserIdentity;
-import com.mongodb.stitch.core.mock.MockStitchUserProfileImpl;
 
 import org.bson.Document;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
-class StoreAuthInfoUnitTests {
-    private static final StitchUserIdentity mockIdentity = new MockStitchUserIdentity(
-            "garply",
-            "waldo"
-    );
-
-    private static final StitchUserProfileImpl mockProfile = new MockStitchUserProfileImpl(
-            "grault",
-            StitchUserProfileUnitTests.ANON_USER_DATA,
-            Collections.singletonList(mockIdentity)
-    );
-
+public class StoreAuthInfoUnitTests {
     @Test
-    void testWrite() throws Exception {
+    public void testWrite() throws Exception {
+        final StitchUserIdentity mockIdentity = new StitchUserIdentity(
+                "garply",
+                "waldo"
+        );
+
+        // TODO: refactor to common function
+        final String firstName = "FIRST_NAME";
+        final String lastName = "LAST_NAME";
+        final String email = "EMAIL";
+        final String gender = "GENDER";
+        final String birthday = "BIRTHDAY";
+        final String pictureUrl = "PICTURE_URL";
+        final String minAge = "42";
+        final String maxAge = "84";
+
+        final Map<String, String> data = new HashMap<>();
+        data.put("first_name", firstName);
+        data.put("last_name", lastName);
+        data.put("email", email);
+        data.put("gender", gender);
+        data.put("birthday", birthday);
+        data.put("picture", pictureUrl);
+        data.put("min_age", minAge);
+        data.put("max_age", maxAge);
+
+        final StitchUserProfileImpl mockProfile = new StitchUserProfileImpl(
+                "grault",
+                data,
+                Collections.singletonList(mockIdentity)
+        );
+
         StoreAuthInfo storeAuthInfo = new StoreAuthInfo(
                 "foo", "bar", "baz", "qux", "quux", "corge", mockProfile
         );

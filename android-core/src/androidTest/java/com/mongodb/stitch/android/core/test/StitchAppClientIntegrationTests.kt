@@ -3,7 +3,7 @@ package com.mongodb.stitch.android.core.test
 import android.support.test.InstrumentationRegistry
 import android.content.Context
 import android.support.test.runner.AndroidJUnit4
-import com.google.android.gms.tasks.Tasks.await
+import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.core.auth.providers.internal.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.android.core.auth.providers.internal.custom.CustomAuthProvider
@@ -15,13 +15,16 @@ import com.mongodb.stitch.core.auth.providers.userpass.CoreUserPasswordAuthProvi
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
 import org.junit.runner.RunWith
 
-import junit.framework.Assert.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.bson.Document
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test
 import java.util.*
 
 @RunWith(AndroidJUnit4::class)
@@ -34,6 +37,24 @@ class StitchAppClientIntegrationTests {
     companion object {
         private const val email: String = "stitch@10gen.com"
         private const val pass: String = "stitchuser"
+
+        // TODO: Refactor to integration test setup class
+        fun getStitchBaseURL(): String {
+            return InstrumentationRegistry.getArguments().getString("test.stitch.baseURL");
+        }
+
+        @BeforeClass
+        @JvmStatic
+        fun setupTest() {
+            var httpClient = OkHttpClient()
+            val request = Request.Builder().url(getStitchBaseURL()).method("GET", null).build()
+            try {
+                val response = httpClient.newCall(request).execute()
+                assertTrue("Expected Stitch server to be available at '${getStitchBaseURL()}'", response.isSuccessful)
+            } catch (e: Exception) {
+                fail("Expected Stitch server to be available at '${getStitchBaseURL()}': ${e.message}")
+            }
+        }
     }
 
     @Before
@@ -41,12 +62,12 @@ class StitchAppClientIntegrationTests {
         this.harness = buildClientTestHarness(context = instrumentationCtx)
         this.stitchAppClient = harness.stitchAppClient!!
 
-        await(this.stitchAppClient.auth.logout())
+        Tasks.await(this.stitchAppClient.auth.logout())
     }
 
     @After
     fun teardown() {
-        await(this.stitchAppClient.auth.logout())
+        Tasks.await(this.stitchAppClient.auth.logout())
         this.harness.teardown()
     }
 
@@ -58,13 +79,13 @@ class StitchAppClientIntegrationTests {
                 UserPasswordAuthProvider.ClientProvider
         )
 
-        await(emailPassClient.registerWithEmail(email, pass))
+        Tasks.await(emailPassClient.registerWithEmail(email, pass))
 
         val conf = this.harness.app.userRegistrations.sendConfirmation(email)
 
-        await(emailPassClient.confirmUser(conf.token, conf.tokenId))
+        Tasks.await(emailPassClient.confirmUser(conf.token, conf.tokenId))
 
-        val user = await(stitchClient.auth.loginWithCredential(
+        val user = Tasks.await(stitchClient.auth.loginWithCredential(
                 emailPassClient.getCredential(email, pass)
         ))
 
@@ -81,7 +102,7 @@ class StitchAppClientIntegrationTests {
 //        registerAndLogin()
 //        val auth = stitchClient.auth?.let { it } ?: return
 //
-//        val key = await(
+//        val key = Tasks.await(
 //                auth.createApiKey("key_test").addOnCompleteListener {
 //                    assertThat(it.isSuccessful, it.exception)
 //                }
@@ -90,8 +111,8 @@ class StitchAppClientIntegrationTests {
 //        assertThat(key != null)
 //        assertThat(key.key != null)
 //
-//        await(this.stitchClient.logout())
-//        await(this.stitchClient.logInWithProvider(APIKeyProvider(key.key!!)).addOnCompleteListener {
+//        Tasks.await(this.stitchClient.logout())
+//        Tasks.await(this.stitchClient.logInWithProvider(APIKeyProvider(key.key!!)).addOnCompleteListener {
 //            assertThat(it.isSuccessful, it.exception)
 //            assertThat(it.result != null)
 //        })
@@ -103,7 +124,7 @@ class StitchAppClientIntegrationTests {
 //        registerAndLogin()
 //        val auth = stitchClient.auth?.let { it } ?: return
 //
-//        val key = await(
+//        val key = Tasks.await(
 //                auth.createApiKey("key_test").addOnCompleteListener {
 //                    assertThat(it.isSuccessful, it.exception)
 //                }
@@ -112,7 +133,7 @@ class StitchAppClientIntegrationTests {
 //        assertThat(key != null)
 //        assertThat(key.key != null)
 //
-//        val partialKey = await(auth.fetchApiKey(key.id))
+//        val partialKey = Tasks.await(auth.fetchApiKey(key.id))
 //        assertThat(partialKey.name == key.name)
 //        assertThat(partialKey.id == key.id)
 //        assertThat(!partialKey.disabled)
@@ -125,7 +146,7 @@ class StitchAppClientIntegrationTests {
 //        val auth = stitchClient.auth?.let { it } ?: return
 //
 //        val keys: List<APIKey> = (0..3).map {
-//            await(auth
+//            Tasks.await(auth
 //                    .createApiKey("selfApiKeyTest$it")
 //                    .addOnCompleteListener {
 //                        assertThat(it.isSuccessful, it.exception)
@@ -134,7 +155,7 @@ class StitchAppClientIntegrationTests {
 //
 //        keys.forEach { assertThat(it.key != null) }
 //
-//        val partialKeys = await(auth.fetchApiKeys())
+//        val partialKeys = Tasks.await(auth.fetchApiKeys())
 //        val partialKeysMapped = partialKeys.associateBy { it.id }
 //
 //        partialKeys.forEach {
@@ -148,7 +169,7 @@ class StitchAppClientIntegrationTests {
 //        registerAndLogin()
 //        val auth = stitchClient.auth?.let { it } ?: return
 //
-//        val key = await(
+//        val key = Tasks.await(
 //                auth.createApiKey("key_test").addOnCompleteListener {
 //                    assertThat(it.isSuccessful, it.exception)
 //                }
@@ -157,13 +178,13 @@ class StitchAppClientIntegrationTests {
 //        assertThat(key != null)
 //        assertThat(key.key != null)
 //
-//        await(auth.disableApiKey(key.id))
+//        Tasks.await(auth.disableApiKey(key.id))
 //
-//        assertThat(await(auth.fetchApiKey(key.id)).disabled)
+//        assertThat(Tasks.await(auth.fetchApiKey(key.id)).disabled)
 //
-//        await(auth.enableApiKey(key.id))
+//        Tasks.await(auth.enableApiKey(key.id))
 //
-//        assertThat(!await(auth.fetchApiKey(key.id)).disabled)
+//        assertThat(!Tasks.await(auth.fetchApiKey(key.id)).disabled)
 //    }
 //
 
@@ -194,7 +215,7 @@ class StitchAppClientIntegrationTests {
 
         val customAuthClient = stitchAppClient.auth.getProviderClient(CustomAuthProvider.ClientProvider)
 
-        val user = await(stitchAppClient.auth.loginWithCredential(
+        val user = Tasks.await(stitchAppClient.auth.loginWithCredential(
                 customAuthClient.getCredential(jwt)
         ))
 
@@ -206,14 +227,14 @@ class StitchAppClientIntegrationTests {
     @Test
     fun testMultipleLoginSemantics() {
         val auth = stitchAppClient.auth
-        await(auth.logout())
+        Tasks.await(auth.logout())
 
         // check storage
         assertFalse(auth.isLoggedIn)
         assertNull(auth.user)
 
         // login anonymously
-        val anonUser = await(
+        val anonUser = Tasks.await(
                 auth.loginWithCredential(
                         auth.getProviderClient(AnonymousAuthProvider.ClientProvider).credential
                 ))
@@ -224,7 +245,7 @@ class StitchAppClientIntegrationTests {
         assertEquals(anonUser.loggedInProviderType, CoreAnonymousAuthProviderClient.DEFAULT_PROVIDER_NAME)
 
         // login anonymously again and make sure user ID is the same
-        assertEquals(anonUser.id, await(
+        assertEquals(anonUser.id, Tasks.await(
                 auth.loginWithCredential(
                         auth.getProviderClient(AnonymousAuthProvider.ClientProvider).credential
                 )).id)
@@ -250,7 +271,7 @@ class StitchAppClientIntegrationTests {
         assertEquals(auth.user.loggedInProviderType, CoreUserPasswordAuthProviderClient.DEFAULT_PROVIDER_NAME)
 
         // Verify that logout clears storage
-        await(auth.logout())
+        Tasks.await(auth.logout())
         assertFalse(auth.isLoggedIn)
         assertNull(auth.user)
     }
@@ -261,18 +282,18 @@ class StitchAppClientIntegrationTests {
         val userPassClient = auth.getProviderClient(UserPasswordAuthProvider.ClientProvider)
 
 
-        await(userPassClient.registerWithEmail(email, pass))
+        Tasks.await(userPassClient.registerWithEmail(email, pass))
         val conf = this.harness.app.userRegistrations.sendConfirmation(email)
-        await(userPassClient.confirmUser(conf.token, conf.tokenId))
+        Tasks.await(userPassClient.confirmUser(conf.token, conf.tokenId))
 
-        val anonUser = await(auth.loginWithCredential(
+        val anonUser = Tasks.await(auth.loginWithCredential(
                 auth.getProviderClient(AnonymousAuthProvider.ClientProvider).credential
         ))
         assertNotNull(anonUser)
         assertEquals(anonUser.loggedInProviderType, CoreAnonymousAuthProviderClient.DEFAULT_PROVIDER_NAME)
 
 
-        val linkedUser = await(
+        val linkedUser = Tasks.await(
                 anonUser.linkWithCredential(userPassClient.getCredential(email, pass))
         )
 
@@ -282,7 +303,7 @@ class StitchAppClientIntegrationTests {
         val userProfile = auth.user.profile as StitchUserProfileImpl
         assertEquals(userProfile.identities.size, 2)
 
-        await(auth.logout())
+        Tasks.await(auth.logout())
         assertFalse(auth.isLoggedIn)
     }
 
@@ -290,12 +311,12 @@ class StitchAppClientIntegrationTests {
     fun testCallFunction() {
         harness.addTestFunction()
 
-        await(stitchAppClient.auth.loginWithCredential(
+        Tasks.await(stitchAppClient.auth.loginWithCredential(
                 stitchAppClient.auth.getProviderClient(AnonymousAuthProvider.ClientProvider).credential
         ))
 
         val randomInt = Random().nextInt()
-        val resultDoc = await(stitchAppClient.callFunction<Document>(
+        val resultDoc = Tasks.await(stitchAppClient.callFunction<Document>(
                 "testFunction", Arrays.asList(randomInt, "hello")
         ))
 

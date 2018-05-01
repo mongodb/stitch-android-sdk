@@ -8,7 +8,7 @@ import java.util.List;
 import org.bson.Document;
 import org.bson.codecs.Codec;
 
-public abstract class CoreStitchService {
+public class CoreStitchService {
   private final StitchAuthRequestClient requestClient;
   private final StitchServiceRoutes serviceRoutes;
   private final String serviceName;

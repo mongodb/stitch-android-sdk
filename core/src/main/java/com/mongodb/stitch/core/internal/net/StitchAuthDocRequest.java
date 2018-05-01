@@ -5,6 +5,11 @@ import org.bson.Document;
 public final class StitchAuthDocRequest extends StitchAuthRequest {
   public final Document document;
 
+  public StitchAuthDocRequest(final StitchAuthRequest request, final Document document) {
+    super(request);
+    this.document = document;
+  }
+
   public StitchAuthDocRequest(final StitchRequest request, final Document document) {
     super(request, false);
     this.document = document;

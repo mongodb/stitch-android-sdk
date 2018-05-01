@@ -44,16 +44,26 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
   protected final StitchRequestClient requestClient;
   protected final StitchAuthRoutes authRoutes;
   private final Storage storage;
-  private final Thread refresherThread;
+  private Thread refresherThread;
   private AuthInfo authInfo;
   private TStitchUser currentUser;
   private CodecRegistry configuredCustomCodecRegistry; // is valid to be null
 
   protected CoreStitchAuth(
+          final StitchRequestClient requestClient,
+          final StitchAuthRoutes authRoutes,
+          final Storage storage,
+          final boolean useTokenRefresher
+          ) {
+    this(requestClient, authRoutes, storage, null, useTokenRefresher);
+  }
+
+  protected CoreStitchAuth(
       final StitchRequestClient requestClient,
       final StitchAuthRoutes authRoutes,
       final Storage storage,
-      final CodecRegistry configuredCustomCodecRegistry) {
+      final CodecRegistry configuredCustomCodecRegistry,
+      final boolean useTokenRefresher) {
     this.requestClient = requestClient;
     this.authRoutes = authRoutes;
     this.storage = storage;
@@ -82,8 +92,10 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
                   this.authInfo.userProfile);
     }
 
-    refresherThread = new Thread(new AccessTokenRefresher<>(new WeakReference<>(this)), AccessTokenRefresher.class.getSimpleName());
-    refresherThread.start();
+    if (useTokenRefresher) {
+      refresherThread = new Thread(new AccessTokenRefresher<>(new WeakReference<>(this)), AccessTokenRefresher.class.getSimpleName());
+      refresherThread.start();
+    }
   }
 
   protected abstract StitchUserFactory<TStitchUser> getUserFactory();
@@ -245,14 +257,14 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
 
     // using a refresh token implies we cannot refresh anything, so clear auth and
     // notify
-    if (req.useRefreshToken) {
+    if (req.useRefreshToken || !req.shouldRefreshOnFailure) {
       clearAuth();
       throw ex;
     }
 
     tryRefreshAccessToken(req.startedAt);
 
-    return doAuthenticatedRequest(req);
+    return doAuthenticatedRequest(req.builder().withShouldRefreshOnFailure(false).build());
   }
 
   // use this critical section to create a queue of pending outbound requests
@@ -278,7 +290,11 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
 
   synchronized void refreshAccessToken() {
     final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
-    reqBuilder.withRefreshToken().withPath(authRoutes.getSessionRoute()).withMethod(Method.POST);
+    reqBuilder
+            .withRefreshToken()
+            .withShouldRefreshOnFailure(false)
+            .withPath(authRoutes.getSessionRoute())
+            .withMethod(Method.POST);
 
     final Response response = doAuthenticatedRequest(reqBuilder.build());
     try {
@@ -440,7 +456,9 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
   }
 
   public void close() throws IOException {
-    refresherThread.interrupt();
+    if (refresherThread != null) {
+      refresherThread.interrupt();
+    }
   }
 
   private static class AuthLoginFields {

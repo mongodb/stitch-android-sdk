@@ -18,7 +18,7 @@ public class StitchUserProfileImpl implements StitchUserProfile {
     this.identities = profile.identities;
   }
 
-  protected StitchUserProfileImpl(
+  public StitchUserProfileImpl(
       final String userType,
       final Map<String, String> data,
       final List<? extends StitchUserIdentity> identities) {

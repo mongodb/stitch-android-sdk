@@ -1,84 +1,70 @@
 package com.mongodb.stitch.core.services.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.internal.common.BSONUtils;
-import com.mongodb.stitch.core.internal.net.ContentTypes;
-import com.mongodb.stitch.core.internal.net.Headers;
 import com.mongodb.stitch.core.internal.net.Method;
-import com.mongodb.stitch.core.internal.net.Response;
-import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
-import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.IntegerCodec;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
-class CoreStitchServiceUnitTests {
-    private static final StitchAppRoutes APP_ROUTES = new StitchAppRoutes("");
-    private static final String MOCK_SERVICE_NAME = "mockService";
-    private static final String MOCK_FUNCTION_NAME = "mockFunction";
-    private static final List<Integer> MOCK_ARGS = Arrays.asList(1, 2, 3);
-    private static final Document EXPECTED_DOC;
-    static {
-        Document document = new Document();
-        document.put("name", MOCK_FUNCTION_NAME);
-        document.put("service", MOCK_SERVICE_NAME);
-        document.put("arguments", MOCK_ARGS);
-
-        EXPECTED_DOC = document;
-    }
-    private static final Map<String, String> BASE_JSON_HEADERS;
-    static {
-        final HashMap<String, String> map = new HashMap<>();
-        map.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
-        BASE_JSON_HEADERS = map;
-    }
-
-    private class MockAuthRequestClient implements StitchAuthRequestClient {
-        @Override
-        public Response doAuthenticatedRequest(StitchAuthRequest stitchReq) {
-            return new Response(200, BASE_JSON_HEADERS, null);
-        }
-
-        public <T> T doAuthenticatedJSONRequest(final StitchAuthDocRequest stitchReq, Decoder<T> decoder) {
-            assertEquals(stitchReq.method, Method.POST);
-            assertEquals(stitchReq.path, APP_ROUTES.getServiceRoutes().getFunctionCallRoute());
-            assertEquals(EXPECTED_DOC, stitchReq.document);
-            return BSONUtils.parseValue("42", decoder);
-        }
-
-        public <T> T doAuthenticatedJSONRequest(final StitchAuthDocRequest stitchReq, Class<T> resultClass) {
-            assertEquals(stitchReq.method, Method.POST);
-            assertEquals(stitchReq.path, APP_ROUTES.getServiceRoutes().getFunctionCallRoute());
-            assertEquals(EXPECTED_DOC, stitchReq.document);
-            return BSONUtils.parseValue("42", resultClass);
-
-        }
-
-        @Override
-        public Response doAuthenticatedJSONRequestRaw(StitchAuthDocRequest stitchReq) {
-            return null;
-        }
-    }
+public class CoreStitchServiceUnitTests {
 
     @Test
-    void testCallFunctionInternal() {
+    public void testCallFunctionInternal() {
+        final String serviceName = "svc1";
+        final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
+        final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
         final CoreStitchService coreStitchService = new CoreStitchService(
-                new MockAuthRequestClient(),
-                APP_ROUTES.getServiceRoutes(),
-                MOCK_SERVICE_NAME
-        ) { };
+                requestClient,
+                routes,
+                serviceName
+        );
 
-        assertEquals(42, (int) coreStitchService.callFunctionInternal(MOCK_FUNCTION_NAME, MOCK_ARGS, new IntegerCodec()));
-        assertEquals(42, (int) coreStitchService.callFunctionInternal(MOCK_FUNCTION_NAME, MOCK_ARGS, Integer.class));
+        doReturn(42).when(requestClient)
+                .doAuthenticatedJSONRequest(any(), ArgumentMatchers.<Decoder<Integer>>any());
+        doReturn(42).when(requestClient)
+                .doAuthenticatedJSONRequest(any(), ArgumentMatchers.<Class<Integer>>any());
+
+        final String funcName = "myFunc1";
+        final List<Integer> args = Arrays.asList(1, 2, 3);
+        final Document expectedRequestDoc = new Document();
+        expectedRequestDoc.put("name", funcName);
+        expectedRequestDoc.put("service", serviceName);
+        expectedRequestDoc.put("arguments", args);
+
+        assertEquals(42, (int) coreStitchService.callFunctionInternal(funcName, args, new IntegerCodec()));
+        assertEquals(42, (int) coreStitchService.callFunctionInternal(funcName, args, Integer.class));
+
+        final ArgumentCaptor<StitchAuthDocRequest> docArgument = ArgumentCaptor.forClass(StitchAuthDocRequest.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Decoder<Integer>> decArgument = ArgumentCaptor.forClass(Decoder.class);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Class<Integer>> clazzArgument = ArgumentCaptor.forClass(Class.class);
+
+        verify(requestClient).doAuthenticatedJSONRequest(docArgument.capture(), decArgument.capture());
+        assertEquals(docArgument.getValue().method, Method.POST);
+        assertEquals(docArgument.getValue().path, routes.getFunctionCallRoute());
+        assertEquals(docArgument.getValue().document, expectedRequestDoc);
+        assertTrue(decArgument.getValue() instanceof IntegerCodec);
+
+        verify(requestClient).doAuthenticatedJSONRequest(docArgument.capture(), clazzArgument.capture());
+        assertEquals(docArgument.getValue().method, Method.POST);
+        assertEquals(docArgument.getValue().document, expectedRequestDoc);
+        assertEquals(docArgument.getValue().path, routes.getFunctionCallRoute());
+        assertEquals(clazzArgument.getValue(), Integer.class);
     }
 }
