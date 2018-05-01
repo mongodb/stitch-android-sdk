@@ -1,40 +1,57 @@
-apply plugin: 'com.android.library'
-
 buildscript {
-    repositories {
-        google()
-        jcenter()
-    }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.1'
+        classpath 'com.android.tools.build:gradle:3.1.2'
     }
 }
 
-android {
-    compileSdkVersion 26
+subprojects {
+    afterEvaluate {
+        if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
+            android {
+                compileSdkVersion target_api
+                defaultConfig {
+                    minSdkVersion min_api
+                    targetSdkVersion target_api
+                    versionCode 1
+                    versionName "1.0"
+                    sourceCompatibility = JavaVersion.VERSION_1_7
+                    targetCompatibility = JavaVersion.VERSION_1_7
 
+                    testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
+                    Properties properties = new Properties()
+                    File file = project.rootProject.file('local.properties')
+                    if (file.exists()) {
+                        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+                    }
+                    testInstrumentationRunnerArgument "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://10.0.2.2:9090")
+                }
+                lintOptions {
+                    disable 'InvalidPackage'
+                }
+                buildTypes {
+                    debug {
+                        minifyEnabled false
+                        testCoverageEnabled true
+                    }
+                    release {
+                        minifyEnabled true
+                        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                    }
+                }
+            }
 
-    defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 26
-        versionCode 1
-        versionName "1.0"
-    }
+            task findbugs(type: FindBugs, dependsOn: "assembleDebug") {
+                excludeFilter new File(config_dir, 'findbugs.xml')
+                classes = fileTree("$project.buildDir/intermediates/classes/debug/com/mongodb")
+                source 'src/main/java', 'src/test/java'
+                classpath = files()
+            }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            jacocoAndroidUnitTestReport {
+                xml.enabled true
+                html.enabled false
+            }
         }
     }
-
-}
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-    api project(':android-core')
-    api project(':android-mongodb-local')
-    api project(':android-mongodb-stitch')
 }

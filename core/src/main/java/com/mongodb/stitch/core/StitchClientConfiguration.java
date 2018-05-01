@@ -1,6 +1,22 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core;
 
-import com.mongodb.stitch.core.internal.common.BSONUtils;
+import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.Storage;
 import com.mongodb.stitch.core.internal.net.Transport;
 
@@ -8,14 +24,14 @@ import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 
 public class StitchClientConfiguration {
-  private final String baseURL;
+  private final String baseUrl;
   private final Storage storage;
   private final String dataDirectory;
   private final Transport transport;
   private final CodecRegistry codecRegistry;
 
   StitchClientConfiguration(final StitchClientConfiguration config) {
-    this.baseURL = config.baseURL;
+    this.baseUrl = config.baseUrl;
     this.storage = config.storage;
     this.dataDirectory = config.dataDirectory;
     this.transport = config.transport;
@@ -23,42 +39,60 @@ public class StitchClientConfiguration {
   }
 
   private StitchClientConfiguration(
-      final String baseURL,
+      final String baseUrl,
       final Storage storage,
       final String dataDirectory,
       final Transport transport,
       final CodecRegistry codecRegistry) {
-    this.baseURL = baseURL;
+    this.baseUrl = baseUrl;
     this.storage = storage;
     this.dataDirectory = dataDirectory;
     this.transport = transport;
     this.codecRegistry = codecRegistry;
   }
 
-  public Builder builder() {
-    return new Builder(this);
+  /**
+   * Gets the base URL of the Stitch server that the client will communicate with.
+   */
+  public String getBaseUrl() {
+    return baseUrl;
   }
 
-  public String getBaseURL() {
-    return baseURL;
-  }
-
+  /**
+   * Gets the underlying storage for authentication info.
+   */
   public Storage getStorage() {
     return storage;
   }
 
+  /**
+   * Gets the local directory in which Stitch can store any data (e.g. embedded MongoDB data
+   * directory).
+   */
   public String getDataDirectory() {
     return dataDirectory;
   }
 
+  /**
+   * Gets the {@link Transport} that the client will use to make round trips to the Stitch server.
+   */
   public Transport getTransport() {
     return transport;
   }
 
-  public CodecRegistry getCodecRegistry() { return codecRegistry; }
+  public CodecRegistry getCodecRegistry() {
+    return codecRegistry;
+  }
+
+  /**
+   * Gets the builder form of this configuration.
+   */
+  public Builder builder() {
+    return new Builder(this);
+  }
 
   public static class Builder {
-    private String baseURL;
+    private String baseUrl;
     private Storage storage;
     private String dataDirectory;
     private Transport transport;
@@ -67,32 +101,41 @@ public class StitchClientConfiguration {
     public Builder() {}
 
     Builder(final StitchClientConfiguration config) {
-      baseURL = config.baseURL;
+      baseUrl = config.baseUrl;
       storage = config.storage;
       dataDirectory = config.dataDirectory;
       transport = config.transport;
       codecRegistry = config.codecRegistry;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    public Builder withBaseURL(final String baseURL) {
-      this.baseURL = baseURL;
+    /**
+     * Sets the base URL of the Stitch server that the client will communicate with.
+     */
+    public Builder withBaseUrl(final String baseUrl) {
+      this.baseUrl = baseUrl;
       return this;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
+    /**
+     * Sets the underlying storage for authentication info.
+     */
     public Builder withStorage(final Storage storage) {
       this.storage = storage;
       return this;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
+    /**
+     * Sets the local directory in which Stitch can store any data (e.g. embedded MongoDB data
+     * directory).
+     */
     public Builder withDataDirectory(final String dataDirectory) {
       this.dataDirectory = dataDirectory;
       return this;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
+    /**
+     * Sets the {@link Transport} that the client will use to make round trips to the Stitch server.
+     */
     public Builder withTransport(final Transport transport) {
       this.transport = transport;
       return this;
@@ -100,38 +143,54 @@ public class StitchClientConfiguration {
 
     /**
      * Merges the provided codec registry with the default codec registry.
+     *
      * @param codecRegistry The codec registry to merge with the default registry.
      */
-    @SuppressWarnings("UnusedReturnValue")
     public Builder withCustomCodecs(final CodecRegistry codecRegistry) {
-      this.codecRegistry = CodecRegistries.fromRegistries(
-              BSONUtils.DEFAULT_CODEC_REGISTRY,
-              codecRegistry
-      );
+      this.codecRegistry =
+          CodecRegistries.fromRegistries(BsonUtils.DEFAULT_CODEC_REGISTRY, codecRegistry);
       return this;
     }
 
-    public String getBaseURL() {
-      return baseURL;
+    /**
+     * Gets the base URL of the Stitch server that the client will communicate with.
+     */
+    public String getBaseUrl() {
+      return baseUrl;
     }
 
+    /**
+     * Gets the local directory in which Stitch can store any data (e.g. embedded MongoDB data
+     * directory).
+     */
     public String getDataDirectory() {
       return dataDirectory;
     }
 
+    /**
+     * Gets the underlying storage for authentication info.
+     */
     public Storage getStorage() {
       return storage;
     }
 
+    /**
+     * Gets the {@link Transport} that the client will use to make round trips to the Stitch server.
+     */
     public Transport getTransport() {
       return transport;
     }
 
-    public CodecRegistry getCodecRegistry() { return codecRegistry; }
+    public CodecRegistry getCodecRegistry() {
+      return codecRegistry;
+    }
 
+    /**
+     * Builds the {@link StitchAppClientConfiguration}.
+     */
     public StitchClientConfiguration build() {
-      if (baseURL == null || baseURL.isEmpty()) {
-        throw new IllegalArgumentException("baseURL must be set");
+      if (baseUrl == null || baseUrl.isEmpty()) {
+        throw new IllegalArgumentException("baseUrl must be set");
       }
 
       if (storage == null) {
@@ -142,7 +201,8 @@ public class StitchClientConfiguration {
         throw new IllegalArgumentException("transport must be set");
       }
 
-      return new StitchClientConfiguration(baseURL, storage, dataDirectory, transport, codecRegistry);
+      return new StitchClientConfiguration(
+          baseUrl, storage, dataDirectory, transport, codecRegistry);
     }
   }
 }

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.server.core.auth.internal;
 
 import com.mongodb.stitch.core.StitchAppClientInfo;
@@ -14,6 +30,7 @@ import com.mongodb.stitch.server.core.auth.StitchAuth;
 import com.mongodb.stitch.server.core.auth.StitchUser;
 import com.mongodb.stitch.server.core.auth.providers.AuthProviderClientSupplier;
 import com.mongodb.stitch.server.core.auth.providers.NamedAuthProviderClientSupplier;
+
 import org.bson.Document;
 
 public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements StitchAuth {
@@ -24,7 +41,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
       final StitchAuthRoutes authRoutes,
       final Storage storage,
       final StitchAppClientInfo appInfo) {
-    super(requestClient, authRoutes, storage, appInfo.configuredCodecRegistry);
+    super(requestClient, authRoutes, storage, appInfo.getConfiguredCodecRegistry(), true);
     this.appInfo = appInfo;
   }
 
@@ -34,13 +51,13 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
 
   @Override
   public <T> T getProviderClient(final AuthProviderClientSupplier<T> provider) {
-    return provider.getClient(requestClient, authRoutes);
+    return provider.getClient(getRequestClient(), getAuthRoutes());
   }
 
   @Override
   public <T> T getProviderClient(
       final NamedAuthProviderClientSupplier<T> provider, final String providerName) {
-    return provider.getClient(providerName, requestClient, authRoutes);
+    return provider.getClient(providerName, getRequestClient(), getAuthRoutes());
   }
 
   @Override
@@ -63,11 +80,11 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     if (hasDeviceId()) {
       info.put(DeviceFields.DEVICE_ID, getDeviceId());
     }
-    if (appInfo.localAppName != null) {
-      info.put(DeviceFields.APP_ID, appInfo.localAppName);
+    if (appInfo.getLocalAppName() != null) {
+      info.put(DeviceFields.APP_ID, appInfo.getLocalAppName());
     }
-    if (appInfo.localAppVersion != null) {
-      info.put(DeviceFields.APP_VERSION, appInfo.localAppVersion);
+    if (appInfo.getLocalAppVersion() != null) {
+      info.put(DeviceFields.APP_VERSION, appInfo.getLocalAppVersion());
     }
     info.put(DeviceFields.PLATFORM, System.getProperty("java.version", ""));
     info.put(DeviceFields.PLATFORM_VERSION, "java-server");
@@ -81,6 +98,5 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onAuthEvent() {
-  }
+  protected void onAuthEvent() {}
 }

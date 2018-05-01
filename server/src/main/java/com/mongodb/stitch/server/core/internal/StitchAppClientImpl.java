@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.server.core.internal;
 
 import com.mongodb.stitch.core.StitchAppClientConfiguration;
@@ -11,10 +27,8 @@ import com.mongodb.stitch.server.core.auth.internal.StitchAuthImpl;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientProvider;
 import com.mongodb.stitch.server.core.services.internal.ServiceClientProvider;
 import com.mongodb.stitch.server.core.services.internal.StitchServiceImpl;
-
-import org.bson.codecs.Decoder;
-
 import java.util.List;
+import org.bson.codecs.Decoder;
 
 public final class StitchAppClientImpl implements StitchAppClient {
 
@@ -23,6 +37,11 @@ public final class StitchAppClientImpl implements StitchAppClient {
   private final StitchAppRoutes routes;
   private final StitchAuthImpl auth;
 
+  /**
+   * Constructs an app client with the given configuration.
+   *
+   * @param config The configuration to use for the app client.
+   */
   public StitchAppClientImpl(final StitchAppClientConfiguration config) {
 
     this.info =
@@ -32,9 +51,9 @@ public final class StitchAppClientImpl implements StitchAppClient {
             config.getLocalAppName(),
             config.getLocalAppVersion(),
             config.getCodecRegistry());
-    this.routes = new StitchAppRoutes(this.info.clientAppId);
+    this.routes = new StitchAppRoutes(this.info.getClientAppId());
     final StitchRequestClient requestClient =
-        new StitchRequestClient(config.getBaseURL(), config.getTransport());
+        new StitchRequestClient(config.getBaseUrl(), config.getTransport());
     this.auth =
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), this.info);
@@ -59,12 +78,14 @@ public final class StitchAppClientImpl implements StitchAppClient {
   }
 
   @Override
-  public <TResult> TResult callFunction(final String name, final List<? extends Object> args, final Class<TResult> resultClass) {
+  public <ResultT> ResultT callFunction(
+      final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
     return coreClient.callFunctionInternal(name, args, resultClass);
   }
 
   @Override
-  public <TResult> TResult callFunction(final String name, final List<? extends Object> args, final Decoder<TResult> resultDecoder) {
+  public <ResultT> ResultT callFunction(
+      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder) {
     return coreClient.callFunctionInternal(name, args, resultDecoder);
   }
 }

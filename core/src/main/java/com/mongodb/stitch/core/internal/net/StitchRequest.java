@@ -1,14 +1,31 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.internal.net;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 public class StitchRequest {
-  public final Method method;
-  public final String path;
-  public final Map<String, String> headers;
-  public final byte[] body;
-  public final Long startedAt;
+  private final Method method;
+  private final String path;
+  private final Map<String, String> headers;
+  private final byte[] body;
+  private final Long startedAt;
 
   StitchRequest(final StitchRequest req) {
     this.method = req.method;
@@ -35,6 +52,44 @@ public class StitchRequest {
     return new Builder(this);
   }
 
+  /**
+   * Returns the HTTP method of the request.
+   */
+  public Method getMethod() {
+    return method;
+  }
+
+  /**
+   * Returns the Stitch API path of the request.
+   */
+  public String getPath() {
+    return path;
+  }
+
+  /**
+   * Returns the headers that will be included in the request.
+   */
+  public Map<String, String> getHeaders() {
+    return headers;
+  }
+
+  /**
+   * Returns a copy of the body that will be sent along with the request.
+   */
+  public byte[] getBody() {
+    if (body == null) {
+      return null;
+    }
+    return Arrays.copyOf(body, body.length);
+  }
+
+  public Long getStartedAt() {
+    return startedAt;
+  }
+
+  /**
+   * A builder that can build {@link StitchRequest}s.
+   */
   public static class Builder {
     private Method method;
     private String path;
@@ -52,44 +107,75 @@ public class StitchRequest {
 
     public Builder() {}
 
+    /**
+     * Sets the HTTP method of the request.
+     */
     public Builder withMethod(final Method method) {
       this.method = method;
       return this;
     }
 
+    /**
+     * Sets the Stitch API path of the request.
+     */
     public Builder withPath(final String path) {
       this.path = path;
       return this;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
+    /**
+     * Sets the headers that will be included in the request.
+     */
     public Builder withHeaders(final Map<String, String> headers) {
       this.headers = headers;
       return this;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
+    /**
+     * Sets a copy of the body that will be sent along with the request.
+     */
     public Builder withBody(final byte[] body) {
-      this.body = body;
+      if (body == null) {
+        return this;
+      }
+      this.body = Arrays.copyOf(body, body.length);
       return this;
     }
 
+    /**
+     * Returns the HTTP method of the request.
+     */
     public Method getMethod() {
       return this.method;
     }
 
+    /**
+     * Returns the Stitch API path of the request.
+     */
     public String getPath() {
       return this.path;
     }
 
+    /**
+     * Returns the headers that will be included in the request.
+     */
     public Map<String, String> getHeaders() {
       return this.headers;
     }
 
+    /**
+     * Returns a copy of the body that will be sent along with the request.
+     */
     public byte[] getBody() {
-      return this.body;
+      if (body == null) {
+        return null;
+      }
+      return Arrays.copyOf(this.body, this.body.length);
     }
 
+    /**
+     * Builds, validates, and returns the {@link StitchRequest}.
+     */
     public StitchRequest build() {
       if (method == null) {
         throw new IllegalStateException("must set method");
