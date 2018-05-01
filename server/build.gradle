@@ -11,15 +11,7 @@ buildscript {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':core')
-
-    testCompile(
-            'org.junit.jupiter:junit-jupiter-api:5.0.1'
-    )
-    testRuntime(
-            'org.junit.jupiter:junit-jupiter-engine:5.0.1'
-    )
 }
 
 sourceCompatibility = "1.8"

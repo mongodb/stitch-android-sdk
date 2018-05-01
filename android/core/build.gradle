@@ -1,0 +1,75 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+android {
+    compileSdkVersion 26
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        Properties properties = new Properties()
+        File file = project.rootProject.file('local.properties')
+        if (file.exists()) {
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        }
+        testInstrumentationRunnerArgument "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
+    }
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    buildToolsVersion '27.0.3'
+    productFlavors {
+        all {
+
+        }
+    }
+}
+
+dependencies {
+    api project(':core')
+    api 'com.google.android.gms:play-services-base:15.0.0'
+    api "android.arch.lifecycle:extensions:$architecture_components_version"
+
+    // Testing
+    // TODO: What can be removed here...
+    androidTestImplementation project(':core:admin-client')
+    androidTestImplementation 'com.android.support:support-annotations:27.1.1'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test:rules:1.0.2'
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+    androidTestImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    androidTestImplementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.9.5'
+    androidTestImplementation 'io.jsonwebtoken:jjwt:0.9.0'
+    androidTestImplementation 'com.google.android.gms:play-services-base:15.0.0'
+    androidTestImplementation 'com.squareup.okhttp3:okhttp:3.10.0'
+}
+
+// TODO:     outputs.upToDateWhen {false}
+afterEvaluate {
+    connectedAndroidTest {
+        outputs.upToDateWhen { false }
+    }
+}
+
+

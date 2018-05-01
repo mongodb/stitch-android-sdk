@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stitch_client_app_id">test-vxfnm</string>
+    <string name="stitch_base_url">https://erd.ngrok.io</string>
+</resources>

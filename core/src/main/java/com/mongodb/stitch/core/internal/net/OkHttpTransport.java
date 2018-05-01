@@ -1,13 +1,27 @@
-package com.mongodb.stitch.core.internal.net;
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import com.mongodb.stitch.core.StitchClientException;
-import com.mongodb.stitch.core.StitchRequestException;
+package com.mongodb.stitch.core.internal.net;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -24,22 +38,24 @@ public final class OkHttpTransport implements Transport {
 
   private static okhttp3.Request buildRequest(final Request request) {
     final okhttp3.Request.Builder reqBuilder =
-        new okhttp3.Request.Builder().url(request.url).headers(Headers.of(request.headers));
-    if (request.body != null) {
+        new okhttp3.Request.Builder()
+            .url(request.getUrl())
+            .headers(Headers.of(request.getHeaders()));
+    if (request.getBody() != null) {
       String contentType =
-          request.headers.get(com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE);
+          request.getHeaders().get(com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE);
       contentType = contentType == null ? "" : contentType;
-      final RequestBody body = RequestBody.create(MediaType.parse(contentType), request.body);
-      reqBuilder.method(request.method.toString(), body);
+      final RequestBody body = RequestBody.create(MediaType.parse(contentType), request.getBody());
+      reqBuilder.method(request.getMethod().toString(), body);
     } else {
-      switch (request.method) {
+      switch (request.getMethod()) {
         case POST:
         case PUT:
         case PATCH:
-          reqBuilder.method(request.method.toString(), RequestBody.create(null, ""));
+          reqBuilder.method(request.getMethod().toString(), RequestBody.create(null, ""));
           break;
         default:
-          reqBuilder.method(request.method.toString(), null);
+          reqBuilder.method(request.getMethod().toString(), null);
           break;
       }
     }

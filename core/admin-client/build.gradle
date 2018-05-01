@@ -1,0 +1,35 @@
+apply plugin: 'java-library'
+apply plugin: 'kotlin'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+dependencies {
+    implementation project(':core')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.5"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testImplementation 'com.squareup.okhttp3:okhttp:3.10.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+// TODO: Refactor to root
+test {
+    outputs.upToDateWhen { false }
+
+    Properties properties = new Properties()
+    File file = project.rootProject.file('local.properties')
+    if (file.exists()) {
+        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    }
+    systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
+}
