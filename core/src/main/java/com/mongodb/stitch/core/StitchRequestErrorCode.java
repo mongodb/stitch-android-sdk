@@ -5,5 +5,6 @@ package com.mongodb.stitch.core;
  */
 public enum StitchRequestErrorCode {
     TRANSPORT_ERROR,
+    TRANSPORT_TIMEOUT_ERROR,
     DECODING_ERROR
 }

@@ -24,6 +24,7 @@ class StitchAppClientConfigurationUnitTests {
     private static final Storage STORAGE = new MemoryStorage();
     private static final Transport TRANSPORT = (Request request) ->
         new Response(200, null, null);
+    private static final Long TRANSPORT_TIMEOUT = 15000L;
 
     @Test
     void testStitchAppClientConfigurationBuilderInit() {
@@ -48,6 +49,10 @@ class StitchAppClientConfigurationUnitTests {
 
         builder.withTransport(TRANSPORT);
 
+        assertThrows(IllegalArgumentException.class, builder::build);
+
+        builder.withTransportTimeout(TRANSPORT_TIMEOUT);
+
         final StitchAppClientConfiguration config = builder.build();
 
         assertEquals(config.getClientAppId(), CLIENT_APP_ID);
@@ -56,6 +61,7 @@ class StitchAppClientConfigurationUnitTests {
         assertEquals(config.getBaseURL(), BASE_URL);
         assertEquals(config.getStorage(), STORAGE);
         assertEquals(config.getTransport(), TRANSPORT);
+        assertEquals(config.getTransportTimeout(), TRANSPORT_TIMEOUT);
         assertEquals(config.getCodecRegistry(), null);
     }
 
@@ -82,6 +88,10 @@ class StitchAppClientConfigurationUnitTests {
 
         builder.withTransport(TRANSPORT);
 
+        assertThrows(IllegalArgumentException.class, builder::build);
+
+        builder.withTransportTimeout(TRANSPORT_TIMEOUT);
+
         Codec<CustomType> customTypeCodec = new CustomType.Codec();
         builder.withCustomCodecs(CodecRegistries.fromCodecs(customTypeCodec));
 
@@ -93,6 +103,7 @@ class StitchAppClientConfigurationUnitTests {
         assertEquals(config.getBaseURL(), BASE_URL);
         assertEquals(config.getStorage(), STORAGE);
         assertEquals(config.getTransport(), TRANSPORT);
+        assertEquals(config.getTransportTimeout(), TRANSPORT_TIMEOUT);
 
         // Ensure that there is a codec for our custom type.
         assertEquals(config.getCodecRegistry().get(CustomType.class), customTypeCodec);

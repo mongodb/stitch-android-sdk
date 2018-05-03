@@ -38,7 +38,10 @@ public final class StitchAppClientImpl implements StitchAppClient {
             config.getCodecRegistry());
     this.routes = new StitchAppRoutes(this.info.clientAppId);
     final StitchRequestClient requestClient =
-        new StitchRequestClient(config.getBaseURL(), config.getTransport());
+        new StitchRequestClient(
+                config.getBaseURL(),
+                config.getTransport(),
+                config.getTransportTimeout());
     this.auth =
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), dispatcher, this.info);

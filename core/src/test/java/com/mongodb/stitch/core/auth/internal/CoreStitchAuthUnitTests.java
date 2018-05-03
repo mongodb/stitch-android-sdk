@@ -22,6 +22,7 @@ import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.mock.MockCoreStitchAuthForCodecTests;
 import com.mongodb.stitch.core.mock.MockRequestClientForCodecTests;
+import com.mongodb.stitch.core.testutil.Constants;
 import com.mongodb.stitch.core.testutil.CustomType;
 
 import org.bson.Document;
@@ -197,7 +198,9 @@ class CoreStitchAuthUnitTests {
         };
 
         MockRequestClient() {
-            super("http://localhost:8080", null);
+            super("http://localhost:8080",
+                    null,
+                    Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
         }
 
         Function<StitchRequest, Response> getHandleAuthProviderLinkRoute() {

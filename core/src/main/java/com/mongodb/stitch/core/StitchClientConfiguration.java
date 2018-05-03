@@ -12,6 +12,7 @@ public class StitchClientConfiguration {
   private final Storage storage;
   private final String dataDirectory;
   private final Transport transport;
+  private final Long transportTimeout;
   private final CodecRegistry codecRegistry;
 
   StitchClientConfiguration(final StitchClientConfiguration config) {
@@ -19,6 +20,7 @@ public class StitchClientConfiguration {
     this.storage = config.storage;
     this.dataDirectory = config.dataDirectory;
     this.transport = config.transport;
+    this.transportTimeout = config.transportTimeout;
     this.codecRegistry = config.codecRegistry;
   }
 
@@ -27,11 +29,13 @@ public class StitchClientConfiguration {
       final Storage storage,
       final String dataDirectory,
       final Transport transport,
+      final Long transportTimeout,
       final CodecRegistry codecRegistry) {
     this.baseURL = baseURL;
     this.storage = storage;
     this.dataDirectory = dataDirectory;
     this.transport = transport;
+    this.transportTimeout = transportTimeout;
     this.codecRegistry = codecRegistry;
   }
 
@@ -55,6 +59,19 @@ public class StitchClientConfiguration {
     return transport;
   }
 
+  /**
+   * The number of milliseconds that a {@link Transport} should spend on an HTTP round trip before
+   * failing with an error.
+   *
+   * - important: If the underlying transport internally handles timeouts, it is possible that the
+   *              transport will throw a timeout error before this specified interval. If you
+   *              experience premature timeouts, configure your underlying transport to have a
+   *              longer timeout interval.
+   */
+  public Long getTransportTimeout() {
+    return transportTimeout;
+  }
+
   public CodecRegistry getCodecRegistry() { return codecRegistry; }
 
   public static class Builder {
@@ -62,6 +79,7 @@ public class StitchClientConfiguration {
     private Storage storage;
     private String dataDirectory;
     private Transport transport;
+    private Long transportTimeout;
     private CodecRegistry codecRegistry;
 
     public Builder() {}
@@ -71,6 +89,7 @@ public class StitchClientConfiguration {
       storage = config.storage;
       dataDirectory = config.dataDirectory;
       transport = config.transport;
+      transportTimeout = config.transportTimeout;
       codecRegistry = config.codecRegistry;
     }
 
@@ -95,6 +114,21 @@ public class StitchClientConfiguration {
     @SuppressWarnings("UnusedReturnValue")
     public Builder withTransport(final Transport transport) {
       this.transport = transport;
+      return this;
+    }
+
+    /**
+     * Sets the number of milliseconds that a {@link Transport} should spend on an HTTP round trip
+     * before failing with an error.
+     *
+     * - important: If the underlying transport internally handles timeouts, it is possible that
+     *              the transport will throw a timeout error before this specified interval. If you
+     *              experience premature timeouts, configure your underlying transport to have a
+     *              longer timeout interval.
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public Builder withTransportTimeout(final Long transportTimeout) {
+      this.transportTimeout = transportTimeout;
       return this;
     }
 
@@ -127,6 +161,10 @@ public class StitchClientConfiguration {
       return transport;
     }
 
+    public Long getTransportTimeout() {
+      return transportTimeout;
+    }
+
     public CodecRegistry getCodecRegistry() { return codecRegistry; }
 
     public StitchClientConfiguration build() {
@@ -142,7 +180,17 @@ public class StitchClientConfiguration {
         throw new IllegalArgumentException("transport must be set");
       }
 
-      return new StitchClientConfiguration(baseURL, storage, dataDirectory, transport, codecRegistry);
+      if (transportTimeout == null) {
+        throw new IllegalArgumentException("transport timeout must be set");
+      }
+
+      return new StitchClientConfiguration(
+              baseURL,
+              storage,
+              dataDirectory,
+              transport,
+              transportTimeout,
+              codecRegistry);
     }
   }
 }
