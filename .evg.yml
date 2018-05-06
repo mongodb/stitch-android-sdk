@@ -150,7 +150,25 @@ functions:
         ./gradlew install
 
 tasks:
-  - name: run_tests
+  - name: run_core_tests
+    commands:
+      - func: "fetch_source"
+      - func: "setup_mongod"
+      - func: "setup_stitch"
+      - func: "setup_embedded"
+      - command: shell.exec
+        params: 
+          shell: "bash"
+          script: |
+            set -e
+            cd stitch-java-sdk
+
+            echo "running java tests"
+            echo "test.stitch.baseURL=http://localhost:9090" > local.properties
+            ./gradlew :core:test --info < /dev/null
+            ./gradlew :core:admin-client:test --info < /dev/null
+
+  - name: run_android_tests
     commands:
       - func: "fetch_source"
       - func: "setup_mongod"
@@ -164,10 +182,6 @@ tasks:
             set -e
             cd stitch-java-sdk
 
-            echo "running android tests"
-            echo "test.stitch.baseURL=http://10.0.2.2:9090" > local.properties
-            ./gradlew :android:core:cAT --info < /dev/null
-
             echo "running java tests"
             echo "test.stitch.baseURL=http://localhost:9090" > local.properties
             ./gradlew :core:test --info < /dev/null
@@ -177,9 +191,18 @@ buildvariants:
 - name: linux-64
   display_name: Linux-64
   run_on:
+    - baas
+  expansions:
+    mongodb_url: http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.4.4.tgz
+    transpiler_target: node8-linux
+  tasks:
+    - name: run_core_tests
+- name: linux-64-android
+  display_name: Linux-64-Android
+  run_on:
     - baas-java-sdk
   expansions:
     mongodb_url: http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.4.4.tgz
     transpiler_target: node8-linux
   tasks:
-    - name: run_tests
+    - name: run_android_tests
