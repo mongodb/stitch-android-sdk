@@ -98,12 +98,7 @@ public final class MongoDbMobileProvider extends ContentProvider {
 
   @Override
   public void onTrimMemory(int level) {
-    // We don't care about the UI being hidden as a memory event.
-    if (level == TRIM_MEMORY_UI_HIDDEN) {
-      return;
-    }
-
-    String mode;
+    final String mode;
     switch (level) {
       case TRIM_MEMORY_BACKGROUND:
       case TRIM_MEMORY_RUNNING_CRITICAL:
@@ -117,8 +112,9 @@ public final class MongoDbMobileProvider extends ContentProvider {
       case TRIM_MEMORY_RUNNING_MODERATE:
         mode = TrimMemoryCommandModes.TRIM_MODE_CONSERVATIVE;
         break;
+      case TRIM_MEMORY_UI_HIDDEN: // We don't care about the UI being hidden as a memory event.
       default:
-        return; // ignores UI_HIDDEN mode
+        return;
     }
 
     for (final EventListener listener : eventListeners) {

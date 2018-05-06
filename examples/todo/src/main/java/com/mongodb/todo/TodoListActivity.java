@@ -27,6 +27,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -168,7 +169,8 @@ public class TodoListActivity extends AppCompatActivity {
     AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Add Item");
 
-    View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, null);
+    final ViewGroup viewGroup = findViewById(android.R.id.content);
+    final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, viewGroup);
     final EditText input = view.findViewById(R.id.et_todo_item_task);
 
     builder.setView(view);
@@ -198,7 +200,8 @@ public class TodoListActivity extends AppCompatActivity {
     AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Edit Item");
 
-    View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, null);
+    final ViewGroup viewGroup = findViewById(android.R.id.content);
+    final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, viewGroup);
     final EditText input = view.findViewById(R.id.et_todo_item_task);
 
     input.setText(currentTask);
