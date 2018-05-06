@@ -191,7 +191,7 @@ buildvariants:
 - name: linux-64
   display_name: Linux-64
   run_on:
-    - baas
+    - baas-linux
   expansions:
     mongodb_url: http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.4.4.tgz
     transpiler_target: node8-linux
