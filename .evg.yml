@@ -191,11 +191,11 @@ post:
       files:
         - "./stitch-java-sdk/core/build/test-results/test/*.xml"
         - "./stitch-java-sdk/core/admin-client/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/android/core/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/android/mongodb-local/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/android/mongodb-stitch/build/test-results/test/*.xml"
         - "./stitch-java-sdk/server/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/android/examples/todo/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/examples/todo/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/android/core/build/outputs/androidTest-results/connected/*.xml"
+        - "./stitch-java-sdk/android/mongodb-local/build/outputs/androidTest-results/connected/*.xml"
+        - "./stitch-java-sdk/android/mongodb-stitch/build/outputs/androidTest-results/connected/*.xml"
 
 buildvariants:
 - name: linux-64
