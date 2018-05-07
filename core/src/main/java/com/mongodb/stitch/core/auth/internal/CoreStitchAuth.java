@@ -226,10 +226,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       return doLogin(credential, false);
     }
 
-    if (credential.getProviderCapabilities().getReusesExistingSession()) {
-      if (credential.getProviderType().equals(currentUser.getLoggedInProviderType())) {
-        return currentUser;
-      }
+    if (credential.getProviderCapabilities().getReusesExistingSession() &&
+        credential.getProviderType().equals(currentUser.getLoggedInProviderType())) {
+      return currentUser;
     }
 
     logoutBlocking();

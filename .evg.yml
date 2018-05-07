@@ -160,7 +160,7 @@ tasks:
           script: |
             set -e
             cd stitch-java-sdk
-            ./gradlew checkstyle lint --continue --warning-mode=all < /dev/null
+            ./gradlew checkstyle findbugs pmd lint --continue --warning-mode=all < /dev/null
 
   - name: run_core_tests
     commands:
