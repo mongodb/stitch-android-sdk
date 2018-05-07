@@ -208,17 +208,15 @@ post:
         - "./stitch-java-sdk/android/core/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/mongodb-local/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/mongodb-stitch/build/outputs/androidTest-results/connected/*.xml"
-
   - command: s3.put
-      params:
-        aws_key: hello
-        aws_secret: poo
-        local_files_include_filter:
-          - stitch-java-sdk/**/build/outputs/findbugs/*.xml
-        remote_file: mms/${build_id}/${task_name}/findbugs-
-        bucket: mciuploads
-        permissions: public-read
-        content_type: text/xml
+    params:
+      aws_key: ${artifacts_aws_key}
+      aws_secret: ${artifacts_aws_secret}
+      local_file: src/github.com/10gen/stitch/etc/cpp/libmongo/plugin/libmongo.so
+      remote_file: stitch-mongo-libs/${build_id}/libmongo.so
+      bucket: stitch-artifacts
+      content_type: application/octet-stream
+      permissions: public-read
 
 buildvariants:
 - name: linux-64
