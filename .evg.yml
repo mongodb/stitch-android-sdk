@@ -165,7 +165,7 @@ tasks:
 
             echo "running java tests"
             echo "test.stitch.baseURL=http://localhost:9090" > local.properties
-            ./gradlew test --info < /dev/null
+            ./gradlew test --info --continue < /dev/null
 
   - name: run_android_tests
     commands:
@@ -183,7 +183,13 @@ tasks:
 
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" > local.properties
-            ./gradlew connectedAndroidTest --info < /dev/null
+            ./gradlew connectedAndroidTest --info --continue < /dev/null
+
+post:
+  - command: attach.xunit_results
+    params:
+      files:
+        - "./stitch-java-sdk/*/build/test-reports/*.xml"
 
 buildvariants:
 - name: linux-64
