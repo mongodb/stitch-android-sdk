@@ -150,6 +150,18 @@ functions:
           ./gradlew install
 
 tasks:
+  - name: lint
+    commands:
+      - func: "fetch_source"
+      - func: "setup_embedded"
+      - command: shell.exec
+        params: 
+          shell: "bash"
+          script: |
+            set -e
+            cd stitch-java-sdk
+            ./gradlew checkstyle lint --continue --warning-mode=all < /dev/null
+
   - name: run_core_tests
     commands:
       - func: "fetch_source"
@@ -165,7 +177,7 @@ tasks:
 
             echo "running java tests"
             echo "test.stitch.baseURL=http://localhost:9090" > local.properties
-            ./gradlew test --info --continue < /dev/null
+            ./gradlew test --info --continue --warning-mode=all < /dev/null
 
   - name: run_android_tests
     commands:
@@ -183,7 +195,7 @@ tasks:
 
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" > local.properties
-            ./gradlew connectedAndroidTest --info --continue < /dev/null
+            ./gradlew connectedAndroidTest --info --continue --warning-mode=all < /dev/null
 
 post:
   - command: attach.xunit_results
@@ -206,6 +218,7 @@ buildvariants:
     mongodb_url: http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.4.4.tgz
     transpiler_target: node8-linux
   tasks:
+    - name: lint
     - name: run_core_tests
 - name: linux-64-android
   display_name: Linux-64-Android
