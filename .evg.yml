@@ -165,8 +165,7 @@ tasks:
 
             echo "running java tests"
             echo "test.stitch.baseURL=http://localhost:9090" > local.properties
-            ./gradlew :core:test --info < /dev/null
-            ./gradlew :core:admin-client:test --info < /dev/null
+            ./gradlew test --info < /dev/null
 
   - name: run_android_tests
     commands:
@@ -182,10 +181,9 @@ tasks:
             set -e
             cd stitch-java-sdk
 
-            echo "running java tests"
-            echo "test.stitch.baseURL=http://localhost:9090" > local.properties
-            ./gradlew :core:test --info < /dev/null
-            ./gradlew :core:admin-client:test --info < /dev/null
+            echo "running android tests"
+            echo "test.stitch.baseURL=http://10.0.2.2:9090" > local.properties
+            ./gradlew connectedAndroidTest --info < /dev/null
 
 buildvariants:
 - name: linux-64
