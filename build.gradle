@@ -1,10 +1,103 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 allprojects {
     repositories {
         google()
         jcenter()
         mavenLocal()
+        mavenCentral()
+    }
+    buildscript {
+        ext {
+            kotlin_version = '1.2.41'
+            architecture_components_version = '1.1.1'
+            support_library_version = '27.1.1'
+            google_play_services_version = '15.0.1'
+        }
+    }
+}
+
+def configDir = new File(rootDir, 'config')
+
+configure(subprojects) {
+    apply plugin: 'checkstyle'
+    apply plugin: 'findbugs'
+    apply plugin: 'pmd'
+
+    configurations {
+        ktlint
+    }
+
+    dependencies {
+        ktlint "com.github.shyiko:ktlint:0.23.1"
+    }
+
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
+            android {
+                lintOptions {
+                    disable 'InvalidPackage'
+                }
+            }
+            task findbugs(type: FindBugs, dependsOn: "assembleDebug") {
+                excludeFilter new File(configDir, 'findbugs.xml')
+                classes = fileTree("$project.buildDir/intermediates/classes/debug/com/mongodb")
+                source 'src/main/java', 'src/test/java'
+                classpath = files()
+            }
+        } else if (project.plugins.hasPlugin("java")) {
+            task findbugs(dependsOn: ['findbugsMain', 'findbugsTest']) {
+            }
+        }
+
+        tasks.withType(FindBugs) {
+            effort = 'max'
+
+            reports {
+                xml.enabled = false
+                html.enabled = true
+                html.setDestination new File("$project.buildDir/outputs/findbugs/$project.name-findbugs.html")
+            }
+        }
+    }
+
+    task checkstyle(type: Checkstyle) {
+        configFile = new File(configDir, 'checkstyle.xml')
+        configProperties.checkstyleConfigDir = configDir
+        source 'src/main/java', 'src/test/java'
+        include '**/*.java'
+        exclude '**/gen/**'
+        classpath = files()
+
+        reports {
+            xml.enabled = false
+            html.enabled = true
+            html.setDestination new File("$project.buildDir/outputs/checkstyle/$project.name-checkstyle.html")
+        }
+    }
+
+    task pmd(type: Pmd) {
+        source 'src/main/java', 'src/test/java'
+        include '**/*.java'
+        exclude '**/gen/**'
+
+        reports {
+            xml.enabled = false
+            html.enabled = true
+            html.setDestination new File("$project.buildDir/outputs/pmd/$project.name-pmd.html")
+        }
+    }
+
+    task ktlint(type: JavaExec, group: "verification") {
+        description = "Check Kotlin code style."
+        classpath = configurations.ktlint
+        main = "com.github.shyiko.ktlint.Main"
+        args "src/**/*.kt"
+    }
+
+    task ktlintFormat(type: JavaExec, group: "formatting") {
+        description = "Fix Kotlin code style deviations."
+        classpath = configurations.ktlint
+        main = "com.github.shyiko.ktlint.Main"
+        args "-F", "src/**/*.kt"
     }
 }
 

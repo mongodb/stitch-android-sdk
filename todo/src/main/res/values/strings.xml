@@ -1,6 +1,0 @@
-<resources>
-    <string name="app_name">ToDo</string>
-    <string name="add_item_action_label">Add</string>
-    <string name="clear_checked_action_label">Clear Checked</string>
-    <string name="clear_all_action_label">Clear All</string>
-</resources>
