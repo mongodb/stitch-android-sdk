@@ -46,7 +46,7 @@ configure(subprojects) {
             reports {
                 xml.enabled = false
                 html.enabled = true
-                html.setDestination new File("$project.buildDir/outputs/findbugs/findbugs.html")
+                html.setDestination new File("$project.buildDir/outputs/findbugs/$project.name-findbugs.html")
             }
         }
     }
@@ -62,7 +62,7 @@ configure(subprojects) {
         reports {
             xml.enabled = false
             html.enabled = true
-            html.setDestination new File("$project.buildDir/outputs/checkstyle/checkstyle.html")
+            html.setDestination new File("$project.buildDir/outputs/checkstyle/$project.name-checkstyle.html")
         }
     }
 
@@ -74,7 +74,7 @@ configure(subprojects) {
         reports {
             xml.enabled = false
             html.enabled = true
-            html.setDestination new File("$project.buildDir/outputs/pmd/pmd.html")
+            html.setDestination new File("$project.buildDir/outputs/pmd/$project.name-pmd.html")
         }
     }
 }

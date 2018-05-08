@@ -210,11 +210,14 @@ post:
         - "./stitch-java-sdk/android/mongodb-stitch/build/outputs/androidTest-results/connected/*.xml"
   - command: s3.put
     params:
-      aws_key: ${artifacts_aws_key}
-      aws_secret: ${artifacts_aws_secret}
-      local_file: src/github.com/10gen/stitch/etc/cpp/libmongo/plugin/libmongo.so
-      remote_file: stitch-mongo-libs/${build_id}/libmongo.so
-      bucket: stitch-artifacts
+      aws_key: ${test_artifacts_aws_key}
+      aws_secret: ${test_artifacts_aws_secret}
+      local_files_include_filter:
+        - stitch-java-sdk/**/build/outputs/**/*checkstyle*.html
+        - stitch-java-sdk/**/build/outputs/**/*findbugs*.html
+        - stitch-java-sdk/**/build/outputs/**/*pmd*.html
+      remote_file: ${build_id}/
+      bucket: stitch-test-artifacts
       content_type: application/octet-stream
       permissions: public-read
 
