@@ -1,16 +1,33 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.auth.internal;
 
 import com.mongodb.stitch.core.auth.StitchUserIdentity;
 import com.mongodb.stitch.core.auth.StitchUserProfile;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class StitchUserProfileImpl implements StitchUserProfile {
-  protected final String userType;
-  protected final Map<String, String> data;
-  protected final List<? extends StitchUserIdentity> identities;
+  private final String userType;
+  private final Map<String, String> data;
+  private final List<? extends StitchUserIdentity> identities;
 
   protected StitchUserProfileImpl(final StitchUserProfileImpl profile) {
     this.userType = profile.userType;
@@ -18,7 +35,14 @@ public class StitchUserProfileImpl implements StitchUserProfile {
     this.identities = profile.identities;
   }
 
-  protected StitchUserProfileImpl(
+  /**
+   * Constructs a user profile.
+   *
+   * @param userType The type of the user.
+   * @param data The profile data of the user.
+   * @param identities The identities associated with a user.
+   */
+  public StitchUserProfileImpl(
       final String userType,
       final Map<String, String> data,
       final List<? extends StitchUserIdentity> identities) {
@@ -44,7 +68,7 @@ public class StitchUserProfileImpl implements StitchUserProfile {
     return data.get(DataFields.EMAIL);
   }
 
-  public String getPictureURL() {
+  public String getPictureUrl() {
     return data.get(DataFields.PICTURE_URL);
   }
 
@@ -64,6 +88,9 @@ public class StitchUserProfileImpl implements StitchUserProfile {
     return data.get(DataFields.BIRTHDAY);
   }
 
+  /**
+   * Get the minimum age of this user; may be null.
+   */
   public Integer getMinAge() {
     final String age = data.get(DataFields.MIN_AGE);
     if (age == null) {
@@ -72,6 +99,9 @@ public class StitchUserProfileImpl implements StitchUserProfile {
     return Integer.parseInt(age);
   }
 
+  /**
+   * Get the maximum age of this user; may be null.
+   */
   public Integer getMaxAge() {
     final String age = data.get(DataFields.MAX_AGE);
     if (age == null) {
@@ -82,6 +112,10 @@ public class StitchUserProfileImpl implements StitchUserProfile {
 
   public List<? extends StitchUserIdentity> getIdentities() {
     return identities;
+  }
+
+  public Map<String, String> getData() {
+    return data;
   }
 
   private static class DataFields {

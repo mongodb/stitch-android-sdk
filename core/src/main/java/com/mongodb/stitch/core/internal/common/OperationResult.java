@@ -1,12 +1,28 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.internal.common;
 
-public final class OperationResult<SuccessType, FailureType> {
-  private final SuccessType result;
-  private final FailureType failureResult;
+public final class OperationResult<SuccessTypeT, FailureTypeT> {
+  private final SuccessTypeT result;
+  private final FailureTypeT failureResult;
   private final boolean isSuccessful;
 
   private OperationResult(
-      final SuccessType result, final FailureType failureResult, final boolean isSuccessful) {
+      final SuccessTypeT result, final FailureTypeT failureResult, final boolean isSuccessful) {
     this.result = result;
     this.failureResult = failureResult;
     this.isSuccessful = isSuccessful;
@@ -24,14 +40,24 @@ public final class OperationResult<SuccessType, FailureType> {
     return isSuccessful;
   }
 
-  public SuccessType getResult() {
+  /**
+   * Gets the result of the operation, if successful.
+   *
+   * @return The result of the operation.
+   */
+  public SuccessTypeT getResult() {
     if (!isSuccessful) {
       throw new IllegalStateException("operation was failed, not successful");
     }
     return result;
   }
 
-  public FailureType getFailure() {
+  /**
+   * Gets the failure reason for the operation, if it failed.
+   *
+   * @return The failure reason of the operation.
+   */
+  public FailureTypeT getFailure() {
     if (isSuccessful) {
       throw new IllegalStateException("operation was successful, not failed");
     }

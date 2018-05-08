@@ -1,0 +1,27 @@
+apply plugin: 'com.android.library'
+//apply plugin: 'jacoco-android'
+
+android {
+    compileSdkVersion 27
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 27
+        versionCode 1
+        versionName "1.0"
+
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    buildToolsVersion '27.0.3'
+    compileOptions {
+    }
+}
+
+dependencies {
+    implementation project(':android:core')
+    api('org.mongodb:mongodb-driver-embedded:3.8.0-SNAPSHOT') // TODO: REPLACE WITH ACTUAL 3.8.0
+}
