@@ -93,8 +93,7 @@ functions:
           set -e
           EMULATOR_PID=''
           cleanup() {
-              kill $EMULATOR_PID
-              wait $EMULATOR_PID
+              kill -9 $EMULATOR_PID
               avdmanager delete avd -n android_avd
           }
 
