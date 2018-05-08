@@ -160,7 +160,7 @@ tasks:
           script: |
             set -e
             cd stitch-java-sdk
-            ./gradlew checkstyle findbugs pmd lint --continue --warning-mode=all < /dev/null
+            ./gradlew checkstyle findbugs pmd lint ktlint --continue --warning-mode=all < /dev/null
 
   - name: run_core_tests
     commands:
@@ -216,9 +216,9 @@ post:
         - stitch-java-sdk/**/build/outputs/**/*checkstyle*.html
         - stitch-java-sdk/**/build/outputs/**/*findbugs*.html
         - stitch-java-sdk/**/build/outputs/**/*pmd*.html
-      remote_file: ${build_id}/
+      remote_file: ${build_id}/report
       bucket: stitch-test-artifacts
-      content_type: application/octet-stream
+      content_type: text/html
       permissions: public-read
 
 buildvariants:

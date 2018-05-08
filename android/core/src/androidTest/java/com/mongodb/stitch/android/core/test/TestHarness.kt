@@ -5,7 +5,8 @@ import com.mongodb.stitch.android.core.Stitch
 import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.core.auth.providers.internal.userpassword.UserPasswordAuthProvider
 import com.mongodb.stitch.core.StitchAppClientConfiguration
-import com.mongodb.stitch.core.admin.*
+import com.mongodb.stitch.core.admin.Apps
+import com.mongodb.stitch.core.admin.StitchAdminClient
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.apps.app
 import com.mongodb.stitch.core.admin.apps.create
@@ -13,8 +14,12 @@ import com.mongodb.stitch.core.admin.authProviders.AuthProvidersResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigWrapper
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.authProviders.authProvider
+import com.mongodb.stitch.core.admin.create
+import com.mongodb.stitch.core.admin.enable
 import com.mongodb.stitch.core.admin.functions.FunctionCreator
 import com.mongodb.stitch.core.admin.functions.FunctionResponse
+import com.mongodb.stitch.core.admin.list
+import com.mongodb.stitch.core.admin.remove
 import com.mongodb.stitch.core.admin.services.ServiceConfigWrapper
 import com.mongodb.stitch.core.admin.services.ServiceResponse
 import com.mongodb.stitch.core.admin.services.service
@@ -27,11 +32,13 @@ import org.bson.types.ObjectId
 
 val defaultServerUrl = StitchAppClientIntegrationTests.getStitchBaseURL()
 
-internal fun buildAdminTestHarness(seedTestApp: Boolean = false,
-                                   context: Context,
-                                   adminUsername: String = "unique_user@domain.com",
-                                   adminPassword: String = "password",
-                                   serverUrl: String = defaultServerUrl): TestHarness {
+internal fun buildAdminTestHarness(
+    seedTestApp: Boolean = false,
+    context: Context,
+    adminUsername: String = "unique_user@domain.com",
+    adminPassword: String = "password",
+    serverUrl: String = defaultServerUrl
+): TestHarness {
 
     val harness = TestHarness(
             context = context,
@@ -47,10 +54,12 @@ internal fun buildAdminTestHarness(seedTestApp: Boolean = false,
     return harness
 }
 
-internal fun buildClientTestHarness(context: Context,
-                                    username: String = "unique_user@domain.com",
-                                    password: String = "password",
-                                    serverUrl: String = defaultServerUrl): TestHarness {
+internal fun buildClientTestHarness(
+    context: Context,
+    username: String = "unique_user@domain.com",
+    password: String = "password",
+    serverUrl: String = defaultServerUrl
+): TestHarness {
     val harness: TestHarness = buildAdminTestHarness(
             seedTestApp = true,
             context = context,
@@ -65,10 +74,12 @@ internal fun buildClientTestHarness(context: Context,
     return harness
 }
 
-internal class TestHarness(private val context: Context,
-                           private val username: String = "unique_user@domain.com",
-                           private val password: String = "password",
-                           private val serverUrl: String = defaultServerUrl) {
+internal class TestHarness(
+    private val context: Context,
+    private val username: String = "unique_user@domain.com",
+    private val password: String = "password",
+    private val serverUrl: String = defaultServerUrl
+) {
     private val adminClient: StitchAdminClient by lazy {
         StitchAdminClient.create(serverUrl)
     }
@@ -112,8 +123,10 @@ internal class TestHarness(private val context: Context,
         return app
     }
 
-    fun createUser(email: String = "test_user@domain.com",
-                   password: String = "password"): UserResponse {
+    fun createUser(
+        email: String = "test_user@domain.com",
+        password: String = "password"
+    ): UserResponse {
         this.userCredentials = Pair(email, password)
         val user = this.app.users.create(data = UserCreator(email = email, password = password))
         this.user = user
@@ -124,8 +137,6 @@ internal class TestHarness(private val context: Context,
         val serviceView = this.app.services.create(data = serviceConfig)
         rules.map { this.app.services.service(id = serviceView.id).rules.create(data = it) }
         return serviceView
-
-
     }
 
     fun addProvider(config: ProviderConfigs?): AuthProvidersResponse {
@@ -153,7 +164,6 @@ internal class TestHarness(private val context: Context,
         try {
             this.app.authProviders.create(data = ProviderConfigWrapper(ProviderConfigs.Anon))
         } catch (err: Error) {
-
         }
         return this.app.authProviders.authProvider(
                 this.app.authProviders.list().find { it.type == "anon-user" }!!.id
@@ -190,7 +200,6 @@ internal class TestHarness(private val context: Context,
                 .withBaseUrl(this.serverUrl)
 
         this.stitchAppClient = Stitch.initializeAppClient(configBuilder)
-
 
         this.stitchAppClient!!.auth.loginWithCredential(
                 this.stitchAppClient!!.auth

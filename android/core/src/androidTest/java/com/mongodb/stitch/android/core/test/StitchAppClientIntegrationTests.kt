@@ -18,12 +18,21 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bson.Document
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.*
+import java.util.Arrays
+import java.util.Date
+import java.util.Calendar
+import java.util.Random
 
 @RunWith(AndroidJUnit4::class)
 class StitchAppClientIntegrationTests {
@@ -38,7 +47,7 @@ class StitchAppClientIntegrationTests {
 
         // TODO: Refactor to integration test setup class
         fun getStitchBaseURL(): String {
-            return InstrumentationRegistry.getArguments().getString("test.stitch.baseURL");
+            return InstrumentationRegistry.getArguments().getString("test.stitch.baseURL")
         }
 
         @BeforeClass
@@ -70,9 +79,11 @@ class StitchAppClientIntegrationTests {
     }
 
     // Registers a new email/password user, and logs them in, returning the user's ID
-    private fun registerAndLogin(stitchClient: StitchAppClient = this.stitchAppClient,
-                                 email: String = StitchAppClientIntegrationTests.email,
-                                 pass: String = StitchAppClientIntegrationTests.pass): String {
+    private fun registerAndLogin(
+        stitchClient: StitchAppClient = this.stitchAppClient,
+        email: String = StitchAppClientIntegrationTests.email,
+        pass: String = StitchAppClientIntegrationTests.pass
+    ): String {
         val emailPassClient = stitchClient.auth.getProviderClient(
                 UserPasswordAuthProvider.ClientProvider
         )
@@ -279,7 +290,6 @@ class StitchAppClientIntegrationTests {
         val auth = stitchAppClient.auth
         val userPassClient = auth.getProviderClient(UserPasswordAuthProvider.ClientProvider)
 
-
         Tasks.await(userPassClient.registerWithEmail(email, pass))
         val conf = this.harness.app.userRegistrations.sendConfirmation(email)
         Tasks.await(userPassClient.confirmUser(conf.token, conf.tokenId))
@@ -289,7 +299,6 @@ class StitchAppClientIntegrationTests {
         ))
         assertNotNull(anonUser)
         assertEquals(anonUser.loggedInProviderType, CoreAnonymousAuthProviderClient.DEFAULT_PROVIDER_NAME)
-
 
         val linkedUser = Tasks.await(
                 anonUser.linkWithCredential(userPassClient.getCredential(email, pass))

@@ -22,20 +22,22 @@ import org.bson.Document
 val objMapper = StitchObjectMapper.getInstance().registerKotlinModule()
 val writer = ObjectMapper().registerKotlinModule().writer()
 
-/// Any endpoint that can be described with basic
-/// CRUD operations
+// / Any endpoint that can be described with basic
+// / CRUD operations
 interface Resource {
-    /// path to this endpoint
+    // / path to this endpoint
     val url: String
-    /// stitch admin auth for making requests
+    // / stitch admin auth for making requests
     val adminAuth: StitchAdminAuth
 }
 
-/// Base implementation of Resource Protocol
-abstract class BasicResource(val adminAuth: StitchAdminAuth,
-                             val url: String)
+// / Base implementation of Resource Protocol
+abstract class BasicResource(
+    val adminAuth: StitchAdminAuth,
+    val url: String
+)
 
-/// Adds an endpoint method that GETs some list
+// / Adds an endpoint method that GETs some list
 interface Listable<T> : Resource
 
 inline fun <reified T> Listable<T>.list(): List<T> {
@@ -51,7 +53,7 @@ inline fun <reified T> Listable<T>.list(): List<T> {
     )
 }
 
-/// Adds an endpoint method that GETs some id
+// / Adds an endpoint method that GETs some id
 interface Gettable<T> : Resource
 
 inline fun <reified T> Gettable<T>.get(): T {
@@ -67,10 +69,10 @@ inline fun <reified T> Gettable<T>.get(): T {
     )
 }
 
-/// Adds an endpoint method that DELETEs some id
+// / Adds an endpoint method that DELETEs some id
 interface Removable : Resource
 
-fun Removable.remove(): Unit {
+fun Removable.remove() {
     val reqBuilder = StitchAuthRequest.Builder()
     reqBuilder
             .withMethod(Method.DELETE)
@@ -79,8 +81,7 @@ fun Removable.remove(): Unit {
     adminAuth.doAuthenticatedRequest(reqBuilder.build())
 }
 
-
-/// Adds an endpoint method that POSTs new data
+// / Adds an endpoint method that POSTs new data
 interface Creatable<Creator, T> : Resource
 
 inline fun <Creator, reified T> Creatable<Creator, T>.create(data: Creator): T {
@@ -97,7 +98,7 @@ inline fun <Creator, reified T> Creatable<Creator, T>.create(data: Creator): T {
     )
 }
 
-/// Adds an endpoint method that PUTs some data
+// / Adds an endpoint method that PUTs some data
 interface Updatable<T> : Resource
 
 inline fun <reified T> Updatable<T>.update(data: T): T {
@@ -114,10 +115,10 @@ inline fun <reified T> Updatable<T>.update(data: T): T {
     )
 }
 
-/// Adds an endpoint that enables a given resource
+// / Adds an endpoint that enables a given resource
 interface Enablable : Resource
 
-fun Enablable.enable(): Unit {
+fun Enablable.enable() {
     val reqBuilder = StitchAuthRequest.Builder()
     reqBuilder
             .withMethod(Method.PUT)
@@ -126,10 +127,10 @@ fun Enablable.enable(): Unit {
     adminAuth.doAuthenticatedRequest(reqBuilder.build())
 }
 
-/// Adds an endpoint that disables a given resource
+// / Adds an endpoint that disables a given resource
 interface Disablable : Resource
 
-fun Disablable.disable(): Unit {
+fun Disablable.disable() {
     val reqBuilder = StitchAuthRequest.Builder()
     reqBuilder
             .withMethod(Method.PUT)
@@ -142,10 +143,10 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
         BasicResource(adminAuth, url), Listable<AppResponse> {
     class App(adminAuth: StitchAdminAuth, url: String) :
             BasicResource(adminAuth, url), Gettable<AppResponse>, Removable {
-        /// Resource for listing the auth providers of an application
+        // / Resource for listing the auth providers of an application
         class AuthProviders(adminAuth: StitchAdminAuth, url: String) :
                 BasicResource(adminAuth, url), Listable<AuthProvidersResponse>, Creatable<ProviderConfigWrapper, AuthProvidersResponse> {
-            /// Resource for a specific auth provider of an application
+            // / Resource for a specific auth provider of an application
             class AuthProvider(adminAuth: StitchAdminAuth, url: String) :
                     BasicResource(adminAuth, url),
                     Gettable<AuthProvidersResponse>,
@@ -155,16 +156,16 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
                     Disablable
         }
 
-        /// Resource for user registrations of an application
+        // / Resource for user registrations of an application
         class UserRegistrations(adminAuth: StitchAdminAuth, url: String) :
                 BasicResource(adminAuth, url)
 
-        /// Resource for a list of users of an application
+        // / Resource for a list of users of an application
         class Users(adminAuth: StitchAdminAuth, url: String) :
                 BasicResource(adminAuth, url),
                 Listable<UserResponse>,
                 Creatable<UserCreator, UserResponse> {
-            /// Resource for a single user of an application
+            // / Resource for a single user of an application
             class User(adminAuth: StitchAdminAuth, url: String) :
                     BasicResource(adminAuth, url), Gettable<UserResponse>, Removable
         }
@@ -180,24 +181,24 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
                     Removable
         }
 
-        /// Resource for listing services of an application
+        // / Resource for listing services of an application
         class Services(adminAuth: StitchAdminAuth, url: String) :
                 BasicResource(adminAuth, url),
                 Listable<ServiceResponse>,
                 Creatable<ServiceConfigWrapper, ServiceResponse> {
 
-            /// Resource for a specific service of an application. Can fetch rules
-            /// of the service
+            // / Resource for a specific service of an application. Can fetch rules
+            // / of the service
             class Service(adminAuth: StitchAdminAuth, url: String) :
                     BasicResource(adminAuth, url),
                     Gettable<ServiceResponse>, Removable {
 
-                /// Resource for listing the rules of a service
+                // / Resource for listing the rules of a service
                 class Rules(adminAuth: StitchAdminAuth, url: String) :
                         BasicResource(adminAuth, url),
                         Listable<RuleResponse>,
                         Creatable<Document, RuleResponse> {
-                    /// Resource for a specific rule of a service
+                    // / Resource for a specific rule of a service
                     class Rule(adminAuth: StitchAdminAuth, url: String) :
                             BasicResource(adminAuth, url),
                             Gettable<RuleResponse>, Removable

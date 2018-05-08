@@ -13,9 +13,10 @@ import org.bson.Document
  * A special implementation of CoreStitchAuth that communicates with the MongoDB Stitch Admin API.
  */
 class StitchAdminAuth(
-        requestClient: StitchRequestClient,
-        authRoutes: StitchAuthRoutes,
-        storage: Storage) :
+    requestClient: StitchRequestClient,
+    authRoutes: StitchAuthRoutes,
+    storage: Storage
+) :
         CoreStitchAuth<StitchAdminUser>(
                 requestClient,
                 authRoutes,

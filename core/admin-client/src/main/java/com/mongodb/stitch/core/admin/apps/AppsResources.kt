@@ -8,15 +8,17 @@ import com.mongodb.stitch.core.admin.objMapper
 import com.mongodb.stitch.core.internal.net.Method
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest
 
-/// View into a specific application
+// / View into a specific application
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class AppResponse(@JsonProperty("_id") val id: String,
-                       @JsonProperty("name") val name: String,
-                       @JsonProperty("client_app_id") val clientAppId: String)
+data class AppResponse(
+    @JsonProperty("_id") val id: String,
+    @JsonProperty("name") val name: String,
+    @JsonProperty("client_app_id") val clientAppId: String
+)
 
-/// POST a new application
-/// - parameter name: name of the new application
-/// - parameter defaults: whether or not to enable default values
+// / POST a new application
+// / - parameter name: name of the new application
+// / - parameter defaults: whether or not to enable default values
 fun Apps.create(name: String, defaults: Boolean = false): AppResponse {
     val reqBuilder = StitchAuthRequest.Builder()
     reqBuilder
@@ -31,8 +33,8 @@ fun Apps.create(name: String, defaults: Boolean = false): AppResponse {
     )
 }
 
-/// GET an application
-/// - parameter id: id for the application
+// / GET an application
+// / - parameter id: id for the application
 fun Apps.app(appId: String): Apps.App {
     return Apps.App(this.adminAuth, "$url/$appId")
 }

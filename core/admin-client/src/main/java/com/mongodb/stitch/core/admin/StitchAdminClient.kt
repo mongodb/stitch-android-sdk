@@ -8,8 +8,8 @@ import com.mongodb.stitch.core.internal.net.StitchAuthRequest
 import com.mongodb.stitch.core.internal.net.StitchRequestClient
 
 class StitchAdminClient private constructor(
-        private val adminAuth: StitchAdminAuth,
-        private val authRoutes: StitchAdminAuthRoutes
+    private val adminAuth: StitchAdminAuth,
+    private val authRoutes: StitchAdminAuthRoutes
 ) {
     companion object {
         const val apiPath = "/api/admin/v3.0"

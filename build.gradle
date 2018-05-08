@@ -22,6 +22,14 @@ configure(subprojects) {
     apply plugin: 'findbugs'
     apply plugin: 'pmd'
 
+    configurations {
+        ktlint
+    }
+
+    dependencies {
+        ktlint "com.github.shyiko:ktlint:0.23.1"
+    }
+
     afterEvaluate { project ->
         if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
             android {
@@ -76,6 +84,20 @@ configure(subprojects) {
             html.enabled = true
             html.setDestination new File("$project.buildDir/outputs/pmd/$project.name-pmd.html")
         }
+    }
+
+    task ktlint(type: JavaExec, group: "verification") {
+        description = "Check Kotlin code style."
+        classpath = configurations.ktlint
+        main = "com.github.shyiko.ktlint.Main"
+        args "src/**/*.kt"
+    }
+
+    task ktlintFormat(type: JavaExec, group: "formatting") {
+        description = "Fix Kotlin code style deviations."
+        classpath = configurations.ktlint
+        main = "com.github.shyiko.ktlint.Main"
+        args "-F", "src/**/*.kt"
     }
 }
 

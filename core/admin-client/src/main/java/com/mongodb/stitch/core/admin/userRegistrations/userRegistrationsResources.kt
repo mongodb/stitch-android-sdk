@@ -6,14 +6,16 @@ import com.mongodb.stitch.core.admin.objMapper
 import com.mongodb.stitch.core.internal.net.Method
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest
 
-/// Class that allows the retrieval of the token
-/// and tokenId of a confirmation email, for the sake
-/// of skirting email registration
-data class ConfirmationEmail(val token: String,
-                             @JsonProperty("token_id") val tokenId: String)
+// / Class that allows the retrieval of the token
+// / and tokenId of a confirmation email, for the sake
+// / of skirting email registration
+data class ConfirmationEmail(
+    val token: String,
+    @JsonProperty("token_id") val tokenId: String
+)
 
-/// GET confirmation email token and tokenId
-/// - parameter email: email that the confirmation email was sent to
+// / GET confirmation email token and tokenId
+// / - parameter email: email that the confirmation email was sent to
 fun Apps.App.UserRegistrations.sendConfirmation(email: String): ConfirmationEmail {
     val reqBuilder = StitchAuthRequest.Builder()
     reqBuilder

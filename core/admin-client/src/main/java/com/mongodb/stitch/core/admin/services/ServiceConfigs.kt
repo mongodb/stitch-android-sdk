@@ -9,6 +9,8 @@ sealed class ServiceConfigs {
     data class Mongo(@JsonProperty("uri") val uri: String) : ServiceConfigs()
 }
 
-data class ServiceConfigWrapper(val name: String,
-                                val type: String,
-                                val config: ServiceConfigs)
+data class ServiceConfigWrapper(
+    val name: String,
+    val type: String,
+    val config: ServiceConfigs
+)

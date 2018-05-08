@@ -4,7 +4,9 @@ import com.mongodb.stitch.core.auth.providers.userpass.CoreUserPasswordAuthProvi
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.junit.Assert.*
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.BeforeClass
 import org.junit.Test
 
@@ -12,7 +14,7 @@ class StitchAdminClientTests {
 
     companion object {
         fun getStitchBaseURL(): String {
-            return System.getProperty("test.stitch.baseURL");
+            return System.getProperty("test.stitch.baseURL")
         }
 
         @BeforeClass
