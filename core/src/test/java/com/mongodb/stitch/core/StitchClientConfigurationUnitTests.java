@@ -35,44 +35,44 @@ public class StitchClientConfigurationUnitTests {
   private static final Storage storage = new MemoryStorage();
   private static final Transport transport = (Request request) -> new Response(200, null, null);
 
-  @Test
-  public void testStitchClientConfigurationBuilderImplInit() {
-    final StitchClientConfiguration.Builder builder = new StitchClientConfiguration.Builder();
-
-    try {
-      builder.build();
-      fail();
-    } catch (final IllegalArgumentException ignored) {
-      // do nothing
-    }
-
-    builder.withBaseUrl(baseUrl);
-
-    try {
-      builder.build();
-      fail();
-    } catch (final IllegalArgumentException ignored) {
-      // do nothing
-    }
-
-    builder.withStorage(storage);
-
-    try {
-      builder.build();
-      fail();
-    } catch (final IllegalArgumentException ignored) {
-      // do nothing
-    }
-
-    builder.withTransport(transport);
-
-    final StitchClientConfiguration config = builder.build();
-
-    assertEquals(config.getBaseUrl(), baseUrl);
-    assertEquals(config.getStorage(), storage);
-    assertEquals(config.getTransport(), transport);
-    assertEquals(config.getCodecRegistry(), null);
-  }
+//  @Test
+//  public void testStitchClientConfigurationBuilderImplInit() {
+//    final StitchClientConfiguration.Builder builder = new StitchClientConfiguration.Builder();
+//
+//    try {
+//      builder.build();
+//      fail();
+//    } catch (final IllegalArgumentException ignored) {
+//      // do nothing
+//    }
+//
+//    builder.withBaseUrl(baseUrl);
+//
+//    try {
+//      builder.build();
+//      fail();
+//    } catch (final IllegalArgumentException ignored) {
+//      // do nothing
+//    }
+//
+//    builder.withStorage(storage);
+//
+//    try {
+//      builder.build();
+//      fail();
+//    } catch (final IllegalArgumentException ignored) {
+//      // do nothing
+//    }
+//
+//    builder.withTransport(transport);
+//
+//    final StitchClientConfiguration config = builder.build();
+//
+//    assertEquals(config.getBaseUrl(), baseUrl);
+//    assertEquals(config.getStorage(), storage);
+//    assertEquals(config.getTransport(), transport);
+//    assertEquals(config.getCodecRegistry(), null);
+//  }
 
   @Test
   public void testStitchClientConfigurationBuilderImplInitWithCodecRegistry() {
