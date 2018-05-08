@@ -1,29 +1,45 @@
+def configDir = new File(rootDir, 'config')
+
 allprojects {
-    repositories {
-        google()
-        jcenter()
-        mavenLocal()
-        mavenCentral()
-    }
+    apply plugin: 'jacoco'
+    apply plugin: 'checkstyle'
+    apply plugin: 'findbugs'
+    apply plugin: 'pmd'
+
     buildscript {
+        repositories {
+            google()
+            jcenter()
+            mavenLocal()
+            mavenCentral()
+        }
+        configurations.all {
+            resolutionStrategy {
+                force 'org.codehaus.groovy:groovy-all:2.4.12'
+            }
+        }
         ext {
             kotlin_version = '1.2.41'
             architecture_components_version = '1.1.1'
             support_library_version = '27.1.1'
             google_play_services_version = '15.0.1'
         }
+        dependencies {
+            classpath 'com.android.tools.build:gradle:3.1.2'
+            classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+            classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
+        }
     }
-}
-
-def configDir = new File(rootDir, 'config')
-
-configure(subprojects) {
-    apply plugin: 'checkstyle'
-    apply plugin: 'findbugs'
-    apply plugin: 'pmd'
 
     configurations {
         ktlint
+    }
+
+    repositories {
+        google()
+        jcenter()
+        mavenLocal()
+        mavenCentral()
     }
 
     dependencies {
@@ -32,9 +48,15 @@ configure(subprojects) {
 
     afterEvaluate { project ->
         if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
+
             android {
                 lintOptions {
                     disable 'InvalidPackage'
+                }
+                buildTypes {
+                    debug {
+                        testCoverageEnabled true
+                    }
                 }
             }
             task findbugs(type: FindBugs, dependsOn: "assembleDebug") {
@@ -50,7 +72,6 @@ configure(subprojects) {
 
         tasks.withType(FindBugs) {
             effort = 'max'
-
             reports {
                 xml.enabled = false
                 html.enabled = true
@@ -85,7 +106,9 @@ configure(subprojects) {
             html.setDestination new File("$project.buildDir/outputs/pmd/$project.name-pmd.html")
         }
     }
+}
 
+configure(subprojects) {
     task ktlint(type: JavaExec, group: "verification") {
         description = "Check Kotlin code style."
         classpath = configurations.ktlint
@@ -100,6 +123,26 @@ configure(subprojects) {
         args "-F", "src/**/*.kt"
     }
 }
+
+//afterEvaluate { project ->
+//    task codeCoverageReport(type: JacocoReport) {
+//        executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+//
+//        subprojects.each {
+//            if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
+//                return
+//            }
+//            sourceSets it.sourceSets.main
+//        }
+//
+//        reports {
+//            xml.enabled true
+//            xml.destination "${buildDir}/reports/jacoco/report.xml"
+//            html.enabled false
+//            csv.enabled false
+//        }
+//    }
+//}
 
 task clean(type: Delete) {
     delete rootProject.buildDir

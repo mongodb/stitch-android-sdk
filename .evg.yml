@@ -178,6 +178,7 @@ tasks:
             echo "running java tests"
             echo "test.stitch.baseURL=http://localhost:9090" > local.properties
             ./gradlew test --info --continue --warning-mode=all < /dev/null
+            bash <(curl -s https://codecov.io/bash) -t "16d7e938-88e5-493c-8b2d-a4d8dfa49d37"
 
   - name: run_android_tests
     commands:

@@ -1,14 +1,5 @@
 apply plugin: 'com.android.library'
-
-buildscript {
-    repositories {
-        google()
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.2'
-    }
-}
+//apply plugin: 'jacoco-android'
 
 android {
     compileSdkVersion 27
@@ -28,19 +19,9 @@ android {
     buildToolsVersion '27.0.3'
     compileOptions {
     }
-//    splits {
-//        abi {
-//            enable true
-//            reset()
-//            include 'arm64-v8a'
-//            universalApk true
-//        }
-//    }
 }
 
 dependencies {
     implementation project(':android:core')
-    api('org.mongodb:mongodb-driver-embedded:3.8.0-SNAPSHOT') {
-//        exclude(group: 'org.mongodb', module: 'bson')
-    } // TODO: REPLACE WITH ACTUAL 3.8.0
+    api('org.mongodb:mongodb-driver-embedded:3.8.0-SNAPSHOT') // TODO: REPLACE WITH ACTUAL 3.8.0
 }
