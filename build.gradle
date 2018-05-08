@@ -123,27 +123,3 @@ configure(subprojects) {
         args "-F", "src/**/*.kt"
     }
 }
-
-//afterEvaluate { project ->
-//    task codeCoverageReport(type: JacocoReport) {
-//        executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
-//
-//        subprojects.each {
-//            if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
-//                return
-//            }
-//            sourceSets it.sourceSets.main
-//        }
-//
-//        reports {
-//            xml.enabled true
-//            xml.destination "${buildDir}/reports/jacoco/report.xml"
-//            html.enabled false
-//            csv.enabled false
-//        }
-//    }
-//}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}
