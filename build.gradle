@@ -1,13 +1,144 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+def configDir = new File(rootDir, 'config')
 
-allprojects {
+subprojects {
+    apply plugin: 'jacoco'
+    apply plugin: 'checkstyle'
+    apply plugin: 'findbugs'
+    apply plugin: 'pmd'
+
+    buildscript {
+        repositories {
+            google()
+            jcenter()
+            mavenLocal()
+            mavenCentral()
+        }
+        configurations.all {
+            resolutionStrategy {
+                force 'org.codehaus.groovy:groovy-all:2.4.12'
+            }
+        }
+    }
+
+    configurations {
+        ktlint
+    }
+
     repositories {
         google()
         jcenter()
         mavenLocal()
+        mavenCentral()
+    }
+
+    dependencies {
+        ktlint "com.github.shyiko:ktlint:0.23.1"
+    }
+
+    ext {
+        min_api = 21
+        target_api = 27
+        build_tools_version = '27.0.3'
+        architecture_components_version = '1.1.1'
+        support_library_version = '27.1.1'
+        google_play_services_version = '15.0.1'
+        kotlin_version = '1.2.41'
+        config_dir = configDir
+    }
+
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin("java")) {
+
+            if (!project.hasProperty("sourceCompatibility")) {
+                sourceCompatibility = JavaVersion.VERSION_1_7
+            }
+            if (!project.hasProperty("targetCompatibility")) {
+                targetCompatibility = JavaVersion.VERSION_1_7
+            }
+
+            compileTestJava {
+                sourceCompatibility = JavaVersion.VERSION_1_8
+                targetCompatibility = JavaVersion.VERSION_1_8
+            }
+
+            task findbugs(dependsOn: ['findbugsMain', 'findbugsTest']) {
+            }
+
+            jacocoTestReport {
+                reports {
+                    xml.enabled true
+                    html.enabled false
+                }
+            }
+
+            test {
+                outputs.upToDateWhen { false }
+
+                Properties properties = new Properties()
+                File file = project.rootProject.file('local.properties')
+                if (file.exists()) {
+                    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+                }
+                systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
+            }
+        }
+
+        tasks.withType(FindBugs) {
+            effort = 'max'
+            reports {
+                xml.enabled = false
+                html.enabled = true
+                html.setDestination new File("$project.buildDir/outputs/findbugs/$project.name-findbugs.html")
+            }
+        }
+    }
+
+    checkstyle {
+        toolVersion = "8.10"
+        configFile = new File(configDir, 'checkstyle.xml')
+        configProperties.checkstyleConfigDir = configDir
+    }
+
+    task checkstyle(type: Checkstyle) {
+        configFile = new File(configDir, 'checkstyle.xml')
+        configProperties.checkstyleConfigDir = configDir
+        source 'src/main/java', 'src/test/java'
+        include '**/*.java'
+        exclude '**/gen/**'
+        classpath = files()
+
+        reports {
+            xml.enabled = false
+            html.enabled = true
+            html.setDestination new File("$project.buildDir/outputs/checkstyle/$project.name-checkstyle.html")
+        }
+    }
+
+    task pmd(type: Pmd) {
+        source 'src/main/java', 'src/test/java'
+        include '**/*.java'
+        exclude '**/gen/**'
+
+        reports {
+            xml.enabled = false
+            html.enabled = true
+            html.setDestination new File("$project.buildDir/outputs/pmd/$project.name-pmd.html")
+        }
+    }
+
+    task ktlint(type: JavaExec, group: "verification") {
+        description = "Check Kotlin code style."
+        classpath = configurations.ktlint
+        main = "com.github.shyiko.ktlint.Main"
+        args "src/**/*.kt"
+    }
+
+    task ktlintFormat(type: JavaExec, group: "formatting") {
+        description = "Fix Kotlin code style deviations."
+        classpath = configurations.ktlint
+        main = "com.github.shyiko.ktlint.Main"
+        args "-F", "src/**/*.kt"
     }
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}
+

@@ -1,14 +1,29 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core;
 
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * StitchServiceErrorCode represents the set of errors that can come back from a Stitch request.
- */
+/** StitchServiceErrorCode represents the set of errors that can come back from a Stitch request. */
 public enum StitchServiceErrorCode {
   MISSING_AUTH_REQ("MissingAuthReq"),
-  INVALID_SESSION("InvalidSession"), // Invalid session, expired, no associated user, or app domain mismatch),
+  INVALID_SESSION(
+      "InvalidSession"), // Invalid session, expired, no associated user, or app domain mismatch),
   USER_APP_DOMAIN_MISMATCH("UserAppDomainMismatch"),
   DOMAIN_NOT_ALLOWED("DomainNotAllowed"),
   READ_SIZE_LIMIT_EXCEEDED("ReadSizeLimitExceeded"),
@@ -55,68 +70,75 @@ public enum StitchServiceErrorCode {
   USER_DISABLED("UserDisabled"),
   UNKNOWN("Unknown");
 
-  private static final Map<String, StitchServiceErrorCode> codeNameToError = new HashMap<>();
+  private static final Map<String, StitchServiceErrorCode> CODE_NAME_TO_ERROR = new HashMap<>();
 
   static {
-    codeNameToError.put(INVALID_SESSION._code, INVALID_SESSION);
-    codeNameToError.put(MISSING_AUTH_REQ._code, MISSING_AUTH_REQ);
-    codeNameToError.put(INVALID_SESSION._code, INVALID_SESSION);
-    codeNameToError.put(USER_APP_DOMAIN_MISMATCH._code, USER_APP_DOMAIN_MISMATCH);
-    codeNameToError.put(DOMAIN_NOT_ALLOWED._code, DOMAIN_NOT_ALLOWED);
-    codeNameToError.put(READ_SIZE_LIMIT_EXCEEDED._code, READ_SIZE_LIMIT_EXCEEDED);
-    codeNameToError.put(INVALID_PARAMETER._code, INVALID_PARAMETER);
-    codeNameToError.put(MISSING_PARAMETER._code, MISSING_PARAMETER);
-    codeNameToError.put(TWILIO_ERROR._code, TWILIO_ERROR);
-    codeNameToError.put(GCM_ERROR._code, GCM_ERROR);
-    codeNameToError.put(HTTP_ERROR._code, HTTP_ERROR);
-    codeNameToError.put(AWS_ERROR._code, AWS_ERROR);
-    codeNameToError.put(MONGODB_ERROR._code, MONGODB_ERROR);
-    codeNameToError.put(ARGUMENTS_NOT_ALLOWED._code, ARGUMENTS_NOT_ALLOWED);
-    codeNameToError.put(FUNCTION_EXECUTION_ERROR._code, FUNCTION_EXECUTION_ERROR);
-    codeNameToError.put(NO_MATCHING_RULE_FOUND._code, NO_MATCHING_RULE_FOUND);
-    codeNameToError.put(INTERNAL_SERVER_ERROR._code, INTERNAL_SERVER_ERROR);
-    codeNameToError.put(AUTH_PROVIDER_NOT_FOUND._code, AUTH_PROVIDER_NOT_FOUND);
-    codeNameToError.put(AUTH_PROVIDER_ALREADY_EXISTS._code, AUTH_PROVIDER_ALREADY_EXISTS);
-    codeNameToError.put(SERVICE_NOT_FOUND._code, SERVICE_NOT_FOUND);
-    codeNameToError.put(SERVICE_TYPE_NOT_FOUND._code, SERVICE_TYPE_NOT_FOUND);
-    codeNameToError.put(SERVICE_ALREADY_EXISTS._code, SERVICE_ALREADY_EXISTS);
-    codeNameToError.put(SERVICE_COMMAND_NOT_FOUND._code, SERVICE_COMMAND_NOT_FOUND);
-    codeNameToError.put(VALUE_NOT_FOUND._code, VALUE_NOT_FOUND);
-    codeNameToError.put(VALUE_ALREADY_EXISTS._code, VALUE_ALREADY_EXISTS);
-    codeNameToError.put(VALUE_DUPLICATE_NAME._code, VALUE_DUPLICATE_NAME);
-    codeNameToError.put(FUNCTION_NOT_FOUND._code, FUNCTION_NOT_FOUND);
-    codeNameToError.put(FUNCTION_ALREADY_EXISTS._code, FUNCTION_ALREADY_EXISTS);
-    codeNameToError.put(FUNCTION_DUPLICATE_NAME._code, FUNCTION_DUPLICATE_NAME);
-    codeNameToError.put(FUNCTION_SYNTAX_ERROR._code, FUNCTION_SYNTAX_ERROR);
-    codeNameToError.put(FUNCTION_INVALID._code, FUNCTION_INVALID);
-    codeNameToError.put(INCOMING_WEBHOOK_NOT_FOUND._code, INCOMING_WEBHOOK_NOT_FOUND);
-    codeNameToError.put(INCOMING_WEBHOOK_ALREADY_EXISTS._code, INCOMING_WEBHOOK_ALREADY_EXISTS);
-    codeNameToError.put(INCOMING_WEBHOOK_DUPLICATE_NAME._code, INCOMING_WEBHOOK_DUPLICATE_NAME);
-    codeNameToError.put(RULE_NOT_FOUND._code, RULE_NOT_FOUND);
-    codeNameToError.put(API_KEY_NOT_FOUND._code, API_KEY_NOT_FOUND);
-    codeNameToError.put(RULE_ALREADY_EXISTS._code, RULE_ALREADY_EXISTS);
-    codeNameToError.put(RULE_DUPLICATE_NAME._code, RULE_DUPLICATE_NAME);
-    codeNameToError.put(AUTH_PROVIDER_DUPLICATE_NAME._code, AUTH_PROVIDER_DUPLICATE_NAME);
-    codeNameToError.put(RESTRICTED_HOST._code, RESTRICTED_HOST);
-    codeNameToError.put(API_KEY_ALREADY_EXISTS._code, API_KEY_ALREADY_EXISTS);
-    codeNameToError.put(INCOMING_WEBHOOK_AUTH_FAILED._code, INCOMING_WEBHOOK_AUTH_FAILED);
-    codeNameToError.put(EXECUTION_TIME_LIMIT_EXCEEDED._code, EXECUTION_TIME_LIMIT_EXCEEDED);
-    codeNameToError.put(NOT_CALLABLE._code, NOT_CALLABLE);
-    codeNameToError.put(USER_ALREADY_CONFIRMED._code, USER_ALREADY_CONFIRMED);
-    codeNameToError.put(USER_NOT_FOUND._code, USER_NOT_FOUND);
-    codeNameToError.put(USER_DISABLED._code, USER_DISABLED);
+    CODE_NAME_TO_ERROR.put(INVALID_SESSION.code, INVALID_SESSION);
+    CODE_NAME_TO_ERROR.put(MISSING_AUTH_REQ.code, MISSING_AUTH_REQ);
+    CODE_NAME_TO_ERROR.put(INVALID_SESSION.code, INVALID_SESSION);
+    CODE_NAME_TO_ERROR.put(USER_APP_DOMAIN_MISMATCH.code, USER_APP_DOMAIN_MISMATCH);
+    CODE_NAME_TO_ERROR.put(DOMAIN_NOT_ALLOWED.code, DOMAIN_NOT_ALLOWED);
+    CODE_NAME_TO_ERROR.put(READ_SIZE_LIMIT_EXCEEDED.code, READ_SIZE_LIMIT_EXCEEDED);
+    CODE_NAME_TO_ERROR.put(INVALID_PARAMETER.code, INVALID_PARAMETER);
+    CODE_NAME_TO_ERROR.put(MISSING_PARAMETER.code, MISSING_PARAMETER);
+    CODE_NAME_TO_ERROR.put(TWILIO_ERROR.code, TWILIO_ERROR);
+    CODE_NAME_TO_ERROR.put(GCM_ERROR.code, GCM_ERROR);
+    CODE_NAME_TO_ERROR.put(HTTP_ERROR.code, HTTP_ERROR);
+    CODE_NAME_TO_ERROR.put(AWS_ERROR.code, AWS_ERROR);
+    CODE_NAME_TO_ERROR.put(MONGODB_ERROR.code, MONGODB_ERROR);
+    CODE_NAME_TO_ERROR.put(ARGUMENTS_NOT_ALLOWED.code, ARGUMENTS_NOT_ALLOWED);
+    CODE_NAME_TO_ERROR.put(FUNCTION_EXECUTION_ERROR.code, FUNCTION_EXECUTION_ERROR);
+    CODE_NAME_TO_ERROR.put(NO_MATCHING_RULE_FOUND.code, NO_MATCHING_RULE_FOUND);
+    CODE_NAME_TO_ERROR.put(INTERNAL_SERVER_ERROR.code, INTERNAL_SERVER_ERROR);
+    CODE_NAME_TO_ERROR.put(AUTH_PROVIDER_NOT_FOUND.code, AUTH_PROVIDER_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(AUTH_PROVIDER_ALREADY_EXISTS.code, AUTH_PROVIDER_ALREADY_EXISTS);
+    CODE_NAME_TO_ERROR.put(SERVICE_NOT_FOUND.code, SERVICE_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(SERVICE_TYPE_NOT_FOUND.code, SERVICE_TYPE_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(SERVICE_ALREADY_EXISTS.code, SERVICE_ALREADY_EXISTS);
+    CODE_NAME_TO_ERROR.put(SERVICE_COMMAND_NOT_FOUND.code, SERVICE_COMMAND_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(VALUE_NOT_FOUND.code, VALUE_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(VALUE_ALREADY_EXISTS.code, VALUE_ALREADY_EXISTS);
+    CODE_NAME_TO_ERROR.put(VALUE_DUPLICATE_NAME.code, VALUE_DUPLICATE_NAME);
+    CODE_NAME_TO_ERROR.put(FUNCTION_NOT_FOUND.code, FUNCTION_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(FUNCTION_ALREADY_EXISTS.code, FUNCTION_ALREADY_EXISTS);
+    CODE_NAME_TO_ERROR.put(FUNCTION_DUPLICATE_NAME.code, FUNCTION_DUPLICATE_NAME);
+    CODE_NAME_TO_ERROR.put(FUNCTION_SYNTAX_ERROR.code, FUNCTION_SYNTAX_ERROR);
+    CODE_NAME_TO_ERROR.put(FUNCTION_INVALID.code, FUNCTION_INVALID);
+    CODE_NAME_TO_ERROR.put(INCOMING_WEBHOOK_NOT_FOUND.code, INCOMING_WEBHOOK_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(INCOMING_WEBHOOK_ALREADY_EXISTS.code, INCOMING_WEBHOOK_ALREADY_EXISTS);
+    CODE_NAME_TO_ERROR.put(INCOMING_WEBHOOK_DUPLICATE_NAME.code, INCOMING_WEBHOOK_DUPLICATE_NAME);
+    CODE_NAME_TO_ERROR.put(RULE_NOT_FOUND.code, RULE_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(API_KEY_NOT_FOUND.code, API_KEY_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(RULE_ALREADY_EXISTS.code, RULE_ALREADY_EXISTS);
+    CODE_NAME_TO_ERROR.put(RULE_DUPLICATE_NAME.code, RULE_DUPLICATE_NAME);
+    CODE_NAME_TO_ERROR.put(AUTH_PROVIDER_DUPLICATE_NAME.code, AUTH_PROVIDER_DUPLICATE_NAME);
+    CODE_NAME_TO_ERROR.put(RESTRICTED_HOST.code, RESTRICTED_HOST);
+    CODE_NAME_TO_ERROR.put(API_KEY_ALREADY_EXISTS.code, API_KEY_ALREADY_EXISTS);
+    CODE_NAME_TO_ERROR.put(INCOMING_WEBHOOK_AUTH_FAILED.code, INCOMING_WEBHOOK_AUTH_FAILED);
+    CODE_NAME_TO_ERROR.put(EXECUTION_TIME_LIMIT_EXCEEDED.code, EXECUTION_TIME_LIMIT_EXCEEDED);
+    CODE_NAME_TO_ERROR.put(NOT_CALLABLE.code, NOT_CALLABLE);
+    CODE_NAME_TO_ERROR.put(USER_ALREADY_CONFIRMED.code, USER_ALREADY_CONFIRMED);
+    CODE_NAME_TO_ERROR.put(USER_NOT_FOUND.code, USER_NOT_FOUND);
+    CODE_NAME_TO_ERROR.put(USER_DISABLED.code, USER_DISABLED);
   }
 
-  private final String _code;
+  private final String code;
 
   StitchServiceErrorCode(final String codeName) {
-    _code = codeName;
+    code = codeName;
   }
 
+  /**
+   * Creates an error code from the given name.
+   */
   public static synchronized StitchServiceErrorCode fromCodeName(final String codeName) {
-    if (!codeNameToError.containsKey(codeName)) {
+    if (!CODE_NAME_TO_ERROR.containsKey(codeName)) {
       return UNKNOWN;
     }
-    return codeNameToError.get(codeName);
+    return CODE_NAME_TO_ERROR.get(codeName);
+  }
+
+  public String getCodeName() {
+    return code;
   }
 }

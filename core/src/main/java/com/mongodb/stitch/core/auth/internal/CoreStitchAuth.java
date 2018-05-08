@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.auth.internal;
 
 import com.mongodb.stitch.core.StitchClientErrorCode;
@@ -7,9 +23,9 @@ import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.StitchServiceErrorCode;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.auth.StitchCredential;
-import com.mongodb.stitch.core.auth.internal.models.APICoreUserProfile;
-import com.mongodb.stitch.core.internal.common.BSONUtils;
-import com.mongodb.stitch.core.internal.common.IOUtils;
+import com.mongodb.stitch.core.auth.internal.models.ApiCoreUserProfile;
+import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.stitch.core.internal.common.IoUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import com.mongodb.stitch.core.internal.common.Storage;
 import com.mongodb.stitch.core.internal.net.ContentTypes;
@@ -26,34 +42,46 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import javax.annotation.CheckReturnValue;
+import javax.annotation.meta.When;
 
 import org.bson.Document;
-import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
 /**
- * synchronization in this class happens around the authInfo and currentUser objects such that
- * access to them is 1. always atomic and 2. queued to prevent excess token refreshes.
+ * CoreStitchAuth is responsible for authenticating clients as well as acting as a client for
+ * authenticated requests. Synchronization in this class happens around the {@link
+ * CoreStitchAuth#authInfo} and {@link CoreStitchAuth#currentUser} objects such that access to them
+ * is 1. always atomic and 2. queued to prevent excess token refreshes.
  *
- * @param <TStitchUser>
+ * @param <StitchUserT> The type of users that will be consumed/produced by this component.
  */
-public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> implements StitchAuthRequestClient,
-    Closeable {
+public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
+    implements StitchAuthRequestClient, Closeable {
 
-  protected final StitchRequestClient requestClient;
-  protected final StitchAuthRoutes authRoutes;
+  private final StitchRequestClient requestClient;
+  private final StitchAuthRoutes authRoutes;
   private final Storage storage;
-  private final Thread refresherThread;
+  private Thread refresherThread;
   private AuthInfo authInfo;
-  private TStitchUser currentUser;
+  private StitchUserT currentUser;
   private CodecRegistry configuredCustomCodecRegistry; // is valid to be null
 
   protected CoreStitchAuth(
       final StitchRequestClient requestClient,
       final StitchAuthRoutes authRoutes,
       final Storage storage,
-      final CodecRegistry configuredCustomCodecRegistry) {
+      final boolean useTokenRefresher) {
+    this(requestClient, authRoutes, storage, null, useTokenRefresher);
+  }
+
+  protected CoreStitchAuth(
+      final StitchRequestClient requestClient,
+      final StitchAuthRoutes authRoutes,
+      final Storage storage,
+      final CodecRegistry configuredCustomCodecRegistry,
+      final boolean useTokenRefresher) {
     this.requestClient = requestClient;
     this.authRoutes = authRoutes;
     this.storage = storage;
@@ -71,38 +99,54 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
       this.authInfo = info;
     }
 
-    if (this.authInfo.userId != null) {
+    if (this.authInfo.getUserId() != null) {
       // this implies other properties we are interested should be set
       this.currentUser =
           getUserFactory()
               .makeUser(
-                  this.authInfo.userId,
-                  this.authInfo.loggedInProviderType,
-                  this.authInfo.loggedInProviderName,
-                  this.authInfo.userProfile);
+                  this.authInfo.getUserId(),
+                  this.authInfo.getLoggedInProviderType(),
+                  this.authInfo.getLoggedInProviderName(),
+                  this.authInfo.getUserProfile());
     }
 
-    refresherThread = new Thread(new AccessTokenRefresher<>(new WeakReference<>(this)), AccessTokenRefresher.class.getSimpleName());
-    refresherThread.start();
+    if (useTokenRefresher) {
+      refresherThread =
+          new Thread(
+              new AccessTokenRefresher<>(new WeakReference<>(this)),
+              AccessTokenRefresher.class.getSimpleName());
+      refresherThread.start();
+    }
   }
 
-  protected abstract StitchUserFactory<TStitchUser> getUserFactory();
+  protected abstract StitchUserFactory<StitchUserT> getUserFactory();
+
   protected abstract void onAuthEvent();
+
   protected abstract Document getDeviceInfo();
 
+  @CheckReturnValue(when = When.NEVER)
   synchronized AuthInfo getAuthInfo() {
     return authInfo;
   }
 
-  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+  /** Returns whether or not the client is logged in. */
+  @CheckReturnValue(when = When.NEVER)
   public synchronized boolean isLoggedIn() {
     return currentUser != null;
   }
 
-  public synchronized TStitchUser getUser() {
+  public synchronized StitchUserT getUser() {
     return currentUser;
   }
 
+  /**
+   * Performs a request against Stitch using the provided {@link StitchAuthRequest} object, and
+   * returns the response.
+   *
+   * @param stitchReq The request to perform.
+   * @return The response to the request, successful or not.
+   */
   public Response doAuthenticatedRequest(final StitchAuthRequest stitchReq) {
     try {
       return requestClient.doRequest(prepareAuthRequest(stitchReq));
@@ -112,49 +156,51 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
   }
 
   /**
-   * Performs a request against a server using the provided {@link StitchAuthDocRequest} object,
-   * and decodes the JSON body of the response into a T value using the provided codec.
+   * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
+   * decodes the JSON body of the response into a T value using the provided codec.
    *
    * @param stitchReq The request to perform.
    * @param decoder The {@link Decoder} to use to decode the JSON of the response into a T value.
    * @param <T> The type into which the JSON response will be decoded.
    * @return The decoded value.
    */
-  public <T> T doAuthenticatedJSONRequest(final StitchAuthDocRequest stitchReq, Decoder<T> decoder) {
-    final Response response = doAuthenticatedJSONRequestRaw(stitchReq);
+  public <T> T doAuthenticatedJsonRequest(
+      final StitchAuthDocRequest stitchReq, final Decoder<T> decoder) {
+    final Response response = doAuthenticatedJsonRequestRaw(stitchReq);
 
     try {
-      return BSONUtils.parseValue(IOUtils.readAllToString(response.body), decoder);
+      return BsonUtils.parseValue(IoUtils.readAllToString(response.getBody()), decoder);
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
   }
 
   /**
-   * Performs a request against a server using the provided {@link StitchAuthDocRequest} object,
-   * and decodes the JSON body of the response into a T value as specified by the provided class
-   * type. The type will be decoded using the codec found for T in the codec registry configured
-   * for this {@link CoreStitchAuth}. If there is no codec registry configured for this auth
-   * instance, a default codec registry will be used. If the provided type is not supported by the
-   * codec registry to be used, the method will throw a
-   * {@link org.bson.codecs.configuration.CodecConfigurationException}.
+   * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
+   * decodes the JSON body of the response into a T value as specified by the provided class type.
+   * The type will be decoded using the codec found for T in the codec registry configured for this
+   * {@link CoreStitchAuth}. If there is no codec registry configured for this auth instance, a
+   * default codec registry will be used. If the provided type is not supported by the codec
+   * registry to be used, the method will throw a {@link
+   * org.bson.codecs.configuration.CodecConfigurationException}.
    *
    * @param stitchReq The request to perform.
    * @param resultClass The class that the JSON response should be decoded as.
    * @param <T> The type into which the JSON response will be decoded into.
    * @return The decoded value.
    */
-  public <T> T doAuthenticatedJSONRequest(final StitchAuthDocRequest stitchReq, Class<T> resultClass) {
-    final Response response = doAuthenticatedJSONRequestRaw(stitchReq);
+  public <T> T doAuthenticatedJsonRequest(
+      final StitchAuthDocRequest stitchReq, final Class<T> resultClass) {
+    final Response response = doAuthenticatedJsonRequestRaw(stitchReq);
 
     try {
-      if(this.configuredCustomCodecRegistry != null) {
-        return BSONUtils.parseValue(
-                IOUtils.readAllToString(response.body),
-                resultClass,
-                this.configuredCustomCodecRegistry);
+      if (this.configuredCustomCodecRegistry != null) {
+        return BsonUtils.parseValue(
+            IoUtils.readAllToString(response.getBody()),
+            resultClass,
+            this.configuredCustomCodecRegistry);
       } else {
-        return BSONUtils.parseValue(IOUtils.readAllToString(response.body), resultClass);
+        return BsonUtils.parseValue(IoUtils.readAllToString(response.getBody()), resultClass);
       }
 
     } catch (final Exception e) {
@@ -162,9 +208,16 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     }
   }
 
-  public Response doAuthenticatedJSONRequestRaw(final StitchAuthDocRequest stitchReq) {
+  /**
+   * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
+   * returns the response.
+   *
+   * @param stitchReq The request to perform.
+   * @return The response to the request, successful or not.
+   */
+  public Response doAuthenticatedJsonRequestRaw(final StitchAuthDocRequest stitchReq) {
     final StitchAuthDocRequest.Builder newReqBuilder = stitchReq.builder();
-    newReqBuilder.withBody(stitchReq.document.toJson().getBytes(StandardCharsets.UTF_8));
+    newReqBuilder.withBody(stitchReq.getDocument().toJson().getBytes(StandardCharsets.UTF_8));
     final Map<String, String> newHeaders = newReqBuilder.getHeaders(); // This is not a copy
     newHeaders.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
     newReqBuilder.withHeaders(newHeaders);
@@ -172,22 +225,22 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     return doAuthenticatedRequest(newReqBuilder.build());
   }
 
-  protected synchronized TStitchUser loginWithCredentialBlocking(final StitchCredential credential) {
+  protected synchronized StitchUserT loginWithCredentialBlocking(
+      final StitchCredential credential) {
     if (!isLoggedIn()) {
       return doLogin(credential, false);
     }
 
-    if (credential.getProviderCapabilities().reusesExistingSession) {
-      if (credential.getProviderType().equals(currentUser.getLoggedInProviderType())) {
-        return currentUser;
-      }
+    if (credential.getProviderCapabilities().getReusesExistingSession()
+        && credential.getProviderType().equals(currentUser.getLoggedInProviderType())) {
+      return currentUser;
     }
 
     logoutBlocking();
     return doLogin(credential, false);
   }
 
-  protected synchronized TStitchUser linkUserWithCredentialBlocking(
+  protected synchronized StitchUserT linkUserWithCredentialBlocking(
       final CoreStitchUser user, final StitchCredential credential) {
     if (user != currentUser) {
       throw new StitchClientException(StitchClientErrorCode.USER_NO_LONGER_VALID);
@@ -209,17 +262,17 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     }
   }
 
-  protected boolean hasDeviceId() {
-    return authInfo.deviceId != null
-        && !authInfo.deviceId.isEmpty()
-        && !authInfo.deviceId.equals("000000000000000000000000");
+  protected synchronized boolean hasDeviceId() {
+    return authInfo.getDeviceId() != null
+        && !authInfo.getDeviceId().isEmpty()
+        && !authInfo.getDeviceId().equals("000000000000000000000000");
   }
 
-  protected String getDeviceId() {
+  protected synchronized String getDeviceId() {
     if (!hasDeviceId()) {
       return null;
     }
-    return authInfo.deviceId;
+    return authInfo.getDeviceId();
   }
 
   private synchronized StitchRequest prepareAuthRequest(final StitchAuthRequest stitchReq) {
@@ -229,10 +282,12 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
 
     final StitchRequest.Builder newReq = stitchReq.builder();
     final Map<String, String> newHeaders = newReq.getHeaders(); // This is not a copy
-    if (stitchReq.useRefreshToken) {
-      newHeaders.put(Headers.AUTHORIZATION, Headers.getAuthorizationBearer(authInfo.refreshToken));
+    if (stitchReq.getUseRefreshToken()) {
+      newHeaders.put(
+          Headers.AUTHORIZATION, Headers.getAuthorizationBearer(authInfo.getRefreshToken()));
     } else {
-      newHeaders.put(Headers.AUTHORIZATION, Headers.getAuthorizationBearer(authInfo.accessToken));
+      newHeaders.put(
+          Headers.AUTHORIZATION, Headers.getAuthorizationBearer(authInfo.getAccessToken()));
     }
     newReq.withHeaders(newHeaders);
     return newReq.build();
@@ -245,14 +300,14 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
 
     // using a refresh token implies we cannot refresh anything, so clear auth and
     // notify
-    if (req.useRefreshToken) {
+    if (req.getUseRefreshToken() || !req.getShouldRefreshOnFailure()) {
       clearAuth();
       throw ex;
     }
 
-    tryRefreshAccessToken(req.startedAt);
+    tryRefreshAccessToken(req.getStartedAt());
 
-    return doAuthenticatedRequest(req);
+    return doAuthenticatedRequest(req.builder().withShouldRefreshOnFailure(false).build());
   }
 
   // use this critical section to create a queue of pending outbound requests
@@ -264,7 +319,7 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     }
 
     try {
-      final JWT jwt = JWT.fromEncoded(authInfo.accessToken);
+      final Jwt jwt = Jwt.fromEncoded(authInfo.getAccessToken());
       if (jwt.getIssuedAt() >= reqStartedAt) {
         return;
       }
@@ -278,11 +333,15 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
 
   synchronized void refreshAccessToken() {
     final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
-    reqBuilder.withRefreshToken().withPath(authRoutes.getSessionRoute()).withMethod(Method.POST);
+    reqBuilder
+        .withRefreshToken()
+        .withShouldRefreshOnFailure(false)
+        .withPath(authRoutes.getSessionRoute())
+        .withMethod(Method.POST);
 
     final Response response = doAuthenticatedRequest(reqBuilder.build());
     try {
-      final AuthInfo partialInfo = AuthInfo.readFromAPI(response.body);
+      final AuthInfo partialInfo = AuthInfo.readFromApi(response.getBody());
       authInfo = authInfo.merge(partialInfo);
     } catch (final IOException e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
@@ -302,14 +361,10 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
   }
 
   // callers of doLogin should be synchronized before calling in.
-  private TStitchUser doLogin(final StitchCredential credential, final boolean asLinkRequest) {
+  private StitchUserT doLogin(final StitchCredential credential, final boolean asLinkRequest) {
     final Response response = doLoginRequest(credential, asLinkRequest);
-    final TStitchUser user = processLoginResponse(credential, response);
-    if (asLinkRequest) {
-      onAuthEvent();
-    } else {
-      onAuthEvent();
-    }
+    final StitchUserT user = processLoginResponse(credential, response);
+    onAuthEvent();
     return user;
   }
 
@@ -329,17 +384,18 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     reqBuilder.withDocument(body);
 
     if (!asLinkRequest) {
-      return requestClient.doJSONRequestRaw(reqBuilder.build());
+      return requestClient.doJsonRequestRaw(reqBuilder.build());
     }
     final StitchAuthDocRequest linkRequest =
         new StitchAuthDocRequest(reqBuilder.build(), reqBuilder.getDocument());
-    return doAuthenticatedJSONRequestRaw(linkRequest);
+    return doAuthenticatedJsonRequestRaw(linkRequest);
   }
 
-  private TStitchUser processLoginResponse(final StitchCredential credential, final Response response) {
+  private StitchUserT processLoginResponse(
+      final StitchCredential credential, final Response response) {
     AuthInfo newAuthInfo;
     try {
-      newAuthInfo = AuthInfo.readFromAPI(response.body);
+      newAuthInfo = AuthInfo.readFromApi(response.getBody());
     } catch (final IOException e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
@@ -347,10 +403,10 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     newAuthInfo =
         authInfo.merge(
             new AuthInfo(
-                newAuthInfo.userId,
-                newAuthInfo.deviceId,
-                newAuthInfo.accessToken,
-                newAuthInfo.refreshToken,
+                newAuthInfo.getUserId(),
+                newAuthInfo.getDeviceId(),
+                newAuthInfo.getAccessToken(),
+                newAuthInfo.getRefreshToken(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 null));
@@ -361,7 +417,10 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     currentUser =
         getUserFactory()
             .makeUser(
-                authInfo.userId, credential.getProviderType(), credential.getProviderName(), null);
+                authInfo.getUserId(),
+                credential.getProviderType(),
+                credential.getProviderName(),
+                null);
 
     final StitchUserProfileImpl profile;
     try {
@@ -377,10 +436,10 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     newAuthInfo =
         newAuthInfo.merge(
             new AuthInfo(
-                newAuthInfo.userId,
-                newAuthInfo.deviceId,
-                newAuthInfo.accessToken,
-                newAuthInfo.refreshToken,
+                newAuthInfo.getUserId(),
+                newAuthInfo.getDeviceId(),
+                newAuthInfo.getAccessToken(),
+                newAuthInfo.getRefreshToken(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 profile));
@@ -398,7 +457,7 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     currentUser =
         getUserFactory()
             .makeUser(
-                authInfo.userId,
+                authInfo.getUserId(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 profile);
@@ -413,7 +472,8 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     final Response response = doAuthenticatedRequest(reqBuilder.build());
 
     try {
-      return StitchObjectMapper.getInstance().readValue(response.body, APICoreUserProfile.class);
+      return StitchObjectMapper.getInstance()
+          .readValue(response.getBody(), ApiCoreUserProfile.class);
     } catch (final IOException e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
@@ -439,8 +499,19 @@ public abstract class CoreStitchAuth<TStitchUser extends CoreStitchUser> impleme
     onAuthEvent();
   }
 
+  /** Closes the component down by stopping the access token refresher. */
   public void close() throws IOException {
-    refresherThread.interrupt();
+    if (refresherThread != null) {
+      refresherThread.interrupt();
+    }
+  }
+
+  protected StitchRequestClient getRequestClient() {
+    return requestClient;
+  }
+
+  protected StitchAuthRoutes getAuthRoutes() {
+    return authRoutes;
   }
 
   private static class AuthLoginFields {
