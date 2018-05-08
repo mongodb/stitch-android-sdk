@@ -96,12 +96,7 @@ functions:
               kill -9 $EMULATOR_PID
               avdmanager delete avd -n android_avd
           }
-
           trap cleanup EXIT
-
-          # Kill previous instances
-          pkill -9 adb
-          pkill -9 emulator
 
           # Create the AVD
           echo no | avdmanager create avd --force -k "system-images;android-26;google_apis;x86_64" --name android_avd -p android_avd
@@ -164,12 +159,15 @@ functions:
       params:
         shell: "bash"
         script: |
+          if [ "${is_patch}" = "true" ]; then
+            exit 0
+          fi
           source ./creds
           cd stitch-java-sdk
 
           if [ -z "${github_pr_number}" ]
           then
-            bash <(curl -s https://codecov.io/bash)
+            bash <(curl -s https://codecov.io/bash) -C ${revision} -b ${build_id}
           else
             PR_INFO=`curl https://api.github.com/repos/${github_org}/${github_repo}/pulls/${github_pr_number}`
             BRANCH=`echo $PR_INFO | python -c "import sys, json; print json.load(sys.stdin)['head']['ref']"`
