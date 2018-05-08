@@ -100,6 +100,10 @@ functions:
 
           trap cleanup EXIT
 
+          # Kill previous instances
+          pkill -9 adb
+          pkill -9 emulator
+
           # Create the AVD
           echo no | avdmanager create avd --force -k "system-images;android-26;google_apis;x86_64" --name android_avd -p android_avd
 
@@ -122,7 +126,7 @@ functions:
           failcounter=0
           timeout_in_sec=600
           until [[ "$bootanim" =~ "stopped" ]]; do
-            bootanim=`adb -e shell getprop init.svc.bootanim 2>&1 &`
+            bootanim=`adb -e shell getprop init.svc.bootanim 2>&1`
             if [[ "$bootanim" =~ "device not found" || "$bootanim" =~ "device offline"
               || "$bootanim" =~ "running" ]]; then
               let "failcounter += 1"
