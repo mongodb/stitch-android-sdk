@@ -159,14 +159,14 @@ functions:
       params:
         shell: "bash"
         script: |
-          if [ "${is_patch}" = "true" ]; then
-            exit 0
-          fi
           source ./creds
           cd stitch-java-sdk
 
           if [ -z "${github_pr_number}" ]
           then
+            if [ "${is_patch}" = "true" ]; then
+              exit 0
+            fi
             bash <(curl -s https://codecov.io/bash) -C ${revision} -b ${build_id}
           else
             PR_INFO=`curl https://api.github.com/repos/${github_org}/${github_repo}/pulls/${github_pr_number}`
