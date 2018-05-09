@@ -1,9 +1,11 @@
 apply plugin: 'com.android.application'
+apply plugin: 'digital.wup.android-maven-publish'
 apply plugin: 'jacoco-android'
 
 buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:3.1.2'
+        classpath 'digital.wup:android-maven-publish:3.3.0'
         classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
     }
 }
@@ -17,7 +19,8 @@ android {
 }
 
 dependencies {
-    implementation project(':android:sdk')
+    implementation project(':android:stitch-android-sdk')
+    implementation project(':android:android-services:stitch-android-services-mongodb-local')
     implementation "com.android.support:support-v4:${support_library_version}"
     implementation "com.android.support:appcompat-v7:${support_library_version}"
     implementation "com.android.support:recyclerview-v7:${support_library_version}"

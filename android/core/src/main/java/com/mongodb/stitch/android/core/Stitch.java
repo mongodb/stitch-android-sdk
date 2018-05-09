@@ -67,6 +67,12 @@ public final class Stitch {
     Log.d(TAG, "Initialized android SDK");
   }
 
+  private static synchronized void ensureInitialized() {
+    if (!initialized) {
+      throw new IllegalStateException("Stitch not initialized yet; please call initialize() first");
+    }
+  }
+
   /**
    * Gets the default initialized app client. If one has not been set, then an error will be thrown.
    * {@link com.mongodb.stitch.android.core.internal.StitchInitProvider} will normally automatically
@@ -77,6 +83,7 @@ public final class Stitch {
    * @return The default initialized app client.
    */
   public static synchronized StitchAppClient getDefaultAppClient() {
+    ensureInitialized();
     if (defaultClientAppId == null) {
       throw new IllegalStateException("default app client has not yet been initialized/set");
     }
@@ -91,11 +98,20 @@ public final class Stitch {
    * @return The app client associated with the client app id.
    */
   public static synchronized StitchAppClient getAppClient(final String clientAppId) {
+    ensureInitialized();
     if (!appClients.containsKey(clientAppId)) {
       throw new IllegalStateException(
           String.format("client for app '%s' has not yet been initialized", clientAppId));
     }
     return appClients.get(clientAppId);
+  }
+
+  /**
+   * Checks if an app client has been initialized by its client app id.
+   */
+  public static synchronized boolean hasAppClient(final String clientAppId) {
+    ensureInitialized();
+    return appClients.containsKey(clientAppId);
   }
 
   /**
@@ -107,6 +123,7 @@ public final class Stitch {
    */
   public static synchronized StitchAppClient initializeDefaultAppClient(
       final StitchAppClientConfiguration.Builder configBuilder) {
+    ensureInitialized();
     final String clientAppId = configBuilder.getClientAppId();
     if (clientAppId == null || clientAppId.isEmpty()) {
       throw new IllegalArgumentException("clientAppId must be set to a non-empty string");
@@ -130,6 +147,7 @@ public final class Stitch {
    */
   public static synchronized StitchAppClient initializeAppClient(
       final StitchAppClientConfiguration.Builder configBuilder) {
+    ensureInitialized();
     final String clientAppId = configBuilder.getClientAppId();
     if (clientAppId == null || clientAppId.isEmpty()) {
       throw new IllegalArgumentException("clientAppId must be set to a non-empty string");

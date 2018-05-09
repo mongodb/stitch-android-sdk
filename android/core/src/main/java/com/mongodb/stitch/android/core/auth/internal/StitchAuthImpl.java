@@ -22,8 +22,8 @@ import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
 import com.mongodb.stitch.android.core.auth.StitchAuthListener;
 import com.mongodb.stitch.android.core.auth.StitchUser;
-import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClientSupplier;
-import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientSupplier;
+import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClientFactory;
+import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.auth.StitchCredential;
@@ -74,13 +74,13 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  public <T> T getProviderClient(final AuthProviderClientSupplier<T> provider) {
+  public <T> T getProviderClient(final AuthProviderClientFactory<T> provider) {
     return provider.getClient(getRequestClient(), getAuthRoutes(), dispatcher);
   }
 
   @Override
   public <T> T getProviderClient(
-      final NamedAuthProviderClientSupplier<T> provider, final String providerName) {
+      final NamedAuthProviderClientFactory<T> provider, final String providerName) {
     return provider.getClient(providerName, getRequestClient(), getAuthRoutes(), dispatcher);
   }
 
@@ -90,7 +90,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<StitchUser>() {
           @Override
           public StitchUser call() throws Exception {
-            return loginWithCredentialBlocking(credential);
+            return loginWithCredentialInternal(credential);
           }
         });
   }
@@ -101,7 +101,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<StitchUser>() {
           @Override
           public StitchUser call() throws Exception {
-            return linkUserWithCredentialBlocking(user, credential);
+            return linkUserWithCredentialInternal(user, credential);
           }
         });
   }
@@ -112,7 +112,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<Void>() {
           @Override
           public Void call() throws Exception {
-            logoutBlocking();
+            logoutInternal();
             return null;
           }
         });
@@ -120,10 +120,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
 
   @Override
   protected Document getDeviceInfo() {
-    final Document info = new Document();
-    if (hasDeviceId()) {
-      info.put(DeviceFields.DEVICE_ID, getDeviceId());
-    }
+    final Document info = super.getDeviceInfo();
     if (appInfo.getLocalAppName() != null) {
       info.put(DeviceFields.APP_ID, appInfo.getLocalAppName());
     }
@@ -187,6 +184,5 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   @Override
   public void close() throws IOException {
     super.close();
-    dispatcher.close();
   }
 }

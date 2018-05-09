@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 sealed class ServiceConfigs {
     object Http : ServiceConfigs()
-    class AwsSes(region: String, accessKeyId: String, secretAccessKey: String) : ServiceConfigs()
-    class Twilio(accountSid: String, authToken: String) : ServiceConfigs()
+    data class AwsSes(val region: String, val accessKeyId: String, val secretAccessKey: String) : ServiceConfigs()
+    data class Twilio(@JsonProperty("sid") val accountSid: String, @JsonProperty("auth_token") val authToken: String) : ServiceConfigs()
     data class Mongo(@JsonProperty("uri") val uri: String) : ServiceConfigs()
 }
 

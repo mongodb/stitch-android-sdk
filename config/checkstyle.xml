@@ -219,6 +219,12 @@
             <property name="exceptionVariableName" value="expected" />
         </module>
         <module name="CommentsIndentation" />
+        <module name="FinalClass"/>
+        <module name="FinalLocalVariable">
+            <property name="tokens" value="VARIABLE_DEF"/>
+            <property name="validateEnhancedForLoopVariable" value="true"/>
+        </module>
+        <module name="FinalParameters"/>
     </module>
 
     <module name="RegexpSingleline">
@@ -234,4 +240,5 @@
         <property name="maximum" value="10" />
         <property name="message" value="MongoDB copyright is missing or malformed." />
     </module>
+
 </module>

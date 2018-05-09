@@ -1,0 +1,8 @@
+apply plugin: 'java-library'
+
+archivesBaseName = 'stitch-core-services-mongodb-local'
+
+dependencies {
+    implementation project(':core:stitch-core-sdk')
+    api('org.mongodb:mongodb-driver-embedded:3.8.0-SNAPSHOT') // TODO: REPLACE WITH ACTUAL 3.8.0
+}

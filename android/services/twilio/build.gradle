@@ -1,0 +1,40 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'digital.wup.android-maven-publish'
+apply plugin: 'jacoco-android'
+
+archivesBaseName = 'stitch-android-services-twilio'
+
+buildscript {
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.2'
+        classpath 'digital.wup:android-maven-publish:3.3.0'
+        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+    }
+}
+
+android {
+    compileSdkVersion target_api
+    defaultConfig {
+        minSdkVersion min_api
+        targetSdkVersion target_api
+
+        Properties properties = new Properties()
+        File file = project.rootProject.file('local.properties')
+        if (file.exists()) {
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        }
+        testInstrumentationRunnerArgument "test.stitch.twilioSid", properties.getProperty("test.stitch.twilioSid", "")
+        testInstrumentationRunnerArgument "test.stitch.twilioAuthToken", properties.getProperty("test.stitch.twilioAuthToken", "")
+    }
+}
+
+dependencies {
+    implementation project(':android:stitch-android-core')
+    api project(':core:core-services:stitch-core-services-twilio')
+
+    androidTestImplementation project(':android:stitch-android-testutils')
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}

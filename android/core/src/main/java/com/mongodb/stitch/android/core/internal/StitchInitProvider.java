@@ -87,37 +87,41 @@ public final class StitchInitProvider extends ContentProvider {
   @NonNull
   @Override
   public Cursor query(
-      @NonNull Uri uri,
-      @Nullable String[] strings,
-      @Nullable String s,
-      @Nullable String[] strings1,
-      @Nullable String s1) {
+      @NonNull final Uri uri,
+      @Nullable final String[] strings,
+      @Nullable final String s,
+      @Nullable final String[] strings1,
+      @Nullable final String s1) {
     throw new UnsupportedOperationException();
   }
 
   @NonNull
   @Override
-  public String getType(@NonNull Uri uri) {
+  public String getType(@NonNull final Uri uri) {
     throw new UnsupportedOperationException();
   }
 
   @NonNull
   @Override
-  public Uri insert(@NonNull Uri uri, @Nullable ContentValues contentValues) {
+  public Uri insert(@NonNull final Uri uri, @Nullable final ContentValues contentValues) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public int delete(@NonNull Uri uri, @Nullable String s, @Nullable String[] strings) {
+  public int delete(
+      @NonNull final Uri uri,
+      @Nullable final String s,
+      @Nullable final String[] strings
+  ) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public int update(
-      @NonNull Uri uri,
-      @Nullable ContentValues contentValues,
-      @Nullable String s,
-      @Nullable String[] strings) {
+      @NonNull final Uri uri,
+      @Nullable final ContentValues contentValues,
+      @Nullable final String s,
+      @Nullable final String[] strings) {
     throw new UnsupportedOperationException();
   }
 

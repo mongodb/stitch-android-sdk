@@ -1,0 +1,8 @@
+apply plugin: 'java-library'
+
+archivesBaseName = 'stitch-server-services-mongodb-local'
+
+dependencies {
+    implementation project(':server:stitch-server-core')
+    api project(':core:core-services:stitch-core-services-mongodb-local')
+}

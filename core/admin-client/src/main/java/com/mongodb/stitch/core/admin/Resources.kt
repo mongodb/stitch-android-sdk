@@ -10,14 +10,13 @@ import com.mongodb.stitch.core.admin.functions.FunctionCreator
 import com.mongodb.stitch.core.admin.functions.FunctionResponse
 import com.mongodb.stitch.core.admin.services.ServiceConfigWrapper
 import com.mongodb.stitch.core.admin.services.ServiceResponse
+import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.admin.users.UserCreator
 import com.mongodb.stitch.core.admin.users.UserResponse
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper
 import com.mongodb.stitch.core.internal.net.Method
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest
-
-import org.bson.Document
 
 val objMapper = StitchObjectMapper.getInstance().registerKotlinModule()
 val writer = ObjectMapper().registerKotlinModule().writer()
@@ -197,7 +196,7 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
                 class Rules(adminAuth: StitchAdminAuth, url: String) :
                         BasicResource(adminAuth, url),
                         Listable<RuleResponse>,
-                        Creatable<Document, RuleResponse> {
+                        Creatable<RuleCreator, RuleResponse> {
                     // / Resource for a specific rule of a service
                     class Rule(adminAuth: StitchAdminAuth, url: String) :
                             BasicResource(adminAuth, url),

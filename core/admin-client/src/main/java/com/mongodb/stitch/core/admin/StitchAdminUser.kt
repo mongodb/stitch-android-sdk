@@ -2,6 +2,7 @@ package com.mongodb.stitch.core.admin
 
 import com.mongodb.stitch.core.auth.StitchUserIdentity
 import com.mongodb.stitch.core.auth.StitchUserProfile
+import com.mongodb.stitch.core.auth.UserType
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl
 
@@ -20,7 +21,7 @@ class StitchAdminUser(
         return loggedInProviderName
     }
 
-    override fun getUserType(): String? {
+    override fun getUserType(): UserType? {
         return profile?.userType
     }
 

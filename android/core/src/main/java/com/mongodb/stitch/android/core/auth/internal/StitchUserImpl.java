@@ -36,7 +36,7 @@ public final class StitchUserImpl extends CoreStitchUserImpl implements StitchUs
   }
 
   @Override
-  public Task<StitchUser> linkWithCredential(StitchCredential credential) {
+  public Task<StitchUser> linkWithCredential(final StitchCredential credential) {
     return auth.linkWithCredential(this, credential);
   }
 }
