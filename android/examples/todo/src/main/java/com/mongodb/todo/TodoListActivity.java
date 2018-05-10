@@ -169,8 +169,7 @@ public class TodoListActivity extends AppCompatActivity {
     AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Add Item");
 
-    final ViewGroup viewGroup = findViewById(android.R.id.content);
-    final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, viewGroup);
+    final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, null);
     final EditText input = view.findViewById(R.id.et_todo_item_task);
 
     builder.setView(view);
@@ -200,8 +199,7 @@ public class TodoListActivity extends AppCompatActivity {
     AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Edit Item");
 
-    final ViewGroup viewGroup = findViewById(android.R.id.content);
-    final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, viewGroup);
+    final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, null);
     final EditText input = view.findViewById(R.id.et_todo_item_task);
 
     input.setText(currentTask);
