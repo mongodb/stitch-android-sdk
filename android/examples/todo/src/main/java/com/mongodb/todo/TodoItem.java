@@ -25,7 +25,7 @@ public class TodoItem {
   public static final String TODO_LIST_DATABASE = "todo";
   public static final String TODO_LIST_COLLECTION = "items";
 
-  public static final String ID_KEY = "id";
+  public static final String ID_KEY = "_id";
   public static final String TASK_KEY = "task";
   public static final String CHECKED_KEY = "checked";
   public static final String DONE_DATE_KEY = "done_date";

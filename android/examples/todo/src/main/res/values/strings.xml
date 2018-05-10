@@ -5,4 +5,5 @@
     <string name="clear_checked_action_label">Clear Checked</string>
     <string name="clear_all_action_label">Clear All</string>
     <string name="edit_item_hint">Edit Item</string>
+    <string name="stitch_client_app_id">test-app</string>
 </resources>
