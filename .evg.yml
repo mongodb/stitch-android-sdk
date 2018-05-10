@@ -142,9 +142,15 @@ functions:
         script: |
           # TODO: Remove this script when embedded is published
           set -e
+          curl -OL https://download.java.net/java/GA/jdk10/10.0.1/fb4372174a714e6b8c52526dc134031e/10/openjdk-10.0.1_linux-x64_bin.tar.gz
+          tar xf openjdk-10.0.1_linux-x64_bin.tar.gz
+          export JAVA_HOME=`pwd`/jdk-10.0.1
+          export PATH=$JAVA_HOME/bin:$PATH
           git clone https://github.com/mongodb/mongo-java-driver.git
           cd mongo-java-driver
-          git checkout embedded
+          # TODO: replace once branch stable
+          # git checkout embedded
+          git checkout f8291ea9df985a6931056eb13e48148d101ac9b5
           ./gradlew install
 
   "publish_codecov":
