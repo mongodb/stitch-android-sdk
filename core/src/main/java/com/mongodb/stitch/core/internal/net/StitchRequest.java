@@ -23,6 +23,7 @@ import java.util.Map;
 public class StitchRequest {
   private final Method method;
   private final String path;
+  private final Long timeout;
   private final Map<String, String> headers;
   private final byte[] body;
   private final Long startedAt;
@@ -30,6 +31,7 @@ public class StitchRequest {
   StitchRequest(final StitchRequest req) {
     this.method = req.method;
     this.path = req.path;
+    this.timeout = req.timeout;
     this.headers = req.headers;
     this.body = req.body;
     this.startedAt = req.startedAt;
@@ -38,11 +40,13 @@ public class StitchRequest {
   StitchRequest(
       final Method method,
       final String path,
+      final Long timeout,
       final Map<String, String> headers,
       final byte[] body,
       final Long startedAt) {
     this.method = method;
     this.path = path;
+    this.timeout = timeout;
     this.headers = headers;
     this.body = body;
     this.startedAt = startedAt;
@@ -65,6 +69,13 @@ public class StitchRequest {
   public String getPath() {
     return path;
   }
+
+  /**
+   * Returns the number of milliseconds that the underlying transport should spend on an HTTP round
+   * trip before failing with an error. If not configured, a default should override it before the
+   * request is transformed into a plain HTTP request.
+   */
+  public Long getTimeout() { return timeout; }
 
   /**
    * Returns the headers that will be included in the request.
@@ -93,6 +104,7 @@ public class StitchRequest {
   public static class Builder {
     private Method method;
     private String path;
+    private Long timeout;
     private Map<String, String> headers = new HashMap<>();
     private byte[] body;
     private Long startedAt;
@@ -100,6 +112,7 @@ public class StitchRequest {
     Builder(final StitchRequest request) {
       method = request.method;
       path = request.path;
+      timeout = request.timeout;
       headers = request.headers;
       body = request.body;
       startedAt = request.startedAt;
@@ -120,6 +133,16 @@ public class StitchRequest {
      */
     public Builder withPath(final String path) {
       this.path = path;
+      return this;
+    }
+
+    /**
+     * Sets he number of milliseconds that the underlying transport should spend on an HTTP round
+     * trip before failing with an error. If not configured, a default should override it before
+     * the request is transformed into a plain HTTP request.
+     */
+    public Builder withTimeout(final Long timeout) {
+      this.timeout = timeout;
       return this;
     }
 
@@ -157,6 +180,13 @@ public class StitchRequest {
     }
 
     /**
+     * Returns the number of milliseconds that the underlying transport should spend on an HTTP
+     * round trip before failing with an error. If not configured, a default should override it
+     * before the request is transformed into a plain HTTP request.
+     */
+    public Long getTimeout() { return timeout; }
+
+    /**
      * Returns the headers that will be included in the request.
      */
     public Map<String, String> getHeaders() {
@@ -187,7 +217,13 @@ public class StitchRequest {
         startedAt = System.currentTimeMillis() / 1000L;
       }
       return new StitchRequest(
-          method, path, headers == null ? new HashMap<String, String>() : headers, body, startedAt);
+              method,
+              path,
+              timeout,
+              headers == null ? new HashMap<String, String>() : headers,
+              body,
+              startedAt
+      );
     }
   }
 }

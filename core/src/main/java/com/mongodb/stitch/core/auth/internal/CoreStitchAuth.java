@@ -221,6 +221,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final Map<String, String> newHeaders = newReqBuilder.getHeaders(); // This is not a copy
     newHeaders.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
     newReqBuilder.withHeaders(newHeaders);
+    newReqBuilder.withTimeout(stitchReq.getTimeout());
 
     return doAuthenticatedRequest(newReqBuilder.build());
   }
@@ -290,6 +291,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
           Headers.AUTHORIZATION, Headers.getAuthorizationBearer(authInfo.getAccessToken()));
     }
     newReq.withHeaders(newHeaders);
+    newReq.withTimeout(stitchReq.getTimeout());
     return newReq.build();
   }
 

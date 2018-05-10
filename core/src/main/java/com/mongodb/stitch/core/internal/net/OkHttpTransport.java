@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Headers;
 import okhttp3.MediaType;
@@ -82,6 +83,10 @@ public final class OkHttpTransport implements Transport {
   @Override
   // This executes a request synchronously
   public Response roundTrip(final Request request) throws IOException {
-    return handleResponse(client.newCall(buildRequest(request)).execute());
+    OkHttpClient reqClient = client.newBuilder().readTimeout(
+            request.getTimeout(),
+            TimeUnit.MILLISECONDS
+    ).build();
+    return handleResponse(reqClient.newCall(buildRequest(request)).execute());
   }
 }

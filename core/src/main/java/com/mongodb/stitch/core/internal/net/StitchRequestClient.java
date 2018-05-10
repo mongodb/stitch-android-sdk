@@ -27,10 +27,14 @@ public class StitchRequestClient {
 
   private final String baseUrl;
   private final Transport transport;
+  private final Long defaultRequestTimeout;
 
-  public StitchRequestClient(final String baseUrl, final Transport transport) {
+  public StitchRequestClient(final String baseUrl,
+                             final Transport transport,
+                             final Long defaultRequestTimeout) {
     this.baseUrl = baseUrl;
     this.transport = transport;
+    this.defaultRequestTimeout = defaultRequestTimeout;
   }
 
   private static Response inspectResponse(final Response response) {
@@ -71,6 +75,7 @@ public class StitchRequestClient {
     final Map<String, String> newHeaders = newReqBuilder.getHeaders(); // This is not a copy
     newHeaders.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
     newReqBuilder.withHeaders(newHeaders);
+    newReqBuilder.withTimeout(stitchReq.getTimeout());
 
     return doRequest(newReqBuilder.build());
   }
@@ -79,6 +84,7 @@ public class StitchRequestClient {
     return new Request.Builder()
         .withMethod(stitchReq.getMethod())
         .withUrl(String.format("%s%s", baseUrl, stitchReq.getPath()))
+        .withTimeout(stitchReq.getTimeout() == null ? defaultRequestTimeout: stitchReq.getTimeout())
         .withHeaders(stitchReq.getHeaders())
         .withBody(stitchReq.getBody())
         .build();

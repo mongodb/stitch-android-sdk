@@ -21,6 +21,8 @@ import static org.junit.Assert.fail;
 
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
+import com.mongodb.stitch.core.testutil.Constants;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.util.HashMap;
@@ -60,7 +62,7 @@ public class StitchRequestClientUnitTests {
                 fail(e.getMessage());
                 return null;
               }
-            });
+            }, Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
 
     final StitchRequest.Builder builder =
         new StitchRequest.Builder().withPath(BAD_REQUEST_ENDPOINT).withMethod(Method.GET);
@@ -97,7 +99,7 @@ public class StitchRequestClientUnitTests {
                 fail(e.getMessage());
                 return null;
               }
-            });
+            }, Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
 
     final StitchDocRequest.Builder builder = new StitchDocRequest.Builder();
     builder.withPath(BAD_REQUEST_ENDPOINT).withMethod(Method.POST);

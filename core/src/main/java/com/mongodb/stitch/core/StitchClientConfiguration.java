@@ -28,6 +28,7 @@ public class StitchClientConfiguration {
   private final Storage storage;
   private final String dataDirectory;
   private final Transport transport;
+  private final Long defaultRequestTimeout;
   private final CodecRegistry codecRegistry;
 
   StitchClientConfiguration(final StitchClientConfiguration config) {
@@ -35,6 +36,7 @@ public class StitchClientConfiguration {
     this.storage = config.storage;
     this.dataDirectory = config.dataDirectory;
     this.transport = config.transport;
+    this.defaultRequestTimeout = config.defaultRequestTimeout;
     this.codecRegistry = config.codecRegistry;
   }
 
@@ -43,11 +45,13 @@ public class StitchClientConfiguration {
       final Storage storage,
       final String dataDirectory,
       final Transport transport,
+      final Long defaultRequestTimeout,
       final CodecRegistry codecRegistry) {
     this.baseUrl = baseUrl;
     this.storage = storage;
     this.dataDirectory = dataDirectory;
     this.transport = transport;
+    this.defaultRequestTimeout = defaultRequestTimeout;
     this.codecRegistry = codecRegistry;
   }
 
@@ -80,6 +84,15 @@ public class StitchClientConfiguration {
     return transport;
   }
 
+  /**
+   * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
+   * before failing with an error.
+   *
+   * Important: If a request timeout was specified for a specific operation, for example in a
+   * function call, that timeout will override this one.
+   */
+  public Long getDefaultRequestTimeout() { return defaultRequestTimeout; }
+
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;
   }
@@ -96,6 +109,7 @@ public class StitchClientConfiguration {
     private Storage storage;
     private String dataDirectory;
     private Transport transport;
+    private Long defaultRequestTimeout;
     private CodecRegistry codecRegistry;
 
     public Builder() {}
@@ -105,6 +119,7 @@ public class StitchClientConfiguration {
       storage = config.storage;
       dataDirectory = config.dataDirectory;
       transport = config.transport;
+      defaultRequestTimeout = config.defaultRequestTimeout;
       codecRegistry = config.codecRegistry;
     }
 
@@ -138,6 +153,18 @@ public class StitchClientConfiguration {
      */
     public Builder withTransport(final Transport transport) {
       this.transport = transport;
+      return this;
+    }
+
+    /**
+     * Sets the number of seconds that a `Transport` should spend by default on an HTTP round trip
+     * before failing with an error.
+     *
+     * Important: If a request timeout was specified for a specific operation, for example in a
+     * function call, that timeout will override this one.
+     */
+    public Builder withDefaultRequestTimeout(final Long defaultRequestTimeout) {
+      this.defaultRequestTimeout = defaultRequestTimeout;
       return this;
     }
 
@@ -181,6 +208,15 @@ public class StitchClientConfiguration {
       return transport;
     }
 
+    /**
+     * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
+     * before failing with an error.
+     *
+     * Important: If a request timeout was specified for a specific operation, for example in a
+     * function call, that timeout will override this one.
+     */
+    public Long getDefaultRequestTimeout() { return defaultRequestTimeout; }
+
     public CodecRegistry getCodecRegistry() {
       return codecRegistry;
     }
@@ -201,8 +237,12 @@ public class StitchClientConfiguration {
         throw new IllegalArgumentException("transport must be set");
       }
 
+      if (defaultRequestTimeout == null) {
+        throw new IllegalArgumentException("defaultRequestTimeout must be set");
+      }
+
       return new StitchClientConfiguration(
-          baseUrl, storage, dataDirectory, transport, codecRegistry);
+          baseUrl, storage, dataDirectory, transport, defaultRequestTimeout, codecRegistry);
     }
   }
 }

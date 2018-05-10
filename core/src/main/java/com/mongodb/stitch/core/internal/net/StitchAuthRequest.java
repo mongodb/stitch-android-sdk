@@ -55,6 +55,7 @@ public class StitchAuthRequest extends StitchRequest {
     super(
         request.getMethod(),
         request.getPath(),
+        request.getTimeout(),
         request.getHeaders(),
         request.getBody(),
         request.getStartedAt());

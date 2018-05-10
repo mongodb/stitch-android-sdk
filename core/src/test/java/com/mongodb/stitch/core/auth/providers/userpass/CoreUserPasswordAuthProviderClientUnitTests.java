@@ -26,6 +26,8 @@ import com.mongodb.stitch.core.internal.net.Request;
 import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
+import com.mongodb.stitch.core.testutil.Constants;
+
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,7 +78,7 @@ public class CoreUserPasswordAuthProviderClientUnitTests {
                   fail(e.getMessage());
                   return null;
                 }
-              }),
+              }, Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS),
           routes.getAuthRoutes()) {};
 
   @Test
