@@ -83,10 +83,10 @@ public final class OkHttpTransport implements Transport {
   @Override
   // This executes a request synchronously
   public Response roundTrip(final Request request) throws IOException {
-    OkHttpClient reqClient = client.newBuilder().readTimeout(
-            request.getTimeout(),
-            TimeUnit.MILLISECONDS
-    ).build();
+    OkHttpClient reqClient = client.newBuilder()
+            .readTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
+            .writeTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
+            .build();
     return handleResponse(reqClient.newCall(buildRequest(request)).execute());
   }
 }

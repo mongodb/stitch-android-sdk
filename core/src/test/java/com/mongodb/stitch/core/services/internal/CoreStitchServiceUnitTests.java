@@ -60,8 +60,10 @@ public class CoreStitchServiceUnitTests {
     expectedRequestDoc.put("arguments", args);
 
     assertEquals(
-        42, (int) coreStitchService.callFunctionInternal(funcName, args, new IntegerCodec()));
-    assertEquals(42, (int) coreStitchService.callFunctionInternal(funcName, args, Integer.class));
+        42, (int) coreStitchService.callFunctionInternal(
+                funcName, args, null, new IntegerCodec()));
+    assertEquals(42, (int) coreStitchService.callFunctionInternal(
+            funcName, args, null, Integer.class));
 
     final ArgumentCaptor<StitchAuthDocRequest> docArgument =
         ArgumentCaptor.forClass(StitchAuthDocRequest.class);

@@ -19,6 +19,8 @@ package com.mongodb.stitch.core.internal.net;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import com.mongodb.stitch.core.StitchRequestErrorCode;
+import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import com.mongodb.stitch.core.testutil.Constants;
@@ -36,6 +38,7 @@ public class StitchRequestClientUnitTests {
   private static final String GET_ENDPOINT = "/get";
   private static final String NOT_GET_ENDPOINT = "/notget";
   private static final String BAD_REQUEST_ENDPOINT = "/badreq";
+  private static final String TIMEOUT_ENDPOINT = "/timeout";
 
   static {
     HEADERS.put("bar", "baz");
@@ -81,6 +84,37 @@ public class StitchRequestClientUnitTests {
     assertEquals((int) response.getStatusCode(), 200);
     assertEquals(
         TEST_DOC, StitchObjectMapper.getInstance().readValue(response.getBody(), Map.class));
+  }
+
+  @Test
+  public void testDoRequestWithTimeout() throws Exception {
+    final StitchRequestClient stitchRequestClient =
+            new StitchRequestClient(
+                    "http://domain.com",
+                    (Request request) -> {
+                      if (request.getUrl().contains(TIMEOUT_ENDPOINT)) {
+                        if(request.getTimeout() <= 5000L) {
+                            Thread.sleep(request.getTimeout());
+                            throw new Exception("mocking a timeout");
+                        }
+                        return new Response(500, HEADERS, null);
+                      }
+
+                      return new Response(204, HEADERS, null);
+                    }, Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
+
+    final StitchRequest.Builder builder =
+            new StitchRequest.Builder()
+                    .withPath(TIMEOUT_ENDPOINT)
+                    .withMethod(Method.GET)
+                    .withTimeout(3000L);
+
+    try {
+      stitchRequestClient.doRequest(builder.build());
+      fail();
+    } catch (final StitchRequestException ignored) {
+      assertEquals(ignored.getErrorCode(), StitchRequestErrorCode.TRANSPORT_ERROR);
+    }
   }
 
   @Test

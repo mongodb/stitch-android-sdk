@@ -32,6 +32,7 @@ import java.util.Map;
 
 public final class Stitch {
   private static final String DEFAULT_BASE_URL = "https://stitch.mongodb.com";
+  private static final Long DEFAULT_DEFAULT_REQUEST_TIMEOUT = 15000L;
   private static final String TAG = Stitch.class.getSimpleName();
   private static final Map<String, StitchAppClientImpl> appClients = new HashMap<>();
   private static boolean initialized;
@@ -150,6 +151,9 @@ public final class Stitch {
     }
     if (configBuilder.getTransport() == null) {
       configBuilder.withTransport(new OkHttpTransport());
+    }
+    if (configBuilder.getDefaultRequestTimeout() == null) {
+      configBuilder.withDefaultRequestTimeout(DEFAULT_DEFAULT_REQUEST_TIMEOUT);
     }
     if (configBuilder.getBaseUrl() == null || configBuilder.getBaseUrl().isEmpty()) {
       configBuilder.withBaseUrl(DEFAULT_BASE_URL);

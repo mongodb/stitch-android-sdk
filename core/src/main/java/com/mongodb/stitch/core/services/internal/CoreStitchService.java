@@ -23,6 +23,8 @@ import java.util.List;
 import org.bson.Document;
 import org.bson.codecs.Codec;
 
+import javax.annotation.Nullable;
+
 
 public class CoreStitchService {
   private final StitchAuthRequestClient requestClient;
@@ -39,7 +41,9 @@ public class CoreStitchService {
   }
 
   private StitchAuthDocRequest getCallServiceFunctionRequest(
-      final String name, final List<? extends Object> args) {
+      final String name,
+      final List<? extends Object> args,
+      final @Nullable Long requestTimeout) {
     final Document body = new Document();
     body.put("name", name);
     body.put("service", serviceName);
@@ -48,18 +52,26 @@ public class CoreStitchService {
     final StitchAuthDocRequest.Builder reqBuilder = new StitchAuthDocRequest.Builder();
     reqBuilder.withMethod(Method.POST).withPath(serviceRoutes.getFunctionCallRoute());
     reqBuilder.withDocument(body);
+    reqBuilder.withTimeout(requestTimeout);
     return reqBuilder.build();
   }
 
   public <T> T callFunctionInternal(
-      final String name, final List<? extends Object> args, final Codec<T> codec) {
+      final String name,
+      final List<? extends Object> args,
+      final @Nullable Long requestTimeout,
+      final Codec<T> codec
+      ) {
     return requestClient.doAuthenticatedJsonRequest(
-        getCallServiceFunctionRequest(name, args), codec);
+        getCallServiceFunctionRequest(name, args, requestTimeout), codec);
   }
 
   public <T> T callFunctionInternal(
-      final String name, final List<? extends Object> args, final Class<T> resultClass) {
+      final String name,
+      final List<? extends Object> args,
+      final @Nullable Long requestTimeout,
+      final Class<T> resultClass) {
     return requestClient.doAuthenticatedJsonRequest(
-        getCallServiceFunctionRequest(name, args), resultClass);
+        getCallServiceFunctionRequest(name, args, requestTimeout), resultClass);
   }
 }

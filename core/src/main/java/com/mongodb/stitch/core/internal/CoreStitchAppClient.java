@@ -24,6 +24,8 @@ import java.util.List;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 
+import javax.annotation.Nullable;
+
 public final class CoreStitchAppClient {
   private final StitchAuthRequestClient authRequestClient;
   private final StitchAppRoutes routes;
@@ -35,7 +37,9 @@ public final class CoreStitchAppClient {
   }
 
   private StitchAuthDocRequest getCallFunctionRequest(
-      final String name, final List<? extends Object> args) {
+          final String name,
+          final List<? extends Object> args,
+          final @Nullable Long requestTimeout) {
     final Document body = new Document();
     body.put("name", name);
     body.put("arguments", args);
@@ -43,6 +47,7 @@ public final class CoreStitchAppClient {
     final StitchAuthDocRequest.Builder reqBuilder = new StitchAuthDocRequest.Builder();
     reqBuilder.withMethod(Method.POST).withPath(routes.getFunctionCallRoute());
     reqBuilder.withDocument(body);
+    reqBuilder.withTimeout(requestTimeout);
     return reqBuilder.build();
   }
 
@@ -57,9 +62,12 @@ public final class CoreStitchAppClient {
    * @return The decoded value.
    */
   public <T> T callFunctionInternal(
-      final String name, final List<? extends Object> args, final Decoder<T> decoder) {
+      final String name,
+      final List<? extends Object> args,
+      final @Nullable Long requestTimeout,
+      final Decoder<T> decoder) {
     return authRequestClient.doAuthenticatedJsonRequest(
-        getCallFunctionRequest(name, args), decoder);
+        getCallFunctionRequest(name, args, requestTimeout), decoder);
   }
 
   /**
@@ -76,8 +84,11 @@ public final class CoreStitchAppClient {
    * @return The decoded value.
    */
   public <T> T callFunctionInternal(
-      final String name, final List<? extends Object> args, final Class<T> resultClass) {
+      final String name,
+      final List<? extends Object> args,
+      final @Nullable Long requestTimeout,
+      final Class<T> resultClass) {
     return authRequestClient.doAuthenticatedJsonRequest(
-        getCallFunctionRequest(name, args), resultClass);
+        getCallFunctionRequest(name, args, requestTimeout), resultClass);
   }
 }
