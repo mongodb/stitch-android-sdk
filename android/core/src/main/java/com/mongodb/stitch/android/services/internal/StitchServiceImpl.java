@@ -42,52 +42,53 @@ public final class StitchServiceImpl extends CoreStitchService implements Stitch
   public <ResultT> Task<ResultT> callFunction(
       final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
-        new Callable<ResultT>() {
-          @Override
-          public ResultT call() throws Exception {
-            return callFunctionInternal(name, args, null, resultClass);
-          }
-        });
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          return callFunctionInternal(name, args, null, resultClass);
+        }
+      });
   }
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-          final String name,
-          final List<? extends Object> args,
-          final Long requestTimeout,
-          final Class<ResultT> resultClass) {
-      return dispatcher.dispatchTask(
-              new Callable<ResultT>() {
-                    @Override
-                    public ResultT call() throws Exception { return callFunctionInternal(name, args, requestTimeout, resultClass);
-                    }
-                });
-    }
+      final String name,
+      final List<? extends Object> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          return callFunctionInternal(name, args, requestTimeout, resultClass);
+        }
+      });
+  }
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
       final String name, final List<? extends Object> args, final Codec<ResultT> resultCodec) {
     return dispatcher.dispatchTask(
-        new Callable<ResultT>() {
-          @Override
-          public ResultT call() throws Exception {
-            return callFunctionInternal(name, args, null, resultCodec);
-          }
-        });
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          return callFunctionInternal(name, args, null, resultCodec);
+        }
+      });
   }
 
-    @Override
-    public <ResultT> Task<ResultT> callFunction(
-            final String name,
-            final List<? extends Object> args,
-            final Long requestTimeout,
-            final Codec<ResultT> resultCodec) {
-        return dispatcher.dispatchTask(
-                new Callable<ResultT>() {
-                    @Override
-                    public ResultT call() throws Exception {
-                        return callFunctionInternal(name, args, requestTimeout, resultCodec);
-                    }
-                });
-    }
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name,
+      final List<? extends Object> args,
+      final Long requestTimeout,
+      final Codec<ResultT> resultCodec) {
+    return dispatcher.dispatchTask(
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          åreturn callFunctionInternal(name, args, requestTimeout, resultCodec);
+        }
+      });
+  }
 }

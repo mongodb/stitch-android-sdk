@@ -20,11 +20,9 @@ import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.bson.Document;
 import org.bson.codecs.Codec;
-
-import javax.annotation.Nullable;
-
 
 public class CoreStitchService {
   private final StitchAuthRequestClient requestClient;
@@ -60,8 +58,7 @@ public class CoreStitchService {
       final String name,
       final List<? extends Object> args,
       final @Nullable Long requestTimeout,
-      final Codec<T> codec
-      ) {
+      final Codec<T> codec) {
     return requestClient.doAuthenticatedJsonRequest(
         getCallServiceFunctionRequest(name, args, requestTimeout), codec);
   }

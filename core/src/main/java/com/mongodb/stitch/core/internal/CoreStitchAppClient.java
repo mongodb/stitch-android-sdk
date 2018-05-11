@@ -21,10 +21,9 @@ import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
-
-import javax.annotation.Nullable;
 
 public final class CoreStitchAppClient {
   private final StitchAuthRequestClient authRequestClient;

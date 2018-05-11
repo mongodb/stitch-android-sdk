@@ -29,6 +29,13 @@ public class StitchRequestClient {
   private final Transport transport;
   private final Long defaultRequestTimeout;
 
+  /**
+   * Constructs a StitchRequestClient with the provided parameters.
+   * @param baseUrl The base URL of the Stitch server to which this client will make requests.
+   * @param transport The underlying {@link Transport} that this client will use to make requests.
+   * @param defaultRequestTimeout The number of milliseconds the client should wait for a response
+   *                              by default from the server before failing with an error.
+   */
   public StitchRequestClient(final String baseUrl,
                              final Transport transport,
                              final Long defaultRequestTimeout) {
@@ -84,7 +91,8 @@ public class StitchRequestClient {
     return new Request.Builder()
         .withMethod(stitchReq.getMethod())
         .withUrl(String.format("%s%s", baseUrl, stitchReq.getPath()))
-        .withTimeout(stitchReq.getTimeout() == null ? defaultRequestTimeout: stitchReq.getTimeout())
+        .withTimeout(
+                stitchReq.getTimeout() == null ? defaultRequestTimeout : stitchReq.getTimeout())
         .withHeaders(stitchReq.getHeaders())
         .withBody(stitchReq.getBody())
         .build();

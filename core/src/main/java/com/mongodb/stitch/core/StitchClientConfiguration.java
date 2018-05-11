@@ -86,12 +86,12 @@ public class StitchClientConfiguration {
 
   /**
    * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
-   * before failing with an error.
-   *
-   * Important: If a request timeout was specified for a specific operation, for example in a
-   * function call, that timeout will override this one.
+   * before failing with an error. Important: If a request timeout was specified for a specific
+   * operation, for example in a function call, that timeout will override this one.
    */
-  public Long getDefaultRequestTimeout() { return defaultRequestTimeout; }
+  public Long getDefaultRequestTimeout() {
+    return defaultRequestTimeout;
+  }
 
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;
@@ -158,10 +158,8 @@ public class StitchClientConfiguration {
 
     /**
      * Sets the number of seconds that a `Transport` should spend by default on an HTTP round trip
-     * before failing with an error.
-     *
-     * Important: If a request timeout was specified for a specific operation, for example in a
-     * function call, that timeout will override this one.
+     * before failing with an error. Important: If a request timeout was specified for a specific
+     * operation, for example in a function call, that timeout will override this one.
      */
     public Builder withDefaultRequestTimeout(final Long defaultRequestTimeout) {
       this.defaultRequestTimeout = defaultRequestTimeout;
@@ -210,12 +208,12 @@ public class StitchClientConfiguration {
 
     /**
      * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
-     * before failing with an error.
-     *
-     * Important: If a request timeout was specified for a specific operation, for example in a
-     * function call, that timeout will override this one.
+     * before failing with an error. Important: If a request timeout was specified for a specific
+     * operation, for example in a function call, that timeout will override this one.
      */
-    public Long getDefaultRequestTimeout() { return defaultRequestTimeout; }
+    public Long getDefaultRequestTimeout() {
+      return defaultRequestTimeout;
+    }
 
     public CodecRegistry getCodecRegistry() {
       return codecRegistry;

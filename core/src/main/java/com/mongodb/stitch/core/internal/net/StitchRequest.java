@@ -75,7 +75,9 @@ public class StitchRequest {
    * trip before failing with an error. If not configured, a default should override it before the
    * request is transformed into a plain HTTP request.
    */
-  public Long getTimeout() { return timeout; }
+  public Long getTimeout() {
+    return timeout;
+  }
 
   /**
    * Returns the headers that will be included in the request.
@@ -184,7 +186,9 @@ public class StitchRequest {
      * round trip before failing with an error. If not configured, a default should override it
      * before the request is transformed into a plain HTTP request.
      */
-    public Long getTimeout() { return timeout; }
+    public Long getTimeout() {
+      return timeout;
+    }
 
     /**
      * Returns the headers that will be included in the request.

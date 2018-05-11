@@ -90,18 +90,18 @@ public class StitchRequestClientUnitTests {
   public void testDoRequestWithTimeout() throws Exception {
     final StitchRequestClient stitchRequestClient =
             new StitchRequestClient(
-                    "http://domain.com",
-                    (Request request) -> {
-                      if (request.getUrl().contains(TIMEOUT_ENDPOINT)) {
-                        if(request.getTimeout() <= 5000L) {
-                            Thread.sleep(request.getTimeout());
-                            throw new Exception("mocking a timeout");
-                        }
-                        return new Response(500, HEADERS, null);
-                      }
+                "http://domain.com",
+                (Request request) -> {
+                  if (request.getUrl().contains(TIMEOUT_ENDPOINT)) {
+                    if (request.getTimeout() <= 5000L) {
+                      Thread.sleep(request.getTimeout());
+                      throw new Exception("mocking a timeout");
+                    }
+                    return new Response(500, HEADERS, null);
+                  }
 
-                      return new Response(204, HEADERS, null);
-                    }, Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
+                  return new Response(204, HEADERS, null);
+                }, Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
 
     final StitchRequest.Builder builder =
             new StitchRequest.Builder()

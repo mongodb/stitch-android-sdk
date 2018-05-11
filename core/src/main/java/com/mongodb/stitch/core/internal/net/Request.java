@@ -56,7 +56,9 @@ public final class Request {
    * Returns the number of milliseconds that the underlying transport should spend on an HTTP round
    * trip before failing with an error.
    */
-  public Long getTimeout() { return timeout; }
+  public Long getTimeout() {
+    return timeout;
+  }
 
   /**
    * Returns the headers that will be included in the request.
@@ -157,7 +159,9 @@ public final class Request {
      * Returns the number of milliseconds that the underlying transport should spend on an HTTP
      * round trip before failing with an error.
      */
-    public Long getTimeout() { return timeout; }
+    public Long getTimeout() {
+      return timeout;
+    }
 
     /**
      * Returns the headers that will be included in the request.

@@ -86,10 +86,10 @@ public final class StitchAppClientImpl implements StitchAppClient {
 
   @Override
   public <ResultT> ResultT callFunction(
-          final String name,
-          final List<? extends Object> args,
-          final Long requestTimeout,
-          final Class<ResultT> resultClass) {
+      final String name,
+      final List<? extends Object> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass) {
     return coreClient.callFunctionInternal(name, args, requestTimeout, resultClass);
   }
 
@@ -101,10 +101,10 @@ public final class StitchAppClientImpl implements StitchAppClient {
 
   @Override
   public <ResultT> ResultT callFunction(
-          final String name,
-          final List<? extends Object> args,
-          final Long requestTimeout,
-          final Decoder<ResultT> resultDecoder) {
+      final String name,
+      final List<? extends Object> args,
+      final Long requestTimeout,
+      final Decoder<ResultT> resultDecoder) {
     return coreClient.callFunctionInternal(name, args, requestTimeout, resultDecoder);
   }
 }
