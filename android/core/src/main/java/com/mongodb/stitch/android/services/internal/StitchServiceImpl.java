@@ -87,7 +87,7 @@ public final class StitchServiceImpl extends CoreStitchService implements Stitch
       new Callable<ResultT>() {
         @Override
         public ResultT call() throws Exception {
-          åreturn callFunctionInternal(name, args, requestTimeout, resultCodec);
+          return callFunctionInternal(name, args, requestTimeout, resultCodec);
         }
       });
   }
