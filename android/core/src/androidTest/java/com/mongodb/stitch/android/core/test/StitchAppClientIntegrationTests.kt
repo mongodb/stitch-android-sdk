@@ -340,7 +340,7 @@ class StitchAppClientIntegrationTests {
             Tasks.await(stitchAppClient.callFunction<Document>(
                     "testFunction", Arrays.asList(randomInt, "hello"), 1L
             ))
-        } catch(ex: ExecutionException) {
+        } catch (ex: ExecutionException) {
             assertTrue(ex.cause is StitchRequestException)
             assertEquals(
                     (ex.cause as StitchRequestException).errorCode,

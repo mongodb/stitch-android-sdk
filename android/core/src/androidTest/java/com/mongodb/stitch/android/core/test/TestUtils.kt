@@ -8,8 +8,10 @@ inline fun <reified T> StitchAppClient.callFunction(name: String, args: List<Any
     return this.callFunction(name, args, T::class.java)
 }
 
-inline fun <reified T> StitchAppClient.callFunction(name: String,
-                                                    args: List<Any>,
-                                                    requestTimeout: Long): Task<T> {
+inline fun <reified T> StitchAppClient.callFunction(
+    name: String,
+    args: List<Any>,
+    requestTimeout: Long
+): Task<T> {
     return this.callFunction(name, args, requestTimeout, T::class.java)
 }
