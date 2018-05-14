@@ -35,12 +35,30 @@ public final class StitchServiceImpl extends CoreStitchService implements Stitch
   @Override
   public <ResultT> ResultT callFunction(
       final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
-    return callFunctionInternal(name, args, resultClass);
+    return callFunctionInternal(name, args, null, resultClass);
+  }
+
+  @Override
+  public <ResultT> ResultT callFunction(
+          final String name,
+          final List<? extends Object> args,
+          final Long requestTimeout,
+          final Class<ResultT> resultClass) {
+    return callFunctionInternal(name, args, requestTimeout, resultClass);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
       final String name, final List<? extends Object> args, final Codec<ResultT> resultCodec) {
-    return callFunctionInternal(name, args, resultCodec);
+    return callFunctionInternal(name, args, null, resultCodec);
+  }
+
+  @Override
+  public <ResultT> ResultT callFunction(
+          final String name,
+          final List<? extends Object> args,
+          final Long requestTimeout,
+          final Codec<ResultT> resultCodec) {
+    return callFunctionInternal(name, args, requestTimeout, resultCodec);
   }
 }

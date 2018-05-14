@@ -25,6 +25,7 @@ import com.mongodb.stitch.core.internal.common.Storage;
 import com.mongodb.stitch.core.internal.net.Request;
 import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.internal.net.Transport;
+import com.mongodb.stitch.core.testutil.Constants;
 import com.mongodb.stitch.core.testutil.CustomType;
 import org.bson.Document;
 import org.bson.codecs.Codec;
@@ -82,6 +83,15 @@ public class StitchAppClientConfigurationUnitTests {
 
     builder.withTransport(TRANSPORT);
 
+    try {
+      builder.build();
+      fail();
+    } catch (final IllegalArgumentException ignored) {
+      // do nothing
+    }
+
+    builder.withDefaultRequestTimeout(Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
+
     final StitchAppClientConfiguration config = builder.build();
 
     assertEquals(config.getClientAppId(), CLIENT_APP_ID);
@@ -135,6 +145,15 @@ public class StitchAppClientConfigurationUnitTests {
     }
 
     builder.withTransport(TRANSPORT);
+
+    try {
+      builder.build();
+      fail();
+    } catch (final IllegalArgumentException ignored) {
+      // do nothing
+    }
+
+    builder.withDefaultRequestTimeout(Constants.DEFAULT_TRANSPORT_TIMEOUT_MILLISECONDS);
 
     Codec<CustomType> customTypeCodec = new CustomType.Codec();
     builder.withCustomCodecs(CodecRegistries.fromCodecs(customTypeCodec));

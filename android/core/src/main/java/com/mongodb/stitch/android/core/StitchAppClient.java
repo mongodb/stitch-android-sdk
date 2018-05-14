@@ -69,6 +69,29 @@ public interface StitchAppClient {
       final String name, final List<? extends Object> args, final Class<ResultT> resultClass);
 
   /**
+   * Calls the specified Stitch function, and decodes the response into an instance of the specified
+   * type. The response will be decoded using the codec registry specified when the client was
+   * configured. If no codec registry was configured, a default codec registry will be used. The
+   * default codec registry supports the mappings specified <a
+   * href="http://mongodb.github.io/mongo-java-driver/3.1/bson/documents/#document">here</a>
+   * Also accepts a timeout in milliseconds. Use this for functions that may run longer than the
+   * client-wide default timeout (15 seconds by default).
+   *
+   * @param name The name of the Stitch function to call.
+   * @param args The arguments to pass to the function.
+   * @param requestTimeout The number of milliseconds the client should wait for a response from the
+   *                       server before failing with an error.
+   * @param resultClass The class that the response should be decoded as.
+   * @param <ResultT> The type into which the Stitch response will be decoded.
+   * @return A {@link Task} containing the decoded value.
+   */
+  <ResultT> Task<ResultT> callFunction(
+          final String name,
+          final List<? extends Object> args,
+          final Long requestTimeout,
+          final Class<ResultT> resultClass);
+
+  /**
    * Calls the specified Stitch function, and decodes the response into a value using the provided
    * {@link Decoder} or {@link Codec}.
    *
@@ -81,4 +104,24 @@ public interface StitchAppClient {
    */
   <ResultT> Task<ResultT> callFunction(
       final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder);
+
+  /**
+   * Calls the specified Stitch function, and decodes the response into a value using the provided
+   * {@link Decoder} or {@link Codec}. Also accepts a timeout in milliseconds. Use this for
+   * functions that may run longer than the client-wide default timeout (15 seconds by default).
+   *
+   * @param name The name of the Stitch function to call.
+   * @param args The arguments to pass to the function.
+   * @param requestTimeout The number of milliseconds the client should wait for a response from the
+   *                       server before failing with an error.
+   * @param resultDecoder The {@link Decoder} or {@link Codec} to use to decode the response into a
+   *     value.
+   * @param <ResultT> The type into which the response will be decoded.
+   * @return A {@link Task} containing the decoded value.
+   */
+  <ResultT> Task<ResultT> callFunction(
+          final String name,
+          final List<? extends Object> args,
+          final Long requestTimeout,
+          final Decoder<ResultT> resultDecoder);
 }

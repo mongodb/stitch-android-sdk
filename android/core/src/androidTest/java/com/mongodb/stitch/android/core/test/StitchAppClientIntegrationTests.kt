@@ -8,6 +8,8 @@ import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.core.auth.providers.internal.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.android.core.auth.providers.internal.custom.CustomAuthProvider
 import com.mongodb.stitch.android.core.auth.providers.internal.userpassword.UserPasswordAuthProvider
+import com.mongodb.stitch.core.StitchRequestErrorCode
+import com.mongodb.stitch.core.StitchRequestException
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl
 import com.mongodb.stitch.core.auth.providers.anonymous.CoreAnonymousAuthProviderClient
@@ -33,6 +35,7 @@ import java.util.Arrays
 import java.util.Date
 import java.util.Calendar
 import java.util.Random
+import java.util.concurrent.ExecutionException
 
 @RunWith(AndroidJUnit4::class)
 class StitchAppClientIntegrationTests {
@@ -331,5 +334,18 @@ class StitchAppClientIntegrationTests {
         assertTrue(resultDoc.containsKey("stringValue"))
         assertEquals(randomInt, resultDoc.getInteger("intValue"))
         assertEquals("hello", resultDoc.getString("stringValue"))
+
+        // Ensure that a function call with 1ms timeout fails
+        try {
+            Tasks.await(stitchAppClient.callFunction<Document>(
+                    "testFunction", Arrays.asList(randomInt, "hello"), 1L
+            ))
+        } catch (ex: ExecutionException) {
+            assertTrue(ex.cause is StitchRequestException)
+            assertEquals(
+                    (ex.cause as StitchRequestException).errorCode,
+                    StitchRequestErrorCode.TRANSPORT_ERROR
+            )
+        }
     }
 }

@@ -59,7 +59,8 @@ public final class StitchAppClientImpl implements StitchAppClient {
             config.getCodecRegistry());
     this.routes = new StitchAppRoutes(this.info.getClientAppId());
     final StitchRequestClient requestClient =
-        new StitchRequestClient(config.getBaseUrl(), config.getTransport());
+        new StitchRequestClient(
+                config.getBaseUrl(), config.getTransport(), config.getDefaultRequestTimeout());
     this.auth =
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), dispatcher, this.info);
@@ -88,24 +89,54 @@ public final class StitchAppClientImpl implements StitchAppClient {
   public <ResultT> Task<ResultT> callFunction(
       final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
-        new Callable<ResultT>() {
-          @Override
-          public ResultT call() throws Exception {
-            return coreClient.callFunctionInternal(name, args, resultClass);
-          }
-        });
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          return coreClient.callFunctionInternal(name, args, null, resultClass);
+        }
+      });
+  }
+
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name,
+      final List<? extends Object> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          return coreClient.callFunctionInternal(name, args, requestTimeout, resultClass);
+        }
+      });
   }
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
       final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
-        new Callable<ResultT>() {
-          @Override
-          public ResultT call() throws Exception {
-            return coreClient.callFunctionInternal(name, args, resultDecoder);
-          }
-        });
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          return coreClient.callFunctionInternal(name, args, null, resultDecoder);
+        }
+      });
+  }
+
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name,
+      final List<? extends Object> args,
+      final Long requestTimeout,
+      final Decoder<ResultT> resultDecoder) {
+    return dispatcher.dispatchTask(
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() throws Exception {
+          return coreClient.callFunctionInternal(name, args, requestTimeout, resultDecoder);
+        }
+      });
   }
 
   /** Closes the auth component down. */

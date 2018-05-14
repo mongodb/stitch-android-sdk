@@ -26,13 +26,20 @@ import java.util.Map;
 public final class Request {
   private final Method method;
   private final String url;
+  private final Long timeout;
   private final Map<String, String> headers;
   private final byte[] body;
 
   private Request(
-      final Method method, final String url, final Map<String, String> headers, final byte[] body) {
+      final Method method,
+      final String url,
+      final Long timeout,
+      final Map<String, String> headers,
+      final byte[] body
+  ) {
     this.method = method;
     this.url = url;
+    this.timeout = timeout;
     this.headers = headers;
     this.body = body;
   }
@@ -42,6 +49,15 @@ public final class Request {
    */
   public String getUrl() {
     return url;
+  }
+
+
+  /**
+   * Returns the number of milliseconds that the underlying transport should spend on an HTTP round
+   * trip before failing with an error.
+   */
+  public Long getTimeout() {
+    return timeout;
   }
 
   /**
@@ -74,6 +90,7 @@ public final class Request {
   public static class Builder {
     private Method method;
     private String url;
+    private Long timeout;
     private Map<String, String> headers;
     private byte[] body;
 
@@ -82,6 +99,7 @@ public final class Request {
     private Builder(final Request request) {
       method = request.method;
       url = request.url;
+      timeout = request.timeout;
       headers = request.headers;
       body = request.body;
     }
@@ -91,6 +109,15 @@ public final class Request {
      */
     public Builder withUrl(final String url) {
       this.url = url;
+      return this;
+    }
+
+    /**
+     * Sets the number of milliseconds that the underlying transport should spend on an HTTP round
+     * trip before failing with an error.
+     */
+    public Builder withTimeout(final Long timeout) {
+      this.timeout = timeout;
       return this;
     }
 
@@ -129,6 +156,14 @@ public final class Request {
     }
 
     /**
+     * Returns the number of milliseconds that the underlying transport should spend on an HTTP
+     * round trip before failing with an error.
+     */
+    public Long getTimeout() {
+      return timeout;
+    }
+
+    /**
      * Returns the headers that will be included in the request.
      */
     public Map<String, String> getHeaders() {
@@ -162,8 +197,11 @@ public final class Request {
       if (url == null || url.isEmpty()) {
         throw new IllegalStateException("must set non-empty url");
       }
+      if (timeout == null) {
+        throw new IllegalStateException("must set a timeout");
+      }
       return new Request(
-          method, url, headers == null ? new HashMap<String, String>() : headers, body);
+          method, url, timeout, headers == null ? new HashMap<String, String>() : headers, body);
     }
   }
 }
