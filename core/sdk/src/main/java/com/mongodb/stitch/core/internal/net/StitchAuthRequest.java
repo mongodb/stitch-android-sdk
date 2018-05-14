@@ -165,7 +165,7 @@ public class StitchAuthRequest extends StitchRequest {
      */
     public StitchAuthRequest build() {
       if (useRefreshToken) {
-        shouldRefreshOnFailure = true;
+        shouldRefreshOnFailure = false;
       }
       return new StitchAuthRequest(super.build(), useRefreshToken, shouldRefreshOnFailure);
     }
