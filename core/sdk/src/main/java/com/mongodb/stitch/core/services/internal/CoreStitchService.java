@@ -17,11 +17,24 @@
 package com.mongodb.stitch.core.services.internal;
 
 import java.util.List;
+import javax.annotation.Nullable;
 import org.bson.codecs.Codec;
 
-import javax.annotation.Nullable;
-
 public interface CoreStitchService {
+
+  void callFunctionInternal(
+      final String name,
+      final List<?> args);
+
+  <T> T callFunctionInternal(
+      final String name,
+      final List<?> args,
+      final Codec<T> codec);
+
+  <T> T callFunctionInternal(
+      final String name,
+      final List<?> args,
+      final Class<T> resultClass);
 
   void callFunctionInternal(
       final String name,

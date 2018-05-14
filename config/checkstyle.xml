@@ -240,5 +240,4 @@
         <property name="maximum" value="10" />
         <property name="message" value="MongoDB copyright is missing or malformed." />
     </module>
-
 </module>

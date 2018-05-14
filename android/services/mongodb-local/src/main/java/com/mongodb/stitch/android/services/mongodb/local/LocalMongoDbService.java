@@ -36,7 +36,6 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
   private static final String TAG = LocalMongoDbService.class.getSimpleName();
 
   private static final String ADMIN_DATABASE_NAME = "admin";
-  private static final Set<MongoClient> localInstances = new HashSet<>();
   public static final ServiceClientFactory<MongoClient> ClientFactory =
       new ServiceClientFactory<MongoClient>() {
 
@@ -48,13 +47,12 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
         ) {
 
           final MongoClient client = CoreLocalMongoDbService.getClient(appInfo);
-          localInstances.add(client);
           MongoDbMobileProvider.addEventListener(
               new MongoDbMobileProvider.EventListener() {
                 @Override
                 public void onLowBatteryLevel() {
                   Log.i(TAG, "Notifying embedded MongoDB of low host battery level");
-                  for (final MongoClient client : localInstances) {
+                  for (final MongoClient client : getLocalInstances()) {
                     try {
                       client
                           .getDatabase(ADMIN_DATABASE_NAME)
@@ -74,7 +72,7 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
                 @Override
                 public void onOkayBatteryLevel() {
                   Log.i(TAG, "Notifying embedded MongoDB of normal host battery level");
-                  for (final MongoClient client : localInstances) {
+                  for (final MongoClient client : getLocalInstances()) {
                     try {
                       client
                           .getDatabase(ADMIN_DATABASE_NAME)
@@ -94,7 +92,7 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
                 @Override
                 public void onTrimMemory(final String memoryTrimMode) {
                   Log.i(TAG, "Notifying embedded MongoDB of low memory condition on host");
-                  for (final MongoClient client : localInstances) {
+                  for (final MongoClient client : getLocalInstances()) {
                     try {
                       client
                           .getDatabase(ADMIN_DATABASE_NAME)

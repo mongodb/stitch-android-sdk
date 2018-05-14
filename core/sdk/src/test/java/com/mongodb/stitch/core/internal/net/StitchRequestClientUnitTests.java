@@ -67,6 +67,7 @@ public class StitchRequestClientUnitTests {
     final Request expectedRequest = new Request.Builder()
         .withMethod(Method.GET)
         .withUrl(URI.create(domain).resolve(path).toString())
+        .withTimeout(1500L)
         .build();
     assertEquals(expectedRequest, actualRequest);
 
@@ -164,6 +165,7 @@ public class StitchRequestClientUnitTests {
         .withUrl(URI.create(domain).resolve(path).toString())
         .withBody("{\"my\" : {\"$numberInt\" : \"24\"}}".getBytes(StandardCharsets.UTF_8))
         .withHeaders(expectedHeaders)
+        .withTimeout(1500L)
         .build();
     assertEquals(expectedRequest, actualRequest);
 
@@ -237,7 +239,8 @@ public class StitchRequestClientUnitTests {
   public void testHandleNonCanonicalHeaders() throws Exception {
     final String domain = "http://domain.com";
     final Transport transport = Mockito.mock(Transport.class);
-    final StitchRequestClient stitchRequestClient = new StitchRequestClient(domain, transport, 1500L);
+    final StitchRequestClient stitchRequestClient =
+        new StitchRequestClient(domain, transport, 1500L);
 
     // A bad response should throw an exception
     doReturn(new Response(500)).when(transport).roundTrip(any());
@@ -277,7 +280,8 @@ public class StitchRequestClientUnitTests {
   public void testDoRequestWithTimeout() throws Exception {
     final String domain = "http://domain.com";
     final Transport transport = Mockito.mock(Transport.class);
-    final StitchRequestClient stitchRequestClient = new StitchRequestClient(domain, transport, 1500L);
+    final StitchRequestClient stitchRequestClient =
+        new StitchRequestClient(domain, transport, 1500L);
 
     doThrow(new TimeoutException("whoops")).when(transport)
         .roundTrip(ArgumentMatchers.argThat(req -> req.getTimeout() == 3000L));

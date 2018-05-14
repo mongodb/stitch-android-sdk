@@ -323,7 +323,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
     reqBuilder
         .withRefreshToken()
-        .withShouldRefreshOnFailure(false)
         .withPath(authRoutes.getSessionRoute())
         .withMethod(Method.POST);
 

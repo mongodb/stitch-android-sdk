@@ -21,6 +21,8 @@ import com.mongodb.embedded.client.MongoClientSettings;
 import com.mongodb.embedded.client.MongoClients;
 import com.mongodb.embedded.client.MongoEmbeddedSettings;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -51,5 +53,9 @@ public abstract class CoreLocalMongoDbService {
 
     localInstances.put(instanceKey, client);
     return client;
+  }
+
+  protected static synchronized Collection<MongoClient> getLocalInstances() {
+    return localInstances.values();
   }
 }

@@ -56,6 +56,29 @@ public class CoreStitchServiceImpl implements CoreStitchService {
 
   public void callFunctionInternal(
       final String name,
+      final List<? extends Object> args
+  ) {
+    requestClient.doAuthenticatedRequest(getCallServiceFunctionRequest(name, args, null));
+  }
+
+  public <T> T callFunctionInternal(
+      final String name,
+      final List<? extends Object> args,
+      final Codec<T> codec) {
+    return requestClient.doAuthenticatedJsonRequest(
+        getCallServiceFunctionRequest(name, args, null), codec);
+  }
+
+  public <T> T callFunctionInternal(
+      final String name,
+      final List<? extends Object> args,
+      final Class<T> resultClass) {
+    return requestClient.doAuthenticatedJsonRequest(
+        getCallServiceFunctionRequest(name, args, null), resultClass);
+  }
+
+  public void callFunctionInternal(
+      final String name,
       final List<? extends Object> args,
       final @Nullable Long requestTimeout
   ) {

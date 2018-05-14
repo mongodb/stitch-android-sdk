@@ -126,6 +126,7 @@ public interface StitchAppClient extends Closeable {
           final List<? extends Object> args,
           final Long requestTimeout,
           final Decoder<ResultT> resultDecoder);
+
   /**
    * Closes the client and shuts down all background operations.
    */
