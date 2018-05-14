@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.server.services.aws.ses;
 
+import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.services.aws.ses.internal.AwsSesServiceClientImpl;
 import javax.annotation.Nonnull;
@@ -29,8 +30,9 @@ public interface AwsSesServiceClient {
    * @param from The email address to send the email from.
    * @param subject The subject of the email.
    * @param body The body text of the email.
+   * @return The result of the send.
    */
-  void sendEmail(
+  AwsSesSendResult sendEmail(
       @Nonnull final String to,
       @Nonnull final String from,
       @Nonnull final String subject,

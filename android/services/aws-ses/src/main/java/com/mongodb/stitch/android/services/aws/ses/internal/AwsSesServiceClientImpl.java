@@ -22,6 +22,7 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.services.aws.ses.AwsSesServiceClient;
+import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
 import com.mongodb.stitch.core.services.aws.ses.CoreAwsSesServiceClient;
 
 import java.util.concurrent.Callable;
@@ -44,16 +45,15 @@ public final class AwsSesServiceClientImpl extends CoreAwsSesServiceClient
    * @param subject The subject of the email.
    * @return A task that completes when the send is done.
    */
-  public Task<Void> sendEmail(
+  public Task<AwsSesSendResult> sendEmail(
       @NonNull final String to,
       @NonNull final String from,
       @NonNull final String subject,
       @NonNull final String body) {
-    return dispatcher.dispatchTask(new Callable<Void>() {
+    return dispatcher.dispatchTask(new Callable<AwsSesSendResult>() {
       @Override
-      public Void call() {
-        sendEmailInternal(to, from, subject, body);
-        return null;
+      public AwsSesSendResult call() {
+        return sendEmailInternal(to, from, subject, body);
       }
     });
   }

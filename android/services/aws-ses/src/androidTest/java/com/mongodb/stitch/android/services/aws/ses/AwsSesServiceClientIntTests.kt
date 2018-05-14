@@ -77,8 +77,8 @@ class AwsSesServiceClientIntTests : BaseStitchAndroidIntTest() {
         // Sending with all good params for Twilio should work
         val fromGood = "dwight@baas-dev.10gen.cc"
 
-        Tasks.await(awsSes.sendEmail(to, fromGood, subject, body))
-        Tasks.await(awsSes.sendEmail(to, fromGood, subject, body))
+        val result = Tasks.await(awsSes.sendEmail(to, fromGood, subject, body))
+        assertTrue(result.messageId.isNotEmpty())
 
         // Excluding any required parameters should fail
         try {

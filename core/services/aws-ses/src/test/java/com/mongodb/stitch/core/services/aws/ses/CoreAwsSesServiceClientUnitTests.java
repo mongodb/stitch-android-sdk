@@ -19,12 +19,14 @@ package com.mongodb.stitch.core.services.aws.ses;
 import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import com.mongodb.stitch.core.services.internal.CoreStitchService;
 import java.util.List;
 import org.bson.Document;
+import org.bson.codecs.Decoder;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -41,11 +43,25 @@ public class CoreAwsSesServiceClientUnitTests {
     final String subject = "Hello";
     final String body = "again friend";
 
-    client.sendEmailInternal(to, from, subject, body);
+    final String expectedMessageId = "yourMessageId";
+
+
+    doReturn(new AwsSesSendResult(expectedMessageId))
+        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+
+    final AwsSesSendResult result = client.sendEmailInternal(to, from, subject, body);
+    assertEquals(result.getMessageId(), expectedMessageId);
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
-    verify(service).callFunctionInternal(funcNameArg.capture(), funcArgsArg.capture());
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<Decoder<AwsSesSendResult>> resultClassArg =
+        ArgumentCaptor.forClass(Decoder.class);
+    verify(service)
+        .callFunctionInternal(
+            funcNameArg.capture(),
+            funcArgsArg.capture(),
+            resultClassArg.capture());
 
     assertEquals("send", funcNameArg.getValue());
     assertEquals(1, funcArgsArg.getValue().size());
@@ -55,10 +71,11 @@ public class CoreAwsSesServiceClientUnitTests {
     expectedArgs.put("subject", subject);
     expectedArgs.put("body", body);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
+    assertEquals(AwsSesSendResult.Decoder, resultClassArg.getValue());
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any());
+        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
     assertThrows(() -> {
       client.sendEmailInternal(to, from, subject, body);
       return null;

@@ -9,6 +9,7 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.AwsSesActions
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -68,8 +69,8 @@ class AwsSesServiceClientIntTests : BaseStitchServerIntTest() {
         // Sending with all good params for Twilio should work
         val fromGood = "dwight@baas-dev.10gen.cc"
 
-        awsSes.sendEmail(to, fromGood, subject, body)
-        awsSes.sendEmail(to, fromGood, subject, body)
+        val result = awsSes.sendEmail(to, fromGood, subject, body)
+        assertTrue(result.messageId.isNotEmpty())
 
         // Excluding any required parameters should fail
         try {

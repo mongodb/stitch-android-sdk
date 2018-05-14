@@ -20,7 +20,7 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.core.services.internal.CoreStitchService;
 
 import java.util.List;
-import org.bson.codecs.Codec;
+import org.bson.codecs.Decoder;
 
 public interface StitchService extends CoreStitchService {
   /**
@@ -64,27 +64,27 @@ public interface StitchService extends CoreStitchService {
 
   /**
    * Calls the specified Stitch service function, and decodes the response into a value using the
-   * provided {@link Codec}.
+   * provided {@link Decoder}.
    *
    * @param name The name of the Stitch service function to call.
    * @param args The arguments to pass to the function.
-   * @param resultCodec The {@link Codec} to use to decode the response into a value.
+   * @param resultDecoder The {@link Decoder} to use to decode the response into a value.
    * @param <ResultT> The type into which the response will be decoded.
    * @return A {@link Task} containing the decoded value.
    */
   <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Codec<ResultT> resultCodec);
+      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder);
 
   /**
    * Calls the specified Stitch service function, and decodes the response into a value using the
-   * provided {@link Codec}. Also accepts a timeout in milliseconds. Use this for functions that
+   * provided {@link Decoder}. Also accepts a timeout in milliseconds. Use this for functions that
    * may run longer than the client-wide default timeout (15 seconds by default).
    *
    * @param name The name of the Stitch service function to call.
    * @param args The arguments to pass to the function.
    * @param requestTimeout The number of milliseconds the client should wait for a response from the
    *                       server before failing with an error.
-   * @param resultCodec The {@link Codec} to use to decode the response into a value.
+   * @param resultDecoder The {@link Decoder} to use to decode the response into a value.
    * @param <ResultT> The type into which the response will be decoded.
    * @return A {@link Task} containing the decoded value.
    */
@@ -92,5 +92,5 @@ public interface StitchService extends CoreStitchService {
           final String name,
           final List<? extends Object> args,
           final Long requestTimeout,
-          final Codec<ResultT> resultCodec);
+          final Decoder<ResultT> resultDecoder);
 }

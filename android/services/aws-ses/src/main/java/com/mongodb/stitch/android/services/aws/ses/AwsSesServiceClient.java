@@ -24,6 +24,7 @@ import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.android.services.aws.ses.internal.AwsSesServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
 
 public interface AwsSesServiceClient {
 
@@ -34,9 +35,9 @@ public interface AwsSesServiceClient {
    * @param from The email address to send the email from.
    * @param subject The subject of the email.
    * @param body The body text of the email.
-   * @return A task that completes when the send is done.
+   * @return A task containing the result of the send that completes when the send is done.
    */
-  Task<Void> sendEmail(
+  Task<AwsSesSendResult> sendEmail(
       @NonNull final String to,
       @NonNull final String from,
       @NonNull final String subject,

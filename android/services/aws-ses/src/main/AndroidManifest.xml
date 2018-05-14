@@ -1,2 +1,2 @@
-<manifest package="com.mongodb.stitch.android.services.twilio">
+<manifest package="com.mongodb.stitch.android.services.aws.ses">
 </manifest>

@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.server.services.aws.ses.internal;
 
+import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
 import com.mongodb.stitch.core.services.aws.ses.CoreAwsSesServiceClient;
 import com.mongodb.stitch.server.core.services.StitchService;
 import com.mongodb.stitch.server.services.aws.ses.AwsSesServiceClient;
@@ -35,12 +36,13 @@ public final class AwsSesServiceClientImpl extends CoreAwsSesServiceClient
    * @param from The email address to send the email from.
    * @param subject The subject of the email.
    * @param body The body text of the email.
+   * @return The result of the send.
    */
-  public void sendEmail(
+  public AwsSesSendResult sendEmail(
       @Nonnull final String to,
       @Nonnull final String from,
       @Nonnull final String subject,
       @Nonnull final String body) {
-    sendEmailInternal(to, from, subject, body);
+    return sendEmailInternal(to, from, subject, body);
   }
 }

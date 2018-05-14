@@ -28,7 +28,7 @@ public class CoreAwsSesServiceClient {
     this.service = service;
   }
 
-  protected void sendEmailInternal(
+  protected AwsSesSendResult sendEmailInternal(
       final String toAddress,
       final String fromAddress,
       final String subject,
@@ -39,6 +39,9 @@ public class CoreAwsSesServiceClient {
     args.put("fromAddress", fromAddress);
     args.put("subject", subject);
     args.put("body", body);
-    service.callFunctionInternal("send", Collections.singletonList(args));
+    return service.callFunctionInternal(
+        "send",
+        Collections.singletonList(args),
+        AwsSesSendResult.Decoder);
   }
 }
