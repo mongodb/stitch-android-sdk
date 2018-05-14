@@ -1,0 +1,29 @@
+apply plugin: 'java-library'
+apply plugin: 'kotlin'
+
+archivesBaseName = 'stitch-server-services-aws-s3'
+
+buildscript {
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+    }
+}
+
+test {
+    Properties properties = new Properties()
+    File file = project.rootProject.file('local.properties')
+    if (file.exists()) {
+        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    }
+    systemProperty "test.stitch.awsAccessKeyId", properties.getProperty("test.stitch.awsAccessKeyId", "")
+    systemProperty "test.stitch.awsSecretAccessKey", properties.getProperty("test.stitch.awsSecretAccessKey", "")
+}
+
+dependencies {
+    implementation project(':server:stitch-server-core')
+    api project(':core:core-services:stitch-core-services-aws-s3')
+
+    testImplementation project(':server:stitch-server-testutils')
+    testImplementation 'junit:junit:4.12'
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}

@@ -25,7 +25,11 @@ public final class IoUtils {
 
   private IoUtils() {}
 
-  private static byte[] readAllToBytes(final InputStream in) throws IOException {
+  /**
+   * Reads the entire {@link InputStream} to EOF and returns the data as bytes.
+   * @throws IOException in the event the data cannot be read.
+   */
+  public static byte[] readAllToBytes(final InputStream in) throws IOException {
     try {
       final ByteArrayOutputStream result = new ByteArrayOutputStream();
       final byte[] buffer = new byte[1024];

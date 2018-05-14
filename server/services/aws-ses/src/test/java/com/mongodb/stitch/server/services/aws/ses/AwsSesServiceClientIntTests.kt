@@ -66,7 +66,7 @@ class AwsSesServiceClientIntTests : BaseStitchServerIntTest() {
             assertEquals(StitchServiceErrorCode.AWS_ERROR, ex.errorCode)
         }
 
-        // Sending with all good params for Twilio should work
+        // Sending with all good params for SES should work
         val fromGood = "dwight@baas-dev.10gen.cc"
 
         val result = awsSes.sendEmail(to, fromGood, subject, body)
