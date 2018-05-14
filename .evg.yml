@@ -86,6 +86,8 @@ functions:
           cd stitch-java-sdk
           echo "test.stitch.twilioSid=${test_twilio_sid}" >> local.properties
           echo "test.stitch.twilioAuthToken=${test_twilio_authtoken}" >> local.properties
+          echo "test.stitch.awsAccessKeyId=${test_aws_key}" >> local.properties
+          echo "test.stitch.awsSecretAccessKey=${test_aws_secret}" >> local.properties
 
   "setup_emulator":
     - command: shell.exec
