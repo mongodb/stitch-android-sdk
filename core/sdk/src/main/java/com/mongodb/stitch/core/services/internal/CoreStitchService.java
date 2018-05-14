@@ -18,7 +18,7 @@ package com.mongodb.stitch.core.services.internal;
 
 import java.util.List;
 import javax.annotation.Nullable;
-import org.bson.codecs.Codec;
+import org.bson.codecs.Decoder;
 
 public interface CoreStitchService {
 
@@ -29,7 +29,7 @@ public interface CoreStitchService {
   <T> T callFunctionInternal(
       final String name,
       final List<?> args,
-      final Codec<T> codec);
+      final Decoder<T> resultDecoder);
 
   <T> T callFunctionInternal(
       final String name,
@@ -45,7 +45,7 @@ public interface CoreStitchService {
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
-      final Codec<T> codec);
+      final Decoder<T> resultDecoder);
 
   <T> T callFunctionInternal(
       final String name,

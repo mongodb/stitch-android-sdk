@@ -24,7 +24,7 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceImpl;
 import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 import java.util.List;
 import java.util.concurrent.Callable;
-import org.bson.codecs.Codec;
+import org.bson.codecs.Decoder;
 
 public final class StitchServiceImpl extends CoreStitchServiceImpl implements StitchService {
   private final TaskDispatcher dispatcher;
@@ -67,12 +67,12 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Codec<ResultT> resultCodec) {
+      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
         public ResultT call() throws Exception {
-          return callFunctionInternal(name, args, null, resultCodec);
+          return callFunctionInternal(name, args, null, resultDecoder);
         }
       });
   }
@@ -82,12 +82,12 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
       final String name,
       final List<? extends Object> args,
       final Long requestTimeout,
-      final Codec<ResultT> resultCodec) {
+      final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
         public ResultT call() throws Exception {
-          return callFunctionInternal(name, args, requestTimeout, resultCodec);
+          return callFunctionInternal(name, args, requestTimeout, resultDecoder);
         }
       });
   }
