@@ -46,71 +46,72 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
             final TaskDispatcher dispatcher
         ) {
 
-          final MongoClient client = CoreLocalMongoDbService.getClient(appInfo);
-          MongoDbMobileProvider.addEventListener(
-              new MongoDbMobileProvider.EventListener() {
-                @Override
-                public void onLowBatteryLevel() {
-                  Log.i(TAG, "Notifying embedded MongoDB of low host battery level");
-                  for (final MongoClient client : getLocalInstances()) {
-                    try {
-                      client
-                          .getDatabase(ADMIN_DATABASE_NAME)
-                          .runCommand(
-                              new Document(
-                                  BatteryLevelCommand.MONGO_COMMAND,
-                                  BatteryLevelCommand.BATTERY_LEVEL_LOW));
-                    } catch (Exception e) {
-                      Log.w(
-                          TAG,
-                          "Could not notify embedded MongoDB of low host battery level: "
-                              + e.getLocalizedMessage());
-                    }
-                  }
-                }
-
-                @Override
-                public void onOkayBatteryLevel() {
-                  Log.i(TAG, "Notifying embedded MongoDB of normal host battery level");
-                  for (final MongoClient client : getLocalInstances()) {
-                    try {
-                      client
-                          .getDatabase(ADMIN_DATABASE_NAME)
-                          .runCommand(
-                              new Document(
-                                  BatteryLevelCommand.MONGO_COMMAND,
-                                  BatteryLevelCommand.BATTERY_LEVEL_NORMAL));
-                    } catch (Exception e) {
-                      Log.w(
-                          TAG,
-                          "Could not notify embedded MongoDB of normal host battery level: "
-                              + e.getLocalizedMessage());
-                    }
-                  }
-                }
-
-                @Override
-                public void onTrimMemory(final String memoryTrimMode) {
-                  Log.i(TAG, "Notifying embedded MongoDB of low memory condition on host");
-                  for (final MongoClient client : getLocalInstances()) {
-                    try {
-                      client
-                          .getDatabase(ADMIN_DATABASE_NAME)
-                          .runCommand(
-                              new Document(TrimMemoryCommand.MONGO_COMMAND, memoryTrimMode));
-                    } catch (Exception e) {
-                      Log.w(
-                          TAG,
-                          "Could not notify embedded MongoDB of low memory condition on host: "
-                              + e.getLocalizedMessage());
-                    }
-                  }
-                }
-              });
-
-          return client;
+          return CoreLocalMongoDbService.getClient(appInfo);
         }
       };
+
+  static  {
+    MongoDbMobileProvider.addEventListener(
+        new MongoDbMobileProvider.EventListener() {
+          @Override
+          public void onLowBatteryLevel() {
+            Log.i(TAG, "Notifying embedded MongoDB of low host battery level");
+            for (final MongoClient client : getLocalInstances()) {
+              try {
+                client
+                    .getDatabase(ADMIN_DATABASE_NAME)
+                    .runCommand(
+                        new Document(
+                            BatteryLevelCommand.MONGO_COMMAND,
+                            BatteryLevelCommand.BATTERY_LEVEL_LOW));
+              } catch (Exception e) {
+                Log.w(
+                    TAG,
+                    "Could not notify embedded MongoDB of low host battery level: "
+                        + e.getLocalizedMessage());
+              }
+            }
+          }
+
+          @Override
+          public void onOkayBatteryLevel() {
+            Log.i(TAG, "Notifying embedded MongoDB of normal host battery level");
+            for (final MongoClient client : getLocalInstances()) {
+              try {
+                client
+                    .getDatabase(ADMIN_DATABASE_NAME)
+                    .runCommand(
+                        new Document(
+                            BatteryLevelCommand.MONGO_COMMAND,
+                            BatteryLevelCommand.BATTERY_LEVEL_NORMAL));
+              } catch (Exception e) {
+                Log.w(
+                    TAG,
+                    "Could not notify embedded MongoDB of normal host battery level: "
+                        + e.getLocalizedMessage());
+              }
+            }
+          }
+
+          @Override
+          public void onTrimMemory(final String memoryTrimMode) {
+            Log.i(TAG, "Notifying embedded MongoDB of low memory condition on host");
+            for (final MongoClient client : getLocalInstances()) {
+              try {
+                client
+                    .getDatabase(ADMIN_DATABASE_NAME)
+                    .runCommand(
+                        new Document(TrimMemoryCommand.MONGO_COMMAND, memoryTrimMode));
+              } catch (Exception e) {
+                Log.w(
+                    TAG,
+                    "Could not notify embedded MongoDB of low memory condition on host: "
+                        + e.getLocalizedMessage());
+              }
+            }
+          }
+        });
+  }
 
   private static final class BatteryLevelCommand {
     private static final String MONGO_COMMAND = "setBatteryLevel";
