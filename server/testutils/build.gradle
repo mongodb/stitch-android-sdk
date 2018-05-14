@@ -1,0 +1,24 @@
+apply plugin: 'java-library'
+apply plugin: 'kotlin'
+
+buildscript {
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+    }
+}
+
+dependencies {
+    api project(':server:stitch-server-core')
+    api project(':core:stitch-core-admin-client')
+    api project(':core:stitch-core-testutils')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation 'junit:junit:4.12'
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+compileTestJava {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}

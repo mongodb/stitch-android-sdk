@@ -49,11 +49,11 @@ class StitchAdminAuth(
         return document
     }
 
-    public override fun loginWithCredentialBlocking(credential: StitchCredential?): StitchAdminUser {
-        return super.loginWithCredentialBlocking(credential)
+    public override fun loginWithCredentialInternal(credential: StitchCredential?): StitchAdminUser {
+        return super.loginWithCredentialInternal(credential)
     }
 
-    public override fun logoutBlocking() {
-        super.logoutBlocking()
+    public override fun logoutInternal() {
+        super.logoutInternal()
     }
 }

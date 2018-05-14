@@ -18,14 +18,17 @@ package com.mongodb.stitch.android.core;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
-import com.mongodb.stitch.android.services.internal.NamedServiceClientProvider;
-import com.mongodb.stitch.android.services.internal.ServiceClientProvider;
+import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
+import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
+
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
 
 
-public interface StitchAppClient {
+public interface StitchAppClient extends Closeable {
 
   /**
    * Gets the authentication component of the app. This is used for logging in and managing users.
@@ -40,7 +43,7 @@ public interface StitchAppClient {
    * @param <T> The type of client to be returned by the provider.
    * @return A client to interact with the service.
    */
-  <T> T getServiceClient(final NamedServiceClientProvider<T> provider, final String serviceName);
+  <T> T getServiceClient(final NamedServiceClientFactory<T> provider, final String serviceName);
 
   /**
    * Gets a client for the given service. Only some services offer a provider that requires no
@@ -50,7 +53,7 @@ public interface StitchAppClient {
    * @param <T> The type of client to be returned by the provider.
    * @return A client to interact with the service.
    */
-  <T> T getServiceClient(final ServiceClientProvider<T> provider);
+  <T> T getServiceClient(final ServiceClientFactory<T> provider);
 
   /**
    * Calls the specified Stitch function, and decodes the response into an instance of the specified
@@ -124,4 +127,9 @@ public interface StitchAppClient {
           final List<? extends Object> args,
           final Long requestTimeout,
           final Decoder<ResultT> resultDecoder);
+
+  /**
+   * Closes the client and shuts down all background operations.
+   */
+  void close() throws IOException;
 }

@@ -9,8 +9,8 @@ subprojects {
         if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
             android {
                 compileSdkVersion target_api
+
                 defaultConfig {
-                    minSdkVersion min_api
                     targetSdkVersion target_api
                     versionCode 1
                     versionName "1.0"
@@ -31,12 +31,9 @@ subprojects {
                 }
                 buildTypes {
                     debug {
-                        minifyEnabled false
                         testCoverageEnabled true
                     }
                     release {
-                        minifyEnabled true
-                        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
                     }
                 }
             }

@@ -47,10 +47,10 @@ class StitchAdminClient private constructor(
     }
 
     fun logInWithCredential(credential: StitchCredential): StitchAdminUser {
-        return adminAuth.loginWithCredentialBlocking(credential)
+        return adminAuth.loginWithCredentialInternal(credential)
     }
 
     fun logout() {
-        return adminAuth.logoutBlocking()
+        return adminAuth.logoutInternal()
     }
 }

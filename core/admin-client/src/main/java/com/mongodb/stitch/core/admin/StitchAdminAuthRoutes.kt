@@ -22,4 +22,8 @@ class StitchAdminAuthRoutes : StitchAuthRoutes {
     override fun getAuthProviderLinkRoute(providerName: String?): String {
         return "${getAuthProviderLoginRoute(providerName)}?link=true"
     }
+
+    override fun getAuthProviderExtensionRoute(providerName: String, path: String): String {
+        return "${getAuthProviderRoute(providerName)}/$path"
+    }
 }

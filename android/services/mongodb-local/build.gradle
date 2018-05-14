@@ -1,0 +1,26 @@
+apply plugin: 'com.android.library'
+apply plugin: 'digital.wup.android-maven-publish'
+apply plugin: 'jacoco-android'
+
+archivesBaseName = 'stitch-android-services-mongodb-local'
+
+buildscript {
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.2'
+        classpath 'digital.wup:android-maven-publish:3.3.0'
+        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
+    }
+}
+
+android {
+    compileSdkVersion target_api
+    defaultConfig {
+        minSdkVersion min_api
+        targetSdkVersion target_api
+    }
+}
+
+dependencies {
+    implementation project(':android:stitch-android-core')
+    api project(':core:core-services:stitch-core-services-mongodb-local')
+}

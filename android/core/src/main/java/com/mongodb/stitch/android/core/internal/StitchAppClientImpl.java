@@ -21,9 +21,9 @@ import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
 import com.mongodb.stitch.android.core.auth.internal.StitchAuthImpl;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.services.internal.NamedServiceClientProvider;
-import com.mongodb.stitch.android.services.internal.ServiceClientProvider;
-import com.mongodb.stitch.android.services.internal.StitchServiceImpl;
+import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
+import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
+import com.mongodb.stitch.android.core.services.internal.StitchServiceImpl;
 import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.internal.CoreStitchAppClient;
@@ -74,15 +74,19 @@ public final class StitchAppClientImpl implements StitchAppClient {
 
   @Override
   public <T> T getServiceClient(
-      final NamedServiceClientProvider<T> provider, final String serviceName) {
+      final NamedServiceClientFactory<T> provider, final String serviceName) {
     return provider.getClient(
-        new StitchServiceImpl(auth, routes.getServiceRoutes(), serviceName, dispatcher), info);
+        new StitchServiceImpl(auth, routes.getServiceRoutes(), serviceName, dispatcher),
+        info,
+        dispatcher);
   }
 
   @Override
-  public <T> T getServiceClient(final ServiceClientProvider<T> provider) {
+  public <T> T getServiceClient(final ServiceClientFactory<T> provider) {
     return provider.getClient(
-        new StitchServiceImpl(auth, routes.getServiceRoutes(), "", dispatcher), info);
+        new StitchServiceImpl(auth, routes.getServiceRoutes(), "", dispatcher),
+        info,
+        dispatcher);
   }
 
   @Override
@@ -139,8 +143,12 @@ public final class StitchAppClientImpl implements StitchAppClient {
       });
   }
 
-  /** Closes the auth component down. */
+  /**
+   * Closes the client and shuts down all background operations.
+   */
+  @Override
   public void close() throws IOException {
     auth.close();
+    dispatcher.close();
   }
 }

@@ -1,13 +1,46 @@
 rootProject.name = 'Stitch-SDK'
 
-include ':core',
+include ':core:sdk',
         ':core:admin-client',
+        ':core:services:mongodb-local',
+        ':core:services:twilio',
+        ':core:testutils',
 
         ':server',
+        ':server:sdk',
+        ':server:core',
+        ':server:coretest',
+        ':server:services:mongodb-local',
+        ':server:services:twilio',
+        ':server:testutils',
 
         ':android',
         ':android:sdk',
         ':android:core',
-        ':android:mongodb-local',
-        ':android:mongodb-stitch',
-        ':android:examples:todo'
+        ':android:coretest',
+        ':android:services:mongodb-local',
+        ':android:services:twilio',
+        ':android:examples:todo',
+        ':android:testutils'
+
+project(':core:sdk').name = 'stitch-core-sdk'
+project(':core:admin-client').name = 'stitch-core-admin-client'
+project(':core:services').name = 'core-services'
+project(':core:services:mongodb-local').name = 'stitch-core-services-mongodb-local'
+project(':core:services:twilio').name = 'stitch-core-services-twilio'
+project(':core:testutils').name = 'stitch-core-testutils'
+project(':server:sdk').name = 'stitch-server-sdk'
+project(':server:core').name = 'stitch-server-core'
+project(':server:coretest').name = 'stitch-server-coretest'
+project(':server:services').name = 'server-services'
+project(':server:services:mongodb-local').name = 'stitch-server-services-mongodb-local'
+project(':server:services:twilio').name = 'stitch-server-services-twilio'
+project(':server:testutils').name = 'stitch-server-testutils'
+project(':android:sdk').name = 'stitch-android-sdk'
+project(':android:core').name = 'stitch-android-core'
+project(':android:coretest').name = 'stitch-android-coretest'
+project(':android:services').name = 'android-services'
+project(':android:services:mongodb-local').name = 'stitch-android-services-mongodb-local'
+project(':android:services:twilio').name = 'stitch-android-services-twilio'
+project(':android:examples:todo').name = 'stitch-android-examples-todo'
+project(':android:testutils').name = 'stitch-android-testutils'

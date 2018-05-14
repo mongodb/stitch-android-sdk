@@ -1,6 +1,20 @@
 def configDir = new File(rootDir, 'config')
 
+group = 'org.mongodb'
+version = '4.0.0-SNAPSHOT'
+
 subprojects {
+    def projectName = project.displayName.substring(
+            project.displayName.indexOf(":")+1, project.displayName.length()-1).replace(":", "_")
+
+    if (["core", "server"].contains(projectName)) {
+        return
+    }
+
+    group = 'org.mongodb'
+    version = '4.0.0-SNAPSHOT'
+
+    apply plugin: 'maven-publish'
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
     apply plugin: 'findbugs'
@@ -81,6 +95,57 @@ subprojects {
                 }
                 systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
             }
+
+            task sourcesJar(type: Jar) {
+                from sourceSets.main.allJava
+                classifier 'sources'
+            }
+
+            task javadocJar(type: Jar) {
+                from javadoc
+                classifier 'javadoc'
+            }
+
+            publishing {
+                publications {
+                    maven(MavenPublication) {
+                        from components.java
+                        artifact sourcesJar
+                        artifact javadocJar
+                    }
+                }
+            }
+        } else if (project.plugins.hasPlugin("com.android.library")) {
+            task sourcesJar(type: Jar) {
+                from android.sourceSets.main.java.srcDirs
+                classifier 'sources'
+            }
+
+            task javadoc(type: Javadoc) {
+                source = android.sourceSets.main.java.srcDirs
+                classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+                android.libraryVariants.all { variant ->
+                    if (variant.name == 'release') {
+                        owner.classpath += variant.javaCompile.classpath
+                    }
+                }
+                exclude '**/R.html', '**/R.*.html', '**/index.html'
+            }
+
+            task javadocJar(type: Jar) {
+                from javadoc.destinationDir
+                classifier = 'javadoc'
+            }
+
+            publishing {
+                publications {
+                    maven(MavenPublication) {
+                        from components.android
+                        artifact sourcesJar
+                        artifact javadocJar
+                    }
+                }
+            }
         }
 
         tasks.withType(FindBugs) {
@@ -88,8 +153,11 @@ subprojects {
             reports {
                 xml.enabled = false
                 html.enabled = true
-                html.setDestination new File("$project.buildDir/outputs/findbugs/$project.name-findbugs.html")
+                html.setDestination new File("$project.buildDir/outputs/findbugs/$projectName-findbugs.html")
             }
+        }
+        tasks.withType(Javadoc) {
+            excludes = ['**/*.kt', '**/internal/**']
         }
     }
 
@@ -110,7 +178,7 @@ subprojects {
         reports {
             xml.enabled = false
             html.enabled = true
-            html.setDestination new File("$project.buildDir/outputs/checkstyle/$project.name-checkstyle.html")
+            html.setDestination new File("$project.buildDir/outputs/checkstyle/$projectName-checkstyle.html")
         }
     }
 
@@ -122,7 +190,7 @@ subprojects {
         reports {
             xml.enabled = false
             html.enabled = true
-            html.setDestination new File("$project.buildDir/outputs/pmd/$project.name-pmd.html")
+            html.setDestination new File("$project.buildDir/outputs/pmd/$projectName-pmd.html")
         }
     }
 
@@ -139,6 +207,26 @@ subprojects {
         main = "com.github.shyiko.ktlint.Main"
         args "-F", "src/**/*.kt"
     }
+
+    task install(dependsOn: 'publishToMavenLocal')
 }
 
+task allJavadocs(type: Javadoc, group: 'Documentation') {
+    destinationDir = file("$buildDir/docs/javadoc")
+    title = "$project.name $version API"
+    options.author true
+    options.addStringOption 'Xdoclint:none', '-quiet'
+
+    subprojects {
+        afterEvaluate { project ->
+            project.tasks.withType(Javadoc).each { javadocTask ->
+                println(javadocTask.source)
+                source += javadocTask.source
+                classpath += javadocTask.classpath
+                excludes += javadocTask.excludes
+                includes += javadocTask.includes
+            }
+        }
+    }
+}
 

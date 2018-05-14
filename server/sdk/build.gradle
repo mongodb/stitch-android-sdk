@@ -1,0 +1,10 @@
+apply plugin: 'java-library'
+
+archivesBaseName = 'stitch-server-sdk'
+
+dependencies {
+    api project(':server:stitch-server-core')
+
+    // Services
+    api project(':server:server-services:stitch-server-services-twilio')
+}
