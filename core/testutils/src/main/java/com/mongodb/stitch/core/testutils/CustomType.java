@@ -29,7 +29,7 @@ import org.bson.types.ObjectId;
 
 public class CustomType {
   private ObjectId id;
-  private int intValue;
+  private final int intValue;
 
   public CustomType(final ObjectId id, final int intValue) {
     this.id = id;
@@ -40,17 +40,34 @@ public class CustomType {
     return id;
   }
 
-  public void setId(final ObjectId id) {
+  void setId(final ObjectId id) {
     this.id = id;
   }
 
-  public CustomType withNewObjectId() {
+  CustomType withNewObjectId() {
     setId(new ObjectId());
     return this;
   }
 
   public int getIntValue() {
     return intValue;
+  }
+
+  @Override
+  public boolean equals(final Object object) {
+    if (this == object) {
+      return true;
+    }
+    if (!(object instanceof CustomType)) {
+      return false;
+    }
+    final CustomType other = (CustomType) object;
+    return id.equals(other.id) && intValue == other.intValue;
+  }
+
+  @Override
+  public int hashCode() {
+    throw new UnsupportedOperationException("hashCode not designed");
   }
 
   public static class Codec implements CollectibleCodec<CustomType> {

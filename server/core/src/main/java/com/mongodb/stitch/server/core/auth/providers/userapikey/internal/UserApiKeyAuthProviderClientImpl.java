@@ -18,7 +18,7 @@ package com.mongodb.stitch.server.core.auth.providers.userapikey.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
-import com.mongodb.stitch.core.auth.providers.userapikey.CoreUserApiKeyAuthProviderClient;
+import com.mongodb.stitch.core.auth.providers.userapikey.internal.CoreUserApiKeyAuthProviderClient;
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
 import com.mongodb.stitch.server.core.auth.providers.userapikey.UserApiKeyAuthProviderClient;
 

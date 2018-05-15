@@ -192,10 +192,10 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
     /**
      * Merges the provided codec registry with the default codec registry.
      *
-     * @param codecRegistry The codec registry to merge with the default registry.
+     * @param codecRegistry the codec registry to merge with the default registry.
      */
-    public Builder withCustomCodecs(final CodecRegistry codecRegistry) {
-      super.withCustomCodecs(codecRegistry);
+    public Builder withCodecRegistry(final CodecRegistry codecRegistry) {
+      super.withCodecRegistry(codecRegistry);
       return this;
     }
 

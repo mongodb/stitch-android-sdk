@@ -28,9 +28,9 @@ public class StitchRequestClient {
 
   /**
    * Constructs a StitchRequestClient with the provided parameters.
-   * @param baseUrl The base URL of the Stitch server to which this client will make requests.
-   * @param transport The underlying {@link Transport} that this client will use to make requests.
-   * @param defaultRequestTimeout The number of milliseconds the client should wait for a response
+   * @param baseUrl the base URL of the Stitch server to which this client will make requests.
+   * @param transport the underlying {@link Transport} that this client will use to make requests.
+   * @param defaultRequestTimeout the number of milliseconds the client should wait for a response
    *                              by default from the server before failing with an error.
    */
   public StitchRequestClient(final String baseUrl,
@@ -53,8 +53,8 @@ public class StitchRequestClient {
   /**
    * Performs a request against Stitch app servers. Throws a Stitch specific exception
    * if the request fails.
-   * @param stitchReq The request to perform.
-   * @return A {@link Response} to the request.
+   * @param stitchReq the request to perform.
+   * @return a {@link Response} to the request.
    */
   public Response doRequest(final StitchRequest stitchReq) {
     final Response response;

@@ -17,7 +17,6 @@
 package com.mongodb.stitch.core.internal.common;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -61,7 +60,7 @@ public class Dispatcher implements Closeable {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     executorService.shutdownNow();
   }
 }

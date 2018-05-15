@@ -34,7 +34,7 @@ public final class StitchError {
    * StitchServiceException} representing the the error in the response. If the error cannot be
    * recognized, this will throw a {@link StitchServiceException} with the "UNKNOWN" error code.
    *
-   * @param response The network response.
+   * @param response the network response.
    */
   public static void handleRequestError(final Response response) throws StitchRequestException {
     if (response.getBody() == null) {

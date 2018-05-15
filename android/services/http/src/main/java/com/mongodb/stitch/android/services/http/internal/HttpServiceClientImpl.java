@@ -22,9 +22,9 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.services.http.HttpServiceClient;
-import com.mongodb.stitch.core.services.http.CoreHttpServiceClient;
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
+import com.mongodb.stitch.core.services.http.internal.CoreHttpServiceClient;
 import java.util.concurrent.Callable;
 
 public final class HttpServiceClientImpl extends CoreHttpServiceClient
@@ -41,8 +41,8 @@ public final class HttpServiceClientImpl extends CoreHttpServiceClient
   /**
    * Executes the given {@link HttpRequest}.
    *
-   * @param request The request to execute.
-   * @return A task containing the response to executing the request.
+   * @param request the request to execute.
+   * @return a task containing the response to executing the request.
    */
   public Task<HttpResponse> execute(@NonNull final HttpRequest request) {
     return dispatcher.dispatchTask(new Callable<HttpResponse>() {

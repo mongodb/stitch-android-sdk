@@ -1,6 +1,7 @@
 package com.mongodb.stitch.core.admin
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectWriter
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 
 import com.mongodb.stitch.core.admin.apps.AppResponse
@@ -19,7 +20,7 @@ import com.mongodb.stitch.core.internal.net.Method
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest
 
 val objMapper = StitchObjectMapper.getInstance().registerKotlinModule()
-val writer = ObjectMapper().registerKotlinModule().writer()
+val writer: ObjectWriter = ObjectMapper().registerKotlinModule().writer()
 
 // / Any endpoint that can be described with basic
 // / CRUD operations

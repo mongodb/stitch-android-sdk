@@ -17,8 +17,6 @@
 package com.mongodb.stitch.server.core.auth;
 
 import com.mongodb.stitch.core.auth.StitchCredential;
-import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
 
@@ -37,9 +35,9 @@ public interface StitchAuth {
   /**
    * Gets a client for the given named authentication provider.
    *
-   * @param provider The provider that will create a client for the authentication provider.
-   * @param providerName The name of the authentication provider.
-   * @param <T> The type of client to be returned by the provider.
+   * @param provider the provider that will create a client for the authentication provider.
+   * @param providerName the name of the authentication provider.
+   * @param <T> the type of client to be returned by the provider.
    * @return A client to interact with the authentication provider.
    */
   <T> T getProviderClient(
@@ -50,8 +48,8 @@ public interface StitchAuth {
    * from {@link StitchAuth#getProviderClient(AuthProviderClientFactory)} or {@link
    * StitchAuth#getProviderClient(NamedAuthProviderClientFactory, String)}.
    *
-   * @param credential The credentials of the user to log in.
-   * @return The user associated with the credentials if log in is successful.
+   * @param credential the credentials of the user to log in.
+   * @return the user associated with the credentials if log in is successful.
    */
   StitchUser loginWithCredential(final StitchCredential credential);
 

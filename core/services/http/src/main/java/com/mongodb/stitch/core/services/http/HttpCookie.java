@@ -32,7 +32,19 @@ public class HttpCookie {
   private final Boolean secure;
   private final Boolean httpOnly;
 
-  HttpCookie(
+  /**
+   * Constructs a new fully specified cookie.
+   *
+   * @param name the name of the cookie.
+   * @param value the value of the cookie.
+   * @param path the path within the domain to which this cookie belongs.
+   * @param domain the domain to which this cookie belongs.
+   * @param expires when the cookie expires.
+   * @param maxAge how long the cookie can live for.
+   * @param secure whether or not this cookie can only be sent to HTTPS servers.
+   * @param httpOnly whether or not this cookie can only be read by a server.
+   */
+  public HttpCookie(
       @Nonnull final String name,
       @Nonnull final String value,
       @Nullable final String path,

@@ -20,7 +20,6 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClientFactory;
-import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.android.core.auth.providers.userpassword.internal.UserPasswordAuthProviderClientImpl;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;

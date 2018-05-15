@@ -16,7 +16,7 @@
 
 package com.mongodb.stitch.server.services.twilio.internal;
 
-import com.mongodb.stitch.core.services.twilio.CoreTwilioServiceClient;
+import com.mongodb.stitch.core.services.twilio.internal.CoreTwilioServiceClient;
 import com.mongodb.stitch.server.core.services.StitchService;
 import com.mongodb.stitch.server.services.twilio.TwilioServiceClient;
 import javax.annotation.Nonnull;
@@ -31,9 +31,9 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
   /**
    * Sends an SMS/MMS message.
    *
-   * @param to The number to send the message to.
-   * @param from The number that the message is from.
-   * @param body The body text of the message.
+   * @param to the number to send the message to.
+   * @param from the number that the message is from.
+   * @param body the body text of the message.
    */
   public void sendMessage(
       @Nonnull final String to,
@@ -45,10 +45,10 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
   /**
    * Sends an SMS/MMS message.
    *
-   * @param to The number to send the message to.
-   * @param from The number that the message is from.
-   * @param body The body text of the message.
-   * @param mediaUrl The URL of the media to send in an MMS.
+   * @param to the number to send the message to.
+   * @param from the number that the message is from.
+   * @param body the body text of the message.
+   * @param mediaUrl the URL of the media to send in an MMS.
    */
   public void sendMessage(
       @Nonnull final String to,

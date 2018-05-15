@@ -25,6 +25,7 @@ import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public final class StitchServiceImpl extends CoreStitchServiceImpl implements StitchService {
   private final TaskDispatcher dispatcher;
@@ -33,18 +34,19 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
       final StitchAuthRequestClient requestClient,
       final StitchServiceRoutes routes,
       final String name,
+      final CodecRegistry codecRegistry,
       final TaskDispatcher dispatcher) {
-    super(requestClient, routes, name);
+    super(requestClient, routes, name, codecRegistry);
     this.dispatcher = dispatcher;
   }
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
+      final String name, final List<?> args, final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
           return callFunctionInternal(name, args, null, resultClass);
         }
       });
@@ -53,13 +55,13 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
   @Override
   public <ResultT> Task<ResultT> callFunction(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Long requestTimeout,
       final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
           return callFunctionInternal(name, args, requestTimeout, resultClass);
         }
       });
@@ -67,11 +69,11 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder) {
+      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
           return callFunctionInternal(name, args, null, resultDecoder);
         }
       });
@@ -80,13 +82,13 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
   @Override
   public <ResultT> Task<ResultT> callFunction(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Long requestTimeout,
       final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
           return callFunctionInternal(name, args, requestTimeout, resultDecoder);
         }
       });

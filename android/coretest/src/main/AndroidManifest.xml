@@ -1,3 +1,2 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.mongodb.stitch.android.coretest">
+<manifest package="com.mongodb.stitch.android.coretest">
 </manifest>

@@ -21,13 +21,16 @@ import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 
 import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public interface StitchAuthRequestClient {
-  Response doAuthenticatedRequest(StitchAuthRequest stitchReq);
+  Response doAuthenticatedRequest(final StitchAuthRequest stitchReq);
 
-  <T> T doAuthenticatedRequest(StitchAuthRequest stitchReq, Decoder<T> decoder);
+  <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq, final Decoder<T> decoder);
 
-  <T> T doAuthenticatedJsonRequest(StitchAuthDocRequest stitchReq, Decoder<T> decoder);
+  <T> T doAuthenticatedJsonRequest(final StitchAuthDocRequest stitchReq, final Decoder<T> decoder);
 
-  <T> T doAuthenticatedJsonRequest(StitchAuthDocRequest stitchReq, Class<T> resultClass);
+  <T> T doAuthenticatedJsonRequest(final StitchAuthDocRequest stitchReq,
+                                   final Class<T> resultClass,
+                                   final CodecRegistry codecRegistry);
 }

@@ -17,8 +17,8 @@
 package com.mongodb.stitch.server.core.auth.providers.userpassword.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
-import com.mongodb.stitch.core.auth.providers.userpass.CoreUserPasswordAuthProviderClient;
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider;
+import com.mongodb.stitch.core.auth.providers.userpass.internal.CoreUserPasswordAuthProviderClient;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient;
 

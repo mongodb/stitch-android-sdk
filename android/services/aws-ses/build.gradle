@@ -25,8 +25,12 @@ android {
         if (file.exists()) {
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
         }
-        testInstrumentationRunnerArgument "test.stitch.awsAccessKeyId", properties.getProperty("test.stitch.awsAccessKeyId", "")
-        testInstrumentationRunnerArgument "test.stitch.awsSecretAccessKey", properties.getProperty("test.stitch.awsSecretAccessKey", "")
+        if (!properties.getProperty("test.stitch.awsAccessKeyId", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.awsAccessKeyId", properties.getProperty("test.stitch.awsAccessKeyId", "")
+        }
+        if (!properties.getProperty("test.stitch.awsSecretAccessKey", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.awsSecretAccessKey", properties.getProperty("test.stitch.awsSecretAccessKey", "")
+        }
     }
 }
 

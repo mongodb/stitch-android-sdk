@@ -17,7 +17,7 @@
 package com.mongodb.stitch.server.services.mongodb.local;
 
 import com.mongodb.client.MongoClient;
-import com.mongodb.stitch.core.services.mongodb.local.CoreLocalMongoDbService;
+import com.mongodb.stitch.core.services.mongodb.local.internal.CoreLocalMongoDbService;
 import com.mongodb.stitch.server.core.services.internal.ServiceClientFactory;
 
 public final class LocalMongoDbService extends CoreLocalMongoDbService {

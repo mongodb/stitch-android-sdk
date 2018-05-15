@@ -26,6 +26,7 @@ import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.IterableCodecProvider;
 import org.bson.codecs.MapCodecProvider;
 import org.bson.codecs.ValueCodecProvider;
+import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.json.JsonReader;
 
@@ -48,10 +49,10 @@ public final class BsonUtils extends RuntimeException {
    * Parses the provided extended JSON string and decodes it into a T value as specified by the
    * provided {@link Decoder}.
    *
-   * @param json The JSON string to parse.
-   * @param valueDecoder The {@link Decoder} to use to convert the BSON value into the type T.
-   * @param <T> The type into which the JSON string is decoded.
-   * @return The decoded value.
+   * @param json the JSON string to parse.
+   * @param valueDecoder the {@link Decoder} to use to convert the BSON value into the type T.
+   * @param <T> the type into which the JSON string is decoded.
+   * @return the decoded value.
    */
   public static <T> T parseValue(final String json, final Decoder<T> valueDecoder) {
     final JsonReader bsonReader = new JsonReader(json);
@@ -65,10 +66,10 @@ public final class BsonUtils extends RuntimeException {
    * codec registry. If the provided type is not supported by the default codec registry, the method
    * will throw a {@link org.bson.codecs.configuration.CodecConfigurationException}.
    *
-   * @param json The JSON string to parse.
-   * @param valueClass The class that the JSON string should be decoded into.
-   * @param <T> The type into which the JSON string is decoded.
-   * @return The decoded value.
+   * @param json the JSON string to parse.
+   * @param valueClass the class that the JSON string should be decoded into.
+   * @param <T> the type into which the JSON string is decoded.
+   * @return the decoded value.
    */
   public static <T> T parseValue(final String json, final Class<T> valueClass) {
     final JsonReader bsonReader = new JsonReader(json);
@@ -84,16 +85,21 @@ public final class BsonUtils extends RuntimeException {
    * codec registry. If the provided type is not supported by the provided codec registry, the
    * method will throw a {@link org.bson.codecs.configuration.CodecConfigurationException}.
    *
-   * @param json The JSON string to parse.
-   * @param valueClass The class that the JSON string should be decoded into.
-   * @param codecRegistry The codec registry to use to find the codec for the provided class.
-   * @param <T> The type into which the JSON string is decoded.
-   * @return The decoded value.
+   * @param json the JSON string to parse.
+   * @param valueClass the class that the JSON string should be decoded into.
+   * @param codecRegistry the codec registry to use to find the codec for the provided class.
+   * @param <T> the type into which the JSON string is decoded.
+   * @return the decoded value.
    */
   public static <T> T parseValue(
       final String json, final Class<T> valueClass, final CodecRegistry codecRegistry) {
     final JsonReader bsonReader = new JsonReader(json);
     bsonReader.readBsonType();
-    return codecRegistry.get(valueClass).decode(bsonReader, DecoderContext.builder().build());
+    // We can't detect if their codecRegistry has any duplicate providers. There's also a chance
+    // that putting ours first may prevent decoding of some of their classes if for example they
+    // have their own way of decoding an Integer.
+    final CodecRegistry newReg =
+        CodecRegistries.fromRegistries(BsonUtils.DEFAULT_CODEC_REGISTRY, codecRegistry);
+    return newReg.get(valueClass).decode(bsonReader, DecoderContext.builder().build());
   }
 }

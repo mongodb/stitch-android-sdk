@@ -24,7 +24,7 @@ import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.services.aws.s3.AwsS3ServiceClient;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
-import com.mongodb.stitch.core.services.aws.s3.CoreAwsS3ServiceClient;
+import com.mongodb.stitch.core.services.aws.s3.internal.CoreAwsS3ServiceClient;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.Callable;
@@ -43,12 +43,12 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object.
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object.
    */
   public Task<AwsS3PutObjectResult> putObject(
       @NonNull final String bucket,
@@ -67,12 +67,12 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object.
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object.
    */
   public Task<AwsS3PutObjectResult> putObject(
       @NonNull final String bucket,
@@ -91,12 +91,12 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object.
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object.
    */
   public Task<AwsS3PutObjectResult> putObject(
       @NonNull final String bucket,
@@ -115,12 +115,12 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object. The task will
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object. The task will
    *         have an {@link IOException} in the event the body cannot be read.
    */
   public Task<AwsS3PutObjectResult> putObject(
@@ -141,13 +141,13 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
    * Signs an AWS S3 security policy for a future put object request. This future request would
    * be made outside of the Stitch SDK. This is typically used for large requests that are better
    * sent directly to AWS.
-   * {@see https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html}
+   * @see <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html">Uploading a File to Amazon S3 Using HTTP POST</a>
    *
-   * @param bucket The bucket to put the future object in.
-   * @param key The key (or name) of the future object.
-   * @param acl The ACL to apply to the future object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @return The signed policy details.
+   * @param bucket the bucket to put the future object in.
+   * @param key the key (or name) of the future object.
+   * @param acl the ACL to apply to the future object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @return the signed policy details.
    */
   public Task<AwsS3SignPolicyResult> signPolicy(
       @NonNull final String bucket,

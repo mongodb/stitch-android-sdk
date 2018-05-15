@@ -20,8 +20,6 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.core.auth.StitchCredential;
-import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
 import java.io.Closeable;
 
@@ -40,10 +38,10 @@ public interface StitchAuth extends Closeable {
   /**
    * Gets a client for the given named authentication provider.
    *
-   * @param provider The provider that will create a client for the authentication provider.
-   * @param providerName The name of the authentication provider.
-   * @param <T> The type of client to be returned by the provider.
-   * @return A client to interact with the authentication provider.
+   * @param provider the provider that will create a client for the authentication provider.
+   * @param providerName the name of the authentication provider.
+   * @param <T> the type of client to be returned by the provider.
+   * @return a client to interact with the authentication provider.
    */
   <T> T getProviderClient(
       final NamedAuthProviderClientFactory<T> provider, final String providerName);
@@ -53,8 +51,8 @@ public interface StitchAuth extends Closeable {
    * from {@link StitchAuth#getProviderClient(AuthProviderClientFactory)} or {@link
    * StitchAuth#getProviderClient(NamedAuthProviderClientFactory, String)}.
    *
-   * @param credential The credentials of the user to log in.
-   * @return A {@link Task} containing user associated with the credentials if log in is successful.
+   * @param credential the credentials of the user to log in.
+   * @return a {@link Task} containing user associated with the credentials if log in is successful.
    */
   Task<StitchUser> loginWithCredential(final StitchCredential credential);
 

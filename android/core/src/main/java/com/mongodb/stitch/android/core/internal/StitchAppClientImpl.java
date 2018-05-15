@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public final class StitchAppClientImpl implements StitchAppClient {
 
@@ -45,7 +46,7 @@ public final class StitchAppClientImpl implements StitchAppClient {
   /**
    * Constructs an app client with the given configuration.
    *
-   * @param config The configuration to use for the app client.
+   * @param config the configuration to use for the app client.
    */
   public StitchAppClientImpl(final StitchAppClientConfiguration config) {
 
@@ -64,7 +65,7 @@ public final class StitchAppClientImpl implements StitchAppClient {
     this.auth =
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), dispatcher, this.info);
-    this.coreClient = new CoreStitchAppClient(this.auth, this.routes);
+    this.coreClient = new CoreStitchAppClient(this.auth, this.routes, config.getCodecRegistry());
   }
 
   @Override
@@ -76,7 +77,8 @@ public final class StitchAppClientImpl implements StitchAppClient {
   public <T> T getServiceClient(
       final NamedServiceClientFactory<T> provider, final String serviceName) {
     return provider.getClient(
-        new StitchServiceImpl(auth, routes.getServiceRoutes(), serviceName, dispatcher),
+        new StitchServiceImpl(
+            auth, routes.getServiceRoutes(), serviceName, info.getCodecRegistry(), dispatcher),
         info,
         dispatcher);
   }
@@ -84,18 +86,19 @@ public final class StitchAppClientImpl implements StitchAppClient {
   @Override
   public <T> T getServiceClient(final ServiceClientFactory<T> provider) {
     return provider.getClient(
-        new StitchServiceImpl(auth, routes.getServiceRoutes(), "", dispatcher),
+        new StitchServiceImpl(
+            auth, routes.getServiceRoutes(), "", info.getCodecRegistry(), dispatcher),
         info,
         dispatcher);
   }
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
+      final String name, final List<?> args, final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
           return coreClient.callFunctionInternal(name, args, null, resultClass);
         }
       });
@@ -104,13 +107,13 @@ public final class StitchAppClientImpl implements StitchAppClient {
   @Override
   public <ResultT> Task<ResultT> callFunction(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Long requestTimeout,
       final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
           return coreClient.callFunctionInternal(name, args, requestTimeout, resultClass);
         }
       });
@@ -118,11 +121,49 @@ public final class StitchAppClientImpl implements StitchAppClient {
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder) {
+      final String name,
+      final List<?> args,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry
+  ) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
+          return coreClient.callFunctionInternal(name, args, null, resultClass, codecRegistry);
+        }
+      });
+  }
+
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry
+  ) {
+    return dispatcher.dispatchTask(
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() {
+          return coreClient.callFunctionInternal(
+              name,
+              args,
+              requestTimeout,
+              resultClass,
+              codecRegistry);
+        }
+      });
+  }
+
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
+    return dispatcher.dispatchTask(
+      new Callable<ResultT>() {
+        @Override
+        public ResultT call() {
           return coreClient.callFunctionInternal(name, args, null, resultDecoder);
         }
       });
@@ -131,13 +172,13 @@ public final class StitchAppClientImpl implements StitchAppClient {
   @Override
   public <ResultT> Task<ResultT> callFunction(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Long requestTimeout,
       final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
       new Callable<ResultT>() {
         @Override
-        public ResultT call() throws Exception {
+        public ResultT call() {
           return coreClient.callFunctionInternal(name, args, requestTimeout, resultDecoder);
         }
       });

@@ -31,6 +31,7 @@ import com.mongodb.stitch.server.core.services.internal.StitchServiceImpl;
 import java.io.IOException;
 import java.util.List;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public final class StitchAppClientImpl implements StitchAppClient {
 
@@ -42,7 +43,7 @@ public final class StitchAppClientImpl implements StitchAppClient {
   /**
    * Constructs an app client with the given configuration.
    *
-   * @param config The configuration to use for the app client.
+   * @param config the configuration to use for the app client.
    */
   public StitchAppClientImpl(final StitchAppClientConfiguration config) {
     this.info =
@@ -59,7 +60,7 @@ public final class StitchAppClientImpl implements StitchAppClient {
     this.auth =
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), this.info);
-    this.coreClient = new CoreStitchAppClient(this.auth, this.routes);
+    this.coreClient = new CoreStitchAppClient(this.auth, this.routes, this.info.getCodecRegistry());
   }
 
   @Override
@@ -71,24 +72,35 @@ public final class StitchAppClientImpl implements StitchAppClient {
   public <T> T getServiceClient(
       final NamedServiceClientFactory<T> provider, final String serviceName) {
     return provider.getClient(
-        new StitchServiceImpl(auth, routes.getServiceRoutes(), serviceName), info);
+        new StitchServiceImpl(
+            auth,
+            routes.getServiceRoutes(),
+            serviceName,
+            info.getCodecRegistry()),
+        info);
   }
 
   @Override
   public <T> T getServiceClient(final ServiceClientFactory<T> provider) {
-    return provider.getClient(new StitchServiceImpl(auth, routes.getServiceRoutes(), ""), info);
+    return provider.getClient(
+        new StitchServiceImpl(
+            auth,
+            routes.getServiceRoutes(),
+            "",
+            info.getCodecRegistry()),
+        info);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
-      final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
+      final String name, final List<?> args, final Class<ResultT> resultClass) {
     return coreClient.callFunctionInternal(name, args, null, resultClass);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Long requestTimeout,
       final Class<ResultT> resultClass) {
     return coreClient.callFunctionInternal(name, args, requestTimeout, resultClass);
@@ -96,14 +108,35 @@ public final class StitchAppClientImpl implements StitchAppClient {
 
   @Override
   public <ResultT> ResultT callFunction(
-      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder) {
+      final String name,
+      final List<?> args,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry
+  ) {
+    return coreClient.callFunctionInternal(name, args, null, resultClass, codecRegistry);
+  }
+
+  @Override
+  public <ResultT> ResultT callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry
+  ) {
+    return coreClient.callFunctionInternal(name, args, requestTimeout, resultClass, codecRegistry);
+  }
+
+  @Override
+  public <ResultT> ResultT callFunction(
+      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
     return coreClient.callFunctionInternal(name, args, null, resultDecoder);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Long requestTimeout,
       final Decoder<ResultT> resultDecoder) {
     return coreClient.callFunctionInternal(name, args, requestTimeout, resultDecoder);

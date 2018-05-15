@@ -31,11 +31,11 @@ public interface AwsSesServiceClient {
   /**
    * Sends an email.
    *
-   * @param to The email address to send the email to.
-   * @param from The email address to send the email from.
-   * @param subject The subject of the email.
-   * @param body The body text of the email.
-   * @return A task containing the result of the send that completes when the send is done.
+   * @param to the email address to send the email to.
+   * @param from the email address to send the email from.
+   * @param subject the subject of the email.
+   * @param body the body text of the email.
+   * @return a task containing the result of the send that completes when the send is done.
    */
   Task<AwsSesSendResult> sendEmail(
       @NonNull final String to,

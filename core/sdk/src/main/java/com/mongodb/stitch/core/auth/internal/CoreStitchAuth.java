@@ -42,7 +42,6 @@ import java.lang.ref.WeakReference;
 import java.util.Map;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.meta.When;
-
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -64,26 +63,15 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   private Thread refresherThread;
   private AuthInfo authInfo;
   private StitchUserT currentUser;
-  private CodecRegistry configuredCustomCodecRegistry; // is valid to be null
 
   protected CoreStitchAuth(
       final StitchRequestClient requestClient,
       final StitchAuthRoutes authRoutes,
       final Storage storage,
-      final boolean useTokenRefresher) {
-    this(requestClient, authRoutes, storage, null, useTokenRefresher);
-  }
-
-  protected CoreStitchAuth(
-      final StitchRequestClient requestClient,
-      final StitchAuthRoutes authRoutes,
-      final Storage storage,
-      final CodecRegistry configuredCustomCodecRegistry,
       final boolean useTokenRefresher) {
     this.requestClient = requestClient;
     this.authRoutes = authRoutes;
     this.storage = storage;
-    this.configuredCustomCodecRegistry = configuredCustomCodecRegistry;
 
     final AuthInfo info;
     try {
@@ -148,8 +136,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * Performs a request against Stitch using the provided {@link StitchAuthRequest} object, and
    * returns the response.
    *
-   * @param stitchReq The request to perform.
-   * @return The response to the request, successful or not.
+   * @param stitchReq the request to perform.
+   * @return the response to the request, successful or not.
    */
   public Response doAuthenticatedRequest(final StitchAuthRequest stitchReq) {
     try {
@@ -180,13 +168,15 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
    * decodes the JSON body of the response into a T value using the provided codec.
    *
-   * @param stitchReq The request to perform.
-   * @param decoder The {@link Decoder} to use to decode the JSON of the response into a T value.
-   * @param <T> The type into which the JSON response will be decoded.
-   * @return The decoded value.
+   * @param stitchReq the request to perform.
+   * @param decoder the {@link Decoder} to use to decode the JSON of the response into a T value.
+   * @param <T> the type into which the JSON response will be decoded.
+   * @return the decoded value.
    */
   public <T> T doAuthenticatedJsonRequest(
-      final StitchAuthDocRequest stitchReq, final Decoder<T> decoder) {
+      final StitchAuthDocRequest stitchReq,
+      final Decoder<T> decoder
+  ) {
     final Response response = doAuthenticatedRequest(stitchReq);
 
     try {
@@ -199,31 +189,26 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   /**
    * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
    * decodes the JSON body of the response into a T value as specified by the provided class type.
-   * The type will be decoded using the codec found for T in the codec registry configured for this
-   * {@link CoreStitchAuth}. If there is no codec registry configured for this auth instance, a
-   * default codec registry will be used. If the provided type is not supported by the codec
-   * registry to be used, the method will throw a {@link
-   * org.bson.codecs.configuration.CodecConfigurationException}.
+   * The type will be decoded using the codec found for T in the codec registry given.
+   * If the provided type is not supported by the codec registry to be used, the method will throw
+   * a {@link org.bson.codecs.configuration.CodecConfigurationException}.
    *
-   * @param stitchReq The request to perform.
-   * @param resultClass The class that the JSON response should be decoded as.
-   * @param <T> The type into which the JSON response will be decoded into.
-   * @return The decoded value.
+   * @param stitchReq the request to perform.
+   * @param resultClass the class that the JSON response should be decoded as.
+   * @param codecRegistry the codec registry used for de/serialization.
+   * @param <T> the type into which the JSON response will be decoded into.
+   * @return the decoded value.
    */
   public <T> T doAuthenticatedJsonRequest(
-      final StitchAuthDocRequest stitchReq, final Class<T> resultClass) {
+      final StitchAuthDocRequest stitchReq,
+      final Class<T> resultClass,
+      final CodecRegistry codecRegistry
+  ) {
     final Response response = doAuthenticatedRequest(stitchReq);
 
     try {
-      if (this.configuredCustomCodecRegistry != null) {
-        return BsonUtils.parseValue(
-            IoUtils.readAllToString(response.getBody()),
-            resultClass,
-            this.configuredCustomCodecRegistry);
-      } else {
-        return BsonUtils.parseValue(IoUtils.readAllToString(response.getBody()), resultClass);
-      }
-
+      return BsonUtils.parseValue(IoUtils.readAllToString(
+          response.getBody()), resultClass, codecRegistry);
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }

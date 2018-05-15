@@ -6,6 +6,7 @@ include ':core:sdk',
         ':core:services:aws-ses',
         ':core:services:http',
         ':core:services:mongodb-local',
+        ':core:services:mongodb-remote',
         ':core:services:twilio',
         ':core:testutils',
 
@@ -17,6 +18,7 @@ include ':core:sdk',
         ':server:services:aws-ses',
         ':server:services:http',
         ':server:services:mongodb-local',
+        ':server:services:mongodb-remote',
         ':server:services:twilio',
         ':server:testutils',
 
@@ -28,6 +30,7 @@ include ':core:sdk',
         ':android:services:aws-ses',
         ':android:services:http',
         ':android:services:mongodb-local',
+        ':android:services:mongodb-remote',
         ':android:services:twilio',
         ':android:examples:todo',
         ':android:testutils'
@@ -39,6 +42,7 @@ project(':core:services:aws-s3').name = 'stitch-core-services-aws-s3'
 project(':core:services:aws-ses').name = 'stitch-core-services-aws-ses'
 project(':core:services:http').name = 'stitch-core-services-http'
 project(':core:services:mongodb-local').name = 'stitch-core-services-mongodb-local'
+project(':core:services:mongodb-remote').name = 'stitch-core-services-mongodb-remote'
 project(':core:services:twilio').name = 'stitch-core-services-twilio'
 project(':core:testutils').name = 'stitch-core-testutils'
 project(':server:sdk').name = 'stitch-server-sdk'
@@ -49,6 +53,7 @@ project(':server:services:aws-s3').name = 'stitch-server-services-aws-s3'
 project(':server:services:aws-ses').name = 'stitch-server-services-aws-ses'
 project(':server:services:http').name = 'stitch-server-services-http'
 project(':server:services:mongodb-local').name = 'stitch-server-services-mongodb-local'
+project(':server:services:mongodb-remote').name = 'stitch-server-services-mongodb-remote'
 project(':server:services:twilio').name = 'stitch-server-services-twilio'
 project(':server:testutils').name = 'stitch-server-testutils'
 project(':android:sdk').name = 'stitch-android-sdk'
@@ -59,6 +64,7 @@ project(':android:services:aws-s3').name = 'stitch-android-services-aws-s3'
 project(':android:services:aws-ses').name = 'stitch-android-services-aws-ses'
 project(':android:services:http').name = 'stitch-android-services-http'
 project(':android:services:mongodb-local').name = 'stitch-android-services-mongodb-local'
+project(':android:services:mongodb-remote').name = 'stitch-android-services-mongodb-remote'
 project(':android:services:twilio').name = 'stitch-android-services-twilio'
 project(':android:examples:todo').name = 'stitch-android-examples-todo'
 project(':android:testutils').name = 'stitch-android-testutils'

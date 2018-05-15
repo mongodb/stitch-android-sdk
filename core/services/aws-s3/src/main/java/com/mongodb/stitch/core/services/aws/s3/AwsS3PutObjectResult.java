@@ -16,39 +16,14 @@
 
 package com.mongodb.stitch.core.services.aws.s3;
 
-import org.bson.BsonReader;
-import org.bson.Document;
-import org.bson.codecs.Decoder;
-import org.bson.codecs.DecoderContext;
-import org.bson.codecs.DocumentCodec;
-
 public class AwsS3PutObjectResult {
   private final String location;
 
-  AwsS3PutObjectResult(final String location) {
+  public AwsS3PutObjectResult(final String location) {
     this.location = location;
   }
 
   public String getLocation() {
     return location;
-  }
-
-  static Decoder<AwsS3PutObjectResult> Decoder = new Decoder<AwsS3PutObjectResult>() {
-    @Override
-    public AwsS3PutObjectResult decode(
-        final BsonReader reader,
-        final DecoderContext decoderContext
-    ) {
-      final Document document = (new DocumentCodec()).decode(reader, decoderContext);
-      if (!document.containsKey(Fields.LOCATION_FIELD)) {
-        throw new IllegalStateException(
-            String.format("expected %s to be present", Fields.LOCATION_FIELD));
-      }
-      return new AwsS3PutObjectResult(document.getString(Fields.LOCATION_FIELD));
-    }
-  };
-
-  private static class Fields {
-    public static final String LOCATION_FIELD = "location";
   }
 }

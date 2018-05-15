@@ -30,14 +30,14 @@ public interface StitchService extends CoreStitchService {
    * used. The default codec registry supports the mappings specified <a
    * href="http://mongodb.github.io/mongo-java-driver/3.1/bson/documents/#document">here</a>
    *
-   * @param name The name of the Stitch service function to call.
-   * @param args The arguments to pass to the function.
-   * @param resultClass The class that the response should be decoded as.
-   * @param <ResultT> The type into which the response will be decoded.
-   * @return A {@link Task} containing the decoded value.
+   * @param name the name of the Stitch service function to call.
+   * @param args the arguments to pass to the function.
+   * @param resultClass the class that the response should be decoded as.
+   * @param <ResultT> the type into which the response will be decoded.
+   * @return a {@link Task} containing the decoded value.
    */
   <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Class<ResultT> resultClass);
+      final String name, final List<?> args, final Class<ResultT> resultClass);
 
   /**
    * Calls the specified Stitch service function, and decodes the response into an instance of the
@@ -48,17 +48,17 @@ public interface StitchService extends CoreStitchService {
    * Also accepts a timeout in milliseconds. Use this for functions that may run longer than the
    * client-wide default timeout (15 seconds by default).
    *
-   * @param name The name of the Stitch service function to call.
-   * @param args The arguments to pass to the function.
-   * @param requestTimeout The number of milliseconds the client should wait for a response from the
+   * @param name the name of the Stitch service function to call.
+   * @param args the arguments to pass to the function.
+   * @param requestTimeout the number of milliseconds the client should wait for a response from the
    *                       server before failing with an error.
-   * @param resultClass The class that the response should be decoded as.
-   * @param <ResultT> The type into which the response will be decoded.
-   * @return A {@link Task} containing the decoded value.
+   * @param resultClass the class that the response should be decoded as.
+   * @param <ResultT> the type into which the response will be decoded.
+   * @return a {@link Task} containing the decoded value.
    */
   <ResultT> Task<ResultT> callFunction(
           final String name,
-          final List<? extends Object> args,
+          final List<?> args,
           final Long requestTimeout,
           final Class<ResultT> resultClass);
 
@@ -66,31 +66,31 @@ public interface StitchService extends CoreStitchService {
    * Calls the specified Stitch service function, and decodes the response into a value using the
    * provided {@link Decoder}.
    *
-   * @param name The name of the Stitch service function to call.
-   * @param args The arguments to pass to the function.
-   * @param resultDecoder The {@link Decoder} to use to decode the response into a value.
-   * @param <ResultT> The type into which the response will be decoded.
-   * @return A {@link Task} containing the decoded value.
+   * @param name the name of the Stitch service function to call.
+   * @param args the arguments to pass to the function.
+   * @param resultDecoder the {@link Decoder} to use to decode the response into a value.
+   * @param <ResultT> the type into which the response will be decoded.
+   * @return a {@link Task} containing the decoded value.
    */
   <ResultT> Task<ResultT> callFunction(
-      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder);
+      final String name, final List<?> args, final Decoder<ResultT> resultDecoder);
 
   /**
    * Calls the specified Stitch service function, and decodes the response into a value using the
    * provided {@link Decoder}. Also accepts a timeout in milliseconds. Use this for functions that
    * may run longer than the client-wide default timeout (15 seconds by default).
    *
-   * @param name The name of the Stitch service function to call.
-   * @param args The arguments to pass to the function.
-   * @param requestTimeout The number of milliseconds the client should wait for a response from the
+   * @param name the name of the Stitch service function to call.
+   * @param args the arguments to pass to the function.
+   * @param requestTimeout the number of milliseconds the client should wait for a response from the
    *                       server before failing with an error.
-   * @param resultDecoder The {@link Decoder} to use to decode the response into a value.
-   * @param <ResultT> The type into which the response will be decoded.
-   * @return A {@link Task} containing the decoded value.
+   * @param resultDecoder the {@link Decoder} to use to decode the response into a value.
+   * @param <ResultT> the type into which the response will be decoded.
+   * @return a {@link Task} containing the decoded value.
    */
   <ResultT> Task<ResultT> callFunction(
           final String name,
-          final List<? extends Object> args,
+          final List<?> args,
           final Long requestTimeout,
           final Decoder<ResultT> resultDecoder);
 }

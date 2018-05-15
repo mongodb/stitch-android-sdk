@@ -169,9 +169,12 @@ public class StitchClientConfiguration {
     /**
      * Merges the provided codec registry with the default codec registry.
      *
-     * @param codecRegistry The codec registry to merge with the default registry.
+     * @param codecRegistry the codec registry to merge with the default registry.
      */
-    public Builder withCustomCodecs(final CodecRegistry codecRegistry) {
+    public Builder withCodecRegistry(final CodecRegistry codecRegistry) {
+      // We can't detect if their codecRegistry has any duplicate providers. There's also a chance
+      // that putting ours first may prevent decoding of some of their classes if for example they
+      // have their own way of decoding an Integer.
       this.codecRegistry =
           CodecRegistries.fromRegistries(BsonUtils.DEFAULT_CODEC_REGISTRY, codecRegistry);
       return this;
@@ -237,6 +240,10 @@ public class StitchClientConfiguration {
 
       if (defaultRequestTimeout == null) {
         throw new IllegalArgumentException("defaultRequestTimeout must be set");
+      }
+
+      if (codecRegistry == null) {
+        codecRegistry = BsonUtils.DEFAULT_CODEC_REGISTRY;
       }
 
       return new StitchClientConfiguration(

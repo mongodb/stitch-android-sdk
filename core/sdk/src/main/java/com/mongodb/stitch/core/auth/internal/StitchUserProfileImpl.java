@@ -39,9 +39,9 @@ public class StitchUserProfileImpl implements StitchUserProfile {
   /**
    * Constructs a user profile.
    *
-   * @param userType The type of the user.
-   * @param data The profile data of the user.
-   * @param identities The identities associated with a user.
+   * @param userType the type of the user.
+   * @param data the profile data of the user.
+   * @param identities the identities associated with a user.
    */
   public StitchUserProfileImpl(
       final UserType userType,

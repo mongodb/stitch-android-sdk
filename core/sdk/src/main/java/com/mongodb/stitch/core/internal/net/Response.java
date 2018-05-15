@@ -35,16 +35,16 @@ public final class Response {
   /**
    * Constructs a response from a status code, headers, and bodu.
    *
-   * @param statusCode The status code of the response.
-   * @param headers The headers of the response.
-   * @param body The body of the response.
+   * @param statusCode the status code of the response.
+   * @param headers the headers of the response.
+   * @param body the body of the response.
    */
   public Response(
       final int statusCode, final Map<String, String> headers, final InputStream body) {
     this.statusCode = statusCode;
     this.body = body;
     if (headers == null) {
-      this.headers = Collections.<String,String>emptyMap();
+      this.headers = Collections.emptyMap();
       return;
     }
 
@@ -58,29 +58,29 @@ public final class Response {
   /**
    * Constructs a response from a status code and body.
    *
-   * @param statusCode The status code of the response.
-   * @param body The body of the response.
+   * @param statusCode the status code of the response.
+   * @param body the body of the response.
    */
   public Response(final int statusCode, final InputStream body) {
-    this(statusCode, Collections.<String,String>emptyMap(), body);
+    this(statusCode, Collections.<String, String>emptyMap(), body);
   }
 
   /**
    * Constructs a response from a status code and raw body bytes.
    *
-   * @param statusCode The status code of the response.
-   * @param body The body of the response as raw bytes.
+   * @param statusCode the status code of the response.
+   * @param body the body of the response as raw bytes.
    */
   public Response(final int statusCode, final byte[] body) {
-    this(statusCode, Collections.<String,String>emptyMap(), new ByteArrayInputStream(body));
+    this(statusCode, Collections.<String, String>emptyMap(), new ByteArrayInputStream(body));
   }
 
   /**
    * Constructs a response from a status, headers, and a body represented by a {@link String}.
    *
-   * @param statusCode The status code of the response.
-   * @param headers The headers of the response.
-   * @param body The body of the response as a string.
+   * @param statusCode the status code of the response.
+   * @param headers the headers of the response.
+   * @param body the body of the response as a string.
    */
   public Response(final int statusCode, final Map<String, String> headers, final String body) {
     this(
@@ -92,21 +92,21 @@ public final class Response {
   /**
    * Constructs a response from a status and a body represented by a {@link String}.
    *
-   * @param statusCode The status code of the response.
-   * @param body The body of the response as a string.
+   * @param statusCode the status code of the response.
+   * @param body the body of the response as a string.
    */
   public Response(final int statusCode, final String body) {
     this(
         statusCode,
-        Collections.<String,String>emptyMap(),
+        Collections.<String, String>emptyMap(),
         new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
   }
 
   /**
    * Constructs a response from a status and headers.
    *
-   * @param statusCode The status code of the response.
-   * @param headers The headers of the response.
+   * @param statusCode the status code of the response.
+   * @param headers the headers of the response.
    */
   public Response(final int statusCode, final Map<String, String> headers) {
     this(
@@ -118,7 +118,7 @@ public final class Response {
   /**
    * Constructs a successful (200 OK) response from raw body bytes.
    *
-   * @param body The body of the response as raw bytes.
+   * @param body the body of the response as raw bytes.
    */
   public Response(final byte[] body) {
     this(200, body);
@@ -127,7 +127,7 @@ public final class Response {
   /**
    * Constructs a successful (200 OK) response from a body represented by a {@link String}.
    *
-   * @param body The body of the response as a string.
+   * @param body the body of the response as a string.
    */
   public Response(final String body) {
     this(200, body);
@@ -136,11 +136,11 @@ public final class Response {
   /**
    * Constructs a response from the given status code.
    *
-   * @param statusCode The status code of the response.
+   * @param statusCode the status code of the response.
    */
   public Response(final int statusCode) {
     this.statusCode = statusCode;
-    this.headers = Collections.<String,String>emptyMap();
+    this.headers = Collections.emptyMap();
     this.body = null;
   }
 

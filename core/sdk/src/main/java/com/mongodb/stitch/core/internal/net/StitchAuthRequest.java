@@ -35,8 +35,8 @@ public class StitchAuthRequest extends StitchRequest {
   /**
    * Upgrades a request to an authenticated request.
    *
-   * @param request The normal, unauthenticated request to upgrade.
-   * @param useRefreshToken Whether or not to use a refresh token in this request.
+   * @param request the normal, unauthenticated request to upgrade.
+   * @param useRefreshToken whether or not to use a refresh token in this request.
    */
   StitchAuthRequest(final StitchRequest request, final boolean useRefreshToken) {
     this(request, useRefreshToken, true);
@@ -45,12 +45,12 @@ public class StitchAuthRequest extends StitchRequest {
   /**
    * Upgrades a request to an authenticated request.
    *
-   * @param request The normal, unauthenticated request to upgrade.
-   * @param useRefreshToken Whether or not to use a refresh token in this request.
-   * @param shouldRefreshOnFailure Whether or not the performer of this request should attempt to
+   * @param request the normal, unauthenticated request to upgrade.
+   * @param useRefreshToken whether or not to use a refresh token in this request.
+   * @param shouldRefreshOnFailure whether or not the performer of this request should attempt to
    *     refresh authentication info on failure.
    */
-  StitchAuthRequest(
+  private StitchAuthRequest(
       final StitchRequest request,
       final boolean useRefreshToken,
       final boolean shouldRefreshOnFailure) {

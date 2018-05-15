@@ -30,10 +30,10 @@ public interface TwilioServiceClient {
   /**
    * Sends an SMS/MMS message.
    *
-   * @param to The number to send the message to.
-   * @param from The number that the message is from.
-   * @param body The body text of the message.
-   * @return A task that completes when the send is done.
+   * @param to the number to send the message to.
+   * @param from the number that the message is from.
+   * @param body the body text of the message.
+   * @return a task that completes when the send is done.
    */
   Task<Void> sendMessage(
       @NonNull final String to,
@@ -43,11 +43,11 @@ public interface TwilioServiceClient {
   /**
    * Sends an SMS/MMS message.
    *
-   * @param to The number to send the message to.
-   * @param from The number that the message is from.
-   * @param body The body text of the message.
-   * @param mediaUrl The URL of the media to send in an MMS.
-   * @return A task that completes when the send is done.
+   * @param to the number to send the message to.
+   * @param from the number that the message is from.
+   * @param body the body text of the message.
+   * @param mediaUrl the URL of the media to send in an MMS.
+   * @return a task that completes when the send is done.
    */
   Task<Void> sendMessage(
       @NonNull final String to,

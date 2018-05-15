@@ -24,10 +24,7 @@ import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
 import com.mongodb.stitch.android.services.mongodb.local.internal.MongoDbMobileProvider;
 import com.mongodb.stitch.core.StitchAppClientInfo;
-import com.mongodb.stitch.core.services.mongodb.local.CoreLocalMongoDbService;
-
-import java.util.HashSet;
-import java.util.Set;
+import com.mongodb.stitch.core.services.mongodb.local.internal.CoreLocalMongoDbService;
 
 import org.bson.Document;
 

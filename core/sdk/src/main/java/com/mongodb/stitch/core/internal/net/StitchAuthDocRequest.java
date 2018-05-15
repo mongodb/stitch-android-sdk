@@ -19,13 +19,12 @@ package com.mongodb.stitch.core.internal.net;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
+import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
-
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.bson.Document;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public final class StitchAuthDocRequest extends StitchAuthRequest {
   private final Document document;
@@ -128,15 +127,23 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
      * Builds the {@link StitchAuthDocRequest}.
      */
     public StitchAuthDocRequest build() {
+      return this.build(BsonUtils.DEFAULT_CODEC_REGISTRY);
+    }
+
+    /**
+     * Builds the {@link StitchAuthDocRequest}.
+     */
+    public StitchAuthDocRequest build(final CodecRegistry codecRegistry) {
       if (document == null) {
         throw new IllegalArgumentException("document must be set");
       }
       if (getHeaders() == null) {
-        withHeaders(new HashMap<>());
+        withHeaders(new HashMap<String, String>());
       }
       getHeaders().put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
       try {
-        withBody(StitchObjectMapper.getInstance().writeValueAsBytes(document));
+        withBody(StitchObjectMapper.getInstance()
+            .withCodecRegistry(codecRegistry).writeValueAsBytes(document));
       } catch (final JsonProcessingException e) {
         throw new StitchRequestException(e, StitchRequestErrorCode.ENCODING_ERROR);
       }

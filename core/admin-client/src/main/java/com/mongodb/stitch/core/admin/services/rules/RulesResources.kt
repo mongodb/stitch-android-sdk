@@ -1,7 +1,9 @@
 package com.mongodb.stitch.core.admin.services.rules
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import org.bson.Document
 
 enum class AwsS3Actions {
     @JsonProperty("put") Put,
@@ -29,6 +31,13 @@ sealed class RuleCreator {
     data class AwsS3(val name: String, val actions: Set<AwsS3Actions>) : RuleCreator()
     data class AwsSes(val name: String, val actions: Set<AwsSesActions>) : RuleCreator()
     data class Http(val name: String, val actions: Set<HttpActions>) : RuleCreator()
+    data class MongoDb(val namespace: String, private val rule: Document) : RuleCreator() {
+        @JsonAnyGetter
+        fun toRule(): Map<String, Any> {
+            rule["namespace"] = namespace
+            return rule
+        }
+    }
     data class Twilio(val name: String, val actions: Set<TwilioActions>) : RuleCreator()
 }
 

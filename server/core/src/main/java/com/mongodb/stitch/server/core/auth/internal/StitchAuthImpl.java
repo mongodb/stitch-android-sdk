@@ -44,7 +44,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
       final StitchAuthRoutes authRoutes,
       final Storage storage,
       final StitchAppClientInfo appInfo) {
-    super(requestClient, authRoutes, storage, appInfo.getConfiguredCodecRegistry(), true);
+    super(requestClient, authRoutes, storage, true);
     this.appInfo = appInfo;
   }
 

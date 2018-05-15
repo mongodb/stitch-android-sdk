@@ -96,6 +96,19 @@ subprojects {
                 systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
             }
 
+            javadoc {
+                title = "$project.name $version"
+                options.author true
+                options.author = true
+                options.version = true
+                options.links 'https://docs.oracle.com/javase/8/docs/api/'
+                options.links 'http://mongodb.github.io/mongo-java-driver/3.7/javadoc/'
+                options.encoding = 'UTF-8'
+                options.charSet 'UTF-8'
+                options.docEncoding 'UTF-8'
+                exclude '**/index.html', '**/*.kt', '**/test/**'
+            }
+
             task sourcesJar(type: Jar) {
                 from sourceSets.main.allJava
                 classifier 'sources'
@@ -129,7 +142,19 @@ subprojects {
                         owner.classpath += variant.javaCompile.classpath
                     }
                 }
-                exclude '**/R.html', '**/R.*.html', '**/index.html'
+                exclude '**/R.html', '**/R.*.html', '**/index.html', '**/*.kt', '**/test/**'
+
+                title = "$project.name $version"
+                options.author true
+                options.author = true
+                options.version = true
+                options.links 'https://docs.oracle.com/javase/8/docs/api/'
+                options.links 'http://mongodb.github.io/mongo-java-driver/3.7/javadoc/'
+                options.linksOffline "https://developers.google.com/android/reference", "${rootDir}/gradle/extDocs"
+                options.linksOffline "http://d.android.com/reference", "${android.sdkDirectory}/docs/reference"
+                options.encoding = 'UTF-8'
+                options.charSet 'UTF-8'
+                options.docEncoding 'UTF-8'
             }
 
             task javadocJar(type: Jar) {
@@ -156,9 +181,6 @@ subprojects {
                 html.setDestination new File("$project.buildDir/outputs/findbugs/$projectName-findbugs.html")
             }
             excludeFilter = new File(configDir, 'findbugs-exclude.xml')
-        }
-        tasks.withType(Javadoc) {
-            excludes = ['**/*.kt', '**/internal/**']
         }
     }
 
@@ -212,22 +234,79 @@ subprojects {
     task install(dependsOn: 'publishToMavenLocal')
 }
 
-task allJavadocs(type: Javadoc, group: 'Documentation') {
-    destinationDir = file("$buildDir/docs/javadoc")
-    title = "$project.name $version API"
-    options.author true
-    options.addStringOption 'Xdoclint:none', '-quiet'
+def corePackages = ["com.mongodb.stitch.core",
+                "com.mongodb.stitch.core.auth",
+                "com.mongodb.stitch.core.auth.providers.anonymous",
+                "com.mongodb.stitch.core.auth.providers.custom",
+                "com.mongodb.stitch.core.auth.providers.facebook",
+                "com.mongodb.stitch.core.auth.providers.google",
+                "com.mongodb.stitch.core.auth.providers.serverapikey",
+                "com.mongodb.stitch.core.auth.providers.userapikey",
+                "com.mongodb.stitch.core.auth.providers.userpass",
+                "com.mongodb.stitch.core.services.aws.s3",
+                "com.mongodb.stitch.core.services.aws.ses",
+                "com.mongodb.stitch.core.services.http",
+                "com.mongodb.stitch.core.services.mongodb.remote"]
 
-    subprojects {
-        afterEvaluate { project ->
+def androidPackages = ["com.mongodb.stitch.android.core",
+                       "com.mongodb.stitch.android.core.auth",
+                       "com.mongodb.stitch.android.core.auth.providers.userapikey",
+                       "com.mongodb.stitch.android.core.auth.providers.userpassword",
+                       "com.mongodb.stitch.android.core.services",
+                       "com.mongodb.stitch.android.services.aws.s3",
+                       "com.mongodb.stitch.android.services.aws.ses",
+                       "com.mongodb.stitch.android.services.http",
+                       "com.mongodb.stitch.android.services.mongodb.local",
+                       "com.mongodb.stitch.android.services.mongodb.remote",
+                       "com.mongodb.stitch.android.services.twilio"]
+
+def serverPackages = ["com.mongodb.stitch.server.core",
+                      "com.mongodb.stitch.server.core.auth",
+                      "com.mongodb.stitch.server.core.auth.providers.userapikey",
+                      "com.mongodb.stitch.server.core.auth.providers.userpassword",
+                      "com.mongodb.stitch.server.core.services",
+                      "com.mongodb.stitch.server.services.aws.s3",
+                      "com.mongodb.stitch.server.services.aws.ses",
+                      "com.mongodb.stitch.server.services.http",
+                      "com.mongodb.stitch.server.services.mongodb.local",
+                      "com.mongodb.stitch.server.services.mongodb.remote",
+                      "com.mongodb.stitch.server.services.twilio"]
+
+rootProject.gradle.projectsEvaluated {
+    task allJavadocs(type: Javadoc, group: 'Documentation') {
+        destinationDir = file("$buildDir/docs/javadoc")
+        title = "$project.name $version API"
+        options.author true
+        options.author = true
+        options.version = true
+        options.links 'https://docs.oracle.com/javase/8/docs/api/'
+        options.links 'http://mongodb.github.io/mongo-java-driver/3.7/javadoc/'
+        options.linksOffline "https://developers.google.com/android/reference", "${rootDir}/gradle/extDocs"
+        options.encoding = 'UTF-8'
+        options.charSet 'UTF-8'
+        options.docEncoding 'UTF-8'
+        options.group "Android SDK", androidPackages.join(':')
+        options.group "Server SDK", serverPackages.join(':')
+        options.group "Core SDK", corePackages.join(':')
+
+        String androidDocsDir = ""
+        subprojects {
             project.tasks.withType(Javadoc).each { javadocTask ->
-                println(javadocTask.source)
                 source += javadocTask.source
                 classpath += javadocTask.classpath
                 excludes += javadocTask.excludes
                 includes += javadocTask.includes
+
+                if (project.hasProperty("android")) {
+                    androidDocsDir = "${android.sdkDirectory}/docs/reference"
+                }
             }
+        }
+
+        if (!androidDocsDir.isEmpty()) {
+            options.linksOffline "http://d.android.com/reference", androidDocsDir
         }
     }
 }
+
 

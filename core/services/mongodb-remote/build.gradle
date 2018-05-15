@@ -1,0 +1,16 @@
+apply plugin: 'java-library'
+
+archivesBaseName = 'stitch-core-services-mongodb-remote'
+
+dependencies {
+    implementation project(':core:stitch-core-sdk')
+    api 'org.mongodb:mongodb-driver-core:3.8.0-SNAPSHOT' // TODO: REPLACE WITH ACTUAL 3.8.0
+
+    testImplementation project(':core:stitch-core-admin-client')
+    testImplementation project(':core:stitch-core-testutils')
+    testImplementation 'junit:junit:4.12'
+    testImplementation "org.mockito:mockito-core:2.18.3"
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7

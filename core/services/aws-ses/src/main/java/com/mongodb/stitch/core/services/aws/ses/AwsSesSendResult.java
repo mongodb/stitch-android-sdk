@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.services.aws.ses;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
+
 import org.bson.BsonReader;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
@@ -25,7 +27,7 @@ import org.bson.codecs.DocumentCodec;
 public class AwsSesSendResult {
   private final String messageId;
 
-  AwsSesSendResult(final String messageId) {
+  public AwsSesSendResult(final String messageId) {
     this.messageId = messageId;
   }
 
@@ -37,15 +39,12 @@ public class AwsSesSendResult {
     @Override
     public AwsSesSendResult decode(final BsonReader reader, final DecoderContext decoderContext) {
       final Document document = (new DocumentCodec()).decode(reader, decoderContext);
-      if (!document.containsKey(Fields.MESSAGE_ID_FIELD)) {
-        throw new IllegalStateException(
-            String.format("expected %s to be present", Fields.MESSAGE_ID_FIELD));
-      }
+      keyPresent(Fields.MESSAGE_ID_FIELD, document);
       return new AwsSesSendResult(document.getString(Fields.MESSAGE_ID_FIELD));
     }
   };
 
   private static class Fields {
-    public static final String MESSAGE_ID_FIELD = "messageId";
+    static final String MESSAGE_ID_FIELD = "messageId";
   }
 }

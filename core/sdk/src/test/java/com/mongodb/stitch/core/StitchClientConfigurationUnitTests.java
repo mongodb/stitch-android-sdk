@@ -19,8 +19,8 @@ package com.mongodb.stitch.core;
 import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
+import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.MemoryStorage;
 import com.mongodb.stitch.core.internal.common.Storage;
 import com.mongodb.stitch.core.internal.net.Request;
@@ -92,11 +92,11 @@ public class StitchClientConfigurationUnitTests {
     assertEquals(
         config.getDefaultRequestTimeout(),
         (Long) 1500L);
-    assertNull(config.getCodecRegistry());
+    assertEquals(BsonUtils.DEFAULT_CODEC_REGISTRY, config.getCodecRegistry());
 
     // With a custom codec
     final CustomType.Codec customTypeCodec = new CustomType.Codec();
-    builder.withCustomCodecs(CodecRegistries.fromCodecs(customTypeCodec));
+    builder.withCodecRegistry(CodecRegistries.fromCodecs(customTypeCodec));
     config = builder.build();
 
     assertEquals(config.getBaseUrl(), baseUrl);
