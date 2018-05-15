@@ -43,7 +43,7 @@ public final class AwsSesServiceClientImpl extends CoreAwsSesServiceClient
    * @param to The email address to send the email to.
    * @param from The email address to send the email from.
    * @param subject The subject of the email.
-   * @return A task that completes when the send is done.
+   * @return A task containing the result of the send that completes when the send is done.
    */
   public Task<AwsSesSendResult> sendEmail(
       @NonNull final String to,

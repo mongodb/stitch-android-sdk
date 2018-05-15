@@ -250,6 +250,18 @@ post:
         - "./stitch-java-sdk/server/services/twilio/build/test-results/test/*.xml"
         - "./stitch-java-sdk/android/coretest/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/services/mongodb-local/build/outputs/androidTest-results/connected/*.xml"
+        - "./stitch-java-sdk/core/services/aws-ses/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/core/services/http/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/core/services/twilio/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/server/coretest/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/server/services/mongodb-local/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/server/services/aws-ses/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/server/services/http/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/server/services/twilio/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/android/coretest/build/outputs/androidTest-results/connected/*.xml"
+        - "./stitch-java-sdk/android/services/mongodb-local/build/outputs/androidTest-results/connected/*.xml"
+        - "./stitch-java-sdk/android/services/aws-ses/build/outputs/androidTest-results/connected/*.xml"
+        - "./stitch-java-sdk/android/services/http/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/services/twilio/build/outputs/androidTest-results/connected/*.xml"
   - command: s3.put
     params:

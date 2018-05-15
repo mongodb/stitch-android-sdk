@@ -39,7 +39,7 @@ public abstract class CoreLocalMongoDbService {
 
     final String dataDir = appInfo.getDataDirectory();
     if (dataDir == null) {
-      throw new IllegalStateException("StitchAppClient not configured with a data directory");
+      throw new IllegalArgumentException("StitchAppClient not configured with a data directory");
     }
     final String instanceKey = String.format("%s-%s", appInfo.getClientAppId(), dataDir);
     if (localInstances.containsKey(instanceKey)) {

@@ -192,13 +192,13 @@ public final class Request {
      */
     public Request build() {
       if (method == null) {
-        throw new IllegalStateException("must set method");
+        throw new IllegalArgumentException("must set method");
       }
       if (url == null || url.isEmpty()) {
-        throw new IllegalStateException("must set non-empty url");
+        throw new IllegalArgumentException("must set non-empty url");
       }
       if (timeout == null) {
-        throw new IllegalStateException("must set a timeout");
+        throw new IllegalArgumentException("must set a timeout");
       }
       return new Request(
           method, url, timeout, headers == null ? new HashMap<String, String>() : headers, body);
