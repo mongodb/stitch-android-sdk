@@ -76,9 +76,7 @@ public class CoreAwsSesServiceClientUnitTests {
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
-    assertThrows(() -> {
-      client.sendEmailInternal(to, from, subject, body);
-      return null;
-    }, IllegalArgumentException.class);
+    assertThrows(() -> client.sendEmailInternal(to, from, subject, body),
+        IllegalArgumentException.class);
   }
 }

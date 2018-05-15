@@ -6,6 +6,7 @@ dependencies {
     api project(':server:stitch-server-core')
 
     // Services
+    api project(':server:server-services:stitch-server-services-aws-s3')
     api project(':server:server-services:stitch-server-services-aws-ses')
     api project(':server:server-services:stitch-server-services-http')
     api project(':server:server-services:stitch-server-services-twilio')

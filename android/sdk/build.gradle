@@ -24,6 +24,7 @@ dependencies {
     api project(':android:stitch-android-core')
 
     // Services
+    api project(':android:android-services:stitch-android-services-aws-s3')
     api project(':android:android-services:stitch-android-services-aws-ses')
     api project(':android:android-services:stitch-android-services-http')
     api project(':android:android-services:stitch-android-services-twilio')

@@ -34,8 +34,8 @@ public class StitchRequestException extends StitchException {
    * Constructs a request exception from the underlying exception and error code.
    */
   public StitchRequestException(
-      final Exception underlyingTransportException, final StitchRequestErrorCode errorCode) {
-    super(underlyingTransportException);
+      final Exception underlyingException, final StitchRequestErrorCode errorCode) {
+    super(underlyingException);
     this.errorCode = errorCode;
   }
 

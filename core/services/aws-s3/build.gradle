@@ -1,0 +1,12 @@
+apply plugin: 'java-library'
+
+archivesBaseName = 'stitch-core-services-aws-s3'
+
+dependencies {
+    implementation project(':core:stitch-core-sdk')
+
+    testImplementation project(':core:stitch-core-admin-client')
+    testImplementation project(':core:stitch-core-testutils')
+    testImplementation 'junit:junit:4.12'
+    testImplementation "org.mockito:mockito-core:2.18.3"
+}
