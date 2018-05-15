@@ -128,7 +128,7 @@ public class StitchRequestClientUnitTests {
     }
 
     // Handles round trip failing
-    doThrow(new IllegalStateException("whoops")).when(transport).roundTrip(any());
+    doThrow(new IllegalArgumentException("whoops")).when(transport).roundTrip(any());
     try {
       stitchRequestClient.doRequest(builder.build());
       fail();
@@ -226,7 +226,7 @@ public class StitchRequestClientUnitTests {
     }
 
     // Handles round trip failing
-    doThrow(new IllegalStateException("whoops")).when(transport).roundTrip(any());
+    doThrow(new IllegalArgumentException("whoops")).when(transport).roundTrip(any());
     try {
       stitchRequestClient.doRequest(builder.build());
       fail();

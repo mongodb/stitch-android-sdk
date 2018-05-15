@@ -213,10 +213,10 @@ public class StitchRequest {
      */
     public StitchRequest build() {
       if (method == null) {
-        throw new IllegalStateException("must set method");
+        throw new IllegalArgumentException("must set method");
       }
       if (path == null || path.isEmpty()) {
-        throw new IllegalStateException("must set non-empty path");
+        throw new IllegalArgumentException("must set non-empty path");
       }
       if (startedAt == null) {
         startedAt = System.currentTimeMillis() / 1000L;

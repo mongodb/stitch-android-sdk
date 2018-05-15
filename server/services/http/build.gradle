@@ -1,0 +1,19 @@
+apply plugin: 'java-library'
+apply plugin: 'kotlin'
+
+archivesBaseName = 'stitch-server-services-http'
+
+buildscript {
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+    }
+}
+
+dependencies {
+    implementation project(':server:stitch-server-core')
+    api project(':core:core-services:stitch-core-services-http')
+
+    testImplementation project(':server:stitch-server-testutils')
+    testImplementation 'junit:junit:4.12'
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
