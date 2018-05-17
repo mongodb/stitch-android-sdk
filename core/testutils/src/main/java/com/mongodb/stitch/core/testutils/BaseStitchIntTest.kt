@@ -1,8 +1,8 @@
 package com.mongodb.stitch.core.testutils
 
+import com.mongodb.stitch.core.admin.*
 import com.mongodb.stitch.core.admin.Apps.App
 import com.mongodb.stitch.core.admin.Apps.App.Services.Service
-import com.mongodb.stitch.core.admin.StitchAdminClient
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.apps.app
 import com.mongodb.stitch.core.admin.apps.create
@@ -10,15 +10,13 @@ import com.mongodb.stitch.core.admin.authProviders.AuthProvidersResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigWrapper
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.authProviders.authProvider
-import com.mongodb.stitch.core.admin.create
-import com.mongodb.stitch.core.admin.enable
-import com.mongodb.stitch.core.admin.remove
 import com.mongodb.stitch.core.admin.services.ServiceConfigWrapper
 import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.ServiceResponse
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.admin.services.service
+import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyAuthProvider
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -81,6 +79,12 @@ abstract class BaseStitchIntTest {
         val resp = app.authProviders.create(data = ProviderConfigWrapper(config))
         app.authProviders.authProvider(resp.id).enable()
         return resp
+    }
+
+    fun enableApiKeyProvider(app: App) {
+        val responses = app.authProviders.list()
+        val apiKeyProvider = responses.first { it.name == UserApiKeyAuthProvider.DEFAULT_NAME }
+        app.authProviders.authProvider(apiKeyProvider.id).enable()
     }
 
     fun addService(app: App, type: String, name: String, config: ServiceConfigs): Pair<ServiceResponse, Service> {

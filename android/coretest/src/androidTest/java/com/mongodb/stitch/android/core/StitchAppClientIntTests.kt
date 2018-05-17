@@ -2,6 +2,7 @@ package com.mongodb.stitch.android.core
 
 import android.support.test.runner.AndroidJUnit4
 import com.google.android.gms.tasks.Tasks
+import com.mongodb.stitch.android.core.auth.providers.userapikey.UserApiKeyAuthProviderClient
 import com.mongodb.stitch.android.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.StitchRequestErrorCode
@@ -15,11 +16,14 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.custom.CustomAuthProvider
 import com.mongodb.stitch.core.auth.providers.custom.CustomCredential
+import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
+import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.Document
+import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -213,100 +217,4 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
             )
         }
     }
-
-// TODO(STITCH-1448): Restore these tests once the user API key provider client has been implemented and put them in server too
-//    /**
-//     * Test creating and logging in with an api key
-//     */
-//    @Test
-//    fun testCreateSelfApiKey() {
-//        harness.addDefaultApiKeyProvider()
-//        registerAndLogin()
-//        val auth = stitchClient.auth?.let { it } ?: return
-//
-//        val key = Tasks.await(
-//                auth.createApiKey("key_test").addOnCompleteListener {
-//                    assertThat(it.isSuccessful, it.exception)
-//                }
-//        )
-//
-//        assertThat(key != null)
-//        assertThat(key.key != null)
-//
-//        Tasks.await(this.stitchClient.logout())
-//        Tasks.await(this.stitchClient.logInWithProvider(APIKeyProvider(key.key!!)).addOnCompleteListener {
-//            assertThat(it.isSuccessful, it.exception)
-//            assertThat(it.result != null)
-//        })
-//    }
-//
-//    @Test
-//    fun testFetchApiKey() {
-//        harness.addDefaultApiKeyProvider()
-//        registerAndLogin()
-//        val auth = stitchClient.auth?.let { it } ?: return
-//
-//        val key = Tasks.await(
-//                auth.createApiKey("key_test").addOnCompleteListener {
-//                    assertThat(it.isSuccessful, it.exception)
-//                }
-//        )
-//
-//        assertThat(key != null)
-//        assertThat(key.key != null)
-//
-//        val partialKey = Tasks.await(auth.fetchApiKey(key.id))
-//        assertThat(partialKey.name == key.name)
-//        assertThat(partialKey.id == key.id)
-//        assertThat(!partialKey.disabled)
-//    }
-//
-//    @Test
-//    fun testFetchApiKeys() {
-//        harness.addDefaultApiKeyProvider()
-//        registerAndLogin()
-//        val auth = stitchClient.auth?.let { it } ?: return
-//
-//        val keys: List<APIKey> = (0..3).map {
-//            Tasks.await(auth
-//                    .createApiKey("selfApiKeyTest$it")
-//                    .addOnCompleteListener {
-//                        assertThat(it.isSuccessful, it.exception)
-//                    })
-//        }
-//
-//        keys.forEach { assertThat(it.key != null) }
-//
-//        val partialKeys = Tasks.await(auth.fetchApiKeys())
-//        val partialKeysMapped = partialKeys.associateBy { it.id }
-//
-//        partialKeys.forEach {
-//            assertThat(partialKeysMapped.containsKey(it.id))
-//        }
-//    }
-//
-//    @Test
-//    fun testEnableDisableApiKey() {
-//        harness.addDefaultApiKeyProvider()
-//        registerAndLogin()
-//        val auth = stitchClient.auth?.let { it } ?: return
-//
-//        val key = Tasks.await(
-//                auth.createApiKey("key_test").addOnCompleteListener {
-//                    assertThat(it.isSuccessful, it.exception)
-//                }
-//        )
-//
-//        assertThat(key != null)
-//        assertThat(key.key != null)
-//
-//        Tasks.await(auth.disableApiKey(key.id))
-//
-//        assertThat(Tasks.await(auth.fetchApiKey(key.id)).disabled)
-//
-//        Tasks.await(auth.enableApiKey(key.id))
-//
-//        assertThat(!Tasks.await(auth.fetchApiKey(key.id)).disabled)
-//    }
-//
 }

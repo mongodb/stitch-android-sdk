@@ -24,16 +24,15 @@ import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
 import org.bson.Document;
 
-public class CoreUserPasswordAuthProviderClient extends CoreAuthProviderClient {
-
+public class CoreUserPasswordAuthProviderClient extends CoreAuthProviderClient<StitchRequestClient> {
   private final Routes routes;
 
   protected CoreUserPasswordAuthProviderClient(
       final String providerName,
       final StitchRequestClient requestClient,
-      final StitchAuthRoutes routes) {
-    super(providerName, requestClient, routes);
-    this.routes = new Routes(routes, providerName);
+      final StitchAuthRoutes authRoutes) {
+    super(providerName, requestClient, authRoutes.getAuthProviderRoute(providerName));
+    this.routes = new Routes(this.getBaseRoute());
   }
 
   protected void registerWithEmailInternal(final String email, final String password) {
@@ -79,32 +78,34 @@ public class CoreUserPasswordAuthProviderClient extends CoreAuthProviderClient {
   }
 
   private static class Routes {
-    private final StitchAuthRoutes authRoutes;
-    private final String providerName;
+    private final String baseRoute;
 
-    Routes(final StitchAuthRoutes authRoutes, final String providerName) {
-      this.authRoutes = authRoutes;
-      this.providerName = providerName;
+    Routes(final String baseRoute) {
+      this.baseRoute = baseRoute;
+    }
+
+    private String getExtensionRoute(String path) {
+      return String.format("%s/%s", this.baseRoute, path);
     }
 
     private String getRegisterWithEmailRoute() {
-      return authRoutes.getAuthProviderExtensionRoute(providerName,"register");
+      return getExtensionRoute("register");
     }
 
     private String getConfirmUserRoute() {
-      return authRoutes.getAuthProviderExtensionRoute(providerName, "confirm");
+      return getExtensionRoute("confirm");
     }
 
     private String getResendConfirmationEmailRoute() {
-      return authRoutes.getAuthProviderExtensionRoute(providerName, "confirm/send");
+      return getExtensionRoute("confirm/send");
     }
 
     private String getResetPasswordRoute() {
-      return authRoutes.getAuthProviderExtensionRoute(providerName, "reset");
+      return getExtensionRoute("reset");
     }
 
     private String getSendResetPasswordEmailRoute() {
-      return authRoutes.getAuthProviderExtensionRoute(providerName, "reset/send");
+      return getExtensionRoute("reset/send");
     }
   }
 

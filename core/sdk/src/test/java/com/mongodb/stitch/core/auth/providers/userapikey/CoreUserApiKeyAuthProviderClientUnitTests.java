@@ -14,20 +14,10 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.auth.internal;
 
-public interface StitchAuthRoutes {
-  String getBaseAuthRoute();
+package com.mongodb.stitch.core.auth.providers.userapikey;
 
-  String getSessionRoute();
+public class CoreUserApiKeyAuthProviderClientUnitTests {
 
-  String getProfileRoute();
 
-  String getAuthProviderRoute(String providerName);
-
-  String getAuthProviderLoginRoute(String providerName);
-
-  String getAuthProviderLinkRoute(String providerName);
-
-  String getAuthProviderExtensionRoute(String providerName, String path);
 }

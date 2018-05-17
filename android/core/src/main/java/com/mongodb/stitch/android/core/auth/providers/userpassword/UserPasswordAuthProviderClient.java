@@ -65,8 +65,8 @@ public interface UserPasswordAuthProviderClient {
    */
   Task<Void> sendResetPasswordEmail(@NonNull final String email);
 
-  AuthProviderClientFactory<UserPasswordAuthProviderClient> Factory =
-      new AuthProviderClientFactory<UserPasswordAuthProviderClient>() {
+  AuthProviderClientFactory<UserPasswordAuthProviderClient, StitchRequestClient> Factory =
+      new AuthProviderClientFactory<UserPasswordAuthProviderClient, StitchRequestClient>() {
         @Override
         public UserPasswordAuthProviderClient getClient(
             final StitchRequestClient requestClient,

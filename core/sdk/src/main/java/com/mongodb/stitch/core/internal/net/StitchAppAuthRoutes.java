@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.internal.net;
 import static com.mongodb.stitch.core.internal.net.StitchAppAuthRoutes.RouteParts.AUTH_PROVIDER_LINK_ROUTE;
 import static com.mongodb.stitch.core.internal.net.StitchAppAuthRoutes.RouteParts.AUTH_PROVIDER_LOGIN_ROUTE;
 import static com.mongodb.stitch.core.internal.net.StitchAppAuthRoutes.RouteParts.AUTH_PROVIDER_ROUTE;
+import static com.mongodb.stitch.core.internal.net.StitchAppAuthRoutes.RouteParts.BASE_AUTH_ROUTE;
 import static com.mongodb.stitch.core.internal.net.StitchAppAuthRoutes.RouteParts.PROFILE_ROUTE;
 import static com.mongodb.stitch.core.internal.net.StitchAppAuthRoutes.RouteParts.SESSION_ROUTE;
 import static com.mongodb.stitch.core.internal.net.StitchAppRoutes.RouteParts.APP_ROUTE;
@@ -31,6 +32,11 @@ public final class StitchAppAuthRoutes implements StitchAuthRoutes {
 
   StitchAppAuthRoutes(final String clientAppId) {
     this.clientAppId = clientAppId;
+  }
+
+  @Override
+  public String getBaseAuthRoute() {
+    return BASE_AUTH_ROUTE;
   }
 
   @Override
@@ -64,9 +70,11 @@ public final class StitchAppAuthRoutes implements StitchAuthRoutes {
   }
 
   public static class RouteParts {
-    static final String SESSION_ROUTE = BASE_ROUTE + "/auth/session";
-    static final String PROFILE_ROUTE = BASE_ROUTE + "/auth/profile";
-    static final String AUTH_PROVIDER_ROUTE = APP_ROUTE + "/auth/providers/%s";
+    static final String BASE_AUTH_ROUTE = BASE_ROUTE + "/auth";
+    static final String SESSION_ROUTE = BASE_AUTH_ROUTE + "/session";
+    static final String PROFILE_ROUTE = BASE_AUTH_ROUTE + "/profile";
+    static final String BASE_APP_AUTH_ROUTE = APP_ROUTE + "/auth";
+    static final String AUTH_PROVIDER_ROUTE = BASE_APP_AUTH_ROUTE + "/providers/%s";
     static final String AUTH_PROVIDER_LOGIN_ROUTE = AUTH_PROVIDER_ROUTE + "/login";
     static final String AUTH_PROVIDER_LINK_ROUTE = AUTH_PROVIDER_LOGIN_ROUTE + "?link=true";
   }

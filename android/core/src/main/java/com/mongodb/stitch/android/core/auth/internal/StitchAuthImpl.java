@@ -26,10 +26,13 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.StitchClientErrorCode;
+import com.mongodb.stitch.core.StitchClientException;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.core.auth.internal.CoreStitchAuth;
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser;
 import com.mongodb.stitch.core.auth.internal.DeviceFields;
+import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.internal.StitchUserFactory;
 import com.mongodb.stitch.core.internal.common.Storage;
@@ -73,8 +76,32 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     return new StitchUserFactoryImpl(this);
   }
 
+  /**
+   * Gets an authenticated client for the given authentication provider. Most authentication
+   * providers will allow creation of a client without a name of the provider.
+   *
+   * @param provider The provider that will create a client for the authentication provider.
+   * @return A client to interact with the authentication provider.
+   */
   @Override
-  public <T> T getProviderClient(final AuthProviderClientFactory<T> provider) {
+  public <ClientT> ClientT getAuthenticatedProviderClient(
+          AuthProviderClientFactory<ClientT, StitchAuthRequestClient> provider) {
+    if(!isLoggedIn()) {
+      throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
+    }
+    return provider.getClient(this, getAuthRoutes(), dispatcher);
+  }
+
+  /**
+   * Gets a client for the given authentication provider. Most authentication providers will allow
+   * creation of a client without a name of the provider.
+   *
+   * @param provider The provider that will create a client for the authentication provider.
+   * @return A client to interact with the authentication provider.
+   */
+  @Override
+  public <ClientT> ClientT getProviderClient(
+          AuthProviderClientFactory<ClientT, StitchRequestClient> provider) {
     return provider.getClient(getRequestClient(), getAuthRoutes(), dispatcher);
   }
 
