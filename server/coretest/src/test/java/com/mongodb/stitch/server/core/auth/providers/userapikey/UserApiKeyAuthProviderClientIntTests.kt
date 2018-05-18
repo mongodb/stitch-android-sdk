@@ -1,8 +1,5 @@
-package com.mongodb.stitch.android.core.auth.providers.userapikey
+package com.mongodb.stitch.server.core.auth.providers.userapikey
 
-import android.support.test.runner.AndroidJUnit4
-import com.google.android.gms.tasks.Tasks
-import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.StitchClientErrorCode
 import com.mongodb.stitch.core.StitchClientException
 import com.mongodb.stitch.core.StitchServiceErrorCode
@@ -12,6 +9,7 @@ import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey
+import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
 import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,11 +18,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import org.junit.runner.RunWith
-import java.util.concurrent.ExecutionException
 
-@RunWith(AndroidJUnit4::class)
-class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
+class UserApiKeyAuthProviderClientIntTests: BaseStitchServerIntTest() {
     private fun prepareApp(): Pair<AppResponse, Apps.App> {
         val app = createApp()
         addProvider(app.second, config = ProviderConfigs.Userpass(
@@ -48,15 +43,13 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
                 UserApiKeyAuthProviderClient.Factory
         )
 
-        val key = Tasks.await(
-                apiKeyClient.createApiKey("key_test")
-        )
+        val key = apiKeyClient.createApiKey("key_test")
 
         assertNotNull(key)
         assertNotNull(key.key)
 
-        Tasks.await(client.auth.logout())
-        val user = Tasks.await(client.auth.loginWithCredential(UserApiKeyCredential(key.key)))
+        client.auth.logout()
+        val user = client.auth.loginWithCredential(UserApiKeyCredential(key.key))
         assertEquals(originalUserId, user.id)
     }
 
@@ -70,16 +63,12 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
                 UserApiKeyAuthProviderClient.Factory
         )
 
-        val key = Tasks.await(
-                apiKeyClient.createApiKey("key_test")
-        )
+        val key = apiKeyClient.createApiKey("key_test")
 
         assertNotNull(key)
         assertNotNull(key.key)
 
-        val fetchedKey = Tasks.await(
-                apiKeyClient.fetchApiKey(key.id)
-        )
+        val fetchedKey = apiKeyClient.fetchApiKey(key.id)
 
         assertNotNull(fetchedKey)
         assertNull(fetchedKey.key)
@@ -97,12 +86,12 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
         )
 
         val keys: List<UserApiKey> = (0..3).map {
-            Tasks.await(apiKeyClient.createApiKey("selfApiKeyTest$it"))
+            apiKeyClient.createApiKey("selfApiKeyTest$it")
         }
 
         keys.forEach { assertNotNull(it.key) }
 
-        val partialKeys =  Tasks.await(apiKeyClient.fetchApiKeys())
+        val partialKeys =  apiKeyClient.fetchApiKeys()
         assertEquals(keys.size, partialKeys.size)
 
         val partialKeyIds = keys.map { it.id }
@@ -119,18 +108,18 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
                 UserApiKeyAuthProviderClient.Factory
         )
 
-        val key = Tasks.await(apiKeyClient.createApiKey("key_test"))
+        val key = apiKeyClient.createApiKey("key_test")
         assertNotNull(key)
         assertNotNull(key.key)
 
-        Tasks.await(apiKeyClient.disableApiKey(key.id))
-        assertTrue(Tasks.await(apiKeyClient.fetchApiKey(key.id)).disabled)
+        apiKeyClient.disableApiKey(key.id)
+        assertTrue(apiKeyClient.fetchApiKey(key.id).disabled)
 
-        Tasks.await(apiKeyClient.enableApiKey(key.id))
-        assertFalse(Tasks.await(apiKeyClient.fetchApiKey(key.id)).disabled)
+        apiKeyClient.enableApiKey(key.id)
+        assertFalse(apiKeyClient.fetchApiKey(key.id).disabled)
 
-        Tasks.await(apiKeyClient.deleteApiKey(key.id))
-        assertEquals(0, Tasks.await(apiKeyClient.fetchApiKeys()).size)
+        apiKeyClient.deleteApiKey(key.id)
+        assertEquals(0, apiKeyClient.fetchApiKeys().size)
     }
 
     @Test
@@ -145,12 +134,10 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
         )
 
         try {
-            Tasks.await(apiKeyClient.createApiKey("$()!$"))
+            apiKeyClient.createApiKey("$()!$")
             fail("did not fail when creating key with invalid name")
-        } catch (e: ExecutionException) {
-            assertTrue(e.cause is StitchServiceException)
-            assertEquals(StitchServiceErrorCode.INVALID_PARAMETER,
-                    (e.cause as StitchServiceException).errorCode)
+        } catch (e: StitchServiceException) {
+            assertEquals(StitchServiceErrorCode.INVALID_PARAMETER, e.errorCode)
         }
     }
 
@@ -166,12 +153,10 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
         )
 
         try {
-            Tasks.await(apiKeyClient.fetchApiKey(ObjectId()))
+            apiKeyClient.fetchApiKey(ObjectId())
             fail("found a nonexistent key")
-        } catch (e: ExecutionException) {
-            assertTrue(e.cause is StitchServiceException)
-            assertEquals(StitchServiceErrorCode.API_KEY_NOT_FOUND,
-                    (e.cause as StitchServiceException).errorCode)
+        } catch (e: StitchServiceException) {
+            assertEquals(StitchServiceErrorCode.API_KEY_NOT_FOUND, e.errorCode)
         }
     }
 

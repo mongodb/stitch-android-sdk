@@ -17,10 +17,13 @@
 package com.mongodb.stitch.server.core.auth.internal;
 
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.StitchClientErrorCode;
+import com.mongodb.stitch.core.StitchClientException;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.core.auth.internal.CoreStitchAuth;
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser;
 import com.mongodb.stitch.core.auth.internal.DeviceFields;
+import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.internal.StitchUserFactory;
 import com.mongodb.stitch.core.internal.common.Storage;
@@ -50,7 +53,17 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  public <T> T getProviderClient(final AuthProviderClientFactory<T> provider) {
+  public <ClientT> ClientT getAuthenticatedProviderClient(
+          final AuthProviderClientFactory<ClientT, StitchAuthRequestClient> provider) {
+    if(!isLoggedIn()) {
+      throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
+    }
+    return provider.getClient(this, getAuthRoutes());
+  }
+
+  @Override
+  public <ClientT> ClientT getProviderClient(
+          final AuthProviderClientFactory<ClientT, StitchRequestClient> provider) {
     return provider.getClient(getRequestClient(), getAuthRoutes());
   }
 

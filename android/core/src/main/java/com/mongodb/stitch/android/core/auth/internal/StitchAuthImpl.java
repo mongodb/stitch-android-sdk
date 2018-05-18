@@ -85,7 +85,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
    */
   @Override
   public <ClientT> ClientT getAuthenticatedProviderClient(
-          AuthProviderClientFactory<ClientT, StitchAuthRequestClient> provider) {
+          final AuthProviderClientFactory<ClientT, StitchAuthRequestClient> provider) {
     if(!isLoggedIn()) {
       throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
     }
@@ -101,7 +101,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
    */
   @Override
   public <ClientT> ClientT getProviderClient(
-          AuthProviderClientFactory<ClientT, StitchRequestClient> provider) {
+          final AuthProviderClientFactory<ClientT, StitchRequestClient> provider) {
     return provider.getClient(getRequestClient(), getAuthRoutes(), dispatcher);
   }
 

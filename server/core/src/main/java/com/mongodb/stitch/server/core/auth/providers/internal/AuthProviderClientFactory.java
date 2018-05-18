@@ -19,6 +19,9 @@ package com.mongodb.stitch.server.core.auth.providers.internal;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
-public interface AuthProviderClientFactory<T> {
-  T getClient(final StitchRequestClient requestClient, final StitchAuthRoutes routes);
+public interface AuthProviderClientFactory<ClientT, RequestClientT> {
+  ClientT getClient(
+          final RequestClientT requestClient,
+          final StitchAuthRoutes routes
+  );
 }
