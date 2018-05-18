@@ -2,7 +2,6 @@ package com.mongodb.stitch.android.core
 
 import android.support.test.runner.AndroidJUnit4
 import com.google.android.gms.tasks.Tasks
-import com.mongodb.stitch.android.core.auth.providers.userapikey.UserApiKeyAuthProviderClient
 import com.mongodb.stitch.android.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.StitchRequestErrorCode
@@ -16,14 +15,11 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.custom.CustomAuthProvider
 import com.mongodb.stitch.core.auth.providers.custom.CustomCredential
-import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
-import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.Document
-import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

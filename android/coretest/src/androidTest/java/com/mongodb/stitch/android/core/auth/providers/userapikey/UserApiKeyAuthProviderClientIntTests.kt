@@ -7,6 +7,8 @@ import com.mongodb.stitch.core.StitchClientErrorCode
 import com.mongodb.stitch.core.StitchClientException
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
+import com.mongodb.stitch.core.admin.Apps
+import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey
@@ -23,8 +25,7 @@ import java.util.concurrent.ExecutionException
 
 @RunWith(AndroidJUnit4::class)
 class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
-    @Test
-    fun testCreateSelfApiKey() {
+    private fun prepareApp(): Pair<AppResponse, Apps.App> {
         val app = createApp()
         addProvider(app.second, config = ProviderConfigs.Userpass(
                 emailConfirmationUrl = "http://emailConfirmURL.com",
@@ -33,9 +34,13 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
                 resetPasswordSubject = "password subject")
         )
         enableApiKeyProvider(app.second)
+        return app
+    }
 
+    @Test
+    fun testCreateSelfApiKey() {
+        val app = prepareApp()
         val client = getAppClient(app.first)
-
         val originalUserId = registerAndLoginWithUserPass(
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
@@ -57,17 +62,8 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
 
     @Test
     fun testFetchApiKey() {
-        val app = createApp()
-        addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
-        )
-        enableApiKeyProvider(app.second)
-
+        val app = prepareApp()
         val client = getAppClient(app.first)
-
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getAuthenticatedProviderClient(
@@ -92,17 +88,8 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
 
     @Test
     fun testFetchApiKeys() {
-        val app = createApp()
-        addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
-        )
-        enableApiKeyProvider(app.second)
-
+        val app = prepareApp()
         val client = getAppClient(app.first)
-
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getAuthenticatedProviderClient(
@@ -124,17 +111,8 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
 
     @Test
     fun testEnableDisableDeleteApiKey() {
-        val app = createApp()
-        addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
-        )
-        enableApiKeyProvider(app.second)
-
+        val app = prepareApp()
         val client = getAppClient(app.first)
-
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getAuthenticatedProviderClient(
@@ -157,17 +135,8 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
 
     @Test
     fun testCreateKeyWithInvalidName() {
-        val app = createApp()
-        addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
-        )
-        enableApiKeyProvider(app.second)
-
+        val app = prepareApp()
         val client = getAppClient(app.first)
-
         registerAndLoginWithUserPass(
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
@@ -187,17 +156,8 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
 
     @Test
     fun testFetchNonexistentKey() {
-        val app = createApp()
-        addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
-        )
-        enableApiKeyProvider(app.second)
-
+        val app = prepareApp()
         val client = getAppClient(app.first)
-
         registerAndLoginWithUserPass(
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
