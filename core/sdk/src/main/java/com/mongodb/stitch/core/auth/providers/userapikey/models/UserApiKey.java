@@ -23,6 +23,9 @@ import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 
 import org.bson.types.ObjectId;
 
+/**
+ * A struct representing a user API key as returned by the Stitch client API.
+ */
 public final class UserApiKey {
   private final ObjectId id;
   private final String key;
@@ -30,6 +33,13 @@ public final class UserApiKey {
   private final Boolean disabled;
 
 
+  /**
+   * Constructs a User API key with the provided parameters.
+   * @param id The id of the user API key as an ObjectId hex string.
+   * @param key The key itself.
+   * @param name The name of the key.
+   * @param disabled Whether or not the key is disabled.
+   */
   @JsonCreator
   public UserApiKey(
           @JsonProperty(Fields.ID) final String id,

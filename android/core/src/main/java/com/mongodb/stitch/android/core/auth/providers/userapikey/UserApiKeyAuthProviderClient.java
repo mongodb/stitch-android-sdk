@@ -25,11 +25,10 @@ import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
-import com.mongodb.stitch.core.internal.net.StitchRequestClient;
-
-import org.bson.types.ObjectId;
 
 import java.util.List;
+
+import org.bson.types.ObjectId;
 
 public interface UserApiKeyAuthProviderClient {
   /**
@@ -83,9 +82,9 @@ public interface UserApiKeyAuthProviderClient {
       new AuthProviderClientFactory<UserApiKeyAuthProviderClient, StitchAuthRequestClient>() {
         @Override
         public UserApiKeyAuthProviderClient getClient(
-                StitchAuthRequestClient requestClient,
-                StitchAuthRoutes routes,
-                TaskDispatcher dispatcher
+                final StitchAuthRequestClient requestClient,
+                final StitchAuthRoutes routes,
+                final TaskDispatcher dispatcher
         ) {
           return new UserApiKeyAuthProviderClientImpl(requestClient, routes, dispatcher);
         }

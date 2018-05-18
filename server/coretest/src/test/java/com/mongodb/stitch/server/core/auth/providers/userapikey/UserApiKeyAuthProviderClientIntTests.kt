@@ -19,7 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-class UserApiKeyAuthProviderClientIntTests: BaseStitchServerIntTest() {
+class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
     private fun prepareApp(): Pair<AppResponse, Apps.App> {
         val app = createApp()
         addProvider(app.second, config = ProviderConfigs.Userpass(
@@ -91,7 +91,7 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchServerIntTest() {
 
         keys.forEach { assertNotNull(it.key) }
 
-        val partialKeys =  apiKeyClient.fetchApiKeys()
+        val partialKeys = apiKeyClient.fetchApiKeys()
         assertEquals(keys.size, partialKeys.size)
 
         val partialKeyIds = keys.map { it.id }

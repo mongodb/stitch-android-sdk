@@ -19,13 +19,12 @@ package com.mongodb.stitch.server.core.auth.providers.userapikey.internal;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.userapikey.CoreUserApiKeyAuthProviderClient;
-import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyAuthProvider;
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
 import com.mongodb.stitch.server.core.auth.providers.userapikey.UserApiKeyAuthProviderClient;
 
-import org.bson.types.ObjectId;
-
 import java.util.List;
+
+import org.bson.types.ObjectId;
 
 public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthProviderClient
     implements UserApiKeyAuthProviderClient {
@@ -33,7 +32,7 @@ public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthPr
   public UserApiKeyAuthProviderClientImpl(
           final StitchAuthRequestClient requestClient,
           final StitchAuthRoutes routes
-          ) {
+  ) {
     super(requestClient, routes);
   }
 
@@ -44,7 +43,7 @@ public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthPr
    * @return The created API key.
    */
   @Override
-  public UserApiKey createApiKey(String name) {
+  public UserApiKey createApiKey(final String name) {
     return createApiKeyInternal(name);
   }
 
@@ -55,7 +54,7 @@ public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthPr
    * @return The fetched API key.
    */
   @Override
-  public UserApiKey fetchApiKey(ObjectId id) {
+  public UserApiKey fetchApiKey(final ObjectId id) {
     return fetchApiKeyInternal(id);
   }
 
@@ -75,7 +74,7 @@ public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthPr
    * @param id The id of the API key to delete.
    */
   @Override
-  public void deleteApiKey(ObjectId id) {
+  public void deleteApiKey(final ObjectId id) {
     deleteApiKeyInternal(id);
   }
 
@@ -85,7 +84,7 @@ public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthPr
    * @param id The id of the API key to enable.
    */
   @Override
-  public void enableApiKey(ObjectId id) {
+  public void enableApiKey(final ObjectId id) {
     enableApiKeyInternal(id);
   }
 
@@ -95,7 +94,7 @@ public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthPr
    * @param id The id of the API key to disable.
    */
   @Override
-  public void disableApiKey(ObjectId id) {
+  public void disableApiKey(final ObjectId id) {
     disableApiKeyInternal(id);
   }
 }

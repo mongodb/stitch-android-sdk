@@ -50,7 +50,7 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
   /**
    * Performs a basic JSON decoding of the provided HTTP response.
    */
-  protected <T> T decode(Response response, Class<T> resultClass) {
+  protected <T> T decode(final Response response, final Class<T> resultClass) {
     try {
       return StitchObjectMapper.getInstance()
               .readValue(response.getBody(), resultClass);
@@ -63,7 +63,7 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
    * Performs a basic JSON decoding of the provided HTTP response, into a list of the specified
    * type.
    */
-  protected <T> List<T> decodeList(Response response, Class<T> resultClass) {
+  protected <T> List<T> decodeList(final Response response, final Class<T> resultClass) {
     try {
       return StitchObjectMapper.getInstance()
               .readValue(response.getBody(), new TypeReference<List<T>>() {});

@@ -1,8 +1,8 @@
 package com.mongodb.stitch.core.testutils
 
-import com.mongodb.stitch.core.admin.*
 import com.mongodb.stitch.core.admin.Apps.App
 import com.mongodb.stitch.core.admin.Apps.App.Services.Service
+import com.mongodb.stitch.core.admin.StitchAdminClient
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.apps.app
 import com.mongodb.stitch.core.admin.apps.create
@@ -10,6 +10,10 @@ import com.mongodb.stitch.core.admin.authProviders.AuthProvidersResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigWrapper
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.authProviders.authProvider
+import com.mongodb.stitch.core.admin.create
+import com.mongodb.stitch.core.admin.enable
+import com.mongodb.stitch.core.admin.list
+import com.mongodb.stitch.core.admin.remove
 import com.mongodb.stitch.core.admin.services.ServiceConfigWrapper
 import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.ServiceResponse

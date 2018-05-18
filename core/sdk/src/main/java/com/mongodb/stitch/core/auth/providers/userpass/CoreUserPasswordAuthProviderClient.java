@@ -24,7 +24,8 @@ import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
 import org.bson.Document;
 
-public class CoreUserPasswordAuthProviderClient extends CoreAuthProviderClient<StitchRequestClient> {
+public class CoreUserPasswordAuthProviderClient
+        extends CoreAuthProviderClient<StitchRequestClient> {
   private final Routes routes;
 
   protected CoreUserPasswordAuthProviderClient(
@@ -84,7 +85,7 @@ public class CoreUserPasswordAuthProviderClient extends CoreAuthProviderClient<S
       this.baseRoute = baseRoute;
     }
 
-    private String getExtensionRoute(String path) {
+    private String getExtensionRoute(final String path) {
       return String.format("%s/%s", this.baseRoute, path);
     }
 

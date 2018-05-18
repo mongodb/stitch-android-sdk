@@ -24,7 +24,7 @@ import org.junit.runner.RunWith
 import java.util.concurrent.ExecutionException
 
 @RunWith(AndroidJUnit4::class)
-class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
+class UserApiKeyAuthProviderClientIntTests : BaseStitchAndroidIntTest() {
     private fun prepareApp(): Pair<AppResponse, Apps.App> {
         val app = createApp()
         addProvider(app.second, config = ProviderConfigs.Userpass(
@@ -102,7 +102,7 @@ class UserApiKeyAuthProviderClientIntTests: BaseStitchAndroidIntTest() {
 
         keys.forEach { assertNotNull(it.key) }
 
-        val partialKeys =  Tasks.await(apiKeyClient.fetchApiKeys())
+        val partialKeys = Tasks.await(apiKeyClient.fetchApiKeys())
         assertEquals(keys.size, partialKeys.size)
 
         val partialKeyIds = keys.map { it.id }

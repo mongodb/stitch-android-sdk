@@ -21,9 +21,9 @@ import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.userapikey.internal.UserApiKeyAuthProviderClientImpl;
 
-import org.bson.types.ObjectId;
-
 import java.util.List;
+
+import org.bson.types.ObjectId;
 
 public interface UserApiKeyAuthProviderClient {
   /**

@@ -24,10 +24,10 @@ import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 
+import java.util.List;
+
 import org.bson.Document;
 import org.bson.types.ObjectId;
-
-import java.util.List;
 
 public class CoreUserApiKeyAuthProviderClient
         extends CoreAuthProviderClient<StitchAuthRequestClient> {
@@ -138,15 +138,15 @@ public class CoreUserApiKeyAuthProviderClient
       this.baseRoute = baseRoute;
     }
 
-    private String getApiKeyRouteForId(String id) {
+    private String getApiKeyRouteForId(final String id) {
       return String.format("%s/%s", baseRoute, id);
     }
 
-    private String getApiKeyEnableRouteForId(String id) {
+    private String getApiKeyEnableRouteForId(final String id) {
       return getApiKeyRouteForId(id) + "/enable";
     }
 
-    private String getApiKeyDisableRouteForId(String id) {
+    private String getApiKeyDisableRouteForId(final String id) {
       return getApiKeyRouteForId(id) + "/disable";
     }
 

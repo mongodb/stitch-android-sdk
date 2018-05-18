@@ -17,6 +17,14 @@
 
 package com.mongodb.stitch.core.auth.providers.userapikey;
 
+import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 
@@ -26,36 +34,28 @@ import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 
+import java.util.function.Function;
+
+import javax.annotation.Nullable;
+
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import java.util.function.Function;
-
-import javax.annotation.Nullable;
-
-import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 public class CoreUserApiKeyAuthProviderClientUnitTests {
 
   private static final String sampleFullApiKeyResponse =
-          "{\"_id\": \"5aff1768b75e598e62f209e5\", " +
-          "\"key\":\"blah\", " +
-          "\"name\":\"api_key_name\", " +
-          "\"disabled\": false }";
+          "{\"_id\": \"5aff1768b75e598e62f209e5\", "
+                  + "\"key\":\"blah\", "
+                  + "\"name\":\"api_key_name\", "
+                  + "\"disabled\": false }";
 
   private static final String samplePartialApiKeyResponse =
-          "{\"_id\": \"5aff1768b75e598e62f209e5\", " +
-          "\"name\":\"api_key_name\", " +
-          "\"disabled\": false }";
+          "{\"_id\": \"5aff1768b75e598e62f209e5\", "
+                  + "\"name\":\"api_key_name\", "
+                  + "\"disabled\": false }";
 
   private void testClientCall(
           final Function<CoreUserApiKeyAuthProviderClient, Void> fun,
@@ -65,7 +65,7 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
     final String clientAppId = "my_app-12345";
 
     final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
-    if(desiredResponse != null) {
+    if (desiredResponse != null) {
       when(requestClient.doAuthenticatedRequest(any())).thenReturn(desiredResponse);
     }
 
@@ -84,7 +84,8 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
     assertEquals(expectedRequest, requestArg.getValue());
 
     // Should pass along errors
-    doThrow(new IllegalArgumentException("whoops")).when(requestClient).doAuthenticatedRequest(any());
+    doThrow(new IllegalArgumentException("whoops"))
+            .when(requestClient).doAuthenticatedRequest(any());
     assertThrows(() -> {
       fun.apply(client);
       return null;
@@ -107,12 +108,12 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
             .withDocument(new Document("name", apiKeyName));
 
     testClientCall(
-            (client) -> {
-              client.createApiKeyInternal(apiKeyName);
-              return null;
-            },
-            new Response(sampleFullApiKeyResponse),
-            expectedRequestBuilder.build()
+        (client) -> {
+          client.createApiKeyInternal(apiKeyName);
+          return null;
+        },
+        new Response(sampleFullApiKeyResponse),
+        expectedRequestBuilder.build()
     );
   }
 
@@ -130,12 +131,12 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
             .withShouldRefreshOnFailure(false);
 
     testClientCall(
-            (client) -> {
-              client.fetchApiKeyInternal(keyToFetch);
-              return null;
-            },
-            new Response(samplePartialApiKeyResponse),
-            expectedRequestBuilder.build()
+        (client) -> {
+          client.fetchApiKeyInternal(keyToFetch);
+          return null;
+        },
+        new Response(samplePartialApiKeyResponse),
+        expectedRequestBuilder.build()
     );
   }
 
@@ -152,14 +153,14 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
             .withShouldRefreshOnFailure(false);
 
     testClientCall(
-            (client) -> {
-              client.fetchApiKeysInternal();
-              return null;
-            },
-            new Response(String.format("[%s, %s]",
-                    samplePartialApiKeyResponse, samplePartialApiKeyResponse)
-            ),
-            expectedRequestBuilder.build()
+        (client) -> {
+          client.fetchApiKeysInternal();
+          return null;
+        },
+        new Response(String.format("[%s, %s]",
+          samplePartialApiKeyResponse, samplePartialApiKeyResponse)
+        ),
+        expectedRequestBuilder.build()
     );
   }
 
@@ -172,18 +173,18 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
     expectedRequestBuilder
             .withHeaders(null)
             .withMethod(Method.PUT)
-            .withPath(routes.getBaseAuthRoute() +
-                    "/api_keys/" + keyToEnable.toHexString() + "/enable")
+            .withPath(routes.getBaseAuthRoute()
+                    + "/api_keys/" + keyToEnable.toHexString() + "/enable")
             .withRefreshToken()
             .withShouldRefreshOnFailure(false);
 
     testClientCall(
-            (client) -> {
-              client.enableApiKeyInternal(keyToEnable);
-              return null;
-            },
-            null,
-            expectedRequestBuilder.build()
+        (client) -> {
+          client.enableApiKeyInternal(keyToEnable);
+          return null;
+        },
+        null,
+        expectedRequestBuilder.build()
     );
   }
 
@@ -196,18 +197,18 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
     expectedRequestBuilder
             .withHeaders(null)
             .withMethod(Method.PUT)
-            .withPath(routes.getBaseAuthRoute() +
-                    "/api_keys/" + keyToDisable.toHexString() + "/disable")
+            .withPath(routes.getBaseAuthRoute()
+                    + "/api_keys/" + keyToDisable.toHexString() + "/disable")
             .withRefreshToken()
             .withShouldRefreshOnFailure(false);
 
     testClientCall(
-            (client) -> {
-              client.disableApiKeyInternal(keyToDisable);
-              return null;
-            },
-            null,
-            expectedRequestBuilder.build()
+        (client) -> {
+          client.disableApiKeyInternal(keyToDisable);
+          return null;
+        },
+        null,
+        expectedRequestBuilder.build()
     );
   }
 
@@ -225,12 +226,12 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
             .withShouldRefreshOnFailure(false);
 
     testClientCall(
-            (client) -> {
-              client.deleteApiKeyInternal(keyToDelete);
-              return null;
-            },
-            null,
-            expectedRequestBuilder.build()
+        (client) -> {
+          client.deleteApiKeyInternal(keyToDelete);
+          return null;
+        },
+        null,
+        expectedRequestBuilder.build()
     );
   }
 }
