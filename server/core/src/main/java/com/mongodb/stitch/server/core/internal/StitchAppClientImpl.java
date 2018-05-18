@@ -45,7 +45,6 @@ public final class StitchAppClientImpl implements StitchAppClient {
    * @param config The configuration to use for the app client.
    */
   public StitchAppClientImpl(final StitchAppClientConfiguration config) {
-
     this.info =
         new StitchAppClientInfo(
             config.getClientAppId(),

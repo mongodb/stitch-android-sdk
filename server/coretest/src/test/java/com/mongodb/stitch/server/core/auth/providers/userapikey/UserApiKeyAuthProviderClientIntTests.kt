@@ -8,7 +8,6 @@ import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
-import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey
 import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
 import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
@@ -85,7 +84,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
                 UserApiKeyAuthProviderClient.Factory
         )
 
-        val keys: List<UserApiKey> = (0..3).map {
+        val keys = (0..3).map {
             apiKeyClient.createApiKey("selfApiKeyTest$it")
         }
 

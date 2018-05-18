@@ -11,7 +11,6 @@ import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
-import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey
 import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -96,7 +95,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchAndroidIntTest() {
                 UserApiKeyAuthProviderClient.Factory
         )
 
-        val keys: List<UserApiKey> = (0..3).map {
+        val keys = (0..3).map {
             Tasks.await(apiKeyClient.createApiKey("selfApiKeyTest$it"))
         }
 
