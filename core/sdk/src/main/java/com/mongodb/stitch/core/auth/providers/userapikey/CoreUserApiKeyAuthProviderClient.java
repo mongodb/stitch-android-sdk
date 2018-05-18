@@ -29,7 +29,7 @@ import org.bson.types.ObjectId;
 
 import java.util.List;
 
-public abstract class CoreUserApiKeyAuthProviderClient
+public class CoreUserApiKeyAuthProviderClient
         extends CoreAuthProviderClient<StitchAuthRequestClient> {
   private final Routes routes;
 
@@ -68,7 +68,6 @@ public abstract class CoreUserApiKeyAuthProviderClient
             .withPath(routes.getApiKeyRouteForId(id.toHexString()))
             .withRefreshToken()
             .withShouldRefreshOnFailure(false);
-    getRequestClient().doAuthenticatedRequest(reqBuilder.build());
     return decode(getRequestClient().doAuthenticatedRequest(reqBuilder.build()), UserApiKey.class);
   }
 
