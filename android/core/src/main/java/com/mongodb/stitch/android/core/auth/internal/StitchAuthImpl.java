@@ -26,13 +26,10 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.StitchAppClientInfo;
-import com.mongodb.stitch.core.StitchClientErrorCode;
-import com.mongodb.stitch.core.StitchClientException;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.core.auth.internal.CoreStitchAuth;
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser;
 import com.mongodb.stitch.core.auth.internal.DeviceFields;
-import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.internal.StitchUserFactory;
 import com.mongodb.stitch.core.internal.common.Storage;

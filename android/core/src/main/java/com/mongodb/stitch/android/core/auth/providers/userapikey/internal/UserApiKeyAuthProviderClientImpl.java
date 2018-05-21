@@ -25,9 +25,9 @@ import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.userapikey.internal.CoreUserApiKeyAuthProviderClient;
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
-import org.bson.types.ObjectId;
 import java.util.List;
 import java.util.concurrent.Callable;
+import org.bson.types.ObjectId;
 
 public final class UserApiKeyAuthProviderClientImpl extends CoreUserApiKeyAuthProviderClient
     implements UserApiKeyAuthProviderClient {

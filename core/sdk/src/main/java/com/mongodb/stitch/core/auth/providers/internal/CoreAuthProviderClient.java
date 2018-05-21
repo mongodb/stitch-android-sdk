@@ -16,15 +16,6 @@
 
 package com.mongodb.stitch.core.auth.providers.internal;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.mongodb.stitch.core.StitchRequestErrorCode;
-import com.mongodb.stitch.core.StitchRequestException;
-import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
-import com.mongodb.stitch.core.internal.net.Response;
-
-import java.io.IOException;
-import java.util.List;
-
 /**
  * The class from which all Core auth provider clients inherit. Only auth provider clients that
  * make requests to the Stitch server need to inherit this class.
