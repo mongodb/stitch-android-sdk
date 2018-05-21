@@ -21,14 +21,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 
+import java.util.Map;
+
 import org.bson.BsonReader;
 import org.bson.Document;
-import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.DocumentCodec;
 import org.bson.types.ObjectId;
-
-import java.util.Map;
 
 /**
  * A struct representing a user API key as returned by the Stitch client API.
@@ -96,7 +95,7 @@ public final class UserApiKey {
     private static final String DISABLED = "disabled";
   }
 
-  public static final class UserApiKeyDecoder implements Decoder<UserApiKey> {
+  public static final class Decoder implements org.bson.codecs.Decoder<UserApiKey> {
     // TODO: Delete when merging with remote mongodb service PR
     private static void keyPresent(final String key, final Map<String, ?> map) {
       if (!map.containsKey(key)) {
@@ -104,6 +103,7 @@ public final class UserApiKey {
                 String.format("expected %s to be present", key));
       }
     }
+
     /**
      * Decodes a BSON value from the given reader into an instance of the type parameter {@code T}.
      *
@@ -111,18 +111,18 @@ public final class UserApiKey {
      * @param decoderContext the decoder context
      * @return an instance of the type parameter {@code T}.
      */
-     @Override
-     public UserApiKey decode(BsonReader reader, DecoderContext decoderContext) {
-       final Document document = (new DocumentCodec()).decode(reader, decoderContext);
-       keyPresent(Fields.ID, document);
-       keyPresent(Fields.NAME, document);
-       keyPresent(Fields.DISABLED, document);
-       return new UserApiKey(
-               document.getString(Fields.ID),
-               document.getString(Fields.KEY),
-               document.getString(Fields.NAME),
-               document.getBoolean(Fields.DISABLED)
-       );
-     }
+    @Override
+    public UserApiKey decode(final BsonReader reader, final DecoderContext decoderContext) {
+      final Document document = (new DocumentCodec()).decode(reader, decoderContext);
+      keyPresent(Fields.ID, document);
+      keyPresent(Fields.NAME, document);
+      keyPresent(Fields.DISABLED, document);
+      return new UserApiKey(
+              document.getString(Fields.ID),
+              document.getString(Fields.KEY),
+              document.getString(Fields.NAME),
+              document.getBoolean(Fields.DISABLED)
+      );
+    }
   }
 }

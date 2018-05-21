@@ -70,6 +70,6 @@ public interface UserApiKeyAuthProviderClient {
   void disableApiKey(final ObjectId id);
 
   AuthProviderClientFactory<UserApiKeyAuthProviderClient> Factory =
-          (authRequestClient, requestClient, routes) ->
-                  new UserApiKeyAuthProviderClientImpl(authRequestClient, routes);
+      (authRequestClient, requestClient, routes) ->
+              new UserApiKeyAuthProviderClientImpl(authRequestClient, routes);
 }

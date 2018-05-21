@@ -3,8 +3,6 @@ package com.mongodb.stitch.android.core.auth.providers.userapikey
 import android.support.test.runner.AndroidJUnit4
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
-import com.mongodb.stitch.core.StitchClientErrorCode
-import com.mongodb.stitch.core.StitchClientException
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
 import com.mongodb.stitch.core.admin.Apps

@@ -1,7 +1,5 @@
 package com.mongodb.stitch.server.core.auth.providers.userapikey
 
-import com.mongodb.stitch.core.StitchClientErrorCode
-import com.mongodb.stitch.core.StitchClientException
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
 import com.mongodb.stitch.core.admin.Apps

@@ -31,6 +31,6 @@ public interface UserPasswordAuthProviderClient {
   void sendResetPasswordEmail(final String email);
 
   AuthProviderClientFactory<UserPasswordAuthProviderClient> Factory =
-          (authRequestClient, requestClient, routes) ->
-                  new UserPasswordAuthProviderClientImpl(requestClient, routes);
+      (authRequestClient, requestClient, routes) ->
+              new UserPasswordAuthProviderClientImpl(requestClient, routes);
 }

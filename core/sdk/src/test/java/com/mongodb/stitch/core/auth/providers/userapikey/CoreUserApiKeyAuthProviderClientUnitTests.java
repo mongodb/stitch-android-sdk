@@ -56,7 +56,7 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
             new CoreUserApiKeyAuthProviderClient(requestClient, routes);
 
     fun.apply(client);
-    if(ignoresResponse) {
+    if (ignoresResponse) {
       verify(requestClient, times(1)).doAuthenticatedRequest(any());
     } else {
       verify(requestClient, times(1)).doAuthenticatedRequest(any(), any());
@@ -65,7 +65,7 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
     final ArgumentCaptor<StitchAuthRequest> requestArg =
             ArgumentCaptor.forClass(StitchAuthRequest.class);
 
-    if(ignoresResponse) {
+    if (ignoresResponse) {
       verify(requestClient).doAuthenticatedRequest(requestArg.capture());
     } else {
       verify(requestClient).doAuthenticatedRequest(requestArg.capture(), any());
@@ -74,7 +74,7 @@ public class CoreUserApiKeyAuthProviderClientUnitTests {
     assertEquals(expectedRequest, requestArg.getValue());
 
     // Should pass along errors
-    if(ignoresResponse) {
+    if (ignoresResponse) {
       doThrow(new IllegalArgumentException("whoops"))
               .when(requestClient).doAuthenticatedRequest(any());
     } else {

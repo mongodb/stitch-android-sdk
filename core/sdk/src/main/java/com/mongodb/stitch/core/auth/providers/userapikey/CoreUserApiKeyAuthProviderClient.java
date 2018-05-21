@@ -60,7 +60,7 @@ public class CoreUserApiKeyAuthProviderClient
             .withRefreshToken();
     return getRequestClient().doAuthenticatedRequest(
             reqBuilder.build(),
-            new UserApiKey.UserApiKeyDecoder()
+            new UserApiKey.Decoder()
     );
   }
 
@@ -77,7 +77,7 @@ public class CoreUserApiKeyAuthProviderClient
             .withRefreshToken();
     return getRequestClient().doAuthenticatedRequest(
             reqBuilder.build(),
-            new UserApiKey.UserApiKeyDecoder()
+            new UserApiKey.Decoder()
     );
   }
 
@@ -92,7 +92,7 @@ public class CoreUserApiKeyAuthProviderClient
             .withRefreshToken();
     return (List<UserApiKey>) getRequestClient().doAuthenticatedRequest(
             reqBuilder.build(),
-            new CollectionDecoder<>(new UserApiKey.UserApiKeyDecoder()));
+            new CollectionDecoder<>(new UserApiKey.Decoder()));
   }
 
   /**
@@ -162,20 +162,22 @@ public class CoreUserApiKeyAuthProviderClient
     }
   }
 
-  // TODO: Delete when bringing in from remote MongoDB PR
-  private class CollectionDecoder<TResult> implements Decoder<Collection<TResult>> {
-    private final Decoder<TResult> decoder;
+  // TODO: Delete when merging remote MongoDB PR
+  private class CollectionDecoder<T> implements Decoder<Collection<T>> {
+    private final Decoder<T> decoder;
 
-    public CollectionDecoder(final Decoder<TResult> decoder) {
+    public CollectionDecoder(final Decoder<T> decoder) {
       this.decoder = decoder;
     }
 
     @Override
-    public Collection<TResult> decode(final BsonReader reader, final DecoderContext decoderContext) {
-      final Collection<TResult> docs = new ArrayList<>();
+    public Collection<T> decode(
+            final BsonReader reader,
+            final DecoderContext decoderContext) {
+      final Collection<T> docs = new ArrayList<>();
       reader.readStartArray();
       while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-        final TResult doc = decoder.decode(reader, decoderContext);
+        final T doc = decoder.decode(reader, decoderContext);
         docs.add(doc);
       }
       reader.readEndArray();
