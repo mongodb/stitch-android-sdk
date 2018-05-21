@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.stitch.core.internal.common.CollectionDecoder;
 import com.mongodb.stitch.core.services.internal.CoreStitchService;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;

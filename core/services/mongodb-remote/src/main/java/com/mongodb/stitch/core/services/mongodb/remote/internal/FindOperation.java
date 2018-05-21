@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.stitch.core.internal.common.CollectionDecoder;
 import com.mongodb.stitch.core.services.internal.CoreStitchService;
 import java.util.Collection;
 import java.util.Collections;

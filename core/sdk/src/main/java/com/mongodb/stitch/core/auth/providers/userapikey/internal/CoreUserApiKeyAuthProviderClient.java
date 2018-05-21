@@ -18,21 +18,15 @@ package com.mongodb.stitch.core.auth.providers.userapikey.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
-import com.mongodb.stitch.core.auth.providers.CoreAuthProviderClient;
+import com.mongodb.stitch.core.auth.providers.internal.CoreAuthProviderClient;
+import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyAuthProvider;
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
+import com.mongodb.stitch.core.internal.common.CollectionDecoder;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
-
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-
-import org.bson.BsonReader;
-import org.bson.BsonType;
 import org.bson.Document;
-import org.bson.codecs.Decoder;
-import org.bson.codecs.DecoderContext;
 import org.bson.types.ObjectId;
 
 public class CoreUserApiKeyAuthProviderClient
@@ -159,29 +153,6 @@ public class CoreUserApiKeyAuthProviderClient
 
     private static class ApiKeyFields {
       static final String NAME = "name";
-    }
-  }
-
-  // TODO: Delete when merging remote MongoDB PR
-  private static class CollectionDecoder<T> implements Decoder<Collection<T>> {
-    private final Decoder<T> decoder;
-
-    public CollectionDecoder(final Decoder<T> decoder) {
-      this.decoder = decoder;
-    }
-
-    @Override
-    public Collection<T> decode(
-            final BsonReader reader,
-            final DecoderContext decoderContext) {
-      final Collection<T> docs = new ArrayList<>();
-      reader.readStartArray();
-      while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-        final T doc = decoder.decode(reader, decoderContext);
-        docs.add(doc);
-      }
-      reader.readEndArray();
-      return docs;
     }
   }
 }

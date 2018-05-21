@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.services.mongodb.remote.internal;
+package com.mongodb.stitch.core.internal.common;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 
-class CollectionDecoder<ResultT> implements Decoder<Collection<ResultT>> {
+import java.util.ArrayList;
+import java.util.Collection;
+
+public class CollectionDecoder<ResultT> implements Decoder<Collection<ResultT>> {
 
   private final Decoder<ResultT> decoder;
 
-  CollectionDecoder(final Decoder<ResultT> decoder) {
+  public CollectionDecoder(final Decoder<ResultT> decoder) {
     this.decoder = decoder;
   }
 
