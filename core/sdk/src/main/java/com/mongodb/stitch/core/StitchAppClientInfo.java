@@ -24,7 +24,7 @@ public final class StitchAppClientInfo {
   private final String dataDirectory;
   private final String localAppName;
   private final String localAppVersion;
-  private final CodecRegistry configuredCodecRegistry;
+  private final CodecRegistry codecRegistry;
 
   /**
    * Constructs the {@link StitchAppClientInfo}.
@@ -34,12 +34,12 @@ public final class StitchAppClientInfo {
       final String dataDirectory,
       final String localAppName,
       final String localAppVersion,
-      final CodecRegistry configuredCodecRegistry) {
+      final CodecRegistry codecRegistry) {
     this.clientAppId = clientAppId;
     this.dataDirectory = dataDirectory;
     this.localAppName = localAppName;
     this.localAppVersion = localAppVersion;
-    this.configuredCodecRegistry = configuredCodecRegistry;
+    this.codecRegistry = codecRegistry;
   }
 
   /**
@@ -72,9 +72,9 @@ public final class StitchAppClientInfo {
   }
 
   /**
-   * Returns the configured codec registry; may be null.
+   * Returns the codec registry.
    */
-  public CodecRegistry getConfiguredCodecRegistry() {
-    return configuredCodecRegistry;
+  public CodecRegistry getCodecRegistry() {
+    return codecRegistry;
   }
 }

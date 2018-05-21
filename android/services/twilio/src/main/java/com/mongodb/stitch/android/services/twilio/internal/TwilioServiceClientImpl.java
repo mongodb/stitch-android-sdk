@@ -22,7 +22,7 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.services.twilio.TwilioServiceClient;
-import com.mongodb.stitch.core.services.twilio.CoreTwilioServiceClient;
+import com.mongodb.stitch.core.services.twilio.internal.CoreTwilioServiceClient;
 
 import java.util.concurrent.Callable;
 
@@ -39,10 +39,10 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
   /**
    * Sends an SMS/MMS message.
    *
-   * @param to The number to send the message to.
-   * @param from The number that the message is from.
-   * @param body The body text of the message.
-   * @return A task that completes when the send is done.
+   * @param to the number to send the message to.
+   * @param from the number that the message is from.
+   * @param body the body text of the message.
+   * @return a task that completes when the send is done.
    */
   public Task<Void> sendMessage(
       @NonNull final String to,
@@ -60,11 +60,11 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
   /**
    * Sends an SMS/MMS message.
    *
-   * @param to The number to send the message to.
-   * @param from The number that the message is from.
-   * @param body The body text of the message.
-   * @param mediaUrl The URL of the media to send in an MMS.
-   * @return A task that completes when the send is done.
+   * @param to the number to send the message to.
+   * @param from the number that the message is from.
+   * @param body the body text of the message.
+   * @param mediaUrl the URL of the media to send in an MMS.
+   * @return a task that completes when the send is done.
    */
   public Task<Void> sendMessage(
       @NonNull final String to,

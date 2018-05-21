@@ -23,6 +23,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
+import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import java.util.Arrays;
@@ -43,14 +44,18 @@ public class CoreStitchServiceUnitTests {
     final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
     final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
     final CoreStitchService coreStitchService =
-        new CoreStitchServiceImpl(requestClient, routes, serviceName);
+        new CoreStitchServiceImpl(
+            requestClient,
+            routes,
+            serviceName,
+            BsonUtils.DEFAULT_CODEC_REGISTRY);
 
     doReturn(42)
         .when(requestClient)
         .doAuthenticatedJsonRequest(any(), ArgumentMatchers.<Decoder<Integer>>any());
     doReturn(42)
         .when(requestClient)
-        .doAuthenticatedJsonRequest(any(), ArgumentMatchers.<Class<Integer>>any());
+        .doAuthenticatedJsonRequest(any(), ArgumentMatchers.<Class<Integer>>any(), any());
 
     final String funcName = "myFunc1";
     final List<Integer> args = Arrays.asList(1, 2, 3);
@@ -79,7 +84,7 @@ public class CoreStitchServiceUnitTests {
     assertTrue(decArgument.getValue() instanceof IntegerCodec);
 
     verify(requestClient)
-        .doAuthenticatedJsonRequest(docArgument.capture(), clazzArgument.capture());
+        .doAuthenticatedJsonRequest(docArgument.capture(), clazzArgument.capture(), any());
     assertEquals(docArgument.getValue().getMethod(), Method.POST);
     assertEquals(docArgument.getValue().getDocument(), expectedRequestDoc);
     assertEquals(docArgument.getValue().getPath(), routes.getFunctionCallRoute());

@@ -20,7 +20,7 @@ import java.util.Date;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
-public class TodoItem {
+class TodoItem {
 
   public static final String TODO_LIST_DATABASE = "todo";
   public static final String TODO_LIST_COLLECTION = "items";
@@ -30,9 +30,9 @@ public class TodoItem {
   public static final String CHECKED_KEY = "checked";
   public static final String DONE_DATE_KEY = "done_date";
 
-  private ObjectId id;
-  private String task;
-  private Boolean checked;
+  private final ObjectId id;
+  private final String task;
+  private final Boolean checked;
   private Date doneDate;
 
   /** Constructs a todo item from a MongoDB document. */

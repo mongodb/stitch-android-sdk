@@ -32,8 +32,8 @@ public interface HttpServiceClient {
   /**
    * Executes the given {@link HttpRequest}.
    *
-   * @param request The request to execute.
-   * @return A task containing the response to executing the request.
+   * @param request the request to execute.
+   * @return a task containing the response to executing the request.
    */
   Task<HttpResponse> execute(@NonNull final HttpRequest request);
 

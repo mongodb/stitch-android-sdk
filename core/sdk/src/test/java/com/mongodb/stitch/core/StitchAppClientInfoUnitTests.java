@@ -43,6 +43,6 @@ public class StitchAppClientInfoUnitTests {
     assertEquals(stitchAppClientInfo.getLocalAppName(), localAppName);
     assertEquals(stitchAppClientInfo.getLocalAppVersion(), localAppVersion);
     assertEquals(
-        stitchAppClientInfo.getConfiguredCodecRegistry(), BsonUtils.DEFAULT_CODEC_REGISTRY);
+        stitchAppClientInfo.getCodecRegistry(), BsonUtils.DEFAULT_CODEC_REGISTRY);
   }
 }

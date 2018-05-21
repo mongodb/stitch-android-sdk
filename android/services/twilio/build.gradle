@@ -25,8 +25,12 @@ android {
         if (file.exists()) {
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
         }
+        if (!properties.getProperty("test.stitch.twilioSid", "").isEmpty()) {
         testInstrumentationRunnerArgument "test.stitch.twilioSid", properties.getProperty("test.stitch.twilioSid", "")
-        testInstrumentationRunnerArgument "test.stitch.twilioAuthToken", properties.getProperty("test.stitch.twilioAuthToken", "")
+        }
+        if (!properties.getProperty("test.stitch.twilioAuthToken", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.twilioAuthToken", properties.getProperty("test.stitch.twilioAuthToken", "")
+        }
     }
 }
 

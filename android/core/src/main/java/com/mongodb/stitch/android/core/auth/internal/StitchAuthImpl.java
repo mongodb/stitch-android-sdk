@@ -26,18 +26,14 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.StitchAppClientInfo;
-import com.mongodb.stitch.core.StitchClientErrorCode;
-import com.mongodb.stitch.core.StitchClientException;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.core.auth.internal.CoreStitchAuth;
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser;
 import com.mongodb.stitch.core.auth.internal.DeviceFields;
-import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.internal.StitchUserFactory;
 import com.mongodb.stitch.core.internal.common.Storage;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -55,11 +51,11 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   /**
    * Constructs a {@link StitchAuthImpl}.
    *
-   * @param requestClient The request client to use for any Stitch requests.
-   * @param authRoutes Auth specific routes.
-   * @param storage Where to store/retrieve authentication data.
-   * @param dispatcher Where to send asynchronous requests to.
-   * @param appInfo Information about the application.
+   * @param requestClient the request client to use for any Stitch requests.
+   * @param authRoutes auth specific routes.
+   * @param storage where to store/retrieve authentication data.
+   * @param dispatcher where to send asynchronous requests to.
+   * @param appInfo information about the application.
    */
   public StitchAuthImpl(
       final StitchRequestClient requestClient,
@@ -67,7 +63,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
       final Storage storage,
       final TaskDispatcher dispatcher,
       final StitchAppClientInfo appInfo) {
-    super(requestClient, authRoutes, storage, appInfo.getConfiguredCodecRegistry(), true);
+    super(requestClient, authRoutes, storage, true);
     this.dispatcher = dispatcher;
     this.appInfo = appInfo;
   }
@@ -100,7 +96,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     return dispatcher.dispatchTask(
         new Callable<StitchUser>() {
           @Override
-          public StitchUser call() throws Exception {
+          public StitchUser call() {
             return loginWithCredentialInternal(credential);
           }
         });
@@ -111,7 +107,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     return dispatcher.dispatchTask(
         new Callable<StitchUser>() {
           @Override
-          public StitchUser call() throws Exception {
+          public StitchUser call() {
             return linkUserWithCredentialInternal(user, credential);
           }
         });
@@ -122,7 +118,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     return dispatcher.dispatchTask(
         new Callable<Void>() {
           @Override
-          public Void call() throws Exception {
+          public Void call() {
             logoutInternal();
             return null;
           }
@@ -178,7 +174,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     dispatcher.dispatchTask(
         new Callable<Void>() {
           @Override
-          public Void call() throws Exception {
+          public Void call() {
             listener.onAuthEvent(auth);
             return null;
           }
@@ -190,10 +186,5 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     for (final StitchAuthListener listener : listeners) {
       onAuthEvent(listener);
     }
-  }
-
-  @Override
-  public void close() throws IOException {
-    super.close();
   }
 }

@@ -16,8 +16,6 @@
 
 package com.mongodb.stitch.core.auth.providers.userpass;
 
-import com.mongodb.stitch.core.auth.providers.CoreAuthProviderClient;
-
 public final class UserPasswordAuthProvider {
   private UserPasswordAuthProvider() {}
 

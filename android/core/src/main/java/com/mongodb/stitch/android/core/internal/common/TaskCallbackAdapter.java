@@ -36,7 +36,7 @@ public final class TaskCallbackAdapter<T> implements CallbackAsyncAdapter<T, Exc
   @Override
   public void onComplete(final OperationResult<T, Exception> result) {
     if (result.isSuccessful()) {
-      taskCompletionSource.setResult(result.getResult());
+      taskCompletionSource.setResult(result.geResult());
     } else {
       taskCompletionSource.setException(result.getFailure());
     }

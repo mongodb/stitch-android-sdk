@@ -38,13 +38,13 @@ public class AuthInfo {
   /**
    * Constructs a new AuthInfo that's fully specified.
    *
-   * @param userId The id of the currently logged in user.
-   * @param deviceId The id of the device this SDK is running on.
-   * @param accessToken The access token associated with the user.
-   * @param refreshToken The refresh token associated with the user.
-   * @param loggedInProviderType The type of auth provider the current user logged in with.
-   * @param loggedInProviderName The name of the auth provider the current user logged in with.
-   * @param userProfile The profile information about the currently logged in user.
+   * @param userId the id of the currently logged in user.
+   * @param deviceId the id of the device this SDK is running on.
+   * @param accessToken the access token associated with the user.
+   * @param refreshToken the refresh token associated with the user.
+   * @param loggedInProviderType the type of auth provider the current user logged in with.
+   * @param loggedInProviderName the name of the auth provider the current user logged in with.
+   * @param userProfile the profile information about the currently logged in user.
    */
   public AuthInfo(
       final String userId,

@@ -232,7 +232,7 @@ public class StitchRequest {
     }
   }
 
-  protected Document toDocument() {
+  Document toDocument() {
     final Document doc = new Document("method", getMethod().toString());
     doc.put("body", getBody());
     doc.put("headers", getHeaders());

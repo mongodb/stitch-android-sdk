@@ -16,9 +16,9 @@
 
 package com.mongodb.stitch.server.services.http.internal;
 
-import com.mongodb.stitch.core.services.http.CoreHttpServiceClient;
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
+import com.mongodb.stitch.core.services.http.internal.CoreHttpServiceClient;
 import com.mongodb.stitch.server.core.services.StitchService;
 import com.mongodb.stitch.server.services.http.HttpServiceClient;
 
@@ -34,8 +34,8 @@ public final class HttpServiceClientImpl extends CoreHttpServiceClient
   /**
    * Executes the given {@link HttpRequest}.
    *
-   * @param request The request to execute.
-   * @return The response to executing the request.
+   * @param request the request to execute.
+   * @return the response to executing the request.
    */
   public HttpResponse execute(@Nonnull final HttpRequest request) {
     return executeInternal(request);

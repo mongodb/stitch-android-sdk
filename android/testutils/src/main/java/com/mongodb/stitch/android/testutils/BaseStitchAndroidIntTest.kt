@@ -16,7 +16,7 @@ import org.junit.Before
 
 open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
 
-    var clients: MutableList<StitchAppClient> = mutableListOf()
+    private var clients: MutableList<StitchAppClient> = mutableListOf()
 
     @Before
     override fun setup() {

@@ -32,8 +32,8 @@ public final class UserPasswordCredential implements StitchCredential {
   /**
    * Constructs a user password credential for a user.
    *
-   * @param username The username of the user.
-   * @param password The password of the user.
+   * @param username the username of the user.
+   * @param password the password of the user.
    */
   public UserPasswordCredential(
       final String username, final String password) {
@@ -43,9 +43,9 @@ public final class UserPasswordCredential implements StitchCredential {
   /**
    * Constructs a user password credential for a user.
    *
-   * @param providerName The authentication provider name.
-   * @param username The username of the user.
-   * @param password The password of the user.
+   * @param providerName the authentication provider name.
+   * @param username the username of the user.
+   * @param password the password of the user.
    */
   public UserPasswordCredential(
       final String providerName, final String username, final String password) {

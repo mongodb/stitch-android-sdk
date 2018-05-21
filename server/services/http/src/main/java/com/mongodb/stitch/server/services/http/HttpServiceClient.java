@@ -20,6 +20,7 @@ import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.services.http.internal.HttpServiceClientImpl;
+
 import javax.annotation.Nonnull;
 
 public interface HttpServiceClient {
@@ -27,8 +28,8 @@ public interface HttpServiceClient {
   /**
    * Executes the given {@link HttpRequest}.
    *
-   * @param request The request to execute.
-   * @return The response to executing the request.
+   * @param request the request to execute.
+   * @return the response to executing the request.
    */
   HttpResponse execute(@Nonnull final HttpRequest request);
 

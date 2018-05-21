@@ -32,7 +32,7 @@ import org.junit.Before
 
 abstract class BaseStitchIntTest {
 
-    val adminClient: StitchAdminClient by lazy {
+    private val adminClient: StitchAdminClient by lazy {
         StitchAdminClient.create(getStitchBaseURL())
     }
     private var groupId: String = ""

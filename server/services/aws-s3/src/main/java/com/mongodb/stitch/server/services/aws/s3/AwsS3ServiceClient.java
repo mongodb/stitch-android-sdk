@@ -30,12 +30,12 @@ public interface AwsS3ServiceClient {
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object.
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object.
    */
   AwsS3PutObjectResult putObject(
       @Nonnull final String bucket,
@@ -47,12 +47,12 @@ public interface AwsS3ServiceClient {
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object.
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object.
    */
   AwsS3PutObjectResult putObject(
       @Nonnull final String bucket,
@@ -64,12 +64,12 @@ public interface AwsS3ServiceClient {
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object.
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object.
    */
   AwsS3PutObjectResult putObject(
       @Nonnull final String bucket,
@@ -81,12 +81,13 @@ public interface AwsS3ServiceClient {
   /**
    * Puts an object.
    *
-   * @param bucket The bucket to put the object in.
-   * @param key The key (or name) of the object.
-   * @param acl The ACL to apply to the object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @param body The body of the object.
-   * @return The result of the put which contains the location of the object.
+   * @param bucket the bucket to put the object in.
+   * @param key the key (or name) of the object.
+   * @param acl the ACL to apply to the object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @param body the body of the object.
+   * @return the result of the put which contains the location of the object.
+   * @throws IOException if the body fails to be read.
    */
   AwsS3PutObjectResult putObject(
       @Nonnull final String bucket,
@@ -99,13 +100,13 @@ public interface AwsS3ServiceClient {
    * Signs an AWS S3 security policy for a future put object request. This future request would
    * be made outside of the Stitch SDK. This is typically used for large requests that are better
    * sent directly to AWS.
-   * {@see https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html}
+   * @see <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html">Uploading a File to Amazon S3 Using HTTP POST</a>
    *
-   * @param bucket The bucket to put the future object in.
-   * @param key The key (or name) of the future object.
-   * @param acl The ACL to apply to the future object (e.g. private).
-   * @param contentType The content type of the object (e.g. application/json).
-   * @return The signed policy details.
+   * @param bucket the bucket to put the future object in.
+   * @param key the key (or name) of the future object.
+   * @param acl the ACL to apply to the future object (e.g. private).
+   * @param contentType the content type of the object (e.g. application/json).
+   * @return the signed policy details.
    */
   AwsS3SignPolicyResult signPolicy(
       @Nonnull final String bucket,

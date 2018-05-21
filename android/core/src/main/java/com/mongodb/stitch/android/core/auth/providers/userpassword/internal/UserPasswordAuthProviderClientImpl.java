@@ -22,8 +22,7 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.auth.providers.userpassword.UserPasswordAuthProviderClient;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
-import com.mongodb.stitch.core.auth.providers.userpass.CoreUserPasswordAuthProviderClient;
-import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider;
+import com.mongodb.stitch.core.auth.providers.userpass.internal.CoreUserPasswordAuthProviderClient;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
 import java.util.concurrent.Callable;

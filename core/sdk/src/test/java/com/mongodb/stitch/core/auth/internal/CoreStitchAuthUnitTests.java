@@ -332,14 +332,21 @@ public class CoreStitchAuthUnitTests {
     final String rawInt = "{\"$numberInt\": \"42\"}";
     // Check that primitive return types can be decoded.
     doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(reqBuilder.build(), Integer.class));
+    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+        reqBuilder.build(),
+        Integer.class, BsonUtils.DEFAULT_CODEC_REGISTRY));
     doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(reqBuilder.build(), new IntegerCodec()));
+    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+        reqBuilder.build(),
+        new IntegerCodec()));
 
     // Check that the proper exceptions are thrown when decoding into the incorrect type.
     doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
     try {
-      auth.doAuthenticatedJsonRequest(reqBuilder.build(), String.class);
+      auth.doAuthenticatedJsonRequest(
+          reqBuilder.build(),
+          String.class,
+          BsonUtils.DEFAULT_CODEC_REGISTRY);
       fail();
     } catch (final StitchRequestException ignored) {
       // do nothing
@@ -361,7 +368,10 @@ public class CoreStitchAuthUnitTests {
             expectedObjectId.toHexString());
     doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
 
-    Document doc = auth.doAuthenticatedJsonRequest(reqBuilder.build(), Document.class);
+    Document doc = auth.doAuthenticatedJsonRequest(
+        reqBuilder.build(),
+        Document.class,
+        BsonUtils.DEFAULT_CODEC_REGISTRY);
     assertEquals(expectedObjectId, doc.getObjectId("_id"));
     assertEquals(42, (int) doc.getInteger("intValue"));
 
@@ -383,7 +393,10 @@ public class CoreStitchAuthUnitTests {
     // codec.
     doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
     try {
-      auth.doAuthenticatedJsonRequest(reqBuilder.build(), CustomType.class);
+      auth.doAuthenticatedJsonRequest(
+          reqBuilder.build(),
+          CustomType.class,
+          BsonUtils.DEFAULT_CODEC_REGISTRY);
       fail();
     } catch (final StitchRequestException ignored) {
       // do nothing
@@ -402,7 +415,10 @@ public class CoreStitchAuthUnitTests {
     doReturn(new Response(arrFromServerRaw)).when(requestClient).doRequest(any());
 
     @SuppressWarnings("unchecked")
-    final List<Object> list = auth.doAuthenticatedJsonRequest(reqBuilder.build(), List.class);
+    final List<Object> list = auth.doAuthenticatedJsonRequest(
+        reqBuilder.build(),
+        List.class,
+        BsonUtils.DEFAULT_CODEC_REGISTRY);
     assertEquals(arrFromServer, list);
   }
 
@@ -414,10 +430,10 @@ public class CoreStitchAuthUnitTests {
         new StitchAuth(
             requestClient,
             routes,
-            new MemoryStorage(),
-            CodecRegistries.fromRegistries(
-                BsonUtils.DEFAULT_CODEC_REGISTRY,
-                CodecRegistries.fromCodecs(new CustomType.Codec())));
+            new MemoryStorage());
+    final CodecRegistry registry = CodecRegistries.fromRegistries(
+        BsonUtils.DEFAULT_CODEC_REGISTRY,
+        CodecRegistries.fromCodecs(new CustomType.Codec()));
     auth.loginWithCredentialInternal(new AnonymousCredential());
 
     final StitchAuthDocRequest.Builder reqBuilder = new StitchAuthDocRequest.Builder();
@@ -428,9 +444,14 @@ public class CoreStitchAuthUnitTests {
     final String rawInt = "{\"$numberInt\": \"42\"}";
     // Check that primitive return types can be decoded.
     doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(reqBuilder.build(), Integer.class));
+    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+        reqBuilder.build(),
+        Integer.class,
+        registry));
     doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(reqBuilder.build(), new IntegerCodec()));
+    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+        reqBuilder.build(),
+        new IntegerCodec()));
 
     final ObjectId expectedObjectId = new ObjectId();
     final String docRaw =
@@ -441,7 +462,7 @@ public class CoreStitchAuthUnitTests {
     // Check that BSON documents returned as extended JSON can be decoded into BSON
     // documents.
     doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
-    Document doc = auth.doAuthenticatedJsonRequest(reqBuilder.build(), Document.class);
+    Document doc = auth.doAuthenticatedJsonRequest(reqBuilder.build(), Document.class, registry);
     assertEquals(expectedObjectId, doc.getObjectId("_id"));
     assertEquals(42, (int) doc.getInteger("intValue"));
 
@@ -453,25 +474,20 @@ public class CoreStitchAuthUnitTests {
     // Check that a custom type can be decoded without providing a codec, as long as that codec
     // is registered in the CoreStitchAuth's configuration.
     doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
-    final CustomType ct = auth.doAuthenticatedJsonRequest(reqBuilder.build(), CustomType.class);
+    final CustomType ct = auth.doAuthenticatedJsonRequest(
+        reqBuilder.build(),
+        CustomType.class,
+        registry);
     assertEquals(expectedObjectId, ct.getId());
     assertEquals(42, ct.getIntValue());
   }
 
-  public static class StitchAuth extends CoreStitchAuth<CoreStitchUserImpl> {
+  protected static class StitchAuth extends CoreStitchAuth<CoreStitchUserImpl> {
     StitchAuth(
         final StitchRequestClient requestClient,
         final StitchAuthRoutes authRoutes,
         final Storage storage) {
       super(requestClient, authRoutes, storage, false);
-    }
-
-    protected StitchAuth(
-        final StitchRequestClient requestClient,
-        final StitchAuthRoutes authRoutes,
-        final Storage storage,
-        final CodecRegistry codecRegistry) {
-      super(requestClient, authRoutes, storage, codecRegistry, false);
     }
 
     @Override

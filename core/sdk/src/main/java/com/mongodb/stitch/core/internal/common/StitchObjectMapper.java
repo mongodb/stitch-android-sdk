@@ -26,6 +26,9 @@ import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import java.io.IOException;
 import org.bson.Document;
+import org.bson.codecs.DocumentCodec;
+import org.bson.codecs.configuration.CodecRegistries;
+import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.json.JsonMode;
 import org.bson.json.JsonWriterSettings;
 import org.bson.types.ObjectId;
@@ -34,62 +37,89 @@ import org.bson.types.ObjectId;
  * StitchObjectMapper is responsible for handling the serialization and deserialization of JSON
  * objects with special serialization support for {@link Document}s and {@link ObjectId}s.
  */
-public final class StitchObjectMapper {
+public final class StitchObjectMapper extends ObjectMapper {
 
-  private static ObjectMapper singleton;
+  private static StitchObjectMapper singleton;
 
-  private StitchObjectMapper() {}
+  private final CodecRegistry codecRegistry;
 
-  /**
-   * Gets an instance of the object mapper.
-   */
-  public static synchronized ObjectMapper getInstance() {
-    if (singleton != null) {
-      return singleton;
-    }
-    singleton =
-        new ObjectMapper()
-            .registerModule(
-                new SimpleModule("stitchModule")
-                    .addSerializer(
-                        Document.class,
-                        new JsonSerializer<Document>() {
-                          @Override
-                          public void serialize(
-                              final Document value,
-                              final JsonGenerator jsonGenerator,
-                              final SerializerProvider provider)
-                              throws IOException {
-                            final JsonWriterSettings writerSettings =
-                                JsonWriterSettings.builder()
-                                    .outputMode(JsonMode.EXTENDED)
-                                    .indent(true)
-                                    .newLineCharacters("")
-                                    .indentCharacters("")
-                                    .build();
-                            jsonGenerator.writeRawValue(value.toJson(writerSettings));
-                          }
-                        })
-                    .addSerializer(
-                        ObjectId.class,
-                        new JsonSerializer<ObjectId>() {
-                          @Override
-                          public void serialize(
-                              final ObjectId value,
-                              final JsonGenerator jsonGenerator,
-                              final SerializerProvider provider)
-                              throws IOException {
-                            jsonGenerator.writeString(value.toString());
-                          }
-                        }));
-    singleton.setVisibility(
+  private StitchObjectMapper(final CodecRegistry codecRegistry) {
+    this.codecRegistry = codecRegistry;
+    registerModule(
+        new SimpleModule("stitchModule")
+            .addSerializer(
+                Document.class,
+                new JsonSerializer<Document>() {
+                  @Override
+                  public void serialize(
+                      final Document value,
+                      final JsonGenerator jsonGenerator,
+                      final SerializerProvider provider)
+                      throws IOException {
+                    final JsonWriterSettings writerSettings =
+                        JsonWriterSettings.builder()
+                            .outputMode(JsonMode.EXTENDED)
+                            .indent(true)
+                            .newLineCharacters("")
+                            .indentCharacters("")
+                            .build();
+                    final DocumentCodec codec = new DocumentCodec(codecRegistry);
+                    jsonGenerator.writeRawValue(value.toJson(writerSettings, codec));
+                  }
+                })
+            .addSerializer(
+                ObjectId.class,
+                new JsonSerializer<ObjectId>() {
+                  @Override
+                  public void serialize(
+                      final ObjectId value,
+                      final JsonGenerator jsonGenerator,
+                      final SerializerProvider provider)
+                      throws IOException {
+                    jsonGenerator.writeString(value.toString());
+                  }
+                }));
+    setVisibility(
         new VisibilityChecker.Std(
             JsonAutoDetect.Visibility.NONE,
             JsonAutoDetect.Visibility.NONE,
             JsonAutoDetect.Visibility.NONE,
             JsonAutoDetect.Visibility.NONE,
             JsonAutoDetect.Visibility.NONE));
-    singleton.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+  }
+
+  private StitchObjectMapper() {
+    this(BsonUtils.DEFAULT_CODEC_REGISTRY);
+  }
+
+  private StitchObjectMapper(final StitchObjectMapper mapper, final CodecRegistry codecRegistry) {
+    super(mapper);
+    this.codecRegistry = codecRegistry;
+  }
+
+  /**
+   * Applies the given codec registry to be used alongside the default codec registry.
+   * @param codecRegistry the codec registry to merge in.
+   * @return an {@link StitchObjectMapper} with the merged codec registries.
+   */
+  public StitchObjectMapper withCodecRegistry(final CodecRegistry codecRegistry) {
+    // We can't detect if their codecRegistry has any duplicate providers. There's also a chance
+    // that putting ours first may prevent decoding of some of their classes if for example they
+    // have their own way of decoding an Integer.
+    final CodecRegistry newReg =
+        CodecRegistries.fromRegistries(BsonUtils.DEFAULT_CODEC_REGISTRY, codecRegistry);
+    return new StitchObjectMapper(this, newReg);
+  }
+
+  /**
+   * Gets an instance of the object mapper.
+   */
+  public static synchronized StitchObjectMapper getInstance() {
+    if (singleton != null) {
+      return singleton;
+    }
+    singleton = new StitchObjectMapper();
     return singleton;
   }
 }

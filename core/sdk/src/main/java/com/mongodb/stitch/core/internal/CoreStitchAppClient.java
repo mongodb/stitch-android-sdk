@@ -17,56 +17,51 @@
 package com.mongodb.stitch.core.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
-import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
+import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceImpl;
 import java.util.List;
 import javax.annotation.Nullable;
-import org.bson.Document;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public final class CoreStitchAppClient {
-  private final StitchAuthRequestClient authRequestClient;
-  private final StitchAppRoutes routes;
+  private final CoreStitchService functionService;
 
+  /**
+   * Constructs a new app client.
+   *
+   * @param authRequestClient the request client to used for authenticated requests.
+   * @param routes the app specific routes.
+   * @param codecRegistry the codec registry used for de/serialization.
+   */
   public CoreStitchAppClient(
-      final StitchAuthRequestClient authRequestClient, final StitchAppRoutes routes) {
-    this.authRequestClient = authRequestClient;
-    this.routes = routes;
-  }
-
-  private StitchAuthDocRequest getCallFunctionRequest(
-          final String name,
-          final List<? extends Object> args,
-          final @Nullable Long requestTimeout) {
-    final Document body = new Document();
-    body.put("name", name);
-    body.put("arguments", args);
-
-    final StitchAuthDocRequest.Builder reqBuilder = new StitchAuthDocRequest.Builder();
-    reqBuilder.withMethod(Method.POST).withPath(routes.getFunctionCallRoute());
-    reqBuilder.withDocument(body);
-    reqBuilder.withTimeout(requestTimeout);
-    return reqBuilder.build();
+      final StitchAuthRequestClient authRequestClient,
+      final StitchAppRoutes routes,
+      final CodecRegistry codecRegistry
+  ) {
+    this.functionService = new CoreStitchServiceImpl(
+        authRequestClient,
+        routes.getServiceRoutes(),
+        codecRegistry);
   }
 
   /**
    * Calls the specified Stitch function, and decodes the response into a value using the provided
    * {@link Decoder}.
    *
-   * @param name The name of the Stitch function to call.
-   * @param args The arguments to pass to the Stitch function.
-   * @param decoder The {@link Decoder} to use to decode the Stitch response into a value.
-   * @param <T> The type into which the Stitch response will be decoded.
-   * @return The decoded value.
+   * @param name the name of the Stitch function to call.
+   * @param args the arguments to pass to the Stitch function.
+   * @param decoder the {@link Decoder} to use to decode the Stitch response into a value.
+   * @param <T> the type into which the Stitch response will be decoded.
+   * @return the decoded value.
    */
   public <T> T callFunctionInternal(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final @Nullable Long requestTimeout,
       final Decoder<T> decoder) {
-    return authRequestClient.doAuthenticatedJsonRequest(
-        getCallFunctionRequest(name, args, requestTimeout), decoder);
+    return this.functionService.callFunctionInternal(name, args, requestTimeout, decoder);
   }
 
   /**
@@ -76,18 +71,40 @@ public final class CoreStitchAppClient {
    * default codec registry supports the mappings specified <a
    * href="http://mongodb.github.io/mongo-java-driver/3.1/bson/documents/#document">here</a>
    *
-   * @param name The name of the Stitch function to call.
-   * @param args The arguments to pass to the Stitch function.
-   * @param resultClass The class that the Stitch response should be decoded as.
-   * @param <T> The type into which the Stitch response will be decoded.
-   * @return The decoded value.
+   * @param name the name of the Stitch function to call.
+   * @param args the arguments to pass to the Stitch function.
+   * @param resultClass the class that the Stitch response should be decoded as.
+   * @param <T> the type into which the Stitch response will be decoded.
+   * @return the decoded value.
    */
   public <T> T callFunctionInternal(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final @Nullable Long requestTimeout,
       final Class<T> resultClass) {
-    return authRequestClient.doAuthenticatedJsonRequest(
-        getCallFunctionRequest(name, args, requestTimeout), resultClass);
+    return this.functionService.callFunctionInternal(name, args, requestTimeout, resultClass);
+  }
+
+  /**
+  * Calls the specified Stitch function, and decodes the response into an instance of the specified
+  * type. The response will be decoded using the codec registry given.
+  *
+  * @param name the name of the Stitch function to call.
+  * @param args the arguments to pass to the Stitch function.
+  * @param resultClass the class that the Stitch response should be decoded as.
+  * @param <T> the type into which the Stitch response will be decoded.
+  * @param codecRegistry the codec registry that will be used to encode/decode the function call.
+  * @return the decoded value.
+  */
+  public <T> T callFunctionInternal(
+      final String name,
+      final List<?> args,
+      final @Nullable Long requestTimeout,
+      final Class<T> resultClass,
+      final CodecRegistry codecRegistry
+  ) {
+    return this.functionService
+        .withCodecRegistry(codecRegistry)
+        .callFunctionInternal(name, args, requestTimeout, resultClass);
   }
 }

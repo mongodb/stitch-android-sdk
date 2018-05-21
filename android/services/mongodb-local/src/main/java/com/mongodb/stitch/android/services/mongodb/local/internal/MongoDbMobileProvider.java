@@ -27,10 +27,6 @@ import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
-
-import com.mongodb.embedded.client.MongoClients;
-import com.mongodb.embedded.client.MongoEmbeddedSettings;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,7 +36,7 @@ import java.util.List;
  */
 public final class MongoDbMobileProvider extends ContentProvider {
   private static final String TAG = MongoDbMobileProvider.class.getSimpleName();
-  private static List<EventListener> eventListeners = new ArrayList<>();
+  private static final List<EventListener> eventListeners = new ArrayList<>();
 
   /**
    * Registers a {@link MongoDbMobileProvider.EventListener} with the provider.

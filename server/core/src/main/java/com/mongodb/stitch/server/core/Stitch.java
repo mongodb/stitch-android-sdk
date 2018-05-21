@@ -66,8 +66,8 @@ public final class Stitch {
    * Gets an app client by its client app id if it has been initialized; throws if none can be
    * found.
    *
-   * @param clientAppId The client app id of the app client to get.
-   * @return The app client associated with the client app id.
+   * @param clientAppId the client app id of the app client to get.
+   * @return the app client associated with the client app id.
    */
   public static synchronized StitchAppClient getAppClient(final String clientAppId) {
     ensureInitialized();
@@ -90,8 +90,8 @@ public final class Stitch {
    * Initializes the default app client for Stitch to use when using {@link
    * Stitch#getDefaultAppClient()}. Can only be called once.
    *
-   * @param configBuilder The configuration to use to build the app client.
-   * @return The app client that was just initialized.
+   * @param configBuilder the configuration to use to build the app client.
+   * @return the app client that was just initialized.
    */
   public static synchronized StitchAppClient initializeDefaultAppClient(
       final StitchAppClientConfiguration.Builder configBuilder) {
@@ -114,8 +114,8 @@ public final class Stitch {
    * Initializes an app client for Stitch to use when using {@link Stitch#getAppClient(String)}}.
    * Can only be called once per client app id.
    *
-   * @param configBuilder The configuration to use to build the app client.
-   * @return The app client that was just initialized.
+   * @param configBuilder the configuration to use to build the app client.
+   * @return the app client that was just initialized.
    */
   public static synchronized StitchAppClient initializeAppClient(
       final StitchAppClientConfiguration.Builder configBuilder) {

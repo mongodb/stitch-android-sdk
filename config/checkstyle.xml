@@ -225,6 +225,7 @@
             <property name="validateEnhancedForLoopVariable" value="true"/>
         </module>
         <module name="FinalParameters"/>
+        <module name="UnusedImports"/>
     </module>
 
     <module name="RegexpSingleline">

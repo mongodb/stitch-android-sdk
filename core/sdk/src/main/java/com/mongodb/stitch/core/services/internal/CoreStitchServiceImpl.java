@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.services.internal;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
+
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
@@ -23,47 +25,63 @@ import java.util.List;
 import javax.annotation.Nullable;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public class CoreStitchServiceImpl implements CoreStitchService {
   private final StitchAuthRequestClient requestClient;
   private final StitchServiceRoutes serviceRoutes;
   private final String serviceName;
+  private final CodecRegistry codecRegistry;
+
+  public CoreStitchServiceImpl(
+      final StitchAuthRequestClient requestClient,
+      final StitchServiceRoutes routes,
+      final CodecRegistry codecRegistry
+  ) {
+    this(requestClient, routes, "", codecRegistry);
+  }
 
   protected CoreStitchServiceImpl(
       final StitchAuthRequestClient requestClient,
       final StitchServiceRoutes routes,
-      final String name) {
+      final String name,
+      final CodecRegistry codecRegistry
+  ) {
+    notNull("codecRegistry", codecRegistry);
     this.requestClient = requestClient;
     this.serviceRoutes = routes;
     this.serviceName = name;
+    this.codecRegistry = codecRegistry;
   }
 
   private StitchAuthDocRequest getCallServiceFunctionRequest(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final @Nullable Long requestTimeout) {
     final Document body = new Document();
     body.put("name", name);
-    body.put("service", serviceName);
+    if (serviceName != null) {
+      body.put("service", serviceName);
+    }
     body.put("arguments", args);
 
     final StitchAuthDocRequest.Builder reqBuilder = new StitchAuthDocRequest.Builder();
     reqBuilder.withMethod(Method.POST).withPath(serviceRoutes.getFunctionCallRoute());
     reqBuilder.withDocument(body);
     reqBuilder.withTimeout(requestTimeout);
-    return reqBuilder.build();
+    return reqBuilder.build(codecRegistry);
   }
 
   public void callFunctionInternal(
       final String name,
-      final List<? extends Object> args
+      final List<?> args
   ) {
     requestClient.doAuthenticatedRequest(getCallServiceFunctionRequest(name, args, null));
   }
 
   public <T> T callFunctionInternal(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Decoder<T> resultDecoder) {
     return requestClient.doAuthenticatedJsonRequest(
         getCallServiceFunctionRequest(name, args, null), resultDecoder);
@@ -71,15 +89,15 @@ public class CoreStitchServiceImpl implements CoreStitchService {
 
   public <T> T callFunctionInternal(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final Class<T> resultClass) {
     return requestClient.doAuthenticatedJsonRequest(
-        getCallServiceFunctionRequest(name, args, null), resultClass);
+        getCallServiceFunctionRequest(name, args, null), resultClass, codecRegistry);
   }
 
   public void callFunctionInternal(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final @Nullable Long requestTimeout
   ) {
     requestClient.doAuthenticatedRequest(getCallServiceFunctionRequest(name, args, requestTimeout));
@@ -87,7 +105,7 @@ public class CoreStitchServiceImpl implements CoreStitchService {
 
   public <T> T callFunctionInternal(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final @Nullable Long requestTimeout,
       final Decoder<T> resultDecoder) {
     return requestClient.doAuthenticatedJsonRequest(
@@ -96,10 +114,18 @@ public class CoreStitchServiceImpl implements CoreStitchService {
 
   public <T> T callFunctionInternal(
       final String name,
-      final List<? extends Object> args,
+      final List<?> args,
       final @Nullable Long requestTimeout,
       final Class<T> resultClass) {
     return requestClient.doAuthenticatedJsonRequest(
-        getCallServiceFunctionRequest(name, args, requestTimeout), resultClass);
+        getCallServiceFunctionRequest(name, args, requestTimeout), resultClass, codecRegistry);
+  }
+
+  public CodecRegistry getCodecRegistry() {
+    return codecRegistry;
+  }
+
+  public CoreStitchService withCodecRegistry(final CodecRegistry codecRegistry) {
+    return new CoreStitchServiceImpl(requestClient, serviceRoutes, serviceName, codecRegistry);
   }
 }

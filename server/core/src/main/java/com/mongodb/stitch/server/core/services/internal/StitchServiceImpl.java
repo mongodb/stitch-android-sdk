@@ -22,26 +22,29 @@ import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 import com.mongodb.stitch.server.core.services.StitchService;
 import java.util.List;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public final class StitchServiceImpl extends CoreStitchServiceImpl implements StitchService {
 
   public StitchServiceImpl(
       final StitchAuthRequestClient requestClient,
       final StitchServiceRoutes routes,
-      final String name) {
-    super(requestClient, routes, name);
+      final String name,
+      final CodecRegistry codecRegistry
+  ) {
+    super(requestClient, routes, name, codecRegistry);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
-      final String name, final List<? extends Object> args, final Class<ResultT> resultClass) {
+      final String name, final List<?> args, final Class<ResultT> resultClass) {
     return callFunctionInternal(name, args, null, resultClass);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
           final String name,
-          final List<? extends Object> args,
+          final List<?> args,
           final Long requestTimeout,
           final Class<ResultT> resultClass) {
     return callFunctionInternal(name, args, requestTimeout, resultClass);
@@ -49,14 +52,14 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
 
   @Override
   public <ResultT> ResultT callFunction(
-      final String name, final List<? extends Object> args, final Decoder<ResultT> resultDecoder) {
+      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
     return callFunctionInternal(name, args, null, resultDecoder);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
           final String name,
-          final List<? extends Object> args,
+          final List<?> args,
           final Long requestTimeout,
           final Decoder<ResultT> resultDecoder) {
     return callFunctionInternal(name, args, requestTimeout, resultDecoder);

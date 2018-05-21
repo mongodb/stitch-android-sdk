@@ -26,11 +26,11 @@ public interface AwsSesServiceClient {
   /**
    * Sends an email.
    *
-   * @param to The email address to send the email to.
-   * @param from The email address to send the email from.
-   * @param subject The subject of the email.
-   * @param body The body text of the email.
-   * @return The result of the send.
+   * @param to the email address to send the email to.
+   * @param from the email address to send the email from.
+   * @param subject the subject of the email.
+   * @param body the body text of the email.
+   * @return the result of the send.
    */
   AwsSesSendResult sendEmail(
       @Nonnull final String to,

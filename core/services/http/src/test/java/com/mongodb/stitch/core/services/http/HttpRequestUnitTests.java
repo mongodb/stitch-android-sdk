@@ -45,15 +45,15 @@ public class HttpRequestUnitTests {
     final HttpMethod expectedMethod = HttpMethod.DELETE;
     final HttpRequest request = new HttpRequest.Builder()
         .withUrl(expectedUrl).withMethod(expectedMethod).build();
-    assertEquals(expectedUrl, request.url);
-    assertEquals(expectedMethod, request.method);
-    assertNull(request.authUrl);
-    assertNull(request.body);
-    assertNull(request.cookies);
-    assertNull(request.encodeBodyAsJson);
-    assertNull(request.followRedirects);
-    assertNull(request.form);
-    assertNull(request.headers);
+    assertEquals(expectedUrl, request.getUrl());
+    assertEquals(expectedMethod, request.getMethod());
+    assertNull(request.getAuthUrl());
+    assertNull(request.getBody());
+    assertNull(request.getCookies());
+    assertNull(request.getEncodeBodyAsJson());
+    assertNull(request.getFollowRedirects());
+    assertNull(request.getForm());
+    assertNull(request.getHeaders());
 
     final String expectedAuthUrl = "https://username@password:woo.com";
     final byte[] expectedBody = "hello world!".getBytes(StandardCharsets.UTF_8);
@@ -71,14 +71,14 @@ public class HttpRequestUnitTests {
         .withForm(expectedForm)
         .withHeaders(expectedHeaders)
         .build();
-    assertEquals(expectedUrl, fullRequest.url);
-    assertEquals(expectedMethod, fullRequest.method);
-    assertEquals(expectedAuthUrl, fullRequest.authUrl);
-    assertTrue(Arrays.equals(expectedBody, (byte[]) fullRequest.body));
-    assertEquals(expectedCookies, fullRequest.cookies);
-    assertEquals(false, fullRequest.encodeBodyAsJson);
-    assertEquals(true, fullRequest.followRedirects);
-    assertEquals(expectedForm, fullRequest.form);
-    assertEquals(expectedHeaders, fullRequest.headers);
+    assertEquals(expectedUrl, fullRequest.getUrl());
+    assertEquals(expectedMethod, fullRequest.getMethod());
+    assertEquals(expectedAuthUrl, fullRequest.getAuthUrl());
+    assertTrue(Arrays.equals(expectedBody, (byte[]) fullRequest.getBody()));
+    assertEquals(expectedCookies, fullRequest.getCookies());
+    assertEquals(false, fullRequest.getEncodeBodyAsJson());
+    assertEquals(true, fullRequest.getFollowRedirects());
+    assertEquals(expectedForm, fullRequest.getForm());
+    assertEquals(expectedHeaders, fullRequest.getHeaders());
   }
 }

@@ -22,7 +22,7 @@ import java.util.Locale;
 public final class Headers {
   public static final String CONTENT_TYPE_CANON = "Content-Type";
   public static final String CONTENT_TYPE = CONTENT_TYPE_CANON.toLowerCase(Locale.US);
-  public static final String AUTHORIZATION_CANON = "Authorization";
+  private static final String AUTHORIZATION_CANON = "Authorization";
   public static final String AUTHORIZATION = AUTHORIZATION_CANON.toLowerCase(Locale.US);
   private static final String AUTHORIZATION_BEARER = "Bearer";
 
@@ -31,8 +31,8 @@ public final class Headers {
   /**
    * Pulls out the Bearer value (https://tools.ietf.org/html/rfc6750) from an Authorization header.
    *
-   * @param value The bearer value
-   * @return A standard Authorization Bearer header value.
+   * @param value the bearer value
+   * @return a standard Authorization Bearer header value.
    */
   public static String getAuthorizationBearer(final String value) {
     return String.format("%s %s", AUTHORIZATION_BEARER, value);

@@ -21,15 +21,15 @@ import java.util.Map;
 import org.bson.types.Binary;
 
 public final class HttpRequest {
-  final String url;
-  final HttpMethod method;
-  final String authUrl;
-  final Map<String, Collection<String>> headers;
-  final Map<String, String> cookies;
-  final Object body;
-  final Boolean encodeBodyAsJson;
-  final Map<String, String> form;
-  final Boolean followRedirects;
+  private final String url;
+  private final HttpMethod method;
+  private final String authUrl;
+  private final Map<String, Collection<String>> headers;
+  private final Map<String, String> cookies;
+  private final Object body;
+  private final Boolean encodeBodyAsJson;
+  private final Map<String, String> form;
+  private final Boolean followRedirects;
 
   private HttpRequest(
       final String url,
@@ -51,6 +51,42 @@ public final class HttpRequest {
     this.encodeBodyAsJson = encodeBodyAsJson;
     this.form = form;
     this.followRedirects = followRedirects;
+  }
+
+  public String getUrl() {
+    return url;
+  }
+
+  public HttpMethod getMethod() {
+    return method;
+  }
+
+  public String getAuthUrl() {
+    return authUrl;
+  }
+
+  public Map<String, Collection<String>> getHeaders() {
+    return headers;
+  }
+
+  public Map<String, String> getCookies() {
+    return cookies;
+  }
+
+  public Object getBody() {
+    return body;
+  }
+
+  public Boolean getEncodeBodyAsJson() {
+    return encodeBodyAsJson;
+  }
+
+  public Map<String, String> getForm() {
+    return form;
+  }
+
+  public Boolean getFollowRedirects() {
+    return followRedirects;
   }
 
   /**
@@ -122,7 +158,8 @@ public final class HttpRequest {
 
     /**
      * Sets whether or not the included body should be encoded as extended JSON when sent to the
-     * url in this request. Defaults to false. {@see Builder.withBody}.
+     * url in this request. Defaults to false.
+     * @see Builder#withBody withBody
      */
     public Builder withEncodeBodyAsJson(final Boolean encodeBodyAsJson) {
       this.encodeBodyAsJson = encodeBodyAsJson;

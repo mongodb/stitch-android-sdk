@@ -21,7 +21,6 @@ class StitchAdminAuth(
                 requestClient,
                 authRoutes,
                 storage,
-                null,
                 true
         ) {
 
