@@ -45,7 +45,7 @@ public final class OperationResult<SuccessTypeT, FailureTypeT> {
    *
    * @return The result of the operation.
    */
-  public SuccessTypeT geResultT() {
+  public SuccessTypeT geResult() {
     if (!isSuccessful) {
       throw new IllegalStateException("operation was failed, not successful");
     }

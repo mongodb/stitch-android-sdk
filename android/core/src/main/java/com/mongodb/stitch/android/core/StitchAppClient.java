@@ -63,10 +63,10 @@ public interface StitchAppClient extends Closeable {
    * default codec registry supports the mappings specified <a
    * href="http://mongodb.github.io/mongo-java-driver/3.1/bson/documents/#document">here</a>
    *
-   * @param name he name of the Stitch function to call.
+   * @param name the name of the Stitch function to call.
    * @param args he arguments to pass to the function.
-   * @param resultClass he class that the response should be decoded as.
-   * @param <ResultT> he type into which the Stitch response will be decoded.
+   * @param resultClass the class that the response should be decoded as.
+   * @param <ResultT> the type into which the Stitch response will be decoded.
    * @return a {@link Task} containing the decoded value.
    */
   <ResultT> Task<ResultT> callFunction(
