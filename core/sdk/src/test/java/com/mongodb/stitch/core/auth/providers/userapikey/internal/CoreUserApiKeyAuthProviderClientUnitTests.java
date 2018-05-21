@@ -15,7 +15,7 @@
  */
 
 
-package com.mongodb.stitch.core.auth.providers.userapikey;
+package com.mongodb.stitch.core.auth.providers.userapikey.internal;
 
 import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
 import static org.junit.Assert.assertEquals;
