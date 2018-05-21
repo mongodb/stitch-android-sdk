@@ -23,6 +23,7 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.android.core.auth.providers.userpassword.internal.UserPasswordAuthProviderClientImpl;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
+import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
@@ -69,6 +70,7 @@ public interface UserPasswordAuthProviderClient {
       new AuthProviderClientFactory<UserPasswordAuthProviderClient>() {
         @Override
         public UserPasswordAuthProviderClient getClient(
+            final StitchAuthRequestClient authRequestClient,
             final StitchRequestClient requestClient,
             final StitchAuthRoutes routes,
             final TaskDispatcher dispatcher

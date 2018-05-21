@@ -160,6 +160,23 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   /**
+   * Performs a request against Stitch using the provided {@link StitchAuthRequest} object,
+   * and decodes the response using the provided result decoder.
+   *
+   * @param stitchReq The request to perform.
+   * @return The response to the request, successful or not.
+   */
+  public <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq,
+                                      final Decoder<T> resultDecoder) {
+    final Response response = doAuthenticatedRequest(stitchReq);
+    try {
+      return BsonUtils.parseValue(IoUtils.readAllToString(response.getBody()), resultDecoder);
+    } catch (final Exception e) {
+      throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
+    }
+  }
+
+  /**
    * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
    * decodes the JSON body of the response into a T value using the provided codec.
    *

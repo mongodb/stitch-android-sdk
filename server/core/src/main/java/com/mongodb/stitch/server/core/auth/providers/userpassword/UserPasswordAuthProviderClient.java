@@ -31,5 +31,6 @@ public interface UserPasswordAuthProviderClient {
   void sendResetPasswordEmail(final String email);
 
   AuthProviderClientFactory<UserPasswordAuthProviderClient> Factory =
-      UserPasswordAuthProviderClientImpl::new;
+      (authRequestClient, requestClient, routes) ->
+              new UserPasswordAuthProviderClientImpl(requestClient, routes);
 }

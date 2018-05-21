@@ -16,39 +16,57 @@
 
 package com.mongodb.stitch.core.auth.providers;
 
-import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
-import com.mongodb.stitch.core.internal.net.StitchRequestClient;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.mongodb.stitch.core.StitchRequestErrorCode;
+import com.mongodb.stitch.core.StitchRequestException;
+import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
+import com.mongodb.stitch.core.internal.net.Response;
 
-public abstract class CoreAuthProviderClient {
+import java.io.IOException;
+import java.util.List;
 
+/**
+ * The class from which all Core auth provider clients inherit. Only auth provider clients that
+ * make requests to the Stitch server need to inherit this class.
+ */
+public abstract class CoreAuthProviderClient<RequestClientT> {
   private final String providerName;
-  private final StitchRequestClient requestClient;
-  private final StitchAuthRoutes authRoutes;
+  private final RequestClientT requestClient;
+  private final String baseRoute;
 
-  protected CoreAuthProviderClient(final CoreAuthProviderClient coreClient) {
-    this.providerName = coreClient.providerName;
-    this.requestClient = coreClient.requestClient;
-    this.authRoutes = coreClient.authRoutes;
-  }
-
+  /**
+   * A basic constructor, which sets the provider client's properties to the values provided in
+   * the parameters.
+   */
   protected CoreAuthProviderClient(
-      final String providerName,
-      final StitchRequestClient requestClient,
-      final StitchAuthRoutes authRoutes) {
+          final String providerName,
+          final RequestClientT requestClient,
+          final String baseRoute) {
     this.providerName = providerName;
     this.requestClient = requestClient;
-    this.authRoutes = authRoutes;
+    this.baseRoute = baseRoute;
   }
 
+  /**
+   * Returns the name of the authentication provider.
+   */
   protected String getProviderName() {
     return providerName;
   }
 
-  protected StitchRequestClient getRequestClient() {
+  /**
+   * Returns the request client used by the client to make requests. Is generic since some auth
+   * provider clients use an authenticated request client while others use an unauthenticated
+   * request client.
+   */
+  protected RequestClientT getRequestClient() {
     return requestClient;
   }
 
-  protected StitchAuthRoutes getAuthRoutes() {
-    return authRoutes;
+  /**
+   * Returns the base route for this authentication provider client.
+   */
+  protected String getBaseRoute() {
+    return baseRoute;
   }
 }

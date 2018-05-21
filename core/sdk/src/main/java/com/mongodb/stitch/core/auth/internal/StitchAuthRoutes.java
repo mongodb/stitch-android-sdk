@@ -17,6 +17,8 @@
 package com.mongodb.stitch.core.auth.internal;
 
 public interface StitchAuthRoutes {
+  String getBaseAuthRoute();
+
   String getSessionRoute();
 
   String getProfileRoute();
