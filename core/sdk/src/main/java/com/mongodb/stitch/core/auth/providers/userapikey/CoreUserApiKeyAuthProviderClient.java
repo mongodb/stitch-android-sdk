@@ -163,7 +163,7 @@ public class CoreUserApiKeyAuthProviderClient
   }
 
   // TODO: Delete when merging remote MongoDB PR
-  private class CollectionDecoder<T> implements Decoder<Collection<T>> {
+  private static class CollectionDecoder<T> implements Decoder<Collection<T>> {
     private final Decoder<T> decoder;
 
     public CollectionDecoder(final Decoder<T> decoder) {
