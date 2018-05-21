@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.server.core.auth.providers.userpassword;
 
-import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.userpassword.internal.UserPasswordAuthProviderClientImpl;
 
@@ -31,6 +30,7 @@ public interface UserPasswordAuthProviderClient {
 
   void sendResetPasswordEmail(final String email);
 
-  AuthProviderClientFactory<UserPasswordAuthProviderClient, StitchRequestClient> Factory =
-      UserPasswordAuthProviderClientImpl::new;
+  AuthProviderClientFactory<UserPasswordAuthProviderClient> Factory =
+          (authRequestClient, requestClient, routes) ->
+                  new UserPasswordAuthProviderClientImpl(requestClient, routes);
 }

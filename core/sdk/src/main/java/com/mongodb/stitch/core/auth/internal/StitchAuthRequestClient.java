@@ -25,6 +25,8 @@ import org.bson.codecs.Decoder;
 public interface StitchAuthRequestClient {
   Response doAuthenticatedRequest(StitchAuthRequest stitchReq);
 
+  <T> T doAuthenticatedRequest(StitchAuthRequest stitchReq, Decoder<T> decoder);
+
   <T> T doAuthenticatedJsonRequest(StitchAuthDocRequest stitchReq, Decoder<T> decoder);
 
   <T> T doAuthenticatedJsonRequest(StitchAuthDocRequest stitchReq, Class<T> resultClass);

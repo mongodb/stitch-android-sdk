@@ -25,6 +25,7 @@ import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
+import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
 import java.util.List;
 
@@ -78,15 +79,16 @@ public interface UserApiKeyAuthProviderClient {
    */
   Task<Void> disableApiKey(@NonNull final ObjectId id);
 
-  AuthProviderClientFactory<UserApiKeyAuthProviderClient, StitchAuthRequestClient> Factory =
-      new AuthProviderClientFactory<UserApiKeyAuthProviderClient, StitchAuthRequestClient>() {
+  AuthProviderClientFactory<UserApiKeyAuthProviderClient> Factory =
+      new AuthProviderClientFactory<UserApiKeyAuthProviderClient>() {
         @Override
         public UserApiKeyAuthProviderClient getClient(
-                final StitchAuthRequestClient requestClient,
+                final StitchAuthRequestClient authRequestClient,
+                final StitchRequestClient requestClient,
                 final StitchAuthRoutes routes,
                 final TaskDispatcher dispatcher
         ) {
-          return new UserApiKeyAuthProviderClientImpl(requestClient, routes, dispatcher);
+          return new UserApiKeyAuthProviderClientImpl(authRequestClient, routes, dispatcher);
         }
       };
 }

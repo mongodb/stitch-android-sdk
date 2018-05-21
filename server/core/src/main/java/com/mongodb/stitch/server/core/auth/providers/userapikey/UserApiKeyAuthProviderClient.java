@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.server.core.auth.providers.userapikey;
 
-import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.providers.userapikey.models.UserApiKey;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.userapikey.internal.UserApiKeyAuthProviderClientImpl;
@@ -70,6 +69,7 @@ public interface UserApiKeyAuthProviderClient {
    */
   void disableApiKey(final ObjectId id);
 
-  AuthProviderClientFactory<UserApiKeyAuthProviderClient, StitchAuthRequestClient> Factory =
-          UserApiKeyAuthProviderClientImpl::new;
+  AuthProviderClientFactory<UserApiKeyAuthProviderClient> Factory =
+          (authRequestClient, requestClient, routes) ->
+                  new UserApiKeyAuthProviderClientImpl(authRequestClient, routes);
 }

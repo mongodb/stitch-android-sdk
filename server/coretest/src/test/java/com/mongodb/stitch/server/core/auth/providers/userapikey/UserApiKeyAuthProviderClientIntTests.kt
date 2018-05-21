@@ -38,7 +38,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         val originalUserId = registerAndLoginWithUserPass(
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
-        val apiKeyClient = client.auth.getAuthenticatedProviderClient(
+        val apiKeyClient = client.auth.getProviderClient(
                 UserApiKeyAuthProviderClient.Factory
         )
 
@@ -58,7 +58,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
-        val apiKeyClient = client.auth.getAuthenticatedProviderClient(
+        val apiKeyClient = client.auth.getProviderClient(
                 UserApiKeyAuthProviderClient.Factory
         )
 
@@ -80,7 +80,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
-        val apiKeyClient = client.auth.getAuthenticatedProviderClient(
+        val apiKeyClient = client.auth.getProviderClient(
                 UserApiKeyAuthProviderClient.Factory
         )
 
@@ -103,7 +103,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
-        val apiKeyClient = client.auth.getAuthenticatedProviderClient(
+        val apiKeyClient = client.auth.getProviderClient(
                 UserApiKeyAuthProviderClient.Factory
         )
 
@@ -128,7 +128,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         registerAndLoginWithUserPass(
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
-        val apiKeyClient = client.auth.getAuthenticatedProviderClient(
+        val apiKeyClient = client.auth.getProviderClient(
                 UserApiKeyAuthProviderClient.Factory
         )
 
@@ -147,7 +147,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         registerAndLoginWithUserPass(
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
-        val apiKeyClient = client.auth.getAuthenticatedProviderClient(
+        val apiKeyClient = client.auth.getProviderClient(
                 UserApiKeyAuthProviderClient.Factory
         )
 
@@ -156,22 +156,6 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
             fail("found a nonexistent key")
         } catch (e: StitchServiceException) {
             assertEquals(StitchServiceErrorCode.API_KEY_NOT_FOUND, e.errorCode)
-        }
-    }
-
-    @Test
-    fun testLoggedOut() {
-        val app = createApp()
-        val client = getAppClient(app.first)
-        try {
-            client.auth.getAuthenticatedProviderClient(
-                    UserApiKeyAuthProviderClient.Factory
-            )
-            fail("created an authenticated client while logged out")
-        } catch (e: Exception) {
-            assertTrue(e is StitchClientException)
-            assertEquals(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST,
-                    (e as StitchClientException).errorCode)
         }
     }
 }

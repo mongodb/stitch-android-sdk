@@ -24,17 +24,6 @@ import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderC
 
 public interface StitchAuth {
   /**
-   * Gets an authenticated client for the given authentication provider. Most authentication
-   * providers will allow creation of a client without a name of the provider.
-   *
-   * @param provider The provider that will create a client for the authentication provider.
-   * @param <ClientT> The type of client to be returned by the provider.
-   * @return A client to interact with the authentication provider.
-   */
-  <ClientT> ClientT getAuthenticatedProviderClient(
-          final AuthProviderClientFactory<ClientT, StitchAuthRequestClient> provider);
-
-  /**
    * Gets a client for the given authentication provider. Most authentication providers will allow
    * creation of a client without a name of the provider.
    *
@@ -43,7 +32,7 @@ public interface StitchAuth {
    * @return A client to interact with the authentication provider.
    */
   <ClientT> ClientT getProviderClient(
-          final AuthProviderClientFactory<ClientT, StitchRequestClient> provider);
+          final AuthProviderClientFactory<ClientT> provider);
 
   /**
    * Gets a client for the given named authentication provider.

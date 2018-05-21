@@ -48,31 +48,6 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
   }
 
   /**
-   * Performs a basic JSON decoding of the provided HTTP response.
-   */
-  protected <T> T decode(final Response response, final Class<T> resultClass) {
-    try {
-      return StitchObjectMapper.getInstance()
-              .readValue(response.getBody(), resultClass);
-    } catch (final IOException e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
-    }
-  }
-
-  /**
-   * Performs a basic JSON decoding of the provided HTTP response, into a list of the specified
-   * type.
-   */
-  protected <T> List<T> decodeList(final Response response, final Class<T> resultClass) {
-    try {
-      return StitchObjectMapper.getInstance()
-              .readValue(response.getBody(), new TypeReference<List<T>>() {});
-    } catch (final IOException e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
-    }
-  }
-
-  /**
    * Returns the name of the authentication provider.
    */
   protected String getProviderName() {

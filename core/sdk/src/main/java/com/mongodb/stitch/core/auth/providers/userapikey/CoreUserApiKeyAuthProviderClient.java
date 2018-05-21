@@ -24,9 +24,15 @@ import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
+import org.bson.BsonReader;
+import org.bson.BsonType;
 import org.bson.Document;
+import org.bson.codecs.Decoder;
+import org.bson.codecs.DecoderContext;
 import org.bson.types.ObjectId;
 
 public class CoreUserApiKeyAuthProviderClient
@@ -51,9 +57,11 @@ public class CoreUserApiKeyAuthProviderClient
             .withMethod(Method.POST)
             .withPath(this.getBaseRoute())
             .withDocument(new Document(Routes.ApiKeyFields.NAME, name))
-            .withRefreshToken()
-            .withShouldRefreshOnFailure(false);
-    return decode(getRequestClient().doAuthenticatedRequest(reqBuilder.build()), UserApiKey.class);
+            .withRefreshToken();
+    return getRequestClient().doAuthenticatedRequest(
+            reqBuilder.build(),
+            new UserApiKey.UserApiKeyDecoder()
+    );
   }
 
   /**
@@ -66,9 +74,11 @@ public class CoreUserApiKeyAuthProviderClient
     reqBuilder
             .withMethod(Method.GET)
             .withPath(routes.getApiKeyRouteForId(id.toHexString()))
-            .withRefreshToken()
-            .withShouldRefreshOnFailure(false);
-    return decode(getRequestClient().doAuthenticatedRequest(reqBuilder.build()), UserApiKey.class);
+            .withRefreshToken();
+    return getRequestClient().doAuthenticatedRequest(
+            reqBuilder.build(),
+            new UserApiKey.UserApiKeyDecoder()
+    );
   }
 
   /**
@@ -79,10 +89,10 @@ public class CoreUserApiKeyAuthProviderClient
     reqBuilder
             .withMethod(Method.GET)
             .withPath(this.getBaseRoute())
-            .withRefreshToken()
-            .withShouldRefreshOnFailure(false);
-    return decodeList(
-            getRequestClient().doAuthenticatedRequest(reqBuilder.build()), UserApiKey.class);
+            .withRefreshToken();
+    return (List<UserApiKey>) getRequestClient().doAuthenticatedRequest(
+            reqBuilder.build(),
+            new CollectionDecoder<>(new UserApiKey.UserApiKeyDecoder()));
   }
 
   /**
@@ -95,8 +105,7 @@ public class CoreUserApiKeyAuthProviderClient
     reqBuilder
             .withMethod(Method.DELETE)
             .withPath(routes.getApiKeyRouteForId(id.toHexString()))
-            .withRefreshToken()
-            .withShouldRefreshOnFailure(false);
+            .withRefreshToken();
     getRequestClient().doAuthenticatedRequest(reqBuilder.build());
   }
 
@@ -110,8 +119,7 @@ public class CoreUserApiKeyAuthProviderClient
     reqBuilder
             .withMethod(Method.PUT)
             .withPath(routes.getApiKeyEnableRouteForId(id.toHexString()))
-            .withRefreshToken()
-            .withShouldRefreshOnFailure(false);
+            .withRefreshToken();
     getRequestClient().doAuthenticatedRequest(reqBuilder.build());
   }
 
@@ -125,8 +133,7 @@ public class CoreUserApiKeyAuthProviderClient
     reqBuilder
             .withMethod(Method.PUT)
             .withPath(routes.getApiKeyDisableRouteForId(id.toHexString()))
-            .withRefreshToken()
-            .withShouldRefreshOnFailure(false);
+            .withRefreshToken();
     getRequestClient().doAuthenticatedRequest(reqBuilder.build());
   }
 
@@ -152,6 +159,27 @@ public class CoreUserApiKeyAuthProviderClient
 
     private static class ApiKeyFields {
       static final String NAME = "name";
+    }
+  }
+
+  // TODO: Delete when bringing in from remote MongoDB PR
+  private class CollectionDecoder<TResult> implements Decoder<Collection<TResult>> {
+    private final Decoder<TResult> decoder;
+
+    public CollectionDecoder(final Decoder<TResult> decoder) {
+      this.decoder = decoder;
+    }
+
+    @Override
+    public Collection<TResult> decode(final BsonReader reader, final DecoderContext decoderContext) {
+      final Collection<TResult> docs = new ArrayList<>();
+      reader.readStartArray();
+      while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+        final TResult doc = decoder.decode(reader, decoderContext);
+        docs.add(doc);
+      }
+      reader.readEndArray();
+      return docs;
     }
   }
 }
