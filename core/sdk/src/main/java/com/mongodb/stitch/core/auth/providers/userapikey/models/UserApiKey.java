@@ -16,13 +16,12 @@
 
 package com.mongodb.stitch.core.auth.providers.userapikey.models;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
-
-import java.util.Map;
-
 import org.bson.BsonReader;
 import org.bson.Document;
 import org.bson.codecs.DecoderContext;
@@ -96,14 +95,6 @@ public final class UserApiKey {
   }
 
   public static final class Decoder implements org.bson.codecs.Decoder<UserApiKey> {
-    // TODO: Delete when merging with remote mongodb service PR
-    private static void keyPresent(final String key, final Map<String, ?> map) {
-      if (!map.containsKey(key)) {
-        throw new IllegalStateException(
-                String.format("expected %s to be present", key));
-      }
-    }
-
     /**
      * Decodes a BSON value from the given reader into an instance of the type parameter {@code T}.
      *
