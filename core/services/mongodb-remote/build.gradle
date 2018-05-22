@@ -4,7 +4,7 @@ archivesBaseName = 'stitch-core-services-mongodb-remote'
 
 dependencies {
     implementation project(':core:stitch-core-sdk')
-    api 'org.mongodb:mongodb-driver-core:3.8.0-SNAPSHOT' // TODO: REPLACE WITH ACTUAL 3.8.0
+    api 'org.mongodb:mongodb-driver-core:3.8.0-beta2' // TODO: Replace with published 3.8.0
 
     testImplementation project(':core:stitch-core-admin-client')
     testImplementation project(':core:stitch-core-testutils')

@@ -6,7 +6,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.5'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     api 'com.google.code.findbugs:jsr305:3.0.2'
-    api 'org.mongodb:bson:3.8.0-SNAPSHOT' // TODO: REPLACE WITH ACTUAL 3.8.0
+    api 'org.mongodb:bson:3.8.0-beta2' // TODO: Replace with published 3.8.0
 
     testImplementation project(':core:stitch-core-testutils')
     testImplementation 'junit:junit:4.12'
