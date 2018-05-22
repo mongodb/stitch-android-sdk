@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-/** This package contains the local MongoClient used for local/offline storage. */
+/** This package contains the local MongoClient used for local storage. */
 package com.mongodb.stitch.server.services.mongodb.local;

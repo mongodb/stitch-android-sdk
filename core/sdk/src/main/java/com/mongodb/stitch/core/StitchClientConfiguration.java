@@ -98,12 +98,12 @@ public class StitchClientConfiguration {
   }
 
   /**
-   * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
-   * before failing with an error. Important: If a request timeout was specified for a specific
+   * Gets the number of milliseconds that a `Transport` should spend by default on an HTTP round
+   * trip before failing with an error. Important: If a request timeout was specified for a specific
    * operation, for example in a function call, that timeout will override this one.
    *
-   * @return the number of seconds that a `Transport` should spend by default on an HTTP round trip
-   *         before failing with an error.
+   * @return the number of milliseconds that a `Transport` should spend by default on an HTTP round
+   *         trip before failing with an error.
    */
   public Long getDefaultRequestTimeout() {
     return defaultRequestTimeout;
@@ -199,11 +199,11 @@ public class StitchClientConfiguration {
     }
 
     /**
-     * Sets the number of seconds that a `Transport` should spend by default on an HTTP round trip
-     * before failing with an error. Important: If a request timeout was specified for a specific
-     * operation, for example in a function call, that timeout will override this one.
+     * Sets the number of milliseconds that a `Transport` should spend by default on an HTTP round
+     * trip before failing with an error. Important: If a request timeout was specified for a
+     * specific operation, for example in a function call, that timeout will override this one.
      *
-     * @param defaultRequestTimeout the number of seconds that a `Transport` should spend by
+     * @param defaultRequestTimeout the number of milliseconds that a `Transport` should spend by
      *                              default on an HTTP round trip before failing with an error.
      * @return the builder.
      */
@@ -266,12 +266,12 @@ public class StitchClientConfiguration {
     }
 
     /**
-     * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
-     * before failing with an error. Important: If a request timeout was specified for a specific
-     * operation, for example in a function call, that timeout will override this one.
+     * Gets the number of milliseconds that a `Transport` should spend by default on an HTTP round
+     * trip before failing with an error. Important: If a request timeout was specified for a
+     * specific operation, for example in a function call, that timeout will override this one.
      *
-     * @return the number of seconds that a `Transport` should spend by default on an HTTP round
-     *         trip before failing with an error.
+     * @return the number of milliseconds that a `Transport` should spend by default on an HTTP
+     *         round trip before failing with an error.
      */
     public Long getDefaultRequestTimeout() {
       return defaultRequestTimeout;

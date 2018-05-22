@@ -30,7 +30,7 @@ import org.bson.Document;
 
 /**
  * The LocalMongoDbService is used to access {@link LocalMongoDbService#ClientFactory} which
- * provides MongoClients used for local/offline storage using the embedded MongoDB platform.
+ * provides MongoClients used for local storage using the embedded MongoDB platform.
  */
 public final class LocalMongoDbService extends CoreLocalMongoDbService {
 

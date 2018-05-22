@@ -16,6 +16,6 @@
 
 /**
  * This internal package contains the base implementation of the local MongoDB service for
- * local/offline MongoClients.
+ * local MongoClients.
  */
 package com.mongodb.stitch.core.services.mongodb.local.internal;

@@ -234,12 +234,12 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
     }
 
     /**
-     * Sets the number of seconds that a `Transport` should spend by default on an HTTP round trip
-     * before failing with an error. Important: If a request timeout was specified for a specific
-     * operation, for example in a function call, that timeout will override this one.
+     * Sets the number of milliseconds that a `Transport` should spend by default on an HTTP round
+     * trip before failing with an error. Important: If a request timeout was specified for a
+     * specific operation, for example in a function call, that timeout will override this one.
      *
-     * @param defaultRequestTimeout the number of seconds that a `Transport` should spend by default
-     *                             on an HTTP round trip before failing with an error.
+     * @param defaultRequestTimeout the number of milliseconds that a `Transport` should spend by
+     *                              default on an HTTP round trip before failing with an error.
      * @return the builder.
      */
     public Builder withDefaultRequestTimeout(final Long defaultRequestTimeout) {
