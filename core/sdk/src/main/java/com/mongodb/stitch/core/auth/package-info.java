@@ -15,7 +15,7 @@
  */
 
 /**
- * Contains the core specification and implementation of the authentication components of a Stitch
- * application client.
+ * This package contains various auth components used by an SDK such as credentials and user
+ * information.
  */
 package com.mongodb.stitch.core.auth;

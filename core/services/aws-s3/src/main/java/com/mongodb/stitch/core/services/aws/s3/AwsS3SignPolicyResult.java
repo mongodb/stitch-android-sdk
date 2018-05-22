@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.services.aws.s3;
 
+/**
+ * The result of an AWS S3 sign policy request.
+ */
 public class AwsS3SignPolicyResult {
   private final String policy;
   private final String signature;
@@ -48,6 +51,7 @@ public class AwsS3SignPolicyResult {
 
   /**
    * Returns the description of the policy that has been signed.
+   * @return the description of the policy that has been signed.
    */
   public String getPolicy() {
     return policy;
@@ -55,6 +59,7 @@ public class AwsS3SignPolicyResult {
 
   /**
    * Returns the computed signature of the policy.
+   * @return the computed signature of the policy.
    */
   public String getSignature() {
     return signature;
@@ -62,6 +67,7 @@ public class AwsS3SignPolicyResult {
 
   /**
    * Returns the algorithm used to compute the signature.
+   * @return the algorithm used to compute the signature.
    */
   public String getAlgorithm() {
     return algorithm;
@@ -69,6 +75,7 @@ public class AwsS3SignPolicyResult {
 
   /**
    * Returns the date at which the signature was computed.
+   * @return the date at which the signature was computed.
    */
   public String getDate() {
     return date;
@@ -76,6 +83,7 @@ public class AwsS3SignPolicyResult {
 
   /**
    * Returns the credential that should be used when utilizing this signed policy.
+   * @return the credential that should be used when utilizing this signed policy.
    */
   public String getCredential() {
     return credential;

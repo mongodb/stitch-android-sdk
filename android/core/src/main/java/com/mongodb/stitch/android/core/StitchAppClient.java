@@ -28,11 +28,17 @@ import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-
+/**
+ * StitchAppClient is the main class used to work with Stitch. It allows one to log into Stitch,
+ * call functions, and get clients for different services like local and remote MongoDB, AWS,
+ * and HTTP.
+ */
 public interface StitchAppClient extends Closeable {
 
   /**
    * Gets the authentication component of the app. This is used for logging in and managing users.
+   *
+   * @return the authentication component of the app.
    */
   StitchAuth getAuth();
 
@@ -170,6 +176,8 @@ public interface StitchAppClient extends Closeable {
 
   /**
    * Closes the client and shuts down all background operations.
+   *
+   * @throws IOException if any thread shutdown errors happen.
    */
   void close() throws IOException;
 }

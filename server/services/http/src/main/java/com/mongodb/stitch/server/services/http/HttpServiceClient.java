@@ -23,6 +23,9 @@ import com.mongodb.stitch.server.services.http.internal.HttpServiceClientImpl;
 
 import javax.annotation.Nonnull;
 
+/**
+ * The HTTP service client.
+ */
 public interface HttpServiceClient {
 
   /**

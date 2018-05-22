@@ -20,14 +20,18 @@ import android.util.Log;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
+import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.mongodb.local.internal.MongoDbMobileProvider;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.mongodb.local.internal.CoreLocalMongoDbService;
 
 import org.bson.Document;
 
+/**
+ * The LocalMongoDbService is used to access {@link LocalMongoDbService#ClientFactory} which
+ * provides MongoClients used for local/offline storage using the embedded MongoDB platform.
+ */
 public final class LocalMongoDbService extends CoreLocalMongoDbService {
 
   private static final String TAG = LocalMongoDbService.class.getSimpleName();

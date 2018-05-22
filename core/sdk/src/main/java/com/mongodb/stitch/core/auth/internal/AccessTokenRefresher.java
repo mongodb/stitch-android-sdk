@@ -19,7 +19,7 @@ package com.mongodb.stitch.core.auth.internal;
 import java.lang.ref.WeakReference;
 
 final class AccessTokenRefresher<T extends CoreStitchUser> implements Runnable {
-  private static final Long SLEEP_MILLIS = 60000L;
+  private static final Long SLEEP_MILLIS = 60000L; // how long to sleep for between refreshes.
   private static final Long EXPIRATION_WINDOW_SECS = 300L;
 
   private final WeakReference<CoreStitchAuth<T>> authRef;

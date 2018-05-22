@@ -28,6 +28,12 @@ import java.util.List;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
+/**
+ * The RemoteMongoCollection interface.
+ *
+ * @param <DocumentT> The type that this collection will encode documents from and decode documents
+ *                   to.
+ */
 public interface RemoteMongoCollection<DocumentT> {
 
   /**

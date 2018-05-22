@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-/** Contains the core specification and implementation of a Stitch application client. */
+/** This package contains the base client and errors used by the SDKs. */
 package com.mongodb.stitch.core;

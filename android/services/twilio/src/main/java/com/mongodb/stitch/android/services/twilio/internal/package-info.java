@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.auth.providers.userpass;
-
-public final class UserPasswordAuthProvider {
-  private UserPasswordAuthProvider() {}
-
-  public static final String TYPE = "local-userpass";
-  public static final String DEFAULT_NAME = "local-userpass";
-}
+/**
+ * This internal package contains the Android SDK's implementation of the Twilio service client.
+ */
+package com.mongodb.stitch.android.services.twilio.internal;

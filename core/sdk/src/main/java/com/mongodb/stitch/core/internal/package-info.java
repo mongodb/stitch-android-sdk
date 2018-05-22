@@ -15,7 +15,6 @@
  */
 
 /**
- * Contains the implementation specific classes that should not be expoed to end users but only
- * developers of this SDK.
+ * This internal package contains the base implementation of a StitchAppClient.
  */
 package com.mongodb.stitch.core.internal;

@@ -18,7 +18,7 @@ package com.mongodb.stitch.server.services.aws.ses.internal;
 
 import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
 import com.mongodb.stitch.core.services.aws.ses.internal.CoreAwsSesServiceClient;
-import com.mongodb.stitch.server.core.services.StitchService;
+import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.aws.ses.AwsSesServiceClient;
 import javax.annotation.Nonnull;
 

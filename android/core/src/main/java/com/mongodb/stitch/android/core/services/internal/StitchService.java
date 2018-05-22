@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.android.core.services;
+package com.mongodb.stitch.android.core.services.internal;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.core.services.internal.CoreStitchService;

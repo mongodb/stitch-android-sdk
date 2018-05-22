@@ -22,8 +22,18 @@ import com.mongodb.Block;
 import com.mongodb.Function;
 import java.util.Collection;
 
+/**
+ * The RemoteMongoIterable is the results from an operation, such as a query.
+ *
+ * @param <ResultT> The type that this iterable will decode documents to.
+ */
 public interface RemoteMongoIterable<ResultT> {
 
+  /**
+   * Returns a cursor of the operation represented by this iterable.
+   *
+   * @return a cursor of the operation represented by this iterable.
+   */
   @NonNull
   RemoteMongoCursor<ResultT> iterator();
 

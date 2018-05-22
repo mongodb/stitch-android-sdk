@@ -19,7 +19,7 @@ package com.mongodb.stitch.server.core.services.internal;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceImpl;
 import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
-import com.mongodb.stitch.server.core.services.StitchService;
+
 import java.util.List;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;

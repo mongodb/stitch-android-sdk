@@ -17,12 +17,15 @@
 package com.mongodb.stitch.android.services.mongodb.remote;
 
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
+import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl;
 
+/**
+ * The remote MongoClient used for working with data in MongoDB remotely via Stitch.
+ */
 public interface RemoteMongoClient {
 
   /**

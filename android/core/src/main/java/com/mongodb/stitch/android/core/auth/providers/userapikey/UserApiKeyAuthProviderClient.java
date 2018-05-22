@@ -31,6 +31,9 @@ import java.util.List;
 
 import org.bson.types.ObjectId;
 
+/**
+ * The user API key authentication provider client. This client is used to manage API keys.
+ */
 public interface UserApiKeyAuthProviderClient {
   /**
    * Creates a user API key that can be used to authenticate as the current user.

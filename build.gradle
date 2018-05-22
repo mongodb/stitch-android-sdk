@@ -106,7 +106,7 @@ subprojects {
                 options.encoding = 'UTF-8'
                 options.charSet 'UTF-8'
                 options.docEncoding 'UTF-8'
-                exclude '**/index.html', '**/*.kt', '**/test/**'
+                exclude '**/index.html', '**/*.kt', '**/test*/**'
             }
 
             task sourcesJar(type: Jar) {
@@ -142,7 +142,7 @@ subprojects {
                         owner.classpath += variant.javaCompile.classpath
                     }
                 }
-                exclude '**/R.html', '**/R.*.html', '**/index.html', '**/*.kt', '**/test/**'
+                exclude '**/R.html', '**/R.*.html', '**/index.html', '**/*.kt', '**/test*/**'
 
                 title = "$project.name $version"
                 options.author true
@@ -242,7 +242,8 @@ def corePackages = ["com.mongodb.stitch.core",
                 "com.mongodb.stitch.core.auth.providers.google",
                 "com.mongodb.stitch.core.auth.providers.serverapikey",
                 "com.mongodb.stitch.core.auth.providers.userapikey",
-                "com.mongodb.stitch.core.auth.providers.userpass",
+                "com.mongodb.stitch.core.auth.providers.userapikey.models",
+                "com.mongodb.stitch.core.auth.providers.userpassword",
                 "com.mongodb.stitch.core.services.aws.s3",
                 "com.mongodb.stitch.core.services.aws.ses",
                 "com.mongodb.stitch.core.services.http",

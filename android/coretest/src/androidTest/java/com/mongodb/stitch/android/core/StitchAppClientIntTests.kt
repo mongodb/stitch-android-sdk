@@ -15,8 +15,8 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.custom.CustomAuthProvider
 import com.mongodb.stitch.core.auth.providers.custom.CustomCredential
-import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider
-import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
+import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvider
+import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.Document
@@ -109,7 +109,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         // check storage
         assertTrue(client.auth.isLoggedIn)
-        assertEquals(client.auth.user.loggedInProviderType, AnonymousAuthProvider.TYPE)
+        assertEquals(client.auth.user!!.loggedInProviderType, AnonymousAuthProvider.TYPE)
 
         // login with email provider and make sure user ID is updated
         val emailUserId = registerAndLoginWithUserPass(app.second, client, "test@10gen.com", "hunter1")
@@ -117,7 +117,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         // check storage
         assertTrue(client.auth.isLoggedIn)
-        assertEquals(client.auth.user.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
 
         // login with email provider under different user and make sure user ID is updated
         val id2 = registerAndLoginWithUserPass(app.second, client, "test2@10gen.com", "hunter2")
@@ -125,7 +125,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         // check storage
         assertTrue(client.auth.isLoggedIn)
-        assertEquals(client.auth.user.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
 
         // Verify that logout clears storage
         Tasks.await(client.auth.logout())
@@ -165,7 +165,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertEquals(anonUser.id, linkedUser.id)
         assertEquals(linkedUser.loggedInProviderType, UserPasswordAuthProvider.TYPE)
 
-        assertEquals(client.auth.user.identities.size, 2)
+        assertEquals(client.auth.user!!.identities.size, 2)
 
         Tasks.await(client.auth.logout())
         assertFalse(client.auth.isLoggedIn)

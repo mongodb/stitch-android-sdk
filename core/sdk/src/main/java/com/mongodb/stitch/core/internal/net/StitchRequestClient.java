@@ -16,9 +16,9 @@
 
 package com.mongodb.stitch.core.internal.net;
 
-import com.mongodb.stitch.core.StitchError;
 import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
+import com.mongodb.stitch.core.internal.common.StitchError;
 
 public class StitchRequestClient {
 

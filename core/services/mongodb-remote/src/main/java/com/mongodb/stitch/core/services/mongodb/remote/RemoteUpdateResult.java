@@ -20,11 +20,21 @@ import javax.annotation.Nullable;
 
 import org.bson.BsonValue;
 
+/**
+ * The result of an update operation.
+ */
 public class RemoteUpdateResult {
 
   private final long matchedCount;
   private final BsonValue upsertedId;
 
+  /**
+   * Constructs a result.
+   *
+   * @param matchedCount the number of documents matched by the query.
+   * @param upsertedId the _id of the inserted document if the replace resulted in an inserted
+   *                   document, otherwise null.
+   */
   public RemoteUpdateResult(final long matchedCount, final BsonValue upsertedId) {
     this.matchedCount = matchedCount;
     this.upsertedId = upsertedId;

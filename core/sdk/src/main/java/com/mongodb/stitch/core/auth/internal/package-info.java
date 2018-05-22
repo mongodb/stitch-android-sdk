@@ -15,7 +15,7 @@
  */
 
 /**
- * Contains the core specification and implementation of the authentication components of a Stitch
- * application client that are implementation specific and should not be exposed to end users.
+ * This internal package contains the base implementation of the authentication components of a
+ * Stitch client.
  */
 package com.mongodb.stitch.core.auth.internal;

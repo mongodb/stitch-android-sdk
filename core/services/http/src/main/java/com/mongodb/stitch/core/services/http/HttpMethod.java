@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.services.http;
 
+/**
+ * The series of HTTP methods accepted by the HTTP service.
+ */
 public enum HttpMethod {
   GET,
   POST,

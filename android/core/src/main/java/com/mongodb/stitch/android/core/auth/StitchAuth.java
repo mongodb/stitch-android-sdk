@@ -16,13 +16,19 @@
 
 package com.mongodb.stitch.android.core.auth;
 
+import android.support.annotation.Nullable;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.core.auth.StitchCredential;
-
 import java.io.Closeable;
 
+/**
+ * StitchAuth manages authentication for any Stitch based client. It provides methods for logging
+ * in with various authentication providers using {@link StitchCredential}s, retrieving the current
+ * user, and getting authentication provider clients to perform actions such as registering users
+ * and creating user API keys.
+ */
 public interface StitchAuth extends Closeable {
   /**
    * Gets a client for the given authentication provider. Most authentication providers will allow
@@ -56,18 +62,32 @@ public interface StitchAuth extends Closeable {
    */
   Task<StitchUser> loginWithCredential(final StitchCredential credential);
 
-  /** Logs out the currently logged in user. */
+  /**
+   * Logs out the currently logged in user.
+   *
+   * @return a {@link Task} completing when logged out.
+   */
   Task<Void> logout();
 
-  /** Returns whether or not there's a currently logged in user. */
+  /**
+   * Returns whether or not there's a currently logged in user.
+   *
+   * @return whether or not there's a currently logged in user.
+   */
   boolean isLoggedIn();
 
-  /** Returns the currently logged in user; may be null. */
+  /**
+   * Returns the currently logged in user; null if not logged in.
+   *
+   * @return the currently logged in user; null if not logged in.
+   */
+  @Nullable
   StitchUser getUser();
 
   /**
    * Adds a listener for any important auth event.
    *
+   * @param listener the listener to add.
    * @see StitchAuthListener
    */
   void addAuthListener(final StitchAuthListener listener);
@@ -75,7 +95,7 @@ public interface StitchAuth extends Closeable {
   /**
    * Removes a listener.
    *
-   * @see StitchAuthListener
+   * @param listener the listener to remove.
    */
   void removeAuthListener(final StitchAuthListener listener);
 }

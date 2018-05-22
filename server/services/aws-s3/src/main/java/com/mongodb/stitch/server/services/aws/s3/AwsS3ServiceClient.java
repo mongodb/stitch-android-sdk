@@ -25,6 +25,9 @@ import java.io.InputStream;
 import javax.annotation.Nonnull;
 import org.bson.types.Binary;
 
+/**
+ * The AWS S3 service client.
+ */
 public interface AwsS3ServiceClient {
 
   /**

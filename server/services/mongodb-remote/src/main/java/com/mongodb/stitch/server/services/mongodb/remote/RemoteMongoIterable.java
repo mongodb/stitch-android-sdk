@@ -24,8 +24,18 @@ import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * The RemoteMongoIterable is the results from an operation, such as a query.
+ *
+ * @param <ResultT> The type that this iterable will decode documents to.
+ */
 public interface RemoteMongoIterable<ResultT> extends Iterable<ResultT> {
 
+  /**
+   * Returns a cursor of the operation represented by this iterable.
+   *
+   * @return a cursor of the operation represented by this iterable.
+   */
   @Override
   @Nonnull
   RemoteMongoCursor<ResultT> iterator();

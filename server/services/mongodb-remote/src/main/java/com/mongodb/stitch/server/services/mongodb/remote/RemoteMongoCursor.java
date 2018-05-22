@@ -21,6 +21,13 @@ import java.util.Iterator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
+/**
+ * The Mongo Cursor interface implementing the iterator protocol..
+ * An application should ensure that a cursor is closed in all circumstances, e.g. using a
+ * try-with-resources statement.
+ *
+ * @param <ResultT> The type of documents the cursor contains
+ */
 @NotThreadSafe
 public interface RemoteMongoCursor<ResultT> extends Iterator<ResultT>, Closeable {
 
