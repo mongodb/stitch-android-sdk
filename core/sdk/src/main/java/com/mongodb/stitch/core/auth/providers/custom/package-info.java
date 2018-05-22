@@ -14,5 +14,7 @@
  * limitations under the License.
  */
 
-/** Contains the core specification and implementation of the custom authentication provider. */
+/**
+ * This package contains the custom authentication provider: type info and its credential builder.
+ */
 package com.mongodb.stitch.core.auth.providers.custom;

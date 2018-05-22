@@ -19,6 +19,16 @@ package com.mongodb.stitch.server.core.auth;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser;
 
+/**
+ * A user that belongs to a MongoDB Stitch application.
+ */
 public interface StitchUser extends CoreStitchUser {
+
+  /**
+   * Links this user with another identity represented by the given credential.
+   *
+   * @param credential the credential bound to an identity to link to.
+   * @return the newly linked user with a new identity added associated with the given credential.
+   */
   StitchUser linkWithCredential(final StitchCredential credential);
 }

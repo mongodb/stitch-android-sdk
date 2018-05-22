@@ -20,6 +20,9 @@ import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactor
 import com.mongodb.stitch.server.services.twilio.internal.TwilioServiceClientImpl;
 import javax.annotation.Nonnull;
 
+/**
+ * The Twilio service client.
+ */
 public interface TwilioServiceClient {
 
   /**

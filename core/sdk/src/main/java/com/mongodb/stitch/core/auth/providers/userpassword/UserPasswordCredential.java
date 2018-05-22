@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.auth.providers.userpass;
+package com.mongodb.stitch.core.auth.providers.userpassword;
 
-import static com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider.DEFAULT_NAME;
-import static com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider.TYPE;
+import static com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvider.DEFAULT_NAME;
+import static com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvider.TYPE;
 
 import com.mongodb.stitch.core.auth.ProviderCapabilities;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import org.bson.Document;
 
+/**
+ * The credential used for User/Password log ins.
+ */
 public final class UserPasswordCredential implements StitchCredential {
 
   private final String providerName;
@@ -47,7 +50,7 @@ public final class UserPasswordCredential implements StitchCredential {
    * @param username the username of the user.
    * @param password the password of the user.
    */
-  public UserPasswordCredential(
+  UserPasswordCredential(
       final String providerName, final String username, final String password) {
     this.providerName = providerName;
     this.username = username;

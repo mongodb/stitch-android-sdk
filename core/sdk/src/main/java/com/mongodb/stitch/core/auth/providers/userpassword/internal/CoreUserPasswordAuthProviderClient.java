@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.auth.providers.userpass.internal;
+package com.mongodb.stitch.core.auth.providers.userpassword.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.internal.CoreAuthProviderClient;

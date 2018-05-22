@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-/** Contains network related classes used to talk to Stitch app servers. */
+/** This internal package contains network related classes used to talk to Stitch app servers. */
 package com.mongodb.stitch.core.internal.net;

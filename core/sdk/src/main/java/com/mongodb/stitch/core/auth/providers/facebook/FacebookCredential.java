@@ -23,16 +23,25 @@ import com.mongodb.stitch.core.auth.ProviderCapabilities;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import org.bson.Document;
 
+/**
+ * The credential used for Facebook OAuth 2.0 log ins.
+ */
 public final class FacebookCredential implements StitchCredential {
 
   private final String providerName;
   private final String accessToken;
 
+  /**
+   * Constructs a Facebook credential for a user.
+   *
+   * @param accessToken the access token from Facebook.
+   * @see <a href="https://docs.mongodb.com/stitch/auth/facebook-auth/">Facebook Authentication</a>
+   */
   public FacebookCredential(final String accessToken) {
     this(DEFAULT_NAME, accessToken);
   }
 
-  public FacebookCredential(final String providerName, final String accessToken) {
+  private FacebookCredential(final String providerName, final String accessToken) {
     this.providerName = providerName;
     this.accessToken = accessToken;
   }

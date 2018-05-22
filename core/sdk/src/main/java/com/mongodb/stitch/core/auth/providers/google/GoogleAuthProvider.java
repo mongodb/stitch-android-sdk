@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.auth.providers.google;
 
+/**
+ * Information about the Google OAuth 2.0 authentication provider.
+ */
 public final class GoogleAuthProvider {
   private GoogleAuthProvider() {}
 

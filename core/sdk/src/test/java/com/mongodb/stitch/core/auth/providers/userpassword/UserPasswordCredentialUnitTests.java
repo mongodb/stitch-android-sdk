@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.auth.providers.userpass;
+package com.mongodb.stitch.core.auth.providers.userpassword;
 
-import static com.mongodb.stitch.core.auth.providers.userpass.UserPasswordAuthProvider.DEFAULT_NAME;
+import static com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvider.DEFAULT_NAME;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;

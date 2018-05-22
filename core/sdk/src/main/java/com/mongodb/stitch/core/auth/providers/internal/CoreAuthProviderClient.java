@@ -40,15 +40,19 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
 
   /**
    * Returns the name of the authentication provider.
+   *
+   * @return the name of the authentication provider.
    */
   protected String getProviderName() {
     return providerName;
   }
 
   /**
-   * Returns the request client used by the client to make requests. Is generic since some auth
+   * Returns the request client used by the client to make requests. It is generic since some auth
    * provider clients use an authenticated request client while others use an unauthenticated
    * request client.
+   *
+   * @return the request client used by the client to make requests.
    */
   protected RequestClientT getRequestClient() {
     return requestClient;
@@ -56,6 +60,8 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
 
   /**
    * Returns the base route for this authentication provider client.
+   *
+   * @return the base route for this authentication provider client.
    */
   protected String getBaseRoute() {
     return baseRoute;

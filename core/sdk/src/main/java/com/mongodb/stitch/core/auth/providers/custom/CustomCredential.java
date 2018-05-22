@@ -23,16 +23,25 @@ import com.mongodb.stitch.core.auth.ProviderCapabilities;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import org.bson.Document;
 
+/**
+ * The credential used for custom auth log ins.
+ */
 public final class CustomCredential implements StitchCredential {
 
   private final String providerName;
   private final String token;
 
+  /**
+   * Constructs a custom auth credential for a user.
+   *
+   * @param token the signed custom auth token.
+   * @see <a href="https://docs.mongodb.com/stitch/auth/custom-auth/">Custom Authentication</a>
+   */
   public CustomCredential(final String token) {
     this(DEFAULT_NAME, token);
   }
 
-  public CustomCredential(final String providerName, final String token) {
+  private CustomCredential(final String providerName, final String token) {
     this.providerName = providerName;
     this.token = token;
   }

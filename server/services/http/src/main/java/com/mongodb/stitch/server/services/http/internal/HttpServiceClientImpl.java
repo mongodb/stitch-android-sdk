@@ -19,7 +19,7 @@ package com.mongodb.stitch.server.services.http.internal;
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
 import com.mongodb.stitch.core.services.http.internal.CoreHttpServiceClient;
-import com.mongodb.stitch.server.core.services.StitchService;
+import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.http.HttpServiceClient;
 
 import javax.annotation.Nonnull;

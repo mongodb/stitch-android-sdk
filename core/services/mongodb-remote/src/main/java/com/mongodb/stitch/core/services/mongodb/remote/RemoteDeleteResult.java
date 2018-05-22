@@ -16,10 +16,18 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote;
 
+/**
+ * The result of a delete operation.
+ */
 public class RemoteDeleteResult {
 
   private final long deletedCount;
 
+  /**
+   * Constructs a result.
+   *
+   * @param deletedCount the number of documents deleted.
+   */
   public RemoteDeleteResult(final long deletedCount) {
     this.deletedCount = deletedCount;
   }

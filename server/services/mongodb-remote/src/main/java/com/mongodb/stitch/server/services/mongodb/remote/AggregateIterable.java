@@ -16,6 +16,11 @@
 
 package com.mongodb.stitch.server.services.mongodb.remote;
 
+/**
+ * Iterable for aggregate.
+ *
+ * @param <ResultT> The type of the result.
+ */
 public interface AggregateIterable<ResultT> extends RemoteMongoIterable<ResultT> {
 
 }

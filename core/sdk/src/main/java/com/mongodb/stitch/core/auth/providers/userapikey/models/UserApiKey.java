@@ -16,16 +16,12 @@
 
 package com.mongodb.stitch.core.auth.providers.userapikey.models;
 
-import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.mongodb.stitch.core.auth.providers.userapikey.internal.CoreUserApiKeyAuthProviderClient.ApiKeyFields;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
-import org.bson.BsonReader;
-import org.bson.Document;
-import org.bson.codecs.DecoderContext;
-import org.bson.codecs.DocumentCodec;
+import javax.annotation.Nullable;
 import org.bson.types.ObjectId;
 
 /**
@@ -38,7 +34,7 @@ public final class UserApiKey {
   private final Boolean disabled;
 
   /**
-   * Constructs a User API key with the provided parameters.
+   * Constructs a user API key with the provided parameters.
    * @param id The id of the user API key as an ObjectId hex string.
    * @param key The key itself.
    * @param name The name of the key.
@@ -46,32 +42,53 @@ public final class UserApiKey {
    */
   @JsonCreator
   public UserApiKey(
-          @JsonProperty(Fields.ID) final String id,
-          @JsonProperty(Fields.KEY) final String key,
-          @JsonProperty(Fields.NAME) final String name,
-          @JsonProperty(Fields.DISABLED) final Boolean disabled) {
+          @JsonProperty(ApiKeyFields.ID) final String id,
+          @JsonProperty(ApiKeyFields.KEY) final String key,
+          @JsonProperty(ApiKeyFields.NAME) final String name,
+          @JsonProperty(ApiKeyFields.DISABLED) final Boolean disabled) {
     this.id = new ObjectId(id);
     this.key = key;
     this.name = name;
     this.disabled = disabled;
   }
 
-  @JsonProperty(Fields.ID)
+  /**
+   * Returns the id of this API key.
+   *
+   * @return the id of this API key.
+   */
+  @JsonProperty(ApiKeyFields.ID)
   public ObjectId getId() {
     return id;
   }
 
-  @JsonProperty(Fields.KEY)
+  /**
+   * Returns the key of this API key. This is only returned on the creation request for a key.
+   *
+   * @return the key of this API key.
+   */
+  @JsonProperty(ApiKeyFields.KEY)
+  @Nullable
   public String getKey() {
     return key;
   }
 
-  @JsonProperty(Fields.NAME)
+  /**
+   * Returns the name of the API key.
+   *
+   * @return the name of the API key.
+   */
+  @JsonProperty(ApiKeyFields.NAME)
   public String getName() {
     return name;
   }
 
-  @JsonProperty(Fields.DISABLED)
+  /**
+   * Returns whether or not this API key is disabled for login usage.
+   *
+   * @return whether or not this API key is disabled for login usage.
+   */
+  @JsonProperty(ApiKeyFields.DISABLED)
   public Boolean getDisabled() {
     return disabled;
   }
@@ -87,33 +104,5 @@ public final class UserApiKey {
     }
   }
 
-  private static class Fields {
-    private static final String ID = "_id";
-    private static final String KEY = "key";
-    private static final String NAME = "name";
-    private static final String DISABLED = "disabled";
-  }
 
-  public static final class Decoder implements org.bson.codecs.Decoder<UserApiKey> {
-    /**
-     * Decodes a BSON value from the given reader into an instance of the type parameter {@code T}.
-     *
-     * @param reader         the BSON reader
-     * @param decoderContext the decoder context
-     * @return an instance of the type parameter {@code T}.
-     */
-    @Override
-    public UserApiKey decode(final BsonReader reader, final DecoderContext decoderContext) {
-      final Document document = (new DocumentCodec()).decode(reader, decoderContext);
-      keyPresent(Fields.ID, document);
-      keyPresent(Fields.NAME, document);
-      keyPresent(Fields.DISABLED, document);
-      return new UserApiKey(
-              document.getString(Fields.ID),
-              document.getString(Fields.KEY),
-              document.getString(Fields.NAME),
-              document.getBoolean(Fields.DISABLED)
-      );
-    }
-  }
 }

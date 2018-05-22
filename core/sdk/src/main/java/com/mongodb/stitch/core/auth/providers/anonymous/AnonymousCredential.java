@@ -23,15 +23,21 @@ import com.mongodb.stitch.core.auth.ProviderCapabilities;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import org.bson.Document;
 
+/**
+ * The credential used for anonymous log ins.
+ */
 public final class AnonymousCredential implements StitchCredential {
 
   private final String providerName;
 
+  /**
+   * Constructs a new anonymous credential.
+   */
   public AnonymousCredential() {
     this(DEFAULT_NAME);
   }
 
-  public AnonymousCredential(final String providerName) {
+  private AnonymousCredential(final String providerName) {
     this.providerName = providerName;
   }
 

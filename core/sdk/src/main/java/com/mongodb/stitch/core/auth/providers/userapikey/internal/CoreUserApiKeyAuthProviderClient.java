@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.auth.providers.userapikey.internal;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
+
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.internal.CoreAuthProviderClient;
@@ -26,7 +28,10 @@ import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import java.util.List;
+import org.bson.BsonReader;
 import org.bson.Document;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.DocumentCodec;
 import org.bson.types.ObjectId;
 
 public class CoreUserApiKeyAuthProviderClient
@@ -50,11 +55,11 @@ public class CoreUserApiKeyAuthProviderClient
     reqBuilder
             .withMethod(Method.POST)
             .withPath(this.getBaseRoute())
-            .withDocument(new Document(Routes.ApiKeyFields.NAME, name))
+            .withDocument(new Document(ApiKeyFields.NAME, name))
             .withRefreshToken();
     return getRequestClient().doAuthenticatedRequest(
             reqBuilder.build(),
-            new UserApiKey.Decoder()
+            new UserApiKeyDecoder()
     );
   }
 
@@ -71,7 +76,7 @@ public class CoreUserApiKeyAuthProviderClient
             .withRefreshToken();
     return getRequestClient().doAuthenticatedRequest(
             reqBuilder.build(),
-            new UserApiKey.Decoder()
+            new UserApiKeyDecoder()
     );
   }
 
@@ -86,7 +91,7 @@ public class CoreUserApiKeyAuthProviderClient
             .withRefreshToken();
     return (List<UserApiKey>) getRequestClient().doAuthenticatedRequest(
             reqBuilder.build(),
-            new CollectionDecoder<>(new UserApiKey.Decoder()));
+            new CollectionDecoder<>(new UserApiKeyDecoder()));
   }
 
   /**
@@ -150,9 +155,35 @@ public class CoreUserApiKeyAuthProviderClient
     private String getApiKeyDisableRouteForId(final String id) {
       return getApiKeyRouteForId(id) + "/disable";
     }
+  }
 
-    private static class ApiKeyFields {
-      static final String NAME = "name";
+  public static class ApiKeyFields {
+    public static final String ID = "_id";
+    public static final String KEY = "key";
+    public static final String NAME = "name";
+    public static final String DISABLED = "disabled";
+  }
+
+  private static final class UserApiKeyDecoder implements org.bson.codecs.Decoder<UserApiKey> {
+    /**
+     * Decodes a BSON value from the given reader into an instance of the type parameter {@code T}.
+     *
+     * @param reader the BSON reader
+     * @param decoderContext the decoder context
+     * @return an instance of the type parameter {@code T}.
+     */
+    @Override
+    public UserApiKey decode(final BsonReader reader, final DecoderContext decoderContext) {
+      final Document document = (new DocumentCodec()).decode(reader, decoderContext);
+      keyPresent(ApiKeyFields.ID, document);
+      keyPresent(ApiKeyFields.NAME, document);
+      keyPresent(ApiKeyFields.DISABLED, document);
+      return new UserApiKey(
+          document.getString(ApiKeyFields.ID),
+          document.getString(ApiKeyFields.KEY),
+          document.getString(ApiKeyFields.NAME),
+          document.getBoolean(ApiKeyFields.DISABLED)
+      );
     }
   }
 }

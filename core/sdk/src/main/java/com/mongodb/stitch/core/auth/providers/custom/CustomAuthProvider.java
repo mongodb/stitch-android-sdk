@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.auth.providers.custom;
 
+/**
+ * Information about the custom authentication provider.
+ */
 public final class CustomAuthProvider {
   private CustomAuthProvider() {}
 

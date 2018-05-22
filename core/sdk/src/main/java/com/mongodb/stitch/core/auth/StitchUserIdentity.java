@@ -16,10 +16,19 @@
 
 package com.mongodb.stitch.core.auth;
 
+/**
+ * An identity that belongs to a Stitch user.
+ */
 public class StitchUserIdentity {
   private final String id;
   private final String providerType;
 
+  /**
+   * Constructs a new identity with the given id and provider type.
+   *
+   * @param id the id of the identity.
+   * @param providerType the type of the provider.
+   */
   public StitchUserIdentity(final String id, final String providerType) {
     this.id = id;
     this.providerType = providerType;
@@ -30,10 +39,22 @@ public class StitchUserIdentity {
     this.providerType = identity.providerType;
   }
 
+  /**
+   * Returns the id of the identity. This is generally an opaque value that shouldn't be used.
+   *
+   * @return the id of the identity.
+   */
   public String getId() {
     return id;
   }
 
+  /**
+   * Returns the type of the provider that this identity is for. A user may be linked to multiple
+   * identities of the same provider type. This value is useful to check if a user has not
+   * registered with a certain provider yet.
+   *
+   * @return the type of the provider that this identity is for.
+   */
   public String getProviderType() {
     return providerType;
   }

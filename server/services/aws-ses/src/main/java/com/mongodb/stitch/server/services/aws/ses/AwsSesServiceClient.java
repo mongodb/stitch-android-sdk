@@ -21,6 +21,9 @@ import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactor
 import com.mongodb.stitch.server.services.aws.ses.internal.AwsSesServiceClientImpl;
 import javax.annotation.Nonnull;
 
+/**
+ * The AWS SES service client.
+ */
 public interface AwsSesServiceClient {
 
   /**

@@ -9,7 +9,7 @@ import com.mongodb.stitch.core.StitchAppClientConfiguration
 import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
-import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
+import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import org.junit.After
 import org.junit.Before

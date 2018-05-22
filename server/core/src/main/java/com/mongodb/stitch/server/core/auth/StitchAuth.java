@@ -19,7 +19,14 @@ package com.mongodb.stitch.server.core.auth;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
+import javax.annotation.Nullable;
 
+/**
+ * StitchAuth manages authentication for any Stitch based client. It provides methods for logging
+ * in with various authentication providers using {@link StitchCredential}s, retrieving the current
+ * user, and getting authentication provider clients to perform actions such as registering users
+ * and creating user API keys.
+ */
 public interface StitchAuth {
   /**
    * Gets a client for the given authentication provider. Most authentication providers will allow
@@ -53,12 +60,23 @@ public interface StitchAuth {
    */
   StitchUser loginWithCredential(final StitchCredential credential);
 
-  /** Logs out the currently logged in user. */
+  /**
+   * Logs out the currently logged in user.
+   */
   void logout();
 
-  /** Returns whether or not there's a currently logged in user. */
+  /**
+   * Returns whether or not there's a currently logged in user.
+   *
+   * @return whether or not there's a currently logged in user.
+   */
   boolean isLoggedIn();
 
-  /** Returns the currently logged in user; may be null. */
+  /**
+   * Returns the currently logged in user; null if not logged in.
+   *
+   * @return the currently logged in user; null if not logged in.
+   */
+  @Nullable
   StitchUser getUser();
 }

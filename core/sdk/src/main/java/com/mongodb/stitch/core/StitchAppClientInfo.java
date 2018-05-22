@@ -28,6 +28,14 @@ public final class StitchAppClientInfo {
 
   /**
    * Constructs the {@link StitchAppClientInfo}.
+   *
+   * @param clientAppId the client app id of the Stitch application that this client is going to
+   *                    communicate with.
+   * @param dataDirectory the local directory in which Stitch can store any data
+   *                       (e.g. embedded MongoDB data directory).
+   * @param localAppName the name of the local application.
+   * @param localAppVersion the current version of the local application.
+   * @param codecRegistry the codec registry being used for encoding/decoding of JSON.
    */
   public StitchAppClientInfo(
       final String clientAppId,
@@ -44,6 +52,8 @@ public final class StitchAppClientInfo {
 
   /**
    * Gets the client app id of the Stitch application that this client communicates with.
+   *
+   * @return the client app id of the Stitch application that this client communicates with.
    */
   public String getClientAppId() {
     return clientAppId;
@@ -52,6 +62,8 @@ public final class StitchAppClientInfo {
   /**
    * Gets the local directory in which Stitch can store any data (e.g. MongoDB Mobile data
    * directory).
+   *
+   * @return the local directory in which Stitch can store any data.
    */
   public String getDataDirectory() {
     return dataDirectory;
@@ -59,6 +71,8 @@ public final class StitchAppClientInfo {
 
   /**
    * Gets the name of the local application.
+   *
+   * @return the name of the local application..
    */
   public String getLocalAppName() {
     return localAppName;
@@ -66,6 +80,8 @@ public final class StitchAppClientInfo {
 
   /**
    * Gets the current version of the local application.
+   *
+   * @return the current version of the local application..
    */
   public String getLocalAppVersion() {
     return localAppVersion;
@@ -73,6 +89,8 @@ public final class StitchAppClientInfo {
 
   /**
    * Returns the codec registry.
+   *
+   * @return the codec registry.
    */
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;

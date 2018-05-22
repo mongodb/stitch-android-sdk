@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-/** Contains the implementation of a basic Stitch service. */
+/** This internal package contains the base implementation of a basic Stitch service. */
 package com.mongodb.stitch.core.services.internal;

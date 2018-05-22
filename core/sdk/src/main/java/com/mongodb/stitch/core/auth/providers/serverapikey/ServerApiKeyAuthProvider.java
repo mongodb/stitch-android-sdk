@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.auth.providers.serverapikey;
 
+/**
+ * Information about the server API key authentication provider.
+ */
 public final class ServerApiKeyAuthProvider {
   private ServerApiKeyAuthProvider() {}
 

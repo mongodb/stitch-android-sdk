@@ -18,12 +18,37 @@ package com.mongodb.stitch.android.services.mongodb.remote;
 
 import com.google.android.gms.tasks.Task;
 import java.io.Closeable;
+import java.util.NoSuchElementException;
 
+/**
+ * The Mongo Cursor interface.
+ * An application should ensure that a cursor is closed in all circumstances, e.g. using a
+ * try-with-resources statement.
+ *
+ * @param <ResultT> The type of documents the cursor contains
+ */
 public interface RemoteMongoCursor<ResultT> extends Closeable {
 
+  /**
+   * Returns whether or not there is a next document to retrieve with {@code next()}.
+   *
+   * @return A {@link Task} containing whether or not there is a next document to
+   *         retrieve with {@code next()}.
+   */
   Task<Boolean> hasNext();
 
+  /**
+   * Returns the next document.
+   *
+   * @return A {@link Task} containing the next document if available or a failed task with
+   *         a {@link NoSuchElementException } exception.
+   */
   Task<ResultT> next();
 
+  /**
+   * A special {@code next()} case that returns the next document if available or null.
+   *
+   * @return A {@link Task} containing the next document if available or null.
+   */
   Task<ResultT> tryNext();
 }

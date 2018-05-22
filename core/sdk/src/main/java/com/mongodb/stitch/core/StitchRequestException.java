@@ -32,6 +32,9 @@ public class StitchRequestException extends StitchException {
 
   /**
    * Constructs a request exception from the underlying exception and error code.
+   *
+   * @param underlyingException the underlying exception that caused this exception.
+   * @param errorCode the request error code associated with this exception.
    */
   public StitchRequestException(
       final Exception underlyingException, final StitchRequestErrorCode errorCode) {
@@ -41,6 +44,8 @@ public class StitchRequestException extends StitchException {
 
   /**
    * Returns the {@link StitchRequestErrorCode} indicating the reason for this exception.
+   *
+   * @return the {@link StitchRequestErrorCode} indicating the reason for this exception.
    */
   public StitchRequestErrorCode getErrorCode() {
     return errorCode;

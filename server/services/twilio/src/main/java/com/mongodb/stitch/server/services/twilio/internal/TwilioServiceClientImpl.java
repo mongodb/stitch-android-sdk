@@ -17,7 +17,7 @@
 package com.mongodb.stitch.server.services.twilio.internal;
 
 import com.mongodb.stitch.core.services.twilio.internal.CoreTwilioServiceClient;
-import com.mongodb.stitch.server.core.services.StitchService;
+import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.twilio.TwilioServiceClient;
 import javax.annotation.Nonnull;
 

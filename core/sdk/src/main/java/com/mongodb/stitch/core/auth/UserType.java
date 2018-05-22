@@ -16,6 +16,11 @@
 
 package com.mongodb.stitch.core.auth;
 
+/**
+ * UserType indicates the type of a user. There are currently only two: normal and server. Normal
+ * users are users created from any authentication provider except the server API key authentication
+ * provider.
+ */
 public enum UserType {
   NORMAL("normal"),
   SERVER("server"),
@@ -27,6 +32,10 @@ public enum UserType {
     this.typeName = name;
   }
 
+  /**
+   * Returns the human-readable name of this user type.
+   * @return the human-readable name of this user type.
+   */
   public String getTypeName() {
     return typeName;
   }
@@ -38,6 +47,9 @@ public enum UserType {
 
   /**
    * Gets a UserType from a typeName; UNKNOWN if none is found.
+   *
+   * @param name the human-readable name of this user type.
+   * @return a UserType from a typeName; UNKNOWN if none is found.
    */
   public static UserType fromName(final String name) {
     if (name.equals(NORMAL.typeName)) {
