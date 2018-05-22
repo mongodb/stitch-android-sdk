@@ -31,11 +31,22 @@ public final class StitchServiceException extends StitchException {
 
   private final StitchServiceErrorCode errorCode;
 
+  /**
+   * Constructs a new exception with the given error code.
+   *
+   * @param errorCode the service error code associated with this exception.
+   */
   public StitchServiceException(final StitchServiceErrorCode errorCode) {
     super(errorCode.getCodeName());
     this.errorCode = errorCode;
   }
 
+  /**
+   * Constructs a new exception with the given message error code.
+   *
+   * @param message a message corresponding to the error.
+   * @param errorCode the service error code associated with this exception.
+   */
   public StitchServiceException(final String message, final StitchServiceErrorCode errorCode) {
     super(message);
     this.errorCode = errorCode;
@@ -43,6 +54,8 @@ public final class StitchServiceException extends StitchException {
 
   /**
    * Returns the {@link StitchServiceErrorCode} associated with the response to the request.
+   *
+   * @return the {@link StitchServiceErrorCode} associated with the response to the request.
    */
   public StitchServiceErrorCode getErrorCode() {
     return errorCode;

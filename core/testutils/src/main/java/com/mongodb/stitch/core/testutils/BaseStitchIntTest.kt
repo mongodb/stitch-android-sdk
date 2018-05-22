@@ -21,7 +21,7 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.admin.services.service
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyAuthProvider
-import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
+import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bson.types.ObjectId

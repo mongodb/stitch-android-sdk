@@ -19,6 +19,11 @@ package com.mongodb.stitch.android.services.mongodb.remote;
 import android.support.annotation.Nullable;
 import org.bson.conversions.Bson;
 
+/**
+ * Iterable for find.
+ *
+ * @param <ResultT> The type of the result.
+ */
 public interface RemoteFindIterable<ResultT> extends RemoteMongoIterable<ResultT> {
 
   /**

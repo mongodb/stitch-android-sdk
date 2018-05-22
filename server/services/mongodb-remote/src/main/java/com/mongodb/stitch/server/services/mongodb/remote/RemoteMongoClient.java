@@ -20,6 +20,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoC
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl;
 
+/**
+ * The remote MongoClient used for working with data in MongoDB remotely via Stitch.
+ */
 public interface RemoteMongoClient {
 
   /**

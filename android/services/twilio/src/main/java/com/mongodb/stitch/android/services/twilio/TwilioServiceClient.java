@@ -20,11 +20,14 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
+import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.twilio.internal.TwilioServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 
+/**
+ * The Twilio service client.
+ */
 public interface TwilioServiceClient {
 
   /**

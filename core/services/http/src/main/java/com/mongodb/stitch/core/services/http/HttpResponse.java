@@ -22,6 +22,9 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * The response to an HTTP request over the HTTP service.
+ */
 public class HttpResponse {
   private final String status;
   private final int statusCode;
@@ -58,6 +61,8 @@ public class HttpResponse {
 
   /**
    * Returns the human readable status of the response.
+   *
+   * @return the human readable status of the response.
    */
   @Nonnull
   public String getStatus() {
@@ -66,6 +71,8 @@ public class HttpResponse {
 
   /**
    * Returns the status code of the response.
+   *
+   * @return the status code of the response.
    */
   public int getStatusCode() {
     return statusCode;
@@ -73,6 +80,8 @@ public class HttpResponse {
 
   /**
    * Returns the content length of the response.
+   *
+   * @return the content length of the response.
    */
   public long getContentLength() {
     return contentLength;
@@ -80,6 +89,8 @@ public class HttpResponse {
 
   /**
    * Returns the response headers.
+   *
+   * @return the response headers.
    */
   @Nullable
   public Map<String, Collection<String>> getHeaders() {
@@ -88,6 +99,8 @@ public class HttpResponse {
 
   /**
    * Returns the response cookies.
+   *
+   * @return the response cookies.
    */
   @Nullable
   public Map<String, HttpCookie> getCookies() {
@@ -96,6 +109,8 @@ public class HttpResponse {
 
   /**
    * Returns a copy of the response body.
+   *
+   * @return a copy of the response body.
    */
   @Nullable
   public byte[] getBody() {

@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.auth.providers.userapikey;
 
+/**
+ * Information about the user API key authentication provider.
+ */
 public final class UserApiKeyAuthProvider {
   private UserApiKeyAuthProvider() {}
 

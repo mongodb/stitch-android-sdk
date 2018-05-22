@@ -27,6 +27,9 @@ public final class IoUtils {
 
   /**
    * Reads the entire {@link InputStream} to EOF and returns the data as bytes.
+   *
+   * @param in the stream to read.
+   * @return the read data as bytes.
    * @throws IOException in the event the data cannot be read.
    */
   public static byte[] readAllToBytes(final InputStream in) throws IOException {
@@ -43,6 +46,13 @@ public final class IoUtils {
     }
   }
 
+  /**
+   * Reads the entire {@link InputStream} to EOF and returns the data as a string.
+   *
+   * @param in the stream to read.
+   * @return the read data as a string.
+   * @throws IOException in the event the data cannot be read.
+   */
   public static String readAllToString(final InputStream in) throws IOException {
     return new String(readAllToBytes(in), StandardCharsets.UTF_8);
   }

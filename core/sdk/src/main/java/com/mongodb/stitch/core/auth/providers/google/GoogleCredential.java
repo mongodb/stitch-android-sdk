@@ -23,16 +23,25 @@ import com.mongodb.stitch.core.auth.ProviderCapabilities;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import org.bson.Document;
 
+/**
+ * The credential used for Google OAuth 2.0 log ins.
+ */
 public final class GoogleCredential implements StitchCredential {
 
   private final String providerName;
   private final String authCode;
 
+  /**
+   * Constructs a Google credential for a user.
+   *
+   * @param authCode the auth code from Google.
+   * @see <a href="https://docs.mongodb.com/stitch/auth/google-auth/">Google Authentication</a>
+   */
   public GoogleCredential(final String authCode) {
     this(DEFAULT_NAME, authCode);
   }
 
-  public GoogleCredential(final String providerName, final String authCode) {
+  private GoogleCredential(final String providerName, final String authCode) {
     this.providerName = providerName;
     this.authCode = authCode;
   }

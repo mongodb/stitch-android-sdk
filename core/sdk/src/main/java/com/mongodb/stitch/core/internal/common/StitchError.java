@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core;
+package com.mongodb.stitch.core.internal.common;
 
 import static com.mongodb.stitch.core.internal.common.IoUtils.readAllToString;
 
+import com.mongodb.stitch.core.StitchServiceErrorCode;
+import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.net.ContentTypes;
 import com.mongodb.stitch.core.internal.net.Headers;
@@ -25,6 +27,9 @@ import com.mongodb.stitch.core.internal.net.Response;
 import java.util.Locale;
 import org.bson.Document;
 
+/**
+ * A set of utilities for handling errors that come back from Stitch app servers.
+ */
 public final class StitchError {
 
   private StitchError() {}
@@ -36,7 +41,7 @@ public final class StitchError {
    *
    * @param response the network response.
    */
-  public static void handleRequestError(final Response response) throws StitchRequestException {
+  public static void handleRequestError(final Response response) {
     if (response.getBody() == null) {
       throw new StitchServiceException(
           String.format(

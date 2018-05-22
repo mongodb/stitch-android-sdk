@@ -52,6 +52,8 @@ public final class CoreStitchAppClient {
    *
    * @param name the name of the Stitch function to call.
    * @param args the arguments to pass to the Stitch function.
+   * @param requestTimeout the number of milliseconds the client should wait for a response from the
+   *                       server before failing with an error.
    * @param decoder the {@link Decoder} to use to decode the Stitch response into a value.
    * @param <T> the type into which the Stitch response will be decoded.
    * @return the decoded value.
@@ -73,6 +75,8 @@ public final class CoreStitchAppClient {
    *
    * @param name the name of the Stitch function to call.
    * @param args the arguments to pass to the Stitch function.
+   * @param requestTimeout the number of milliseconds the client should wait for a response from the
+   *                       server before failing with an error.
    * @param resultClass the class that the Stitch response should be decoded as.
    * @param <T> the type into which the Stitch response will be decoded.
    * @return the decoded value.
@@ -91,6 +95,8 @@ public final class CoreStitchAppClient {
   *
   * @param name the name of the Stitch function to call.
   * @param args the arguments to pass to the Stitch function.
+  * @param requestTimeout the number of milliseconds the client should wait for a response from the
+  *                       server before failing with an error.
   * @param resultClass the class that the Stitch response should be decoded as.
   * @param <T> the type into which the Stitch response will be decoded.
   * @param codecRegistry the codec registry that will be used to encode/decode the function call.

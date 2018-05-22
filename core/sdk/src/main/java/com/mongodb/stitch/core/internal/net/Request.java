@@ -46,6 +46,8 @@ public final class Request {
 
   /**
    * Returns the URL that the request will be performed against.
+   *
+   * @return the URL that the request will be performed against.
    */
   public String getUrl() {
     return url;
@@ -55,6 +57,9 @@ public final class Request {
   /**
    * Returns the number of milliseconds that the underlying transport should spend on an HTTP round
    * trip before failing with an error.
+   *
+   * @return the number of milliseconds that the underlying transport should spend on an HTTP round
+   *         trip before failing with an error.
    */
   public Long getTimeout() {
     return timeout;
@@ -62,6 +67,8 @@ public final class Request {
 
   /**
    * Returns the headers that will be included in the request.
+   *
+   * @return the headers that will be included in the request.
    */
   public Map<String, String> getHeaders() {
     return headers;
@@ -69,6 +76,8 @@ public final class Request {
 
   /**
    * Returns a copy of the body that will be sent along with the request.
+   *
+   * @return a copy of the body that will be sent along with the request.
    */
   public byte[] getBody() {
     if (body == null) {
@@ -79,6 +88,8 @@ public final class Request {
 
   /**
    * Returns the HTTP method of the request.
+   *
+   * @return the HTTP method of the request.
    */
   public Method getMethod() {
     return method;
@@ -94,6 +105,9 @@ public final class Request {
     private Map<String, String> headers;
     private byte[] body;
 
+    /**
+     * Constructs a new builder.
+     */
     public Builder() {}
 
     private Builder(final Request request) {
@@ -106,6 +120,9 @@ public final class Request {
 
     /**
      * Sets the URL that the request will be performed against.
+     *
+     * @param url the URL that the request will be performed against.
+     * @return the builder.
      */
     public Builder withUrl(final String url) {
       this.url = url;
@@ -115,6 +132,10 @@ public final class Request {
     /**
      * Sets the number of milliseconds that the underlying transport should spend on an HTTP round
      * trip before failing with an error.
+     *
+     * @param timeout the number of milliseconds that the underlying transport should spend on an
+     *                HTTP round trip before failing with an error.
+     * @return the builder.
      */
     public Builder withTimeout(final Long timeout) {
       this.timeout = timeout;
@@ -123,6 +144,9 @@ public final class Request {
 
     /**
      * Sets the headers that will be included in the request.
+     *
+     * @param headers the headers that will be included in the request.
+     * @return the builder.
      */
     public Builder withHeaders(final Map<String, String> headers) {
       this.headers = headers;
@@ -131,6 +155,9 @@ public final class Request {
 
     /**
      * Sets a copy of the body that will be sent along with the request.
+     *
+     * @param body the body that will be sent along with the request.
+     * @return the builder.
      */
     public Builder withBody(final byte[] body) {
       if (body == null) {
@@ -142,6 +169,9 @@ public final class Request {
 
     /**
      * Sets the HTTP method of the request.
+     *
+     * @param method the HTTP method of the request.
+     * @return the builder.
      */
     public Builder withMethod(final Method method) {
       this.method = method;
@@ -150,6 +180,8 @@ public final class Request {
 
     /**
      * Returns the URL that the request will be performed against.
+     *
+     * @return the URL that the request will be performed against.
      */
     public String getUrl() {
       return this.url;
@@ -158,6 +190,9 @@ public final class Request {
     /**
      * Returns the number of milliseconds that the underlying transport should spend on an HTTP
      * round trip before failing with an error.
+     *
+     * @return the number of milliseconds that the underlying transport should spend on an HTTP
+     *         round trip before failing with an error.
      */
     public Long getTimeout() {
       return timeout;
@@ -165,6 +200,8 @@ public final class Request {
 
     /**
      * Returns the headers that will be included in the request.
+     *
+     * @return the headers that will be included in the request.
      */
     public Map<String, String> getHeaders() {
       return this.headers;
@@ -172,6 +209,8 @@ public final class Request {
 
     /**
      * Returns a copy of the body that will be sent along with the request.
+     *
+     * @return a copy of the body that will be sent along with the request.
      */
     public byte[] getBody() {
       if (body == null) {
@@ -182,6 +221,8 @@ public final class Request {
 
     /**
      * Returns the HTTP method of the request.
+     *
+     * @return the HTTP method of the request.
      */
     public Method getMethod() {
       return this.method;
@@ -189,6 +230,8 @@ public final class Request {
 
     /**
      * Builds, validates, and returns the {@link Request}.
+     *
+     * @return the built {@link Request}.
      */
     public Request build() {
       if (method == null) {

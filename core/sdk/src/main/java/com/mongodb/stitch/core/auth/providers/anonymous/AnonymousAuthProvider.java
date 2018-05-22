@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.auth.providers.anonymous;
 
+/**
+ * Information about the anonymous authentication provider.
+ */
 public final class AnonymousAuthProvider {
   private AnonymousAuthProvider() {}
 

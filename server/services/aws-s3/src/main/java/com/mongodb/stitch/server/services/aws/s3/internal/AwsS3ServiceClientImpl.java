@@ -19,7 +19,7 @@ package com.mongodb.stitch.server.services.aws.s3.internal;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
 import com.mongodb.stitch.core.services.aws.s3.internal.CoreAwsS3ServiceClient;
-import com.mongodb.stitch.server.core.services.StitchService;
+import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.aws.s3.AwsS3ServiceClient;
 import java.io.IOException;
 import java.io.InputStream;

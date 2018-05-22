@@ -15,7 +15,7 @@
  */
 
 /**
- * Contains the core specification and implementation of the User API key authentication provider
- * and User API key CRUD.
+ * This package contains the user API key authentication provider: type info and its
+ * credential builder.
  */
 package com.mongodb.stitch.core.auth.providers.userapikey;

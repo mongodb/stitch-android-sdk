@@ -19,6 +19,9 @@ package com.mongodb.stitch.core.services.mongodb.remote;
 import javax.annotation.Nullable;
 import org.bson.conversions.Bson;
 
+/**
+ * The options to apply to a find operation (also commonly referred to as a query).
+ */
 public class RemoteFindOptions {
   private int limit;
   private Bson projection;

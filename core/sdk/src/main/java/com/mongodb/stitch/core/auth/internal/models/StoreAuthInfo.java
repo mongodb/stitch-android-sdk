@@ -32,6 +32,14 @@ public final class StoreAuthInfo extends AuthInfo {
 
   /**
    * Constructs a {@link StoreAuthInfo} from storage.
+   *
+   * @param userId the id of the user.
+   * @param deviceId the device id of the user.
+   * @param accessToken the current access token for the logged in user.
+   * @param refreshToken the current refresh token for the logged in user.
+   * @param loggedInProviderType the type of provider used to log in the current user.
+   * @param loggedInProviderName the name of the provider used to log in the current user.
+   * @param userProfile profile information about the user.
    */
   @JsonCreator
   public StoreAuthInfo(
@@ -54,6 +62,14 @@ public final class StoreAuthInfo extends AuthInfo {
 
   /**
    * Constructs a fully specified {@link StoreAuthInfo}.
+   *
+   * @param userId the id of the user.
+   * @param deviceId the device id of the user.
+   * @param accessToken the current access token for the logged in user.
+   * @param refreshToken the current refresh token for the logged in user.
+   * @param loggedInProviderType the type of provider used to log in the current user.
+   * @param loggedInProviderName the name of the provider used to log in the current user.
+   * @param userProfile profile information about the user.
    */
   public StoreAuthInfo(
       final String userId,

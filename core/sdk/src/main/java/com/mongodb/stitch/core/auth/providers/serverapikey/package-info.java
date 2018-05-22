@@ -15,6 +15,7 @@
  */
 
 /**
- * Contains the core specification and implementation of the Server API key authentication provider.
+ * This package contains the Server API key authentication provider: type info and its credential
+ * builder.
  */
 package com.mongodb.stitch.core.auth.providers.serverapikey;

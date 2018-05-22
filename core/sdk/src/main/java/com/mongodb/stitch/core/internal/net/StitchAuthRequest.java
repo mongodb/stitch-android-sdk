@@ -67,6 +67,8 @@ public class StitchAuthRequest extends StitchRequest {
 
   /**
    * Returns whether or not a refresh token should be used in this request.
+   *
+   * @return whether or not a refresh token should be used in this request.
    */
   public boolean getUseRefreshToken() {
     return useRefreshToken;
@@ -75,6 +77,9 @@ public class StitchAuthRequest extends StitchRequest {
   /**
    * Returns whether or not the performer of this request should attempt to refresh authentication
    * info on failure.
+   *
+   * @return whether or not the performer of this request should attempt to refresh authentication
+   *         info on failure.
    */
   public boolean getShouldRefreshOnFailure() {
     return shouldRefreshOnFailure;
@@ -82,6 +87,8 @@ public class StitchAuthRequest extends StitchRequest {
 
   /**
    * Returns a copy of this request in builder form.
+   *
+   * @return a copy of this request in builder form.
    */
   public Builder builder() {
     return new Builder(this);
@@ -94,6 +101,9 @@ public class StitchAuthRequest extends StitchRequest {
     private boolean useRefreshToken;
     private boolean shouldRefreshOnFailure = true;
 
+    /**
+     * Constructs a new builder.
+     */
     public Builder() {
       super();
     }
@@ -105,6 +115,8 @@ public class StitchAuthRequest extends StitchRequest {
 
     /**
      * Set if this request should use an access token in this request.
+     *
+     * @return the builder.
      */
     public Builder withAccessToken() {
       this.useRefreshToken = false;
@@ -113,6 +125,8 @@ public class StitchAuthRequest extends StitchRequest {
 
     /**
      * Set if this request should use a refresh token in this request.
+     *
+     * @return the builder.
      */
     public Builder withRefreshToken() {
       this.useRefreshToken = true;
@@ -122,6 +136,10 @@ public class StitchAuthRequest extends StitchRequest {
     /**
      * Sets whether or not the performer of this request should attempt to refresh authentication
      * info on failure.
+     *
+     * @param shouldRefresh whether or not the performer of this request should attempt to refresh
+     *                      authentication info on failure.
+     * @return the builder.
      */
     public Builder withShouldRefreshOnFailure(final boolean shouldRefresh) {
       this.shouldRefreshOnFailure = shouldRefresh;
@@ -130,6 +148,9 @@ public class StitchAuthRequest extends StitchRequest {
 
     /**
      * Sets the HTTP method of the request.
+     *
+     * @param method the HTTP method of the request.
+     * @return the builder.
      */
     public Builder withMethod(final Method method) {
       super.withMethod(method);
@@ -138,6 +159,9 @@ public class StitchAuthRequest extends StitchRequest {
 
     /**
      * Sets the Stitch API path of the request.
+     *
+     * @param path the Stitch API path of the request.
+     * @return the builder.
      */
     public Builder withPath(final String path) {
       super.withPath(path);
@@ -146,6 +170,9 @@ public class StitchAuthRequest extends StitchRequest {
 
     /**
      * Sets the headers that will be included in the request.
+     *
+     * @param headers the headers that will be included in the request.
+     * @return the builder.
      */
     public Builder withHeaders(final Map<String, String> headers) {
       super.withHeaders(headers);
@@ -154,6 +181,9 @@ public class StitchAuthRequest extends StitchRequest {
 
     /**
      * Sets a copy of the body that will be sent along with the request.
+     *
+     * @param body a copy of the body that will be sent along with the request.
+     * @return the builder.
      */
     public Builder withBody(final byte[] body) {
       super.withBody(body);
@@ -162,6 +192,8 @@ public class StitchAuthRequest extends StitchRequest {
 
     /**
      * Builds the request.
+     *
+     * @return the built {@link StitchAuthRequest}.
      */
     public StitchAuthRequest build() {
       if (useRefreshToken) {

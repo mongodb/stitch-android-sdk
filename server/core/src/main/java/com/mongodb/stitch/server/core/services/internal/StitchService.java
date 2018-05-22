@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.server.core.services;
+package com.mongodb.stitch.server.core.services.internal;
 
 import com.mongodb.stitch.core.services.internal.CoreStitchService;
 

@@ -17,7 +17,6 @@
 package com.mongodb.stitch.android.core.services.internal;
 
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 
 public interface ServiceClientFactory<T> {

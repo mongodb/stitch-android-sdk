@@ -46,6 +46,9 @@ public final class StitchDocRequest extends StitchRequest {
   public static class Builder extends StitchRequest.Builder {
     private Document document;
 
+    /**
+     * Constructs a new builder.
+     */
     public Builder() {}
 
     Builder(final StitchDocRequest request) {
@@ -53,17 +56,31 @@ public final class StitchDocRequest extends StitchRequest {
       document = request.document;
     }
 
+    /**
+     * Sets the document to send in the request.
+     *
+     * @param document the document to send in the request.
+     * @return the builder.
+     */
     public Builder withDocument(final Document document) {
       this.document = document;
       return this;
     }
 
+    /**
+     * Returns the document to send in the request.
+     *
+     * @return the document to send in the request.
+     */
     public Document getDocument() {
       return this.document;
     }
 
     /**
      * Sets the HTTP method of the request.
+     *
+     * @param method the HTTP method of the request.
+     * @return the builder.
      */
     public Builder withMethod(final Method method) {
       super.withMethod(method);
@@ -72,6 +89,9 @@ public final class StitchDocRequest extends StitchRequest {
 
     /**
      * Sets the Stitch API path of the request.
+     *
+     * @param path the Stitch API path of the request.
+     * @return the builder.
      */
     public Builder withPath(final String path) {
       super.withPath(path);
@@ -80,6 +100,9 @@ public final class StitchDocRequest extends StitchRequest {
 
     /**
      * Sets the headers that will be included in the request.
+     *
+     * @param headers the headers that will be included in the request.
+     * @return the builder.
      */
     public Builder withHeaders(final Map<String, String> headers) {
       super.withHeaders(headers);
@@ -88,6 +111,9 @@ public final class StitchDocRequest extends StitchRequest {
 
     /**
      * Sets a copy of the body that will be sent along with the request.
+     *
+     * @param body a copy of the body that will be sent along with the request.
+     * @return the builder.
      */
     public Builder withBody(final byte[] body) {
       super.withBody(body);
@@ -96,13 +122,19 @@ public final class StitchDocRequest extends StitchRequest {
 
     /**
      * Builds the {@link StitchDocRequest}.
+     *
+     * @return the built {@link StitchDocRequest}.
      */
     public StitchDocRequest build() {
       return this.build(BsonUtils.DEFAULT_CODEC_REGISTRY);
     }
 
     /**
-     * Builds the {@link StitchDocRequest}.
+     * Builds the {@link StitchDocRequest} using the given codec registry for encoding the
+     * document.
+     *
+     * @param codecRegistry the registry to use for encoding the document.
+     * @return the built {@link StitchDocRequest}.
      */
     public StitchDocRequest build(final CodecRegistry codecRegistry) {
       if (document == null) {

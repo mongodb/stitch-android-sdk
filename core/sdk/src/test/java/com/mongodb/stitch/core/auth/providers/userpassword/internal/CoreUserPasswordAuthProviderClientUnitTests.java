@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.auth.providers.userpass.internal;
+package com.mongodb.stitch.core.auth.providers.userpassword.internal;
 
 import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
 import static org.junit.Assert.assertEquals;

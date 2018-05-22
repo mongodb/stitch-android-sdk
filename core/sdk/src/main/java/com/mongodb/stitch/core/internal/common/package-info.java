@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-/** Contains common utility classes needed across the internal core implementation. */
+/** This internal package contains common utility classes needed across the core implementation. */
 package com.mongodb.stitch.core.internal.common;

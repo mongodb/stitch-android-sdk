@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote;
 
+/**
+ * The options to apply when updating documents.
+ */
 public class RemoteUpdateOptions {
   private boolean upsert;
 

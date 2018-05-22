@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 /**
  * A response to an HTTP request, typically originating from a {@link Request}.
  */
@@ -144,17 +146,30 @@ public final class Response {
     this.body = null;
   }
 
-  /** Returns the status code of the response. */
+  /**
+   * Returns the status code of the response.
+   *
+   * @return the status code of the response.
+   */
   public int getStatusCode() {
     return statusCode;
   }
 
-  /** Returns the headers of the response. */
+  /**
+   * Returns the headers of the response.
+   *
+   * @return the headers of the response.
+   */
   public Map<String, String> getHeaders() {
     return headers;
   }
 
-  /** Returns the body of the response; may be null. */
+  /**
+   * Returns the body of the response; may be null.
+   *
+   * @return the body of the response; may be null.
+   */
+  @Nullable
   public InputStream getBody() {
     return body;
   }

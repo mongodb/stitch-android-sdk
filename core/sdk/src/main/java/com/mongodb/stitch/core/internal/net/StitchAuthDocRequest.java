@@ -50,6 +50,9 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
   public static class Builder extends StitchAuthRequest.Builder {
     private Document document;
 
+    /**
+     * Constructs a new builder.
+     */
     public Builder() {}
 
     Builder(final StitchAuthDocRequest request) {
@@ -57,17 +60,30 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
       document = request.document;
     }
 
+    /**
+     * Sets the document to send in the request.
+     *
+     * @param document the document to send in the request.
+     * @return the builder.
+     */
     public Builder withDocument(final Document document) {
       this.document = document;
       return this;
     }
 
+    /**
+     * Returns the document to send in the request.
+     *
+     * @return the document to send in the request.
+     */
     public Document getDocument() {
       return this.document;
     }
 
     /**
      * Set if this request should use an access token in this request.
+     *
+     * @return the builder.
      */
     public Builder withAccessToken() {
       super.withAccessToken();
@@ -76,6 +92,8 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
 
     /**
      * Set if this request should use a refresh token in this request.
+     *
+     * @return the builder.
      */
     public Builder withRefreshToken() {
       super.withRefreshToken();
@@ -85,6 +103,10 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
     /**
      * Sets whether or not the performer of this request should attempt to refresh authentication
      * info on failure.
+     *
+     * @param shouldRefresh whether or not the performer of this request should attempt to refresh
+     *                      authentication info on failure.
+     * @return the builder.
      */
     public Builder withShouldRefreshOnFailure(final boolean shouldRefresh) {
       super.withShouldRefreshOnFailure(shouldRefresh);
@@ -93,6 +115,9 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
 
     /**
      * Sets the HTTP method of the request.
+     *
+     * @param method the HTTP method of the request.
+     * @return the builder.
      */
     public Builder withMethod(final Method method) {
       super.withMethod(method);
@@ -101,6 +126,9 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
 
     /**
      * Sets the Stitch API path of the request.
+     *
+     * @param path the Stitch API path of the request.
+     * @return the builder.
      */
     public Builder withPath(final String path) {
       super.withPath(path);
@@ -109,6 +137,9 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
 
     /**
      * Sets the headers that will be included in the request.
+     *
+     * @param headers the headers that will be included in the request.
+     * @return the builder.
      */
     public Builder withHeaders(final Map<String, String> headers) {
       super.withHeaders(headers);
@@ -117,6 +148,9 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
 
     /**
      * Sets a copy of the body that will be sent along with the request.
+     *
+     * @param body a copy of the body that will be sent along with the request.
+     * @return the builder.
      */
     public Builder withBody(final byte[] body) {
       super.withBody(body);
@@ -125,13 +159,19 @@ public final class StitchAuthDocRequest extends StitchAuthRequest {
 
     /**
      * Builds the {@link StitchAuthDocRequest}.
+     *
+     * @return the built {@link StitchAuthDocRequest}.
      */
     public StitchAuthDocRequest build() {
       return this.build(BsonUtils.DEFAULT_CODEC_REGISTRY);
     }
 
     /**
-     * Builds the {@link StitchAuthDocRequest}.
+     * Builds the {@link StitchAuthDocRequest} using the given codec registry for encoding the
+     * document.
+     *
+     * @param codecRegistry the registry to use for encoding the document.
+     * @return the built {@link StitchAuthDocRequest}.
      */
     public StitchAuthDocRequest build(final CodecRegistry codecRegistry) {
       if (document == null) {
