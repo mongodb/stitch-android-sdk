@@ -84,6 +84,7 @@ public final class OkHttpTransport implements Transport {
   // This executes a request synchronously
   public Response roundTrip(final Request request) throws IOException {
     final OkHttpClient reqClient = client.newBuilder()
+            .connectTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
             .readTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
             .writeTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
             .build();
