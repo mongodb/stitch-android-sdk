@@ -99,7 +99,7 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.0.0'
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="stitch_client_app_id"> YOUR_APP_ID </string>
+    <string name="stitch_client_app_id">YOUR_APP_ID</string>
 </resources>
 ```
 
