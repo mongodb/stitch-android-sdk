@@ -122,7 +122,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return authInfo;
   }
 
-  /** Returns whether or not the client is logged in. */
+  /**
+   * Returns whether or not the client is logged in.
+   *
+   * @return whether or not the client is logged in.
+   */
   @CheckReturnValue(when = When.NEVER)
   public synchronized boolean isLoggedIn() {
     return currentUser != null;

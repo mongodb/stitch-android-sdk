@@ -59,6 +59,8 @@ public class StitchRequest {
 
   /**
    * Returns the HTTP method of the request.
+   *
+   * @return the HTTP method of the request.
    */
   public Method getMethod() {
     return method;
@@ -66,6 +68,8 @@ public class StitchRequest {
 
   /**
    * Returns the Stitch API path of the request.
+   *
+   * @return the Stitch API path of the request.
    */
   public String getPath() {
     return path;
@@ -75,6 +79,9 @@ public class StitchRequest {
    * Returns the number of milliseconds that the underlying transport should spend on an HTTP round
    * trip before failing with an error. If not configured, a default should override it before the
    * request is transformed into a plain HTTP request.
+   *
+   * @return the number of milliseconds that the underlying transport should spend on an HTTP round
+   * trip before failing with an error.
    */
   public Long getTimeout() {
     return timeout;
@@ -82,6 +89,8 @@ public class StitchRequest {
 
   /**
    * Returns the headers that will be included in the request.
+   *
+   * @return the headers that will be included in the request.
    */
   public Map<String, String> getHeaders() {
     return headers;
@@ -89,6 +98,8 @@ public class StitchRequest {
 
   /**
    * Returns a copy of the body that will be sent along with the request.
+   *
+   * @return a copy of the body that will be sent along with the request.
    */
   public byte[] getBody() {
     if (body == null) {
@@ -97,6 +108,11 @@ public class StitchRequest {
     return Arrays.copyOf(body, body.length);
   }
 
+  /**
+   * Returns when the request started at.
+   *
+   * @return when the request started at.
+   */
   public Long getStartedAt() {
     return startedAt;
   }
@@ -121,10 +137,16 @@ public class StitchRequest {
       startedAt = request.startedAt;
     }
 
+    /**
+     * Constructs a new builder.
+     */
     public Builder() {}
 
     /**
      * Sets the HTTP method of the request.
+     *
+     * @param method the HTTP method of the request.
+     * @return the builder.
      */
     public Builder withMethod(final Method method) {
       this.method = method;
@@ -133,6 +155,9 @@ public class StitchRequest {
 
     /**
      * Sets the Stitch API path of the request.
+     *
+     * @param path the Stitch API path of the request.
+     * @return the builder.
      */
     public Builder withPath(final String path) {
       this.path = path;
@@ -140,9 +165,13 @@ public class StitchRequest {
     }
 
     /**
-     * Sets he number of milliseconds that the underlying transport should spend on an HTTP round
+     * Sets the number of milliseconds that the underlying transport should spend on an HTTP round
      * trip before failing with an error. If not configured, a default should override it before
      * the request is transformed into a plain HTTP request.
+     *
+     * @param timeout the number of milliseconds that the underlying transport should spend on an
+     *                HTTP round trip before failing with an error.
+     * @return the builder.
      */
     public Builder withTimeout(final Long timeout) {
       this.timeout = timeout;
@@ -151,6 +180,9 @@ public class StitchRequest {
 
     /**
      * Sets the headers that will be included in the request.
+     *
+     * @param headers the headers that will be included in the request.
+     * @return the builder.
      */
     public Builder withHeaders(final Map<String, String> headers) {
       this.headers = headers;
@@ -159,6 +191,9 @@ public class StitchRequest {
 
     /**
      * Sets a copy of the body that will be sent along with the request.
+     *
+     * @param body a copy of the body that will be sent along with the request.
+     * @return the builder.
      */
     public Builder withBody(final byte[] body) {
       if (body == null) {
@@ -170,6 +205,8 @@ public class StitchRequest {
 
     /**
      * Returns the HTTP method of the request.
+     *
+     * @return the HTTP method of the request.
      */
     public Method getMethod() {
       return this.method;
@@ -177,6 +214,8 @@ public class StitchRequest {
 
     /**
      * Returns the Stitch API path of the request.
+     *
+     * @return the Stitch API path of the request.
      */
     public String getPath() {
       return this.path;
@@ -186,6 +225,9 @@ public class StitchRequest {
      * Returns the number of milliseconds that the underlying transport should spend on an HTTP
      * round trip before failing with an error. If not configured, a default should override it
      * before the request is transformed into a plain HTTP request.
+     *
+     * @return the number of milliseconds that the underlying transport should spend on an HTTP
+     *         round trip before failing with an error.
      */
     public Long getTimeout() {
       return timeout;
@@ -193,6 +235,8 @@ public class StitchRequest {
 
     /**
      * Returns the headers that will be included in the request.
+     *
+     * @return the headers that will be included in the request.
      */
     public Map<String, String> getHeaders() {
       return this.headers;
@@ -200,6 +244,8 @@ public class StitchRequest {
 
     /**
      * Returns a copy of the body that will be sent along with the request.
+     *
+     * @return a copy of the body that will be sent along with the request.
      */
     public byte[] getBody() {
       if (body == null) {
@@ -210,6 +256,8 @@ public class StitchRequest {
 
     /**
      * Builds, validates, and returns the {@link StitchRequest}.
+     *
+     * @return the built the {@link StitchRequest}.
      */
     public StitchRequest build() {
       if (method == null) {

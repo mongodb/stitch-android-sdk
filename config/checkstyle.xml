@@ -14,7 +14,20 @@
         <property name="eachLine" value="true" />
     </module>
 
+    <module name="JavadocPackage"/>
+
     <module name="TreeWalker">
+        <!-- Checks for Javadoc comments.                     -->
+        <!-- See http://checkstyle.sf.net/config_javadoc.html -->
+        <module name="JavadocType">
+            <property name="scope" value="public"/>
+        </module>
+        <module name="JavadocMethod">
+            <property name="scope" value="public"/>
+            <property name="allowUndeclaredRTE" value="true"/>
+        </module>
+        <module name="JavadocStyle"/>
+
         <module name="OuterTypeFilename" />
         <module name="IllegalTokenText">
             <property name="tokens" value="STRING_LITERAL, CHAR_LITERAL" />
@@ -240,5 +253,9 @@
         <property name="minimum" value="1" />
         <property name="maximum" value="10" />
         <property name="message" value="MongoDB copyright is missing or malformed." />
+    </module>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="${checkstyleConfigDir}/checkstyle-exclude.xml"/>
     </module>
 </module>

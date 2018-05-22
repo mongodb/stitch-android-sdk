@@ -1,6 +1,6 @@
 package com.mongodb.stitch.core.admin
 
-import com.mongodb.stitch.core.auth.providers.userpass.UserPasswordCredential
+import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import org.junit.Assert.assertNotNull
 import org.junit.Test

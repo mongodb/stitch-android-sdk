@@ -16,13 +16,24 @@
 
 package com.mongodb.stitch.core.services.aws.s3;
 
+/**
+ * The result of an AWS S3 put object request.
+ */
 public class AwsS3PutObjectResult {
   private final String location;
 
+  /**
+   * Constructs a result.
+   * @param location the location of the object.
+   */
   public AwsS3PutObjectResult(final String location) {
     this.location = location;
   }
 
+  /**
+   * Returns the location of the object.
+   * @return the location of the object.
+   */
   public String getLocation() {
     return location;
   }

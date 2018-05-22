@@ -18,12 +18,41 @@ package com.mongodb.stitch.core.auth;
 
 import org.bson.Document;
 
+/**
+ * A StitchCredential provides a Stitch client the information needed to log in or link a user with
+ * an identity.
+ */
 public interface StitchCredential {
+
+  /**
+   * Returns the authentication provider name that this credential is for. (e.g. local-userpass
+   * for the User/Password authentication provider)
+   *
+   * @return the authentication provider name that this credential is for.
+   */
   String getProviderName();
 
+  /**
+   * Returns the authentication provider type that this credential is for. (e.g. local-userpass
+   * for the User/Password authentication provider)
+   *
+   * @return the authentication provider type that this credential is for.
+   */
   String getProviderType();
 
+  /**
+   * Returns the authentication material for this credential. This is the authentication provider
+   * specific information if it's necessary. For example, this could be the username and password
+   * of an identity when using the User/Password authentication provider.
+   *
+   * @return the authentication material for this credential.
+   */
   Document getMaterial();
 
+  /**
+   * Returns the provider capabilities associated with this credential.
+   *
+   * @return the provider capabilities associated with this credential.
+   */
   ProviderCapabilities getProviderCapabilities();
 }

@@ -15,6 +15,7 @@
  */
 
 /**
- * Contains the models needed to store and read authentication info for a Stitch application client.
+ * This internal package contains the models needed to store and read authentication info for a
+ * Stitch client.
  */
 package com.mongodb.stitch.core.auth.internal.models;

@@ -18,6 +18,9 @@ package com.mongodb.stitch.server.services.mongodb.remote;
 
 import org.bson.Document;
 
+/**
+ * The RemoteMongoDatabase interface.
+ */
 public interface RemoteMongoDatabase {
 
   /**

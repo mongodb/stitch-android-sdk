@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.auth.providers.facebook;
 
+/**
+ * Information about the Facebook OAuth 2.0 authentication provider.
+ */
 public final class FacebookAuthProvider {
   private FacebookAuthProvider() {}
 

@@ -20,8 +20,8 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.StitchService;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
+import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.aws.s3.internal.AwsS3ServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
@@ -29,6 +29,9 @@ import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
 import java.io.InputStream;
 import org.bson.types.Binary;
 
+/**
+ * The AWS S3 service client.
+ */
 public interface AwsS3ServiceClient {
 
   /**

@@ -30,6 +30,10 @@ import com.mongodb.stitch.core.internal.net.OkHttpTransport;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * The entry point into the Android SDK. This class is responsible for allowing one to initialize
+ * {@link StitchAppClient}s and work with Stitch.
+ */
 public final class Stitch {
   private static final String DEFAULT_BASE_URL = "https://stitch.mongodb.com";
   private static final Long DEFAULT_DEFAULT_REQUEST_TIMEOUT = 15000L;
@@ -108,6 +112,9 @@ public final class Stitch {
 
   /**
    * Checks if an app client has been initialized by its client app id.
+   *
+   * @param clientAppId the client app id to search for.
+   * @return if an app client has been initialized by its client app id.
    */
   public static synchronized boolean hasAppClient(final String clientAppId) {
     ensureInitialized();

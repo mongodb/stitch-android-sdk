@@ -64,41 +64,81 @@ public class HttpCookie {
     this.httpOnly = httpOnly;
   }
 
+  /**
+   * Returns the name of the cookie.
+   *
+   * @return the name of the cookie.
+   */
   @Nonnull
   public String getName() {
     return name;
   }
 
+  /**
+   * Returns the value of the cookie.
+   *
+   * @return the value of the cookie.
+   */
   @Nonnull
   public String getValue() {
     return value;
   }
 
+  /**
+   * Returns the path within the domain to which this cookie belongs.
+   *
+   * @return the path within the domain to which this cookie belongs.
+   */
   @Nullable
   public String getPath() {
     return path;
   }
 
+  /**
+   * Returns the domain to which this cookie belongs.
+   *
+   * @return the domain to which this cookie belongs.
+   */
   @Nullable
   public String getDomain() {
     return domain;
   }
 
+  /**
+   * Returns when the cookie expires.
+   *
+   * @return when the cookie expires.
+   */
   @Nullable
   public String getExpires() {
     return expires;
   }
 
+  /**
+   * Returns how long the cookie can live for.
+   *
+   * @return how long the cookie can live for.
+   */
   @Nullable
   public Integer getMaxAge() {
     return maxAge;
   }
 
+  /**
+   * Returns whether or not this cookie can only be sent to HTTPS servers.
+   *
+   * @return whether or not this cookie can only be sent to HTTPS servers.
+   */
   @Nullable
   public Boolean isSecure() {
     return secure;
   }
 
+  /**
+   * Returns whether or not this cookie can only be read by a server.
+   *
+   * @return whether or not this cookie can only be read by a server.
+   */
   @Nullable
   public Boolean isHttpOnly() {
     return httpOnly;

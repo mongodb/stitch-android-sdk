@@ -100,6 +100,7 @@ public final class StitchObjectMapper extends ObjectMapper {
 
   /**
    * Applies the given codec registry to be used alongside the default codec registry.
+   *
    * @param codecRegistry the codec registry to merge in.
    * @return an {@link StitchObjectMapper} with the merged codec registries.
    */
@@ -114,6 +115,8 @@ public final class StitchObjectMapper extends ObjectMapper {
 
   /**
    * Gets an instance of the object mapper.
+   *
+   * @return an instance of the object mapper.
    */
   public static synchronized StitchObjectMapper getInstance() {
     if (singleton != null) {

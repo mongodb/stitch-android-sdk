@@ -23,16 +23,24 @@ import com.mongodb.stitch.core.auth.ProviderCapabilities;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import org.bson.Document;
 
+/**
+ * The credential used for user API key log ins.
+ */
 public final class UserApiKeyCredential implements StitchCredential {
 
   private final String providerName;
   private final String key;
 
+  /**
+   * Constructs a user API key credential for a user.
+   *
+   * @param key the API key.
+   */
   public UserApiKeyCredential(final String key) {
     this(DEFAULT_NAME, key);
   }
 
-  public UserApiKeyCredential(final String providerName, final String key) {
+  private UserApiKeyCredential(final String providerName, final String key) {
     this.providerName = providerName;
     this.key = key;
   }

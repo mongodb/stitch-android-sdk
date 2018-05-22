@@ -23,21 +23,40 @@ public final class StitchAppRoutes {
   private final StitchAppAuthRoutes authRoutes;
   private final StitchServiceRoutes serviceRoutes;
 
-  /** Constructs the app specific routes to access an app based on the client app id. */
+  /**
+   * Constructs the app specific routes to access an app based on the client app id.
+   *
+   * @param clientAppId the client app id of the app that will be used to communicate with Stitch.
+   */
   public StitchAppRoutes(final String clientAppId) {
     this.clientAppId = clientAppId;
     authRoutes = new StitchAppAuthRoutes(clientAppId);
     serviceRoutes = new StitchServiceRoutes(clientAppId);
   }
 
+  /**
+   * Returns the auth routes for this app.
+   *
+   * @return the auth routes for this app.
+   */
   public StitchAppAuthRoutes getAuthRoutes() {
     return authRoutes;
   }
 
+  /**
+   * Returns the service routes for this app.
+   *
+   * @return the service routes for this app.
+   */
   public StitchServiceRoutes getServiceRoutes() {
     return serviceRoutes;
   }
 
+  /**
+   * Returns the function call route for this app.
+   *
+   * @return the function call route for this app.
+   */
   public String getFunctionCallRoute() {
     return String.format(RouteParts.FUNCTION_CALL_ROUTE, clientAppId);
   }

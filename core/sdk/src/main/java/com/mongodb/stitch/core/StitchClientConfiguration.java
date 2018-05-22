@@ -23,6 +23,10 @@ import com.mongodb.stitch.core.internal.net.Transport;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 
+/**
+ * Properties representing the configuration of a client that communicate with a particular MongoDB
+ * Stitch application.
+ */
 public class StitchClientConfiguration {
   private final String baseUrl;
   private final Storage storage;
@@ -57,13 +61,17 @@ public class StitchClientConfiguration {
 
   /**
    * Gets the base URL of the Stitch server that the client will communicate with.
+   *
+   * @return the base URL of the Stitch server that the client will communicate with.
    */
   public String getBaseUrl() {
     return baseUrl;
   }
 
   /**
-   * Gets the underlying storage for authentication info.
+   * Gets the underlying storage to persist client specific data to.
+   *
+   * @return the underlying storage to persist client specific data to.
    */
   public Storage getStorage() {
     return storage;
@@ -72,6 +80,8 @@ public class StitchClientConfiguration {
   /**
    * Gets the local directory in which Stitch can store any data (e.g. embedded MongoDB data
    * directory).
+   *
+   * @return the local directory in which Stitch can store any data.
    */
   public String getDataDirectory() {
     return dataDirectory;
@@ -79,6 +89,9 @@ public class StitchClientConfiguration {
 
   /**
    * Gets the {@link Transport} that the client will use to make round trips to the Stitch server.
+   *
+   * @return the {@link Transport} that the client will use to make round trips to the Stitch
+   *         server.
    */
   public Transport getTransport() {
     return transport;
@@ -88,22 +101,35 @@ public class StitchClientConfiguration {
    * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
    * before failing with an error. Important: If a request timeout was specified for a specific
    * operation, for example in a function call, that timeout will override this one.
+   *
+   * @return the number of seconds that a `Transport` should spend by default on an HTTP round trip
+   *         before failing with an error.
    */
   public Long getDefaultRequestTimeout() {
     return defaultRequestTimeout;
   }
 
+  /**
+   * Gets the codec registry used to encode/decode JSON.
+   *
+   * @return the codec registry used to encode/decode JSON.
+   */
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;
   }
 
   /**
    * Gets the builder form of this configuration.
+   *
+   * @return the builder form of this configuration.
    */
   public Builder builder() {
     return new Builder(this);
   }
 
+  /**
+   * A builder that can build a {@link StitchClientConfiguration }object.
+   */
   public static class Builder {
     private String baseUrl;
     private Storage storage;
@@ -112,6 +138,9 @@ public class StitchClientConfiguration {
     private Long defaultRequestTimeout;
     private CodecRegistry codecRegistry;
 
+    /**
+     * Constructs a new builder.
+     */
     public Builder() {}
 
     Builder(final StitchClientConfiguration config) {
@@ -125,6 +154,9 @@ public class StitchClientConfiguration {
 
     /**
      * Sets the base URL of the Stitch server that the client will communicate with.
+     *
+     * @param baseUrl the base URL of the Stitch server that the client will communicate with.
+     * @return the builder.
      */
     public Builder withBaseUrl(final String baseUrl) {
       this.baseUrl = baseUrl;
@@ -132,7 +164,10 @@ public class StitchClientConfiguration {
     }
 
     /**
-     * Sets the underlying storage for authentication info.
+     * Sets the underlying storage to persist client specific data to.
+     *
+     * @param storage the underlying storage to persist client specific data to.
+     * @return the builder.
      */
     public Builder withStorage(final Storage storage) {
       this.storage = storage;
@@ -142,6 +177,9 @@ public class StitchClientConfiguration {
     /**
      * Sets the local directory in which Stitch can store any data (e.g. embedded MongoDB data
      * directory).
+     *
+     * @param dataDirectory the local directory in which Stitch can store any data.
+     * @return the builder.
      */
     public Builder withDataDirectory(final String dataDirectory) {
       this.dataDirectory = dataDirectory;
@@ -150,6 +188,10 @@ public class StitchClientConfiguration {
 
     /**
      * Sets the {@link Transport} that the client will use to make round trips to the Stitch server.
+     *
+     * @param transport the {@link Transport} that the client will use to make round trips to the
+     *                  Stitch server.
+     * @return the builder.
      */
     public Builder withTransport(final Transport transport) {
       this.transport = transport;
@@ -160,6 +202,10 @@ public class StitchClientConfiguration {
      * Sets the number of seconds that a `Transport` should spend by default on an HTTP round trip
      * before failing with an error. Important: If a request timeout was specified for a specific
      * operation, for example in a function call, that timeout will override this one.
+     *
+     * @param defaultRequestTimeout the number of seconds that a `Transport` should spend by
+     *                              default on an HTTP round trip before failing with an error.
+     * @return the builder.
      */
     public Builder withDefaultRequestTimeout(final Long defaultRequestTimeout) {
       this.defaultRequestTimeout = defaultRequestTimeout;
@@ -170,6 +216,7 @@ public class StitchClientConfiguration {
      * Merges the provided codec registry with the default codec registry.
      *
      * @param codecRegistry the codec registry to merge with the default registry.
+     * @return the builder.
      */
     public Builder withCodecRegistry(final CodecRegistry codecRegistry) {
       // We can't detect if their codecRegistry has any duplicate providers. There's also a chance
@@ -182,6 +229,8 @@ public class StitchClientConfiguration {
 
     /**
      * Gets the base URL of the Stitch server that the client will communicate with.
+     *
+     * @return the base URL of the Stitch server that the client will communicate with.
      */
     public String getBaseUrl() {
       return baseUrl;
@@ -190,13 +239,17 @@ public class StitchClientConfiguration {
     /**
      * Gets the local directory in which Stitch can store any data (e.g. embedded MongoDB data
      * directory).
+     *
+     * @return the local directory in which Stitch can store any data.
      */
     public String getDataDirectory() {
       return dataDirectory;
     }
 
     /**
-     * Gets the underlying storage for authentication info.
+     * Gets the underlying storage to persist client specific data to.
+     *
+     * @return the underlying storage to persist client specific data to.
      */
     public Storage getStorage() {
       return storage;
@@ -204,6 +257,9 @@ public class StitchClientConfiguration {
 
     /**
      * Gets the {@link Transport} that the client will use to make round trips to the Stitch server.
+     *
+     * @return the {@link Transport} that the client will use to make round trips to the Stitch
+     *         server.
      */
     public Transport getTransport() {
       return transport;
@@ -213,17 +269,27 @@ public class StitchClientConfiguration {
      * Gets the number of seconds that a `Transport` should spend by default on an HTTP round trip
      * before failing with an error. Important: If a request timeout was specified for a specific
      * operation, for example in a function call, that timeout will override this one.
+     *
+     * @return the number of seconds that a `Transport` should spend by default on an HTTP round
+     *         trip before failing with an error.
      */
     public Long getDefaultRequestTimeout() {
       return defaultRequestTimeout;
     }
 
+    /**
+     * Gets the codec registry used to encode/decode JSON.
+     *
+     * @return the codec registry used to encode/decode JSON.
+     */
     public CodecRegistry getCodecRegistry() {
       return codecRegistry;
     }
 
     /**
      * Builds the {@link StitchAppClientConfiguration}.
+     *
+     * @return the built {@link StitchAppClientConfiguration}.
      */
     public StitchClientConfiguration build() {
       if (baseUrl == null || baseUrl.isEmpty()) {

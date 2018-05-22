@@ -130,6 +130,9 @@ public enum StitchServiceErrorCode {
 
   /**
    * Creates an error code from the given name.
+   *
+   * @param codeName the API code name to look up.
+   * @return the error that maps to the code name.
    */
   public static synchronized StitchServiceErrorCode fromCodeName(final String codeName) {
     if (!CODE_NAME_TO_ERROR.containsKey(codeName)) {
@@ -138,6 +141,11 @@ public enum StitchServiceErrorCode {
     return CODE_NAME_TO_ERROR.get(codeName);
   }
 
+  /**
+   * Gets the name of this error as the API refers to it.
+   *
+   * @return the name of this error as the API refers to it.
+   */
   public String getCodeName() {
     return code;
   }

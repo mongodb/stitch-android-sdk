@@ -19,6 +19,8 @@ package com.mongodb.stitch.core.auth.providers.internal;
 /**
  * The class from which all Core auth provider clients inherit. Only auth provider clients that
  * make requests to the Stitch server need to inherit this class.
+ *
+ * @param <RequestClientT> the type of the request client that this client will use.
  */
 public abstract class CoreAuthProviderClient<RequestClientT> {
   private final String providerName;
@@ -28,6 +30,10 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
   /**
    * A basic constructor, which sets the provider client's properties to the values provided in
    * the parameters.
+   *
+   * @param providerName the name of the provider.
+   * @param requestClient the request client to perform requests against Stitch.
+   * @param baseRoute the base route requests made from this client should use.
    */
   protected CoreAuthProviderClient(
           final String providerName,
@@ -40,15 +46,19 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
 
   /**
    * Returns the name of the authentication provider.
+   *
+   * @return the name of the authentication provider.
    */
   protected String getProviderName() {
     return providerName;
   }
 
   /**
-   * Returns the request client used by the client to make requests. Is generic since some auth
+   * Returns the request client used by the client to make requests. It is generic since some auth
    * provider clients use an authenticated request client while others use an unauthenticated
    * request client.
+   *
+   * @return the request client used by the client to make requests.
    */
   protected RequestClientT getRequestClient() {
     return requestClient;
@@ -56,6 +66,8 @@ public abstract class CoreAuthProviderClient<RequestClientT> {
 
   /**
    * Returns the base route for this authentication provider client.
+   *
+   * @return the base route for this authentication provider client.
    */
   protected String getBaseRoute() {
     return baseRoute;

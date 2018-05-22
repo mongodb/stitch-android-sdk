@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Contains the core specification and implementation of the User/Password authentication provider.
- */
-package com.mongodb.stitch.core.auth.providers.userpass;
+/** This package contains the Twilio service client. */
+package com.mongodb.stitch.android.services.twilio;

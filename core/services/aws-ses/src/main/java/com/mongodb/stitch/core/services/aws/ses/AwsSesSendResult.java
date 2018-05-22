@@ -24,13 +24,24 @@ import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.DocumentCodec;
 
+/**
+ * The result of an AWS SES send request.
+ */
 public class AwsSesSendResult {
   private final String messageId;
 
+  /**
+   * Constructs a result.
+   * @param messageId the id of the sent message.
+   */
   public AwsSesSendResult(final String messageId) {
     this.messageId = messageId;
   }
 
+  /**
+   * Returns the id of the sent message.
+   * @return the id of the sent message.
+   */
   public String getMessageId() {
     return messageId;
   }

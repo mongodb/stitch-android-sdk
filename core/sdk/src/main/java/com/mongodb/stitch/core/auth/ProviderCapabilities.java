@@ -16,17 +16,36 @@
 
 package com.mongodb.stitch.core.auth;
 
+/**
+ * ProviderCapabilities outline to the Stitch auth components what a provider can or cannot do.
+ */
 public final class ProviderCapabilities {
   private final boolean reusesExistingSession;
 
+  /**
+   * Constructs the default capabilities.
+   */
   public ProviderCapabilities() {
     reusesExistingSession = false;
   }
 
+  /**
+   * Constructs capabilities.
+   *
+   * @param reusesExistingSession whether or not to reuse an existing sessions when the provider
+   *                              name and type are the same.
+   */
   public ProviderCapabilities(final boolean reusesExistingSession) {
     this.reusesExistingSession = reusesExistingSession;
   }
 
+  /**
+   * Returns whether or not to reuse an existing sessions when the provider
+   * name and type are the same.
+   *
+   * @return whether or not to reuse an existing sessions when the provider
+   *         name and type are the same.
+   */
   public boolean getReusesExistingSession() {
     return reusesExistingSession;
   }

@@ -25,6 +25,8 @@ public final class StitchClientException extends StitchException {
 
   /**
    * Constructs a client exception with the given error code.
+   *
+   * @param errorCode the client error code.
    */
   public StitchClientException(final StitchClientErrorCode errorCode) {
     this.errorCode = errorCode;
@@ -32,6 +34,8 @@ public final class StitchClientException extends StitchException {
 
   /**
    * Returns the {@link StitchClientErrorCode} associated with the request.
+   *
+   * @return the {@link StitchClientErrorCode} associated with the request.
    */
   public StitchClientErrorCode getErrorCode() {
     return errorCode;

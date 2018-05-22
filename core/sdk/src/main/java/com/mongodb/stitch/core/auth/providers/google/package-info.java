@@ -15,7 +15,7 @@
  */
 
 /**
- * Contains the core specification and implementation of the Google OAuth 2.0 authentication
- * provider.
+ * This package contains the Google OAuth 2.0 authentication provider: type info and its
+ * credential builder.
  */
 package com.mongodb.stitch.core.auth.providers.google;
