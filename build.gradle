@@ -212,7 +212,7 @@ subprojects {
                 owner.user = user
                 key = apiKey
                 publish = true
-                override = true
+                override = false
                 pkg {
                     repo = 'MongoDB'
                     name = "$rootProject.group:$project.archivesBaseName"
