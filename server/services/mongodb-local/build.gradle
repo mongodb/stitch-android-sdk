@@ -1,6 +1,13 @@
 apply plugin: 'java-library'
+apply plugin: 'com.jfrog.bintray'
 
 archivesBaseName = 'stitch-server-services-mongodb-local'
+
+buildscript {
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
 
 dependencies {
     implementation project(':server:stitch-server-core')

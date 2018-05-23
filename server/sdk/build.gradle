@@ -1,6 +1,13 @@
 apply plugin: 'java-library'
+apply plugin: 'com.jfrog.bintray'
 
 archivesBaseName = 'stitch-server-sdk'
+
+buildscript {
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
 
 dependencies {
     api project(':server:stitch-server-core')

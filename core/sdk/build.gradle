@@ -1,6 +1,13 @@
 apply plugin: 'java-library'
+apply plugin: 'com.jfrog.bintray'
 
 archivesBaseName = 'stitch-core-sdk'
+
+buildscript {
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
 
 dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.5'

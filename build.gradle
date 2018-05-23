@@ -1,7 +1,19 @@
 def configDir = new File(rootDir, 'config')
 
 group = 'org.mongodb'
-version = '4.0.0-SNAPSHOT'
+version = '4.0.0-beta-1'
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
 
 subprojects {
     def projectName = project.displayName.substring(
@@ -11,8 +23,8 @@ subprojects {
         return
     }
 
-    group = 'org.mongodb'
-    version = '4.0.0-SNAPSHOT'
+    group = rootProject.group
+    version = rootProject.version
 
     apply plugin: 'maven-publish'
     apply plugin: 'jacoco'
@@ -181,6 +193,57 @@ subprojects {
                 html.setDestination new File("$project.buildDir/outputs/findbugs/$projectName-findbugs.html")
             }
             excludeFilter = new File(configDir, 'findbugs-exclude.xml')
+        }
+
+        if (project.plugins.hasPlugin("com.jfrog.bintray")) {
+            Properties properties = new Properties()
+            File file = project.rootProject.file('local.properties')
+            if (file.exists()) {
+                properties.load(project.rootProject.file('local.properties').newDataInputStream())
+            }
+
+            def user = properties.getProperty("publish.bintray.user", "")
+            def apiKey = properties.getProperty("publish.bintray.apiKey", "")
+            def gpgPassphrase = properties.getProperty("publish.bintray.gpgPassphrase", "")
+            def mavenSyncUser = properties.getProperty("publish.bintray.mavenSyncUser", "")
+            def mavenSyncPassword = properties.getProperty("publish.bintray.mavenSyncPassword", "")
+
+            bintray {
+                owner.user = user
+                key = apiKey
+                publish = true
+                override = true
+                pkg {
+                    repo = 'MongoDB'
+                    name = "$rootProject.group:$project.archivesBaseName"
+                    userOrg = 'mongodb'
+                    licenses = ['Apache-2.0']
+                    vcsUrl = 'https://github.com/mongodb/stitch-android-sdk.git'
+                    githubRepo = 'mongodb/stitch-android-sdk'
+                    githubReleaseNotesFile = 'README.md'
+                    websiteUrl = 'https://www.mongodb.com/cloud/stitch'
+                    publicDownloadNumbers = true
+                    version {
+                        name = rootProject.version
+                        released  = new Date()
+                        if (!gpgPassphrase.isEmpty()) {
+                            gpg {
+                                sign = true
+                                passphrase = gpgPassphrase
+                            }
+                        }
+                        if (!mavenSyncUser.isEmpty()) {
+                            mavenCentralSync {
+                                sync = true
+                                owner.user = mavenSyncUser
+                                password = mavenSyncPassword
+                                close = '1'
+                            }
+                        }
+                    }
+                }
+                publications = ['maven']
+            }
         }
     }
 
