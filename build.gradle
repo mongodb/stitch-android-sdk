@@ -1,7 +1,7 @@
 def configDir = new File(rootDir, 'config')
 
 group = 'org.mongodb'
-version = '4.0.0-beta-1'
+version = VERSION
 
 buildscript {
     repositories {
@@ -339,7 +339,7 @@ def serverPackages = ["com.mongodb.stitch.server.core",
 rootProject.gradle.projectsEvaluated {
     task allJavadocs(type: Javadoc, group: 'Documentation') {
         destinationDir = file("$buildDir/docs/javadoc")
-        title = "$project.name $version API"
+        title = "MongoDB Stitch Java SDK $version API"
         options.author true
         options.author = true
         options.version = true
