@@ -2,7 +2,7 @@ apply plugin: 'java-library'
 apply plugin: 'kotlin'
 apply plugin: 'com.jfrog.bintray'
 
-archivesBaseName = 'stitch-server-services-http'
+ext.pomDisplayName = "Server HTTP Service"
 
 buildscript {
     dependencies {

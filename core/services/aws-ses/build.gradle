@@ -1,7 +1,7 @@
 apply plugin: 'java-library'
 apply plugin: 'com.jfrog.bintray'
 
-archivesBaseName = 'stitch-core-services-aws-ses'
+ext.pomDisplayName = "Core AWS SES Service"
 
 buildscript {
     dependencies {

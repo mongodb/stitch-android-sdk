@@ -2,7 +2,7 @@ apply plugin: 'java-library'
 apply plugin: 'kotlin'
 apply plugin: 'com.jfrog.bintray'
 
-archivesBaseName = 'stitch-server-services-mongodb-remote'
+ext.pomDisplayName = "Server Remote MongoDB Service"
 
 buildscript {
     dependencies {

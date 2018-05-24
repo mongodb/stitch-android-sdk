@@ -72,6 +72,37 @@ subprojects {
         config_dir = configDir
     }
 
+    def pomConfig = {
+        url "https://github.com/mongodb/stitch-android-sdk"
+        licenses {
+            license {
+                name "The Apache Software License, Version 2.0"
+                url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                distribution "repo"
+            }
+        }
+        developers {
+            developer {
+                id "edaniels"
+                name "Eric Daniels"
+                email "eric.daniels@mongodb.com"
+            }
+            developer {
+                id "jsflax"
+                name "Jason Flax"
+                email "jason.flax@mongodb.com"
+            }
+            developer {
+                id "adamchel"
+                name "Adam Chelminski"
+                email "adam.Chelminski@mongodb.com"
+            }
+        }
+        scm {
+            url "https://github.com/mongodb/stitch-android-sdk"
+        }
+    }
+
     afterEvaluate { project ->
         if (project.plugins.hasPlugin("java")) {
 
@@ -131,12 +162,20 @@ subprojects {
                 classifier 'javadoc'
             }
 
+            println(project.displayName)
             publishing {
                 publications {
                     maven(MavenPublication) {
                         from components.java
                         artifact sourcesJar
                         artifact javadocJar
+                        pom.withXml {
+                            def root = asNode()
+                            def displayName = project.properties.get("pomDisplayName", project.name)
+                            root.appendNode('name', "MongoDB Stitch Android/Java SDK - $displayName")
+                            root.appendNode('description', "MongoDB Stitch Android/Java SDK - $displayName")
+                            root.children().last() + pomConfig
+                        }
                     }
                 }
             }
@@ -180,6 +219,10 @@ subprojects {
                         from components.android
                         artifact sourcesJar
                         artifact javadocJar
+                        pom.withXml {
+                            def root = asNode()
+                            root.children().last() + pomConfig
+                        }
                     }
                 }
             }
@@ -212,10 +255,10 @@ subprojects {
                 owner.user = user
                 key = apiKey
                 publish = true
-                override = false
+                override = true
                 pkg {
                     repo = 'MongoDB'
-                    name = "$rootProject.group:$project.archivesBaseName"
+                    name = "$rootProject.group:$project.name"
                     userOrg = 'mongodb'
                     licenses = ['Apache-2.0']
                     vcsUrl = 'https://github.com/mongodb/stitch-android-sdk.git'

@@ -1,7 +1,7 @@
 apply plugin: 'java-library'
 apply plugin: 'com.jfrog.bintray'
 
-archivesBaseName = 'stitch-core-services-aws-s3'
+ext.pomDisplayName = "Core AWS S3 Service"
 
 buildscript {
     dependencies {

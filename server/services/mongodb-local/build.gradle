@@ -1,7 +1,7 @@
 apply plugin: 'java-library'
 apply plugin: 'com.jfrog.bintray'
 
-archivesBaseName = 'stitch-server-services-mongodb-local'
+ext.pomDisplayName = "Server Local MongoDB Service"
 
 buildscript {
     dependencies {
