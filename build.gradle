@@ -162,7 +162,6 @@ subprojects {
                 classifier 'javadoc'
             }
 
-            println(project.displayName)
             publishing {
                 publications {
                     maven(MavenPublication) {
@@ -221,6 +220,9 @@ subprojects {
                         artifact javadocJar
                         pom.withXml {
                             def root = asNode()
+                            def displayName = project.properties.get("pomDisplayName", project.name)
+                            root.appendNode('name', "MongoDB Stitch Android/Java SDK - $displayName")
+                            root.appendNode('description', "MongoDB Stitch Android/Java SDK - $displayName")
                             root.children().last() + pomConfig
                         }
                     }
