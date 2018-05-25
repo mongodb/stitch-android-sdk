@@ -95,7 +95,7 @@ subprojects {
             developer {
                 id "adamchel"
                 name "Adam Chelminski"
-                email "adam.Chelminski@mongodb.com"
+                email "adam.chelminski@mongodb.com"
             }
         }
         scm {
