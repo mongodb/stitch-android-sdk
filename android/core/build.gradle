@@ -25,4 +25,5 @@ android {
 dependencies {
     api project(':core:stitch-core-sdk')
     api "com.google.android.gms:play-services-tasks:${google_play_services_version}"
+    implementation "com.android.support:support-v4:${support_library_version}"
 }

@@ -17,7 +17,7 @@ dependencies {
 
     testImplementation project(':server:stitch-server-testutils')
     testImplementation 'junit:junit:4.12'
-    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8
