@@ -13,3 +13,6 @@ dependencies {
     implementation project(':server:stitch-server-core')
     api project(':core:core-services:stitch-core-services-mongodb-local')
 }
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8

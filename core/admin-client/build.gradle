@@ -15,4 +15,3 @@ dependencies {
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     testImplementation project(':core:stitch-core-testutils')
 }
-

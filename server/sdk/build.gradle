@@ -18,3 +18,6 @@ dependencies {
     api project(':server:server-services:stitch-server-services-http')
     api project(':server:server-services:stitch-server-services-twilio')
 }
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8

@@ -106,13 +106,6 @@ subprojects {
     afterEvaluate { project ->
         if (project.plugins.hasPlugin("java")) {
 
-            if (!project.hasProperty("sourceCompatibility")) {
-                sourceCompatibility = JavaVersion.VERSION_1_7
-            }
-            if (!project.hasProperty("targetCompatibility")) {
-                targetCompatibility = JavaVersion.VERSION_1_7
-            }
-
             compileTestJava {
                 sourceCompatibility = JavaVersion.VERSION_1_8
                 targetCompatibility = JavaVersion.VERSION_1_8
