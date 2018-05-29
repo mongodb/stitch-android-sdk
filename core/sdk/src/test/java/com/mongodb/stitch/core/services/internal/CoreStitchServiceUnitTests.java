@@ -26,11 +26,14 @@ import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
+import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
+
 import java.util.Arrays;
 import java.util.List;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.IntegerCodec;
+import org.bson.codecs.configuration.CodecRegistry;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -52,10 +55,13 @@ public class CoreStitchServiceUnitTests {
 
     doReturn(42)
         .when(requestClient)
-        .doAuthenticatedJsonRequest(any(), ArgumentMatchers.<Decoder<Integer>>any());
+        .doAuthenticatedRequest(any(StitchAuthRequest.class), ArgumentMatchers.<Decoder<Integer>>any());
     doReturn(42)
         .when(requestClient)
-        .doAuthenticatedJsonRequest(any(), ArgumentMatchers.<Class<Integer>>any(), any());
+        .doAuthenticatedRequest(
+            any(StitchAuthRequest.class),
+            ArgumentMatchers.<Class<Integer>>any(),
+            any(CodecRegistry.class));
 
     final String funcName = "myFunc1";
     final List<Integer> args = Arrays.asList(1, 2, 3);
@@ -77,14 +83,17 @@ public class CoreStitchServiceUnitTests {
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<Class<Integer>> clazzArgument = ArgumentCaptor.forClass(Class.class);
 
-    verify(requestClient).doAuthenticatedJsonRequest(docArgument.capture(), decArgument.capture());
+    verify(requestClient).doAuthenticatedRequest(docArgument.capture(), decArgument.capture());
     assertEquals(docArgument.getValue().getMethod(), Method.POST);
     assertEquals(docArgument.getValue().getPath(), routes.getFunctionCallRoute());
     assertEquals(docArgument.getValue().getDocument(), expectedRequestDoc);
     assertTrue(decArgument.getValue() instanceof IntegerCodec);
 
     verify(requestClient)
-        .doAuthenticatedJsonRequest(docArgument.capture(), clazzArgument.capture(), any());
+        .doAuthenticatedRequest(
+            docArgument.capture(),
+            clazzArgument.capture(),
+            any(CodecRegistry.class));
     assertEquals(docArgument.getValue().getMethod(), Method.POST);
     assertEquals(docArgument.getValue().getDocument(), expectedRequestDoc);
     assertEquals(docArgument.getValue().getPath(), routes.getFunctionCallRoute());
