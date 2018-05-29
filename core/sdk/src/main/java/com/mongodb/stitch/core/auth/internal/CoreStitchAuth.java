@@ -169,29 +169,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   /**
-   * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
-   * decodes the JSON body of the response into a T value using the provided codec.
-   *
-   * @param stitchReq the request to perform.
-   * @param decoder the {@link Decoder} to use to decode the JSON of the response into a T value.
-   * @param <T> the type into which the JSON response will be decoded.
-   * @return the decoded value.
-   */
-  public <T> T doAuthenticatedJsonRequest(
-      final StitchAuthDocRequest stitchReq,
-      final Decoder<T> decoder
-  ) {
-    final Response response = doAuthenticatedRequest(stitchReq);
-
-    try {
-      return BsonUtils.parseValue(IoUtils.readAllToString(response.getBody()), decoder);
-    } catch (final Exception e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
-    }
-  }
-
-  /**
-   * Performs a request against Stitch using the provided {@link StitchAuthDocRequest} object, and
+   * Performs a request against Stitch using the provided {@link StitchAuthRequest} object, and
    * decodes the JSON body of the response into a T value as specified by the provided class type.
    * The type will be decoded using the codec found for T in the codec registry given.
    * If the provided type is not supported by the codec registry to be used, the method will throw
@@ -203,8 +181,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * @param <T> the type into which the JSON response will be decoded into.
    * @return the decoded value.
    */
-  public <T> T doAuthenticatedJsonRequest(
-      final StitchAuthDocRequest stitchReq,
+  public <T> T doAuthenticatedRequest(
+      final StitchAuthRequest stitchReq,
       final Class<T> resultClass,
       final CodecRegistry codecRegistry
   ) {

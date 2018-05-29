@@ -83,7 +83,7 @@ public class CoreStitchServiceImpl implements CoreStitchService {
       final String name,
       final List<?> args,
       final Decoder<T> resultDecoder) {
-    return requestClient.doAuthenticatedJsonRequest(
+    return requestClient.doAuthenticatedRequest(
         getCallServiceFunctionRequest(name, args, null), resultDecoder);
   }
 
@@ -91,7 +91,7 @@ public class CoreStitchServiceImpl implements CoreStitchService {
       final String name,
       final List<?> args,
       final Class<T> resultClass) {
-    return requestClient.doAuthenticatedJsonRequest(
+    return requestClient.doAuthenticatedRequest(
         getCallServiceFunctionRequest(name, args, null), resultClass, codecRegistry);
   }
 
@@ -108,7 +108,7 @@ public class CoreStitchServiceImpl implements CoreStitchService {
       final List<?> args,
       final @Nullable Long requestTimeout,
       final Decoder<T> resultDecoder) {
-    return requestClient.doAuthenticatedJsonRequest(
+    return requestClient.doAuthenticatedRequest(
         getCallServiceFunctionRequest(name, args, requestTimeout), resultDecoder);
   }
 
@@ -117,7 +117,7 @@ public class CoreStitchServiceImpl implements CoreStitchService {
       final List<?> args,
       final @Nullable Long requestTimeout,
       final Class<T> resultClass) {
-    return requestClient.doAuthenticatedJsonRequest(
+    return requestClient.doAuthenticatedRequest(
         getCallServiceFunctionRequest(name, args, requestTimeout), resultClass, codecRegistry);
   }
 

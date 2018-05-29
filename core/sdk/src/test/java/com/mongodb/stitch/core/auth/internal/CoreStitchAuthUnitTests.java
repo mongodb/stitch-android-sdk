@@ -130,7 +130,7 @@ public class CoreStitchAuthUnitTests {
 
     final CoreStitchUser user =
         auth.loginWithCredentialInternal(new AnonymousCredential());
-    verify(requestClient, times(2)).doRequest(any());
+    verify(requestClient, times(2)).doRequest(any(StitchRequest.class));
 
     final CoreStitchUser linkedUser =
         auth.linkUserWithCredentialInternal(
@@ -315,7 +315,7 @@ public class CoreStitchAuthUnitTests {
   }
 
   @Test
-  public void testDoAuthenticatedJsonRequestWithDefaultCodecRegistry() {
+  public void testDoAuthenticatedRequestWithDefaultCodecRegistry() {
     final StitchRequestClient requestClient = getMockedRequestClient();
     final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
     final StitchAuth auth = new StitchAuth(
@@ -331,19 +331,19 @@ public class CoreStitchAuthUnitTests {
 
     final String rawInt = "{\"$numberInt\": \"42\"}";
     // Check that primitive return types can be decoded.
-    doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+    doReturn(new Response(rawInt)).when(requestClient).doRequest(any(StitchRequest.class));
+    assertEquals(42, (int) auth.doAuthenticatedRequest(
         reqBuilder.build(),
         Integer.class, BsonUtils.DEFAULT_CODEC_REGISTRY));
-    doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+    doReturn(new Response(rawInt)).when(requestClient).doRequest(any(StitchRequest.class));
+    assertEquals(42, (int) auth.doAuthenticatedRequest(
         reqBuilder.build(),
         new IntegerCodec()));
 
     // Check that the proper exceptions are thrown when decoding into the incorrect type.
-    doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
+    doReturn(new Response(rawInt)).when(requestClient).doRequest(any(StitchRequest.class));
     try {
-      auth.doAuthenticatedJsonRequest(
+      auth.doAuthenticatedRequest(
           reqBuilder.build(),
           String.class,
           BsonUtils.DEFAULT_CODEC_REGISTRY);
@@ -352,9 +352,9 @@ public class CoreStitchAuthUnitTests {
       // do nothing
     }
 
-    doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
+    doReturn(new Response(rawInt)).when(requestClient).doRequest(any(StitchRequest.class));
     try {
-      auth.doAuthenticatedJsonRequest(reqBuilder.build(), new StringCodec());
+      auth.doAuthenticatedRequest(reqBuilder.build(), new StringCodec());
       fail();
     } catch (final StitchRequestException ignored) {
       // do nothing
@@ -366,34 +366,34 @@ public class CoreStitchAuthUnitTests {
         String.format(
             "{\"_id\": {\"$oid\": \"%s\"}, \"intValue\": {\"$numberInt\": \"42\"}}",
             expectedObjectId.toHexString());
-    doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
+    doReturn(new Response(docRaw)).when(requestClient).doRequest(any(StitchRequest.class));
 
-    Document doc = auth.doAuthenticatedJsonRequest(
+    Document doc = auth.doAuthenticatedRequest(
         reqBuilder.build(),
         Document.class,
         BsonUtils.DEFAULT_CODEC_REGISTRY);
     assertEquals(expectedObjectId, doc.getObjectId("_id"));
     assertEquals(42, (int) doc.getInteger("intValue"));
 
-    doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
-    doc = auth.doAuthenticatedJsonRequest(reqBuilder.build(), new DocumentCodec());
+    doReturn(new Response(docRaw)).when(requestClient).doRequest(any(StitchRequest.class));
+    doc = auth.doAuthenticatedRequest(reqBuilder.build(), new DocumentCodec());
     assertEquals(expectedObjectId, doc.getObjectId("_id"));
     assertEquals(42, (int) doc.getInteger("intValue"));
 
     // Check that BSON documents returned as extended JSON can be decoded as a custom type if
     // the codec is specifically provided.
-    doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
+    doReturn(new Response(docRaw)).when(requestClient).doRequest(any(StitchRequest.class));
     final CustomType ct =
-        auth.doAuthenticatedJsonRequest(reqBuilder.build(), new CustomType.Codec());
+        auth.doAuthenticatedRequest(reqBuilder.build(), new CustomType.Codec());
     assertEquals(expectedObjectId, ct.getId());
     assertEquals(42, ct.getIntValue());
 
     // Check that the correct exception is thrown if attempting to decode as a particular class
     // type if the auth was never configured to contain the provided class type
     // codec.
-    doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
+    doReturn(new Response(docRaw)).when(requestClient).doRequest(any(StitchRequest.class));
     try {
-      auth.doAuthenticatedJsonRequest(
+      auth.doAuthenticatedRequest(
           reqBuilder.build(),
           CustomType.class,
           BsonUtils.DEFAULT_CODEC_REGISTRY);
@@ -412,10 +412,11 @@ public class CoreStitchAuthUnitTests {
       fail(e.getMessage());
       return;
     }
-    doReturn(new Response(arrFromServerRaw)).when(requestClient).doRequest(any());
+    doReturn(new Response(arrFromServerRaw)).when(requestClient)
+        .doRequest(any(StitchRequest.class));
 
     @SuppressWarnings("unchecked")
-    final List<Object> list = auth.doAuthenticatedJsonRequest(
+    final List<Object> list = auth.doAuthenticatedRequest(
         reqBuilder.build(),
         List.class,
         BsonUtils.DEFAULT_CODEC_REGISTRY);
@@ -423,7 +424,7 @@ public class CoreStitchAuthUnitTests {
   }
 
   @Test
-  public void testDoAuthenticatedJsonRequestWithCustomCodecRegistry() {
+  public void testDoAuthenticatedRequestWithCustomCodecRegistry() {
     final StitchRequestClient requestClient = getMockedRequestClient();
     final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
     final StitchAuth auth =
@@ -443,13 +444,13 @@ public class CoreStitchAuthUnitTests {
 
     final String rawInt = "{\"$numberInt\": \"42\"}";
     // Check that primitive return types can be decoded.
-    doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+    doReturn(new Response(rawInt)).when(requestClient).doRequest(any(StitchRequest.class));
+    assertEquals(42, (int) auth.doAuthenticatedRequest(
         reqBuilder.build(),
         Integer.class,
         registry));
-    doReturn(new Response(rawInt)).when(requestClient).doRequest(any());
-    assertEquals(42, (int) auth.doAuthenticatedJsonRequest(
+    doReturn(new Response(rawInt)).when(requestClient).doRequest(any(StitchRequest.class));
+    assertEquals(42, (int) auth.doAuthenticatedRequest(
         reqBuilder.build(),
         new IntegerCodec()));
 
@@ -461,20 +462,20 @@ public class CoreStitchAuthUnitTests {
 
     // Check that BSON documents returned as extended JSON can be decoded into BSON
     // documents.
-    doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
-    Document doc = auth.doAuthenticatedJsonRequest(reqBuilder.build(), Document.class, registry);
+    doReturn(new Response(docRaw)).when(requestClient).doRequest(any(StitchRequest.class));
+    Document doc = auth.doAuthenticatedRequest(reqBuilder.build(), Document.class, registry);
     assertEquals(expectedObjectId, doc.getObjectId("_id"));
     assertEquals(42, (int) doc.getInteger("intValue"));
 
-    doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
-    doc = auth.doAuthenticatedJsonRequest(reqBuilder.build(), new DocumentCodec());
+    doReturn(new Response(docRaw)).when(requestClient).doRequest(any(StitchRequest.class));
+    doc = auth.doAuthenticatedRequest(reqBuilder.build(), new DocumentCodec());
     assertEquals(expectedObjectId, doc.getObjectId("_id"));
     assertEquals(42, (int) doc.getInteger("intValue"));
 
     // Check that a custom type can be decoded without providing a codec, as long as that codec
     // is registered in the CoreStitchAuth's configuration.
-    doReturn(new Response(docRaw)).when(requestClient).doRequest(any());
-    final CustomType ct = auth.doAuthenticatedJsonRequest(
+    doReturn(new Response(docRaw)).when(requestClient).doRequest(any(StitchRequest.class));
+    final CustomType ct = auth.doAuthenticatedRequest(
         reqBuilder.build(),
         CustomType.class,
         registry);
