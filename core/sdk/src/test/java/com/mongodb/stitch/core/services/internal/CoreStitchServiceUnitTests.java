@@ -55,7 +55,9 @@ public class CoreStitchServiceUnitTests {
 
     doReturn(42)
         .when(requestClient)
-        .doAuthenticatedRequest(any(StitchAuthRequest.class), ArgumentMatchers.<Decoder<Integer>>any());
+        .doAuthenticatedRequest(
+            any(StitchAuthRequest.class),
+            ArgumentMatchers.<Decoder<Integer>>any());
     doReturn(42)
         .when(requestClient)
         .doAuthenticatedRequest(
