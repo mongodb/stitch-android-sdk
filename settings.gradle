@@ -4,6 +4,7 @@ include ':core:sdk',
         ':core:admin-client',
         ':core:services:aws-s3',
         ':core:services:aws-ses',
+        ':core:services:fcm',
         ':core:services:http',
         ':core:services:mongodb-local',
         ':core:services:mongodb-remote',
@@ -16,6 +17,7 @@ include ':core:sdk',
         ':server:coretest',
         ':server:services:aws-s3',
         ':server:services:aws-ses',
+        ':server:services:fcm',
         ':server:services:http',
         ':server:services:mongodb-local',
         ':server:services:mongodb-remote',
@@ -28,11 +30,13 @@ include ':core:sdk',
         ':android:coretest',
         ':android:services:aws-s3',
         ':android:services:aws-ses',
+        ':android:services:fcm',
         ':android:services:http',
         ':android:services:mongodb-local',
         ':android:services:mongodb-remote',
         ':android:services:twilio',
         ':android:examples:todo',
+        ':android:examples:fcm',
         ':android:testutils'
 
 project(':core:sdk').name = 'stitch-core-sdk'
@@ -40,6 +44,7 @@ project(':core:admin-client').name = 'stitch-core-admin-client'
 project(':core:services').name = 'core-services'
 project(':core:services:aws-s3').name = 'stitch-core-services-aws-s3'
 project(':core:services:aws-ses').name = 'stitch-core-services-aws-ses'
+project(':core:services:fcm').name = 'stitch-core-services-fcm'
 project(':core:services:http').name = 'stitch-core-services-http'
 project(':core:services:mongodb-local').name = 'stitch-core-services-mongodb-local'
 project(':core:services:mongodb-remote').name = 'stitch-core-services-mongodb-remote'
@@ -51,6 +56,7 @@ project(':server:coretest').name = 'stitch-server-coretest'
 project(':server:services').name = 'server-services'
 project(':server:services:aws-s3').name = 'stitch-server-services-aws-s3'
 project(':server:services:aws-ses').name = 'stitch-server-services-aws-ses'
+project(':server:services:fcm').name = 'stitch-server-services-fcm'
 project(':server:services:http').name = 'stitch-server-services-http'
 project(':server:services:mongodb-local').name = 'stitch-server-services-mongodb-local'
 project(':server:services:mongodb-remote').name = 'stitch-server-services-mongodb-remote'
@@ -62,9 +68,12 @@ project(':android:coretest').name = 'stitch-android-coretest'
 project(':android:services').name = 'android-services'
 project(':android:services:aws-s3').name = 'stitch-android-services-aws-s3'
 project(':android:services:aws-ses').name = 'stitch-android-services-aws-ses'
+project(':android:services:fcm').name = 'stitch-android-services-fcm'
 project(':android:services:http').name = 'stitch-android-services-http'
 project(':android:services:mongodb-local').name = 'stitch-android-services-mongodb-local'
 project(':android:services:mongodb-remote').name = 'stitch-android-services-mongodb-remote'
 project(':android:services:twilio').name = 'stitch-android-services-twilio'
+project(':android:examples').name = 'android-examples'
 project(':android:examples:todo').name = 'stitch-android-examples-todo'
+project(':android:examples:fcm').name = 'stitch-android-examples-fcm'
 project(':android:testutils').name = 'stitch-android-testutils'

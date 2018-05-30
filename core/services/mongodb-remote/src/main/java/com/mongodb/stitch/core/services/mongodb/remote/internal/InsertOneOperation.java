@@ -17,7 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import java.util.Collections;
 import org.bson.BsonDocument;
@@ -35,7 +35,7 @@ class InsertOneOperation implements Operation<RemoteInsertOneResult> {
     this.document = document;
   }
 
-  public RemoteInsertOneResult execute(final CoreStitchService service) {
+  public RemoteInsertOneResult execute(final CoreStitchServiceClient service) {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());

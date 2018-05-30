@@ -16,7 +16,7 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import java.util.Collection;
 import java.util.List;
 import org.bson.conversions.Bson;
@@ -30,7 +30,7 @@ class CoreRemoteAggregateIterableImpl<DocumentT, ResultT>
   CoreRemoteAggregateIterableImpl(
       final List<? extends Bson> pipeline,
       final Class<ResultT> resultClass,
-      final CoreStitchService service,
+      final CoreStitchServiceClient service,
       final Operations<DocumentT> operations
   ) {
     super(service, resultClass, operations);

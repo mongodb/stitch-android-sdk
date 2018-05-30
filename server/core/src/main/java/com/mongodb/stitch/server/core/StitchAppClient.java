@@ -44,22 +44,22 @@ public interface StitchAppClient extends Closeable {
   /**
    * Gets a client for the given named service.
    *
-   * @param provider the provider that will create a client for the service.
+   * @param factory the factory that will create a client for the service.
    * @param serviceName the name of the service.
-   * @param <T> the type of client to be returned by the provider.
+   * @param <T> the type of client to be returned by the factory.
    * @return A client to interact with the service.
    */
-  <T> T getServiceClient(final NamedServiceClientFactory<T> provider, final String serviceName);
+  <T> T getServiceClient(final NamedServiceClientFactory<T> factory, final String serviceName);
 
   /**
-   * Gets a client for the given service. Only some services offer a provider that requires no
+   * Gets a client for the given service. Only some services offer a factory that requires no
    * service name.
    *
-   * @param provider the provider that will create a client for the service.
-   * @param <T> the type of client to be returned by the provider.
+   * @param factory the factory that will create a client for the service.
+   * @param <T> the type of client to be returned by the factory.
    * @return A client to interact with the service.
    */
-  <T> T getServiceClient(final ServiceClientFactory<T> provider);
+  <T> T getServiceClient(final ServiceClientFactory<T> factory);
 
   /**
    * Calls the specified Stitch function, and decodes the response into an instance of the specified

@@ -20,7 +20,8 @@ import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.CollectionDecoder;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.util.Collection;
 import java.util.Collections;
 import org.bson.BsonDocument;
@@ -93,7 +94,7 @@ class FindOperation<T> implements Operation<Collection<T>> {
     return this;
   }
 
-  public Collection<T> execute(final CoreStitchService service) {
+  public Collection<T> execute(final CoreStitchServiceClient service) {
 
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());

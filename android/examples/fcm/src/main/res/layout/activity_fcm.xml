@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".FcmActivity"
+    tools:layout_editor_absoluteY="81dp">
+
+
+    <Button
+        android:id="@+id/registerButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="23dp"
+        android:onClick="register"
+        android:text="@string/register"
+        app:layout_constraintBottom_toBottomOf="@+id/deregisterButton"
+        app:layout_constraintEnd_toStartOf="@+id/deregisterButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/deregisterButton" />
+
+    <Button
+        android:id="@+id/deregisterButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="59dp"
+        android:layout_marginTop="56dp"
+        android:onClick="deregister"
+        android:text="@string/deregister"
+        app:layout_constraintBottom_toTopOf="@+id/subscribeToNewsButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/registerButton"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/subscribeToNewsButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="180dp"
+        android:onClick="subscribeToNews"
+        android:text="@string/subscribe_to_news"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/sendToNewsButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="20dp"
+        android:onClick="sendToNews"
+        android:text="@string/send_to_news"
+        app:layout_constraintStart_toStartOf="@+id/subscribeToNewsButton"
+        app:layout_constraintTop_toBottomOf="@+id/subscribeToNewsButton" />
+
+    <Button
+        android:id="@+id/sendToSelfButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="3dp"
+        android:layout_marginTop="20dp"
+        android:onClick="sendToSelf"
+        android:text="@string/send_to_self"
+        app:layout_constraintEnd_toEndOf="@+id/sendToNewsButton"
+        app:layout_constraintTop_toBottomOf="@+id/sendToNewsButton" />
+</android.support.constraint.ConstraintLayout>

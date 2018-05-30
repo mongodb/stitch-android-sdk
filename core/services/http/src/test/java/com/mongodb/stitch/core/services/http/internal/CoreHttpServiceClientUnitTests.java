@@ -26,7 +26,8 @@ import static org.mockito.Mockito.verify;
 import com.mongodb.stitch.core.services.http.HttpMethod;
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
@@ -43,8 +44,8 @@ public class CoreHttpServiceClientUnitTests {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testExecuteInternal() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+  public void testExecute() {
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreHttpServiceClient client = new CoreHttpServiceClient(service);
 
     final String expectedUrl = "http://aol.com";
@@ -79,7 +80,7 @@ public class CoreHttpServiceClientUnitTests {
     doReturn(response)
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
 
-    final HttpResponse result = client.executeInternal(request);
+    final HttpResponse result = client.execute(request);
     assertEquals(result, response);
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
@@ -109,7 +110,7 @@ public class CoreHttpServiceClientUnitTests {
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
-    assertThrows(() -> client.executeInternal(request),
+    assertThrows(() -> client.execute(request),
         IllegalArgumentException.class);
   }
 }

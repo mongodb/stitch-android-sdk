@@ -21,10 +21,21 @@ package com.mongodb.stitch.core;
  * typically before a request is made to the Stitch server.
  */
 public enum StitchClientErrorCode {
-  LOGGED_OUT_DURING_REQUEST,
-  MISSING_URL,
-  MUST_AUTHENTICATE_FIRST,
-  USER_NO_LONGER_VALID,
-  COULD_NOT_LOAD_PERSISTED_AUTH_INFO,
-  COULD_NOT_PERSIST_AUTH_INFO
+  LOGGED_OUT_DURING_REQUEST("logged out while making a request to Stitch"),
+  MUST_AUTHENTICATE_FIRST("method called requires being authenticated"),
+  USER_NO_LONGER_VALID(
+      "user instance being accessed is no longer valid; please get a new user with auth.getUser()"),
+  COULD_NOT_LOAD_PERSISTED_AUTH_INFO("failed to load stored auth information for Stitch"),
+  COULD_NOT_PERSIST_AUTH_INFO("failed to save auth information for Stitch");
+
+  private final String description;
+
+  StitchClientErrorCode(final String description) {
+    this.description = description;
+  }
+
+  @Override
+  public String toString() {
+    return description;
+  }
 }

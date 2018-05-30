@@ -17,19 +17,20 @@
 package com.mongodb.stitch.core.services.aws.ses.internal;
 
 import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.util.Collections;
 import org.bson.Document;
 
 public class CoreAwsSesServiceClient {
 
-  private final CoreStitchService service;
+  private final CoreStitchServiceClient service;
 
-  protected CoreAwsSesServiceClient(final CoreStitchService service) {
+  public CoreAwsSesServiceClient(final CoreStitchServiceClient service) {
     this.service = service;
   }
 
-  protected AwsSesSendResult sendEmailInternal(
+  public AwsSesSendResult sendEmail(
       final String toAddress,
       final String fromAddress,
       final String subject,

@@ -26,7 +26,7 @@ import com.mongodb.stitch.server.core.auth.StitchAuth;
 import com.mongodb.stitch.server.core.auth.internal.StitchAuthImpl;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.core.services.internal.ServiceClientFactory;
-import com.mongodb.stitch.server.core.services.internal.StitchServiceImpl;
+import com.mongodb.stitch.server.core.services.internal.StitchServiceClientImpl;
 
 import java.io.IOException;
 import java.util.List;
@@ -70,20 +70,20 @@ public final class StitchAppClientImpl implements StitchAppClient {
 
   @Override
   public <T> T getServiceClient(
-      final NamedServiceClientFactory<T> provider, final String serviceName) {
-    return provider.getClient(
-        new StitchServiceImpl(
-            auth,
-            routes.getServiceRoutes(),
-            serviceName,
-            info.getCodecRegistry()),
+      final NamedServiceClientFactory<T> factory, final String serviceName) {
+    return factory.getClient(
+        new StitchServiceClientImpl(
+                auth,
+                routes.getServiceRoutes(),
+                serviceName,
+                info.getCodecRegistry()),
         info);
   }
 
   @Override
-  public <T> T getServiceClient(final ServiceClientFactory<T> provider) {
-    return provider.getClient(
-        new StitchServiceImpl(
+  public <T> T getServiceClient(final ServiceClientFactory<T> factory) {
+    return factory.getClient(
+        new StitchServiceClientImpl(
             auth,
             routes.getServiceRoutes(),
             "",

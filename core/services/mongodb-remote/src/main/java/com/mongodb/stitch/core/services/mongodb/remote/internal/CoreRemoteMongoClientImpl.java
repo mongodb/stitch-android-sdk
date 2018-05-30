@@ -16,13 +16,13 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient {
 
-  private final CoreStitchService service;
+  private final CoreStitchServiceClient service;
 
-  public CoreRemoteMongoClientImpl(final CoreStitchService service) {
+  public CoreRemoteMongoClientImpl(final CoreStitchServiceClient service) {
     this.service = service;
   }
 

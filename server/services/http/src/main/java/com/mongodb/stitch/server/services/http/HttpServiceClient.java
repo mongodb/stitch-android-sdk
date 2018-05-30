@@ -18,6 +18,7 @@ package com.mongodb.stitch.server.services.http;
 
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
+import com.mongodb.stitch.core.services.http.internal.CoreHttpServiceClient;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.services.http.internal.HttpServiceClientImpl;
 
@@ -37,5 +38,5 @@ public interface HttpServiceClient {
   HttpResponse execute(@Nonnull final HttpRequest request);
 
   NamedServiceClientFactory<HttpServiceClient> Factory =
-      (service, appInfo) -> new HttpServiceClientImpl(service);
+      (service, appInfo) -> new HttpServiceClientImpl(new CoreHttpServiceClient(service));
 }

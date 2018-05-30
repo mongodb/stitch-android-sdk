@@ -21,11 +21,13 @@ import android.support.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
+import com.mongodb.stitch.android.core.services.internal.StitchServiceClient;
 import com.mongodb.stitch.android.services.aws.s3.internal.AwsS3ServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
+import com.mongodb.stitch.core.services.aws.s3.internal.CoreAwsS3ServiceClient;
+
 import java.io.InputStream;
 import org.bson.types.Binary;
 
@@ -123,12 +125,12 @@ public interface AwsS3ServiceClient {
   NamedServiceClientFactory<AwsS3ServiceClient> Factory =
       new NamedServiceClientFactory<AwsS3ServiceClient>() {
         @Override
-        public AwsS3ServiceClientImpl getClient(
-            final StitchService service,
+        public AwsS3ServiceClient getClient(
+            final StitchServiceClient service,
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {
-          return new AwsS3ServiceClientImpl(service, dispatcher);
+          return new AwsS3ServiceClientImpl(new CoreAwsS3ServiceClient(service), dispatcher);
         }
       };
 }

@@ -17,7 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import java.util.Collections;
 import org.bson.BsonDocument;
@@ -36,7 +36,7 @@ class DeleteOneOperation implements Operation<RemoteDeleteResult> {
     this.filter = filter;
   }
 
-  public RemoteDeleteResult execute(final CoreStitchService service) {
+  public RemoteDeleteResult execute(final CoreStitchServiceClient service) {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());

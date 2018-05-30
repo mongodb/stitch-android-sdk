@@ -51,14 +51,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
 
   @Override
   public <ClientT> ClientT getProviderClient(
-          final AuthProviderClientFactory<ClientT> provider) {
-    return provider.getClient(this, getRequestClient(), getAuthRoutes());
+          final AuthProviderClientFactory<ClientT> factory) {
+    return factory.getClient(this, getRequestClient(), getAuthRoutes());
   }
 
   @Override
   public <T> T getProviderClient(
-      final NamedAuthProviderClientFactory<T> provider, final String providerName) {
-    return provider.getClient(providerName, getRequestClient(), getAuthRoutes());
+      final NamedAuthProviderClientFactory<T> factory, final String providerName) {
+    return factory.getClient(providerName, getRequestClient(), getAuthRoutes());
   }
 
   @Override

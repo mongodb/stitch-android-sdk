@@ -21,7 +21,7 @@ import com.mongodb.stitch.core.StitchAppClientInfo;
 
 public interface ServiceClientFactory<T> {
   T getClient(
-      final StitchService service,
+      final StitchServiceClient serviceClient,
       final StitchAppClientInfo appInfo,
       final TaskDispatcher dispatcher);
 }

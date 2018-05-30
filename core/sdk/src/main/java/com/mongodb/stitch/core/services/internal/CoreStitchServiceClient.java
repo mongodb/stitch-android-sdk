@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public interface CoreStitchService {
+public interface CoreStitchServiceClient {
 
   void callFunctionInternal(
       final String name,
@@ -56,5 +56,5 @@ public interface CoreStitchService {
 
   CodecRegistry getCodecRegistry();
 
-  CoreStitchService withCodecRegistry(final CodecRegistry codecRegistry);
+  CoreStitchServiceClient withCodecRegistry(final CodecRegistry codecRegistry);
 }

@@ -22,7 +22,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.util.List;
 import org.bson.Document;
 import org.junit.Test;
@@ -33,14 +34,14 @@ public class CoreTwilioServiceClientUnitTests {
 
   @Test
   public void testSendMessage() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreTwilioServiceClient client = new CoreTwilioServiceClient(service);
 
     final String to = "+15558509552";
     final String from = "+15558675309";
     final String body = "I've got your number";
 
-    client.sendMessageInternal(to, from, body);
+    client.sendMessage(to, from, body);
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
@@ -58,14 +59,14 @@ public class CoreTwilioServiceClientUnitTests {
     doThrow(new IllegalArgumentException("whoops"))
         .when(service).callFunctionInternal(any(), any());
     assertThrows(() -> {
-      client.sendMessageInternal(to, from, body);
+      client.sendMessage(to, from, body);
       return null;
     }, IllegalArgumentException.class);
   }
 
   @Test
   public void testSendMessageWithMedia() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreTwilioServiceClient client = new CoreTwilioServiceClient(service);
 
     final String to = "+15558509552";
@@ -73,7 +74,7 @@ public class CoreTwilioServiceClientUnitTests {
     final String body = "I've got it!";
     final String mediaUrl = "https://jpegs.com/myjpeg.gif.png";
 
-    client.sendMessageInternal(to, from, body, mediaUrl);
+    client.sendMessage(to, from, body, mediaUrl);
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
@@ -92,7 +93,7 @@ public class CoreTwilioServiceClientUnitTests {
     doThrow(new IllegalArgumentException("whoops"))
         .when(service).callFunctionInternal(any(), any());
     assertThrows(() -> {
-      client.sendMessageInternal(to, from, body);
+      client.sendMessage(to, from, body);
       return null;
     }, IllegalArgumentException.class);
   }

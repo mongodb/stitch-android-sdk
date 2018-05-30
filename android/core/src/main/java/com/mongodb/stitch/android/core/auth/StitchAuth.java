@@ -34,23 +34,23 @@ public interface StitchAuth extends Closeable {
    * Gets a client for the given authentication provider. Most authentication providers will allow
    * creation of a client without a name of the provider.
    *
-   * @param provider The provider that will create a client for the authentication provider.
-   * @param <ClientT> The type of client to be returned by the provider.
+   * @param factory The factory that will create a client for the authentication provider.
+   * @param <ClientT> The type of client to be returned by the factory.
    * @return A client to interact with the authentication provider.
    */
   <ClientT> ClientT getProviderClient(
-          final AuthProviderClientFactory<ClientT> provider);
+          final AuthProviderClientFactory<ClientT> factory);
 
   /**
    * Gets a client for the given named authentication provider.
    *
-   * @param provider the provider that will create a client for the authentication provider.
+   * @param factory the factory that will create a client for the authentication provider.
    * @param providerName the name of the authentication provider.
-   * @param <T> the type of client to be returned by the provider.
+   * @param <T> the type of client to be returned by the factory.
    * @return a client to interact with the authentication provider.
    */
   <T> T getProviderClient(
-      final NamedAuthProviderClientFactory<T> provider, final String providerName);
+      final NamedAuthProviderClientFactory<T> factory, final String providerName);
 
   /**
    * Logs a user in with the given credentials associated with an authentication provider created

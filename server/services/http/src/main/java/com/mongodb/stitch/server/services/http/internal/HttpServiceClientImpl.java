@@ -19,16 +19,16 @@ package com.mongodb.stitch.server.services.http.internal;
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
 import com.mongodb.stitch.core.services.http.internal.CoreHttpServiceClient;
-import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.http.HttpServiceClient;
 
 import javax.annotation.Nonnull;
 
-public final class HttpServiceClientImpl extends CoreHttpServiceClient
-    implements HttpServiceClient {
+public final class HttpServiceClientImpl implements HttpServiceClient {
 
-  public HttpServiceClientImpl(final StitchService service) {
-    super(service);
+  private final CoreHttpServiceClient proxy;
+
+  public HttpServiceClientImpl(final CoreHttpServiceClient client) {
+    this.proxy = client;
   }
 
   /**
@@ -38,6 +38,6 @@ public final class HttpServiceClientImpl extends CoreHttpServiceClient
    * @return the response to executing the request.
    */
   public HttpResponse execute(@Nonnull final HttpRequest request) {
-    return executeInternal(request);
+    return proxy.execute(request);
   }
 }

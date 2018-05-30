@@ -17,7 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import java.util.Collections;
 import java.util.List;
@@ -36,7 +36,7 @@ class InsertManyOperation implements Operation<RemoteInsertManyResult> {
     this.documents = documents;
   }
 
-  public RemoteInsertManyResult execute(final CoreStitchService service) {
+  public RemoteInsertManyResult execute(final CoreStitchServiceClient service) {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());

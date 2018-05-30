@@ -18,6 +18,7 @@ package com.mongodb.stitch.server.services.aws.s3;
 
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
+import com.mongodb.stitch.core.services.aws.s3.internal.CoreAwsS3ServiceClient;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.services.aws.s3.internal.AwsS3ServiceClientImpl;
 import java.io.IOException;
@@ -118,5 +119,5 @@ public interface AwsS3ServiceClient {
       @Nonnull final String contentType);
 
   NamedServiceClientFactory<AwsS3ServiceClient> Factory =
-      (service, appInfo) -> new AwsS3ServiceClientImpl(service);
+      (service, appInfo) -> new AwsS3ServiceClientImpl(new CoreAwsS3ServiceClient(service));
 }

@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.server.services.twilio;
 
+import com.mongodb.stitch.core.services.twilio.internal.CoreTwilioServiceClient;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.services.twilio.internal.TwilioServiceClientImpl;
 import javax.annotation.Nonnull;
@@ -52,5 +53,5 @@ public interface TwilioServiceClient {
       @Nonnull final String mediaUrl);
 
   NamedServiceClientFactory<TwilioServiceClient> Factory =
-      (service, appInfo) -> new TwilioServiceClientImpl(service);
+      (service, appInfo) -> new TwilioServiceClientImpl(new CoreTwilioServiceClient(service));
 }

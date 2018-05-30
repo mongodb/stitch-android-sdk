@@ -16,19 +16,19 @@
 
 package com.mongodb.stitch.core.services.twilio.internal;
 
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import java.util.Collections;
 import org.bson.Document;
 
 public class CoreTwilioServiceClient {
 
-  private final CoreStitchService service;
+  private final CoreStitchServiceClient service;
 
-  protected CoreTwilioServiceClient(final CoreStitchService service) {
+  public CoreTwilioServiceClient(final CoreStitchServiceClient service) {
     this.service = service;
   }
 
-  protected void sendMessageInternal(
+  public void sendMessage(
       final String to,
       final String from,
       final String body,
@@ -44,7 +44,7 @@ public class CoreTwilioServiceClient {
     service.callFunctionInternal("send", Collections.singletonList(args));
   }
 
-  protected void sendMessageInternal(final String to, final String from, final String body) {
-    sendMessageInternal(to, from, body, null);
+  public void sendMessage(final String to, final String from, final String body) {
+    sendMessage(to, from, body, null);
   }
 }

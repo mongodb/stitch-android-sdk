@@ -17,7 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import java.util.Collections;
 import org.bson.BsonDocument;
@@ -45,7 +45,7 @@ class UpdateManyOperation implements Operation<RemoteUpdateResult> {
     return this;
   }
 
-  public RemoteUpdateResult execute(final CoreStitchService service) {
+  public RemoteUpdateResult execute(final CoreStitchServiceClient service) {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());

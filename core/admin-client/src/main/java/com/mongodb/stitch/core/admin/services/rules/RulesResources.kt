@@ -27,9 +27,14 @@ enum class TwilioActions {
     @JsonProperty("send") Send
 }
 
+enum class FcmActions {
+    @JsonProperty("send") Send
+}
+
 sealed class RuleCreator {
     data class AwsS3(val name: String, val actions: Set<AwsS3Actions>) : RuleCreator()
     data class AwsSes(val name: String, val actions: Set<AwsSesActions>) : RuleCreator()
+    data class Fcm(val name: String, val actions: Set<FcmActions>) : RuleCreator()
     data class Http(val name: String, val actions: Set<HttpActions>) : RuleCreator()
     data class MongoDb(val namespace: String, private val rule: Document) : RuleCreator() {
         @JsonAnyGetter

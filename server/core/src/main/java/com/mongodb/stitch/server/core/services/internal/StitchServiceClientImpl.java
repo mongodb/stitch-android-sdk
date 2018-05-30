@@ -17,16 +17,17 @@
 package com.mongodb.stitch.server.core.services.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.services.internal.CoreStitchServiceImpl;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 
 import java.util.List;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public final class StitchServiceImpl extends CoreStitchServiceImpl implements StitchService {
+public final class StitchServiceClientImpl
+    extends CoreStitchServiceClientImpl implements StitchServiceClient {
 
-  public StitchServiceImpl(
+  public StitchServiceClientImpl(
       final StitchAuthRequestClient requestClient,
       final StitchServiceRoutes routes,
       final String name,
@@ -43,10 +44,10 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
 
   @Override
   public <ResultT> ResultT callFunction(
-          final String name,
-          final List<?> args,
-          final Long requestTimeout,
-          final Class<ResultT> resultClass) {
+      final String name,
+      final List<?> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass) {
     return callFunctionInternal(name, args, requestTimeout, resultClass);
   }
 
@@ -58,10 +59,10 @@ public final class StitchServiceImpl extends CoreStitchServiceImpl implements St
 
   @Override
   public <ResultT> ResultT callFunction(
-          final String name,
-          final List<?> args,
-          final Long requestTimeout,
-          final Decoder<ResultT> resultDecoder) {
+      final String name,
+      final List<?> args,
+      final Long requestTimeout,
+      final Decoder<ResultT> resultDecoder) {
     return callFunctionInternal(name, args, requestTimeout, resultDecoder);
   }
 }

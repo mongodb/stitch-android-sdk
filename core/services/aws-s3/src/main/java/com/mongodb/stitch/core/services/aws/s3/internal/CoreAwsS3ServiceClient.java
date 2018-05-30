@@ -20,7 +20,7 @@ import static com.mongodb.stitch.core.internal.common.IoUtils.readAllToBytes;
 
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
@@ -29,13 +29,13 @@ import org.bson.types.Binary;
 
 public class CoreAwsS3ServiceClient {
 
-  private final CoreStitchService service;
+  private final CoreStitchServiceClient service;
 
-  protected CoreAwsS3ServiceClient(final CoreStitchService service) {
+  public CoreAwsS3ServiceClient(final CoreStitchServiceClient service) {
     this.service = service;
   }
 
-  private AwsS3PutObjectResult putObject(
+  private AwsS3PutObjectResult putObjectInternal(
       final String bucket,
       final String key,
       final String acl,
@@ -54,47 +54,47 @@ public class CoreAwsS3ServiceClient {
         ResultDecoders.putObjectResultDecoder);
   }
 
-  protected AwsS3PutObjectResult putObjectInternal(
+  public AwsS3PutObjectResult putObject(
       final String bucket,
       final String key,
       final String acl,
       final String contentType,
       final String body
   ) {
-    return putObject(bucket, key, acl, contentType, body);
+    return putObjectInternal(bucket, key, acl, contentType, body);
   }
 
-  protected AwsS3PutObjectResult putObjectInternal(
+  public AwsS3PutObjectResult putObject(
       final String bucket,
       final String key,
       final String acl,
       final String contentType,
       final Binary body
   ) {
-    return putObject(bucket, key, acl, contentType, body);
+    return putObjectInternal(bucket, key, acl, contentType, body);
   }
 
-  protected AwsS3PutObjectResult putObjectInternal(
+  public AwsS3PutObjectResult putObject(
       final String bucket,
       final String key,
       final String acl,
       final String contentType,
       final byte[] body
   ) {
-    return putObjectInternal(bucket, key, acl, contentType, new Binary(body));
+    return putObject(bucket, key, acl, contentType, new Binary(body));
   }
 
-  protected AwsS3PutObjectResult putObjectInternal(
+  public AwsS3PutObjectResult putObject(
       final String bucket,
       final String key,
       final String acl,
       final String contentType,
       final InputStream body
   ) throws IOException {
-    return putObjectInternal(bucket, key, acl, contentType, new Binary(readAllToBytes(body)));
+    return putObject(bucket, key, acl, contentType, new Binary(readAllToBytes(body)));
   }
 
-  protected AwsS3SignPolicyResult signPolicyInternal(
+  public AwsS3SignPolicyResult signPolicy(
       final String bucket,
       final String key,
       final String acl,

@@ -18,8 +18,8 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
-import com.mongodb.stitch.core.services.internal.CoreStitchServiceImpl;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 import org.bson.Document;
 import org.mockito.Mockito;
@@ -27,12 +27,12 @@ import org.mockito.Mockito;
 final class TestUtils {
 
   static CoreRemoteMongoClient getClient() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     return new CoreRemoteMongoClientImpl(service);
   }
 
   static CoreRemoteMongoDatabase getDatabase(final String name) {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     return client.getDatabase(name);
   }
@@ -44,7 +44,7 @@ final class TestUtils {
   static CoreRemoteMongoCollection<Document> getCollection(final String name) {
     final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
     final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
-    final CoreStitchService service = Mockito.spy(new CoreStitchServiceImpl(
+    final CoreStitchServiceClient service = Mockito.spy(new CoreStitchServiceClientImpl(
         requestClient,
         routes,
         BsonUtils.DEFAULT_CODEC_REGISTRY));

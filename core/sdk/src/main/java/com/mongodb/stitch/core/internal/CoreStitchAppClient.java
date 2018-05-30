@@ -18,15 +18,15 @@ package com.mongodb.stitch.core.internal;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
-import com.mongodb.stitch.core.services.internal.CoreStitchServiceImpl;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
 public final class CoreStitchAppClient {
-  private final CoreStitchService functionService;
+  private final CoreStitchServiceClient functionService;
 
   /**
    * Constructs a new app client.
@@ -40,7 +40,7 @@ public final class CoreStitchAppClient {
       final StitchAppRoutes routes,
       final CodecRegistry codecRegistry
   ) {
-    this.functionService = new CoreStitchServiceImpl(
+    this.functionService = new CoreStitchServiceClientImpl(
         authRequestClient,
         routes.getServiceRoutes(),
         codecRegistry);

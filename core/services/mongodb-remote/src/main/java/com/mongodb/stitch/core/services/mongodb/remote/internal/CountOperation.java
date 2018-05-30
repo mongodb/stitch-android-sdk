@@ -17,7 +17,8 @@
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.util.Collections;
 import org.bson.BsonDocument;
 import org.bson.Document;
@@ -42,7 +43,7 @@ class CountOperation implements Operation<Long> {
     return this;
   }
 
-  public Long execute(final CoreStitchService service) {
+  public Long execute(final CoreStitchServiceClient service) {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());

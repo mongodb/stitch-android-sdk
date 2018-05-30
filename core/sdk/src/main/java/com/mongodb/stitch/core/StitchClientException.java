@@ -40,4 +40,9 @@ public final class StitchClientException extends StitchException {
   public StitchClientErrorCode getErrorCode() {
     return errorCode;
   }
+
+  @Override
+  public String toString() {
+    return String.format("%s(%s): %s", super.toString(), errorCode.name(), errorCode.toString());
+  }
 }

@@ -60,4 +60,10 @@ public final class StitchServiceException extends StitchException {
   public StitchServiceErrorCode getErrorCode() {
     return errorCode;
   }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "%s(%s): %s", super.toString(), errorCode.name(), errorCode.getCodeName());
+  }
 }

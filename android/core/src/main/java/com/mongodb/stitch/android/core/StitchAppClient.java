@@ -18,6 +18,7 @@ package com.mongodb.stitch.android.core;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
+import com.mongodb.stitch.android.core.push.StitchPush;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
 
@@ -43,24 +44,32 @@ public interface StitchAppClient extends Closeable {
   StitchAuth getAuth();
 
   /**
-   * Gets a client for the given named service.
+   * Gets the push notifications component of the app. This is used for registering for push
+   * notifications.
    *
-   * @param provider the provider that will create a client for the service.
-   * @param serviceName the name of the service.
-   * @param <T> the type of client to be returned by the provider.
-   * @return a client to interact with the service.
+   * @return the push notifications component of the app.
    */
-  <T> T getServiceClient(final NamedServiceClientFactory<T> provider, final String serviceName);
+  StitchPush getPush();
 
   /**
-   * Gets a client for the given service. Only some services offer a provider that requires no
-   * service name.
+   * Gets a client for the given named service.
    *
-   * @param provider the provider that will create a client for the service.
-   * @param <T> the type of client to be returned by the provider.
+   * @param factory the factory that will create a client for the service.
+   * @param serviceName the name of the service.
+   * @param <T> the type of client to be returned by the factory.
    * @return a client to interact with the service.
    */
-  <T> T getServiceClient(final ServiceClientFactory<T> provider);
+  <T> T getServiceClient(final NamedServiceClientFactory<T> factory, final String serviceName);
+
+  /**
+   * Gets a client for the given service. Only some services offer a factory that requires no
+   * service name.
+   *
+   * @param factory the factory that will create a client for the service.
+   * @param <T> the type of client to be returned by the factory.
+   * @return a client to interact with the service.
+   */
+  <T> T getServiceClient(final ServiceClientFactory<T> factory);
 
   /**
    * Calls the specified Stitch function, and decodes the response into an instance of the specified

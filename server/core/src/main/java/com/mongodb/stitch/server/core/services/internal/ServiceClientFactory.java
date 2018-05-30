@@ -19,5 +19,5 @@ package com.mongodb.stitch.server.core.services.internal;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 
 public interface ServiceClientFactory<T> {
-  T getClient(final StitchService service, final StitchAppClientInfo appInfo);
+  T getClient(final StitchServiceClient serviceClient, final StitchAppClientInfo appInfo);
 }

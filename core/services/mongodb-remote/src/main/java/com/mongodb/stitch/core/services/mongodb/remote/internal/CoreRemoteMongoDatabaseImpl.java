@@ -20,17 +20,18 @@ import static com.mongodb.MongoNamespace.checkDatabaseNameValidity;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import org.bson.Document;
 
 public class CoreRemoteMongoDatabaseImpl implements CoreRemoteMongoDatabase {
 
   private final String name;
-  private final CoreStitchService service;
+  private final CoreStitchServiceClient service;
 
   CoreRemoteMongoDatabaseImpl(
       final String name,
-      final CoreStitchService service
+      final CoreStitchServiceClient service
   ) {
     notNull("name", name);
     checkDatabaseNameValidity(name);
