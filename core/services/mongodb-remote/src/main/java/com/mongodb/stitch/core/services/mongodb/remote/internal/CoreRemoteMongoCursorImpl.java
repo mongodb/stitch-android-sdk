@@ -18,10 +18,10 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import java.util.Iterator;
 
-class CoreRemoteMongoCursorImpl<ResultT> implements CoreRemoteMongoCursor<ResultT> {
+public class CoreRemoteMongoCursorImpl<ResultT> implements CoreRemoteMongoCursor<ResultT> {
   private final Iterator<ResultT> documents;
 
-  CoreRemoteMongoCursorImpl(final Iterator<ResultT> documents) {
+  public CoreRemoteMongoCursorImpl(final Iterator<ResultT> documents) {
     this.documents = documents;
   }
 

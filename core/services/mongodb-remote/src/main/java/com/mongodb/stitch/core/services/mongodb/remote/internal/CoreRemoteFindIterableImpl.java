@@ -33,7 +33,7 @@ public class CoreRemoteFindIterableImpl<DocumentT, ResultT>
 
   private Bson filter;
 
-  CoreRemoteFindIterableImpl(
+  public CoreRemoteFindIterableImpl(
       final Bson filter,
       final Class<ResultT> resultClass,
       final CoreStitchServiceClient service,

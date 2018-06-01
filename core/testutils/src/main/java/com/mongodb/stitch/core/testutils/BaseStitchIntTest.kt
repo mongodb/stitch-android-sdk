@@ -69,6 +69,7 @@ abstract class BaseStitchIntTest {
             return
         }
         apps.forEach { it.remove() }
+        apps.clear()
         adminClient.logout()
     }
 

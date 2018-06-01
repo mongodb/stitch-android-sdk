@@ -72,6 +72,11 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     return reqBuilder.build(codecRegistry);
   }
 
+  @Nullable
+  public String getName() {
+    return serviceName;
+  }
+
   public void callFunction(
       final String name,
       final List<?> args

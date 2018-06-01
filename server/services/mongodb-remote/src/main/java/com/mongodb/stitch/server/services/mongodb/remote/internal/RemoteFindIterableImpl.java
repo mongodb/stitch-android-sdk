@@ -21,13 +21,13 @@ import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import javax.annotation.Nullable;
 import org.bson.conversions.Bson;
 
-class RemoteFindIterableImpl<ResultT>
+public class RemoteFindIterableImpl<ResultT>
     extends RemoteMongoIterableImpl<ResultT>
     implements RemoteFindIterable<ResultT> {
 
   private final CoreRemoteFindIterable<ResultT> proxy;
 
-  RemoteFindIterableImpl(final CoreRemoteFindIterable<ResultT> iterable) {
+  public RemoteFindIterableImpl(final CoreRemoteFindIterable<ResultT> iterable) {
     super(iterable);
     this.proxy = iterable;
   }

@@ -1,0 +1,20 @@
+apply plugin: 'java-library'
+apply plugin: 'com.jfrog.bintray'
+
+ext.pomDisplayName = "Core Sync MongoDB Service"
+
+buildscript {
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
+
+dependencies {
+    implementation project(':core:stitch-core-sdk')
+    implementation project(':core:core-services:stitch-core-services-mongodb-remote')
+
+    api('org.mongodb:mongodb-driver-embedded:3.8.0-SNAPSHOT') // TODO: Replace with published 3.8.0
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7

@@ -18,6 +18,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
-interface Operation<T> {
+public interface Operation<T> {
   T execute(final CoreStitchServiceClient service);
 }

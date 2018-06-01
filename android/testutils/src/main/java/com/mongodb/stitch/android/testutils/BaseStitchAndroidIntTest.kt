@@ -10,6 +10,7 @@ import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import org.junit.After
 import org.junit.Before
@@ -17,6 +18,21 @@ import org.junit.Before
 open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
 
     private var clients: MutableList<StitchAppClient> = mutableListOf()
+
+    class TestNetworkMonitor: NetworkMonitor {
+        var connectedState = false
+        override fun isConnected(): Boolean {
+            return connectedState
+        }
+        override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
+            return
+        }
+    }
+
+    companion object {
+        val testNetworkMonitor = TestNetworkMonitor()
+    }
+
 
     @Before
     override fun setup() {
@@ -26,8 +42,9 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
 
     @After
     override fun teardown() {
-        super.teardown()
         clients.forEach { it.auth.logout() }
+        clients.clear()
+        super.teardown()
     }
 
     override fun getStitchBaseURL(): String {
@@ -41,7 +58,8 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
         val client = Stitch.initializeAppClient(
                 app.clientAppId,
                 StitchAppClientConfiguration.Builder()
-                .withBaseUrl(getStitchBaseURL()).build())
+                        .withBaseUrl(getStitchBaseURL())
+                        .withNetworkMonitor(testNetworkMonitor).build())
         clients.add(client)
         return client
     }

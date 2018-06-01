@@ -32,9 +32,9 @@ import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 
-class ResultDecoders {
+public class ResultDecoders {
 
-  static final Decoder<RemoteUpdateResult> updateResultDecoder = new UpdateResultDecoder();
+  public static final Decoder<RemoteUpdateResult> updateResultDecoder = new UpdateResultDecoder();
 
   private static final class UpdateResultDecoder implements Decoder<RemoteUpdateResult> {
     public RemoteUpdateResult decode(final BsonReader reader, final DecoderContext decoderContext) {
@@ -60,7 +60,7 @@ class ResultDecoders {
     }
   }
 
-  static final Decoder<RemoteDeleteResult> deleteResultDecoder = new DeleteResultDecoder();
+  public static final Decoder<RemoteDeleteResult> deleteResultDecoder = new DeleteResultDecoder();
 
   private static final class DeleteResultDecoder implements Decoder<RemoteDeleteResult> {
     public RemoteDeleteResult decode(final BsonReader reader, final DecoderContext decoderContext) {
@@ -74,7 +74,8 @@ class ResultDecoders {
     }
   }
 
-  static final Decoder<RemoteInsertOneResult> insertOneResultDecoder = new InsertOneResultDecoder();
+  public static final Decoder<RemoteInsertOneResult> insertOneResultDecoder =
+      new InsertOneResultDecoder();
 
   private static final class InsertOneResultDecoder implements Decoder<RemoteInsertOneResult> {
     public RemoteInsertOneResult decode(
@@ -91,7 +92,7 @@ class ResultDecoders {
     }
   }
 
-  static final Decoder<RemoteInsertManyResult> insertManyResultDecoder =
+  public static final Decoder<RemoteInsertManyResult> insertManyResultDecoder =
       new InsertManyResultDecoder();
 
   private static final class InsertManyResultDecoder implements Decoder<RemoteInsertManyResult> {

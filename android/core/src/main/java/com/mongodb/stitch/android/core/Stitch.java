@@ -20,9 +20,11 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.ConnectivityManager;
 import android.util.Log;
 import com.mongodb.stitch.android.core.internal.StitchAppClientImpl;
 import com.mongodb.stitch.android.core.internal.common.SharedPreferencesStorage;
+import com.mongodb.stitch.android.core.internal.net.AndroidNetworkMonitor;
 import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.core.internal.net.OkHttpTransport;
 import java.util.HashMap;
@@ -223,6 +225,11 @@ public final class Stitch {
     if (builder.getLocalAppVersion() == null
         || builder.getLocalAppVersion().isEmpty()) {
       builder.withLocalAppVersion(localAppVersion);
+    }
+    if (builder.getNetworkMonitor() == null) {
+      final ConnectivityManager connectivityManager
+          = (ConnectivityManager) applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+      builder.withNetworkMonitor(new AndroidNetworkMonitor(connectivityManager));
     }
 
     final StitchAppClientImpl client = new StitchAppClientImpl(clientAppId, builder.build());

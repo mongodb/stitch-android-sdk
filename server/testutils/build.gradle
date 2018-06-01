@@ -13,6 +13,7 @@ dependencies {
     api project(':core:stitch-core-testutils')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation 'junit:junit:4.12'
+    implementation 'commons-io:commons-io:2.6'
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8

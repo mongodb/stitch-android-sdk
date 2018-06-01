@@ -1,0 +1,34 @@
+apply plugin: 'java-library'
+apply plugin: 'kotlin'
+apply plugin: 'com.jfrog.bintray'
+
+ext.pomDisplayName = "Server Sync MongoDB Service"
+
+buildscript {
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
+
+test {
+    Properties properties = new Properties()
+    File file = project.rootProject.file('local.properties')
+    if (file.exists()) {
+        properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    }
+    systemProperty "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
+}
+
+dependencies {
+    implementation project(':server:stitch-server-core')
+    api project(':server:server-services:stitch-server-services-mongodb-remote')
+    api project(':core:core-services:stitch-core-services-mongodb-sync')
+
+    testImplementation project(':server:stitch-server-testutils')
+    testImplementation 'junit:junit:4.12'
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8

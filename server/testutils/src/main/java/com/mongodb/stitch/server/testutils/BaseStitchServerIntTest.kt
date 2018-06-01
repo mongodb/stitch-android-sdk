@@ -5,16 +5,34 @@ import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import com.mongodb.stitch.server.core.Stitch
 import com.mongodb.stitch.server.core.StitchAppClient
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient
+import org.apache.commons.io.FileUtils
 import org.junit.After
 import org.junit.Before
+import java.io.File
 
 open class BaseStitchServerIntTest : BaseStitchIntTest() {
 
     private var clients: MutableList<StitchAppClient> = mutableListOf()
+    private val dataDir = System.getProperty("java.io.tmpdir")
+
+    class TestNetworkMonitor: NetworkMonitor {
+        var connectedState = false
+        override fun isConnected(): Boolean {
+            return connectedState
+        }
+        override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
+            return
+        }
+    }
+
+    companion object {
+        val testNetworkMonitor = TestNetworkMonitor()
+    }
 
     @Before
     override fun setup() {
@@ -23,8 +41,11 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
 
     @After
     override fun teardown() {
-        super.teardown()
         clients.forEach { it.auth.logout() }
+        clients.clear()
+        // TODO: add back after SERVER-35421
+//        FileUtils.forceDelete(File(dataDir))
+        super.teardown()
     }
 
     override fun getStitchBaseURL(): String {
@@ -38,7 +59,9 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
         val client = Stitch.initializeAppClient(
                 app.clientAppId,
                 StitchAppClientConfiguration.Builder()
-                        .withBaseUrl(getStitchBaseURL()).build())
+                        .withDataDirectory(dataDir)
+                        .withBaseUrl(getStitchBaseURL())
+                        .withNetworkMonitor(testNetworkMonitor).build())
         clients.add(client)
         return client
     }

@@ -22,13 +22,13 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable;
 import org.bson.conversions.Bson;
 
-class RemoteFindIterableImpl<ResultT>
+public class RemoteFindIterableImpl<ResultT>
     extends RemoteMongoIterableImpl<ResultT>
     implements RemoteFindIterable<ResultT> {
 
   private final CoreRemoteFindIterable<ResultT> proxy;
 
-  RemoteFindIterableImpl(
+  public RemoteFindIterableImpl(
       final CoreRemoteFindIterable<ResultT> iterable,
       final TaskDispatcher dispatcher
   ) {

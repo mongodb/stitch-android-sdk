@@ -32,7 +32,7 @@ public abstract class CoreRemoteMongoIterableImpl<DocumentT, ResultT>
   private final Class<ResultT> resultClass;
   private final Operations<DocumentT> operations;
 
-  CoreRemoteMongoIterableImpl(
+  public CoreRemoteMongoIterableImpl(
       final CoreStitchServiceClient service,
       final Class<ResultT> resultClass,
       final Operations<DocumentT> operations

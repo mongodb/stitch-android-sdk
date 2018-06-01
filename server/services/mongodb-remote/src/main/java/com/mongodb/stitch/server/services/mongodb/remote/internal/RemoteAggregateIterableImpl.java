@@ -19,11 +19,11 @@ package com.mongodb.stitch.server.services.mongodb.remote.internal;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable;
 
-class RemoteAggregateIterableImpl<ResultT>
+public class RemoteAggregateIterableImpl<ResultT>
     extends RemoteMongoIterableImpl<ResultT>
     implements RemoteAggregateIterable<ResultT> {
 
-  RemoteAggregateIterableImpl(final CoreRemoteAggregateIterable<ResultT> iterable) {
+  public RemoteAggregateIterableImpl(final CoreRemoteAggregateIterable<ResultT> iterable) {
     super(iterable);
   }
 }

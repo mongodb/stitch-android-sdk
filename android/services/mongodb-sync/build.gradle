@@ -1,0 +1,45 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'digital.wup.android-maven-publish'
+apply plugin: 'jacoco-android'
+apply plugin: 'com.jfrog.bintray'
+
+ext.pomDisplayName = "Android Sync MongoDB Service"
+
+buildscript {
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.2'
+        classpath 'digital.wup:android-maven-publish:3.3.0'
+        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
+
+android {
+    compileSdkVersion target_api
+    defaultConfig {
+        minSdkVersion min_api
+        targetSdkVersion target_api
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        Properties properties = new Properties()
+        File file = project.rootProject.file('local.properties')
+        if (file.exists()) {
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        }
+        testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
+    }
+}
+
+dependencies {
+    implementation project(':android:stitch-android-core')
+    api project(':android:android-services:stitch-android-services-mongodb-remote')
+    api project(':core:core-services:stitch-core-services-mongodb-sync')
+
+    androidTestImplementation project(':android:stitch-android-testutils')
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+

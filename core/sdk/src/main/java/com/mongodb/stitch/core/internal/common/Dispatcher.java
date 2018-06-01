@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class Dispatcher implements Closeable {
   private final ExecutorService executorService;
 
-  protected Dispatcher() {
+  public Dispatcher() {
     executorService =
         new ThreadPoolExecutor(
             8,
@@ -36,6 +36,10 @@ public class Dispatcher implements Closeable {
             TimeUnit.SECONDS,
             new LinkedBlockingDeque<Runnable>(),
             Executors.defaultThreadFactory());
+  }
+
+  public <T> void dispatch(final Callable<T> callable) {
+    executorService.submit(callable);
   }
 
   protected <T, U> U dispatch(

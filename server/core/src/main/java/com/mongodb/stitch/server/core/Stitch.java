@@ -20,6 +20,7 @@ import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.core.internal.common.MemoryStorage;
 import com.mongodb.stitch.core.internal.net.OkHttpTransport;
 import com.mongodb.stitch.server.core.internal.StitchAppClientImpl;
+import com.mongodb.stitch.server.core.internal.net.ServerNetworkMonitor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -163,6 +164,9 @@ public final class Stitch {
     }
     if (builder.getBaseUrl() == null || builder.getBaseUrl().isEmpty()) {
       builder.withBaseUrl(DEFAULT_BASE_URL);
+    }
+    if (builder.getNetworkMonitor() == null) {
+      builder.withNetworkMonitor(new ServerNetworkMonitor());
     }
 
     final StitchAppClientImpl client = new StitchAppClientImpl(clientAppId, builder.build());
