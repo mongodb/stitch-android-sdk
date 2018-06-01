@@ -21,6 +21,9 @@ import com.mongodb.stitch.core.push.internal.CoreStitchPushClient;
 
 import org.bson.Document;
 
+/**
+ * StitchPushClient is used to register for push notifications.
+ */
 public interface StitchPushClient extends CoreStitchPushClient {
   Task<Void> register(final Document registrationInfo);
 

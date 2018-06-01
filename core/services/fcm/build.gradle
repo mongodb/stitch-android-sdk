@@ -1,7 +1,7 @@
 apply plugin: 'java-library'
 apply plugin: 'com.jfrog.bintray'
 
-ext.pomDisplayName = "Core Twilio Service"
+ext.pomDisplayName = "Core FCM Service"
 
 buildscript {
     dependencies {

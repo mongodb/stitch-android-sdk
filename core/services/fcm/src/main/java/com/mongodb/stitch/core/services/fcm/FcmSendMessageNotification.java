@@ -153,7 +153,7 @@ public final class FcmSendMessageNotification {
   }
 
   /**
-   * Returns the notification's icon. Note: Android only.
+   * Returns the notification's icon. Note: for messages to Android devices only.
    *
    * @return the notification's icon.
    */
@@ -164,7 +164,7 @@ public final class FcmSendMessageNotification {
 
   /**
    * Returns the identifier used to replace existing notifications in the notification drawer.
-   * Note: Android only.
+   * Note: for messages to Android devices only.
    *
    * @return the identifier used to replace existing notifications in the notification drawer.
    */
@@ -174,7 +174,8 @@ public final class FcmSendMessageNotification {
   }
 
   /**
-   * Returns the notification's icon color, expressed in #rrggbb format. Note: Android only.
+   * Returns the notification's icon color, expressed in #rrggbb format. Note: for messages to
+   * Android devices only.
    *
    * @return the notification's icon color, expressed in #rrggbb format.
    */
@@ -314,7 +315,7 @@ public final class FcmSendMessageNotification {
     }
 
     /**
-     * Sets the notification's icon. Note: Android only.
+     * Sets the notification's icon. Note: for messages to Android devices only.
      *
      * @param icon the notification's icon.
      * @return the builder.
@@ -326,7 +327,7 @@ public final class FcmSendMessageNotification {
 
     /**
      * Sets the identifier used to replace existing notifications in the notification drawer.
-     * Note: Android only.
+     * Note: for messages to Android devices only.
      *
      * @param tag the identifier used to replace existing notifications in the notification
      *            drawer.
@@ -338,7 +339,8 @@ public final class FcmSendMessageNotification {
     }
 
     /**
-     * Sets the notification's icon color, expressed in #rrggbb format. Note: Android only.
+     * Sets the notification's icon color, expressed in #rrggbb format. Note: for messages to
+     * Android devices only.
      *
      * @param color the notification's icon color, expressed in #rrggbb format.
      * @return the builder.

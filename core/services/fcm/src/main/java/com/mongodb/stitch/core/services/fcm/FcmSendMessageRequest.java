@@ -72,7 +72,7 @@ public final class FcmSendMessageRequest {
 
   /**
    * Returns whether or not to indicate to the client that content is available in order
-   * to wake the device. Note: iOS only.
+   * to wake the device. Note: for messages to iOS devices only.
    *
    * @return whether or not to indicate to the client that content is available in order
    *         to wake the device.
@@ -83,7 +83,8 @@ public final class FcmSendMessageRequest {
   }
 
   /**
-   * Returns whether or not the content in the message can be mutated. Note: iOS only.
+   * Returns whether or not the content in the message can be mutated. Note: for messages to
+   * iOS devices only.
    *
    * @return whether or not the content in the message can be mutated.
    */
@@ -165,7 +166,7 @@ public final class FcmSendMessageRequest {
 
     /**
      * Sets whether or not to indicate to the client that content is available in order
-     * to wake the device. Note: iOS only.
+     * to wake the device. Note: for messages to iOS devices only.
      *
      * @param contentAvailable whether or not to indicate to the client that content is available
      *                         in order to wake the device.
@@ -177,7 +178,8 @@ public final class FcmSendMessageRequest {
     }
 
     /**
-     * Sets whether or not the content in the message can be mutated. Note: iOS only.
+     * Sets whether or not the content in the message can be mutated. Note: for messages to
+     * iOS devices only.
      *
      * @param mutableContent whether or not the content in the message can be mutated.
      * @return the builder.
