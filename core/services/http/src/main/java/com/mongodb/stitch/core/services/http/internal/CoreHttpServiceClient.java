@@ -18,19 +18,20 @@ package com.mongodb.stitch.core.services.http.internal;
 
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.util.Collections;
 import org.bson.Document;
 
 public class CoreHttpServiceClient {
 
-  private final CoreStitchService service;
+  private final CoreStitchServiceClient service;
 
-  protected CoreHttpServiceClient(final CoreStitchService service) {
+  public CoreHttpServiceClient(final CoreStitchServiceClient service) {
     this.service = service;
   }
 
-  protected HttpResponse executeInternal(final HttpRequest request) {
+  public HttpResponse execute(final HttpRequest request) {
 
     final String action;
     switch (request.getMethod()) {

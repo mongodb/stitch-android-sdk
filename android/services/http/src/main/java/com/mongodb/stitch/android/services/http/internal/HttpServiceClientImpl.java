@@ -20,20 +20,22 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.http.HttpServiceClient;
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
 import com.mongodb.stitch.core.services.http.internal.CoreHttpServiceClient;
 import java.util.concurrent.Callable;
 
-public final class HttpServiceClientImpl extends CoreHttpServiceClient
-    implements HttpServiceClient {
+public final class HttpServiceClientImpl implements HttpServiceClient {
 
+  private final CoreHttpServiceClient proxy;
   private final TaskDispatcher dispatcher;
 
-  public HttpServiceClientImpl(final StitchService service, final TaskDispatcher dispatcher) {
-    super(service);
+  public HttpServiceClientImpl(
+      final CoreHttpServiceClient client,
+      final TaskDispatcher dispatcher
+  ) {
+    this.proxy = client;
     this.dispatcher = dispatcher;
   }
 
@@ -48,7 +50,7 @@ public final class HttpServiceClientImpl extends CoreHttpServiceClient
     return dispatcher.dispatchTask(new Callable<HttpResponse>() {
       @Override
       public HttpResponse call() {
-        return executeInternal(request);
+        return proxy.execute(request);
       }
     });
   }

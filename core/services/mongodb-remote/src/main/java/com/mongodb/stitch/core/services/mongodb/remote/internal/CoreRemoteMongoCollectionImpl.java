@@ -19,7 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -36,13 +36,13 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
 
   private final MongoNamespace namespace;
   private final Class<DocumentT> documentClass;
-  private final CoreStitchService service;
+  private final CoreStitchServiceClient service;
   private final Operations<DocumentT> operations;
 
   CoreRemoteMongoCollectionImpl(
       final MongoNamespace namespace,
       final Class<DocumentT> documentClass,
-      final CoreStitchService service
+      final CoreStitchServiceClient service
   ) {
     notNull("namespace", namespace);
     notNull("documentClass", documentClass);

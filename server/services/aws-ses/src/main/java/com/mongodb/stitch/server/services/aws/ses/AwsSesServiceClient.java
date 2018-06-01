@@ -17,6 +17,7 @@
 package com.mongodb.stitch.server.services.aws.ses;
 
 import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
+import com.mongodb.stitch.core.services.aws.ses.internal.CoreAwsSesServiceClient;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.services.aws.ses.internal.AwsSesServiceClientImpl;
 import javax.annotation.Nonnull;
@@ -42,5 +43,5 @@ public interface AwsSesServiceClient {
       @Nonnull final String body);
 
   NamedServiceClientFactory<AwsSesServiceClient> Factory =
-      (service, appInfo) -> new AwsSesServiceClientImpl(service);
+      (service, appInfo) -> new AwsSesServiceClientImpl(new CoreAwsSesServiceClient(service));
 }

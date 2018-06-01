@@ -27,13 +27,13 @@ import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public class CoreStitchServiceImpl implements CoreStitchService {
+public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   private final StitchAuthRequestClient requestClient;
   private final StitchServiceRoutes serviceRoutes;
   private final String serviceName;
   private final CodecRegistry codecRegistry;
 
-  public CoreStitchServiceImpl(
+  public CoreStitchServiceClientImpl(
       final StitchAuthRequestClient requestClient,
       final StitchServiceRoutes routes,
       final CodecRegistry codecRegistry
@@ -41,7 +41,7 @@ public class CoreStitchServiceImpl implements CoreStitchService {
     this(requestClient, routes, "", codecRegistry);
   }
 
-  protected CoreStitchServiceImpl(
+  public CoreStitchServiceClientImpl(
       final StitchAuthRequestClient requestClient,
       final StitchServiceRoutes routes,
       final String name,
@@ -125,7 +125,11 @@ public class CoreStitchServiceImpl implements CoreStitchService {
     return codecRegistry;
   }
 
-  public CoreStitchService withCodecRegistry(final CodecRegistry codecRegistry) {
-    return new CoreStitchServiceImpl(requestClient, serviceRoutes, serviceName, codecRegistry);
+  public CoreStitchServiceClient withCodecRegistry(final CodecRegistry codecRegistry) {
+    return new CoreStitchServiceClientImpl(
+        requestClient,
+        serviceRoutes,
+        serviceName,
+        codecRegistry);
   }
 }

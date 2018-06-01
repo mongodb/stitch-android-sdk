@@ -20,7 +20,6 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.aws.s3.AwsS3ServiceClient;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
@@ -30,13 +29,16 @@ import java.io.InputStream;
 import java.util.concurrent.Callable;
 import org.bson.types.Binary;
 
-public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
-    implements AwsS3ServiceClient {
+public final class AwsS3ServiceClientImpl implements AwsS3ServiceClient {
 
+  private final CoreAwsS3ServiceClient proxy;
   private final TaskDispatcher dispatcher;
 
-  public AwsS3ServiceClientImpl(final StitchService service, final TaskDispatcher dispatcher) {
-    super(service);
+  public AwsS3ServiceClientImpl(
+      final CoreAwsS3ServiceClient client,
+      final TaskDispatcher dispatcher
+  ) {
+    this.proxy = client;
     this.dispatcher = dispatcher;
   }
 
@@ -59,7 +61,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
     return dispatcher.dispatchTask(new Callable<AwsS3PutObjectResult>() {
       @Override
       public AwsS3PutObjectResult call() {
-        return putObjectInternal(bucket, key, acl, contentType, body);
+        return proxy.putObject(bucket, key, acl, contentType, body);
       }
     });
   }
@@ -83,7 +85,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
     return dispatcher.dispatchTask(new Callable<AwsS3PutObjectResult>() {
       @Override
       public AwsS3PutObjectResult call() {
-        return putObjectInternal(bucket, key, acl, contentType, body);
+        return proxy.putObject(bucket, key, acl, contentType, body);
       }
     });
   }
@@ -107,7 +109,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
     return dispatcher.dispatchTask(new Callable<AwsS3PutObjectResult>() {
       @Override
       public AwsS3PutObjectResult call() {
-        return putObjectInternal(bucket, key, acl, contentType, body);
+        return proxy.putObject(bucket, key, acl, contentType, body);
       }
     });
   }
@@ -132,7 +134,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
     return dispatcher.dispatchTask(new Callable<AwsS3PutObjectResult>() {
       @Override
       public AwsS3PutObjectResult call() throws IOException {
-        return putObjectInternal(bucket, key, acl, contentType, body);
+        return proxy.putObject(bucket, key, acl, contentType, body);
       }
     });
   }
@@ -158,7 +160,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
     return dispatcher.dispatchTask(new Callable<AwsS3SignPolicyResult>() {
       @Override
       public AwsS3SignPolicyResult call() {
-        return signPolicyInternal(bucket, key, acl, contentType);
+        return proxy.signPolicy(bucket, key, acl, contentType);
       }
     });
   }

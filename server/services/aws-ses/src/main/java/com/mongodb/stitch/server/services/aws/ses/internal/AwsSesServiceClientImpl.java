@@ -18,15 +18,15 @@ package com.mongodb.stitch.server.services.aws.ses.internal;
 
 import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
 import com.mongodb.stitch.core.services.aws.ses.internal.CoreAwsSesServiceClient;
-import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.aws.ses.AwsSesServiceClient;
 import javax.annotation.Nonnull;
 
-public final class AwsSesServiceClientImpl extends CoreAwsSesServiceClient
-    implements AwsSesServiceClient {
+public final class AwsSesServiceClientImpl implements AwsSesServiceClient {
 
-  public AwsSesServiceClientImpl(final StitchService service) {
-    super(service);
+  private final CoreAwsSesServiceClient proxy;
+
+  public AwsSesServiceClientImpl(final CoreAwsSesServiceClient client) {
+    this.proxy = client;
   }
 
   /**
@@ -43,6 +43,6 @@ public final class AwsSesServiceClientImpl extends CoreAwsSesServiceClient
       @Nonnull final String from,
       @Nonnull final String subject,
       @Nonnull final String body) {
-    return sendEmailInternal(to, from, subject, body);
+    return proxy.sendEmail(to, from, subject, body);
   }
 }

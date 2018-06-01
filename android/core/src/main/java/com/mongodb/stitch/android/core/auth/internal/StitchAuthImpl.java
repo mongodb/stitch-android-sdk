@@ -72,23 +72,16 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     return new StitchUserFactoryImpl(this);
   }
 
-  /**
-   * Gets a client for the given authentication provider. Most authentication providers will allow
-   * creation of a client without a name of the provider.
-   *
-   * @param provider The provider that will create a client for the authentication provider.
-   * @return A client to interact with the authentication provider.
-   */
   @Override
   public <ClientT> ClientT getProviderClient(
-          final AuthProviderClientFactory<ClientT> provider) {
-    return provider.getClient(this, getRequestClient(), getAuthRoutes(), dispatcher);
+          final AuthProviderClientFactory<ClientT> factory) {
+    return factory.getClient(this, getRequestClient(), getAuthRoutes(), dispatcher);
   }
 
   @Override
   public <T> T getProviderClient(
-      final NamedAuthProviderClientFactory<T> provider, final String providerName) {
-    return provider.getClient(providerName, getRequestClient(), getAuthRoutes(), dispatcher);
+      final NamedAuthProviderClientFactory<T> factory, final String providerName) {
+    return factory.getClient(providerName, getRequestClient(), getAuthRoutes(), dispatcher);
   }
 
   @Override

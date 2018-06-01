@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">FCM example</string>
+    <string name="stitch_client_app_id">test-app</string>
+    <string name="send_to_self">Send to Self</string>
+    <string name="send_to_news">Send to News</string>
+    <string name="subscribe_to_news">Subscribe to News</string>
+    <string name="deregister">Deregister</string>
+    <string name="register">Register</string>
+</resources>

@@ -17,15 +17,15 @@
 package com.mongodb.stitch.server.services.twilio.internal;
 
 import com.mongodb.stitch.core.services.twilio.internal.CoreTwilioServiceClient;
-import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.twilio.TwilioServiceClient;
 import javax.annotation.Nonnull;
 
-public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
-    implements TwilioServiceClient {
+public final class TwilioServiceClientImpl implements TwilioServiceClient {
 
-  public TwilioServiceClientImpl(final StitchService service) {
-    super(service);
+  private final CoreTwilioServiceClient proxy;
+
+  public TwilioServiceClientImpl(final CoreTwilioServiceClient client) {
+    this.proxy = client;
   }
 
   /**
@@ -39,7 +39,7 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
       @Nonnull final String to,
       @Nonnull final String from,
       @Nonnull final String body) {
-    sendMessageInternal(to, from, body);
+    proxy.sendMessage(to, from, body);
   }
 
   /**
@@ -55,6 +55,6 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
       @Nonnull final String from,
       @Nonnull final String body,
       @Nonnull final String mediaUrl) {
-    sendMessageInternal(to, from, body, mediaUrl);
+    proxy.sendMessage(to, from, body, mediaUrl);
   }
 }

@@ -46,8 +46,8 @@ public class CoreStitchServiceUnitTests {
     final String serviceName = "svc1";
     final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
     final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
-    final CoreStitchService coreStitchService =
-        new CoreStitchServiceImpl(
+    final CoreStitchServiceClient coreStitchService =
+        new CoreStitchServiceClientImpl(
             requestClient,
             routes,
             serviceName,
@@ -56,8 +56,7 @@ public class CoreStitchServiceUnitTests {
     doReturn(42)
         .when(requestClient)
         .doAuthenticatedRequest(
-            any(StitchAuthRequest.class),
-            ArgumentMatchers.<Decoder<Integer>>any());
+            any(StitchAuthRequest.class), ArgumentMatchers.<Decoder<Integer>>any());
     doReturn(42)
         .when(requestClient)
         .doAuthenticatedRequest(

@@ -18,7 +18,7 @@ package com.mongodb.stitch.android.services.mongodb.remote;
 
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
+import com.mongodb.stitch.android.core.services.internal.StitchServiceClient;
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl;
@@ -40,7 +40,7 @@ public interface RemoteMongoClient {
       new NamedServiceClientFactory<RemoteMongoClient>() {
         @Override
         public RemoteMongoClient getClient(
-            final StitchService service,
+            final StitchServiceClient service,
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {

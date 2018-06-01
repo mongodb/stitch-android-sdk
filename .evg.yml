@@ -88,6 +88,8 @@ functions:
           echo "test.stitch.twilioAuthToken=${test_twilio_authtoken}" >> local.properties
           echo "test.stitch.awsAccessKeyId=${test_aws_key}" >> local.properties
           echo "test.stitch.awsSecretAccessKey=${test_aws_secret}" >> local.properties
+          echo "test.stitch.fcmSenderId=${test_fcm_sender_id}" >> local.properties
+          echo "test.stitch.fcmApiKey=${test_fcm_api_key}" >> local.properties
 
   "setup_emulator":
     - command: shell.exec
@@ -226,6 +228,7 @@ post:
         - "./stitch-java-sdk/core/services/mongodb-remote/build/test-results/test/*.xml"
         - "./stitch-java-sdk/core/services/aws-s3/build/test-results/test/*.xml"
         - "./stitch-java-sdk/core/services/aws-ses/build/test-results/test/*.xml"
+        - "./stitch-java-sdk/core/services/fcm/build/test-results/test/*.xml"
         - "./stitch-java-sdk/core/services/http/build/test-results/test/*.xml"
         - "./stitch-java-sdk/core/services/twilio/build/test-results/test/*.xml"
         - "./stitch-java-sdk/server/coretest/build/test-results/test/*.xml"
@@ -240,6 +243,7 @@ post:
         - "./stitch-java-sdk/android/services/mongodb-remote/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/services/aws-s3/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/services/aws-ses/build/outputs/androidTest-results/connected/*.xml"
+        - "./stitch-java-sdk/android/services/fcm/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/services/http/build/outputs/androidTest-results/connected/*.xml"
         - "./stitch-java-sdk/android/services/twilio/build/outputs/androidTest-results/connected/*.xml"
   - command: s3.put

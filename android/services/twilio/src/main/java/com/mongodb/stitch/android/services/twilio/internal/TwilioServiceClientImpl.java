@@ -20,19 +20,21 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.twilio.TwilioServiceClient;
 import com.mongodb.stitch.core.services.twilio.internal.CoreTwilioServiceClient;
 
 import java.util.concurrent.Callable;
 
-public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
-    implements TwilioServiceClient {
+public final class TwilioServiceClientImpl implements TwilioServiceClient {
 
+  private final CoreTwilioServiceClient proxy;
   private final TaskDispatcher dispatcher;
 
-  public TwilioServiceClientImpl(final StitchService service, final TaskDispatcher dispatcher) {
-    super(service);
+  public TwilioServiceClientImpl(
+      final CoreTwilioServiceClient client,
+      final TaskDispatcher dispatcher
+  ) {
+    this.proxy = client;
     this.dispatcher = dispatcher;
   }
 
@@ -51,7 +53,7 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
     return dispatcher.dispatchTask(new Callable<Void>() {
       @Override
       public Void call() {
-        sendMessageInternal(to, from, body);
+        proxy.sendMessage(to, from, body);
         return null;
       }
     });
@@ -74,7 +76,7 @@ public final class TwilioServiceClientImpl extends CoreTwilioServiceClient
     return dispatcher.dispatchTask(new Callable<Void>() {
       @Override
       public Void call() {
-        sendMessageInternal(to, from, body, mediaUrl);
+        proxy.sendMessage(to, from, body, mediaUrl);
         return null;
       }
     });

@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.CollectionDecoder;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -104,7 +104,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testCount() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
@@ -160,7 +160,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testFind() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
@@ -235,7 +235,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testAggregate() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
@@ -296,7 +296,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testInsertOne() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
@@ -339,7 +339,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testInsertMany() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
@@ -392,7 +392,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testDeleteOne() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
@@ -434,7 +434,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testDeleteMany() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
@@ -476,7 +476,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testUpdateOne() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
@@ -539,7 +539,7 @@ public class CoreRemoteMongoCollectionUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testUpdateMany() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client = new CoreRemoteMongoClientImpl(service);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);

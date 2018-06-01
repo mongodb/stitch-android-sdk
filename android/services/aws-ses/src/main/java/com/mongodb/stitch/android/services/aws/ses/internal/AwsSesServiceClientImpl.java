@@ -20,20 +20,22 @@ import android.support.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
 import com.mongodb.stitch.android.services.aws.ses.AwsSesServiceClient;
 import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
 import com.mongodb.stitch.core.services.aws.ses.internal.CoreAwsSesServiceClient;
 
 import java.util.concurrent.Callable;
 
-public final class AwsSesServiceClientImpl extends CoreAwsSesServiceClient
-    implements AwsSesServiceClient {
+public final class AwsSesServiceClientImpl implements AwsSesServiceClient {
 
+  private final CoreAwsSesServiceClient proxy;
   private final TaskDispatcher dispatcher;
 
-  public AwsSesServiceClientImpl(final StitchService service, final TaskDispatcher dispatcher) {
-    super(service);
+  public AwsSesServiceClientImpl(
+      final CoreAwsSesServiceClient client,
+      final TaskDispatcher dispatcher
+  ) {
+    this.proxy = client;
     this.dispatcher = dispatcher;
   }
 
@@ -53,7 +55,7 @@ public final class AwsSesServiceClientImpl extends CoreAwsSesServiceClient
     return dispatcher.dispatchTask(new Callable<AwsSesSendResult>() {
       @Override
       public AwsSesSendResult call() {
-        return sendEmailInternal(to, from, subject, body);
+        return proxy.sendEmail(to, from, subject, body);
       }
     });
   }

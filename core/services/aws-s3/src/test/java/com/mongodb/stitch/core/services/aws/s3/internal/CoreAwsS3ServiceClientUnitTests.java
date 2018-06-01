@@ -25,7 +25,8 @@ import static org.mockito.Mockito.verify;
 
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,7 +44,7 @@ public class CoreAwsS3ServiceClientUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testPutObject() throws IOException {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreAwsS3ServiceClient client = new CoreAwsS3ServiceClient(service);
 
     final String bucket = "stuff";
@@ -58,7 +59,7 @@ public class CoreAwsS3ServiceClientUnitTests {
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
 
     AwsS3PutObjectResult result =
-        client.putObjectInternal(bucket, key, acl, contentType, body);
+        client.putObject(bucket, key, acl, contentType, body);
     assertEquals(result.getLocation(), expectedLocation);
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
@@ -84,7 +85,7 @@ public class CoreAwsS3ServiceClientUnitTests {
 
     final Binary bodyBin = new Binary("hello".getBytes(StandardCharsets.UTF_8));
     result =
-        client.putObjectInternal(bucket, key, acl, contentType, bodyBin);
+        client.putObject(bucket, key, acl, contentType, bodyBin);
     assertEquals(result.getLocation(), expectedLocation);
 
     verify(service, times(2))
@@ -100,7 +101,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     assertEquals(ResultDecoders.putObjectResultDecoder, resultClassArg.getValue());
 
     result =
-        client.putObjectInternal(bucket, key, acl, contentType, bodyBin.getData());
+        client.putObject(bucket, key, acl, contentType, bodyBin.getData());
     assertEquals(result.getLocation(), expectedLocation);
 
     verify(service, times(3))
@@ -116,7 +117,7 @@ public class CoreAwsS3ServiceClientUnitTests {
 
     final InputStream bodyInput = new ByteArrayInputStream(bodyBin.getData());
     result =
-        client.putObjectInternal(bucket, key, acl, contentType, bodyInput);
+        client.putObject(bucket, key, acl, contentType, bodyInput);
     assertEquals(result.getLocation(), expectedLocation);
 
     verify(service, times(4))
@@ -133,14 +134,14 @@ public class CoreAwsS3ServiceClientUnitTests {
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
-    assertThrows(() -> client.putObjectInternal(bucket, key, acl, contentType, body),
+    assertThrows(() -> client.putObject(bucket, key, acl, contentType, body),
         IllegalArgumentException.class);
   }
 
   @Test
   @SuppressWarnings("unchecked")
   public void testSignPolicy() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreAwsS3ServiceClient client = new CoreAwsS3ServiceClient(service);
 
     final String bucket = "stuff";
@@ -163,7 +164,7 @@ public class CoreAwsS3ServiceClientUnitTests {
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
 
     final AwsS3SignPolicyResult result =
-        client.signPolicyInternal(bucket, key, acl, contentType);
+        client.signPolicy(bucket, key, acl, contentType);
     assertEquals(result.getPolicy(), expectedPolicy);
     assertEquals(result.getSignature(), expectedSignature);
     assertEquals(result.getAlgorithm(), expectedAlgorithm);
@@ -194,7 +195,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
-    assertThrows(() -> client.signPolicyInternal(bucket, key, acl, contentType),
+    assertThrows(() -> client.signPolicy(bucket, key, acl, contentType),
         IllegalArgumentException.class);
   }
 }

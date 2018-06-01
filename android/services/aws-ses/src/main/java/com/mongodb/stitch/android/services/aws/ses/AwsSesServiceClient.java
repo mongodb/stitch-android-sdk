@@ -21,10 +21,11 @@ import android.support.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
+import com.mongodb.stitch.android.core.services.internal.StitchServiceClient;
 import com.mongodb.stitch.android.services.aws.ses.internal.AwsSesServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
+import com.mongodb.stitch.core.services.aws.ses.internal.CoreAwsSesServiceClient;
 
 /**
  * The AWS SES service client.
@@ -49,12 +50,12 @@ public interface AwsSesServiceClient {
   NamedServiceClientFactory<AwsSesServiceClient> Factory =
       new NamedServiceClientFactory<AwsSesServiceClient>() {
         @Override
-        public AwsSesServiceClientImpl getClient(
-            final StitchService service,
+        public AwsSesServiceClient getClient(
+            final StitchServiceClient service,
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {
-          return new AwsSesServiceClientImpl(service, dispatcher);
+          return new AwsSesServiceClientImpl(new CoreAwsSesServiceClient(service), dispatcher);
         }
       };
 }

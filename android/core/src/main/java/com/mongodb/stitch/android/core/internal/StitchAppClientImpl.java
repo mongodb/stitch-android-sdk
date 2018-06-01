@@ -21,14 +21,17 @@ import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
 import com.mongodb.stitch.android.core.auth.internal.StitchAuthImpl;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
+import com.mongodb.stitch.android.core.push.StitchPush;
+import com.mongodb.stitch.android.core.push.internal.StitchPushImpl;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchServiceImpl;
+import com.mongodb.stitch.android.core.services.internal.StitchServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.internal.CoreStitchAppClient;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -42,6 +45,7 @@ public final class StitchAppClientImpl implements StitchAppClient {
   private final StitchAppClientInfo info;
   private final StitchAppRoutes routes;
   private final StitchAuthImpl auth;
+  private final StitchPush push;
 
   /**
    * Constructs an app client with the given configuration.
@@ -66,6 +70,7 @@ public final class StitchAppClientImpl implements StitchAppClient {
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), dispatcher, this.info);
     this.coreClient = new CoreStitchAppClient(this.auth, this.routes, config.getCodecRegistry());
+    this.push = new StitchPushImpl(this.auth, this.routes.getPushRoutes(), dispatcher);
   }
 
   @Override
@@ -74,20 +79,33 @@ public final class StitchAppClientImpl implements StitchAppClient {
   }
 
   @Override
+  public StitchPush getPush() {
+    return push;
+  }
+
+  @Override
   public <T> T getServiceClient(
-      final NamedServiceClientFactory<T> provider, final String serviceName) {
-    return provider.getClient(
-        new StitchServiceImpl(
-            auth, routes.getServiceRoutes(), serviceName, info.getCodecRegistry(), dispatcher),
+      final NamedServiceClientFactory<T> factory, final String serviceName) {
+    return factory.getClient(
+        new StitchServiceClientImpl(
+            auth,
+            routes.getServiceRoutes(),
+            serviceName,
+            info.getCodecRegistry(),
+            dispatcher),
         info,
         dispatcher);
   }
 
   @Override
-  public <T> T getServiceClient(final ServiceClientFactory<T> provider) {
-    return provider.getClient(
-        new StitchServiceImpl(
-            auth, routes.getServiceRoutes(), "", info.getCodecRegistry(), dispatcher),
+  public <T> T getServiceClient(final ServiceClientFactory<T> factory) {
+    return factory.getClient(
+        new StitchServiceClientImpl(
+              auth,
+              routes.getServiceRoutes(),
+              "",
+              info.getCodecRegistry(),
+            dispatcher),
         info,
         dispatcher);
   }

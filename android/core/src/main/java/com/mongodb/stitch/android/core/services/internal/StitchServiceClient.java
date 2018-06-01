@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.server.core.services.internal;
+package com.mongodb.stitch.android.core.services.internal;
 
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.google.android.gms.tasks.Task;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 import java.util.List;
 import org.bson.codecs.Decoder;
 
-public interface StitchService extends CoreStitchService {
+public interface StitchServiceClient extends CoreStitchServiceClient {
   /**
    * Calls the specified Stitch service function, and decodes the response into an instance of the
    * specified type. The response will be decoded using the codec registry specified when the app
@@ -33,9 +34,9 @@ public interface StitchService extends CoreStitchService {
    * @param args the arguments to pass to the function.
    * @param resultClass the class that the response should be decoded as.
    * @param <ResultT> the type into which the response will be decoded.
-   * @return the decoded value.
+   * @return a {@link Task} containing the decoded value.
    */
-  <ResultT> ResultT callFunction(
+  <ResultT> Task<ResultT> callFunction(
       final String name, final List<?> args, final Class<ResultT> resultClass);
 
   /**
@@ -53,9 +54,9 @@ public interface StitchService extends CoreStitchService {
    *                       server before failing with an error.
    * @param resultClass the class that the response should be decoded as.
    * @param <ResultT> the type into which the response will be decoded.
-   * @return the decoded value.
+   * @return a {@link Task} containing the decoded value.
    */
-  <ResultT> ResultT callFunction(
+  <ResultT> Task<ResultT> callFunction(
           final String name,
           final List<?> args,
           final Long requestTimeout,
@@ -69,9 +70,9 @@ public interface StitchService extends CoreStitchService {
    * @param args the arguments to pass to the function.
    * @param resultDecoder the {@link Decoder} to use to decode the response into a value.
    * @param <ResultT> the type into which the response will be decoded.
-   * @return the decoded value.
+   * @return a {@link Task} containing the decoded value.
    */
-  <ResultT> ResultT callFunction(
+  <ResultT> Task<ResultT> callFunction(
       final String name, final List<?> args, final Decoder<ResultT> resultDecoder);
 
   /**
@@ -85,9 +86,9 @@ public interface StitchService extends CoreStitchService {
    *                       server before failing with an error.
    * @param resultDecoder the {@link Decoder} to use to decode the response into a value.
    * @param <ResultT> the type into which the response will be decoded.
-   * @return the decoded value.
+   * @return a {@link Task} containing the decoded value.
    */
-  <ResultT> ResultT callFunction(
+  <ResultT> Task<ResultT> callFunction(
           final String name,
           final List<?> args,
           final Long requestTimeout,

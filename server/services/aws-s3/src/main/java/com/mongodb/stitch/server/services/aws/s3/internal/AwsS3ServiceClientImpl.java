@@ -19,18 +19,18 @@ package com.mongodb.stitch.server.services.aws.s3.internal;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3PutObjectResult;
 import com.mongodb.stitch.core.services.aws.s3.AwsS3SignPolicyResult;
 import com.mongodb.stitch.core.services.aws.s3.internal.CoreAwsS3ServiceClient;
-import com.mongodb.stitch.server.core.services.internal.StitchService;
 import com.mongodb.stitch.server.services.aws.s3.AwsS3ServiceClient;
 import java.io.IOException;
 import java.io.InputStream;
 import javax.annotation.Nonnull;
 import org.bson.types.Binary;
 
-public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
-    implements AwsS3ServiceClient {
+public final class AwsS3ServiceClientImpl implements AwsS3ServiceClient {
 
-  public AwsS3ServiceClientImpl(final StitchService service) {
-    super(service);
+  private final CoreAwsS3ServiceClient proxy;
+
+  public AwsS3ServiceClientImpl(final CoreAwsS3ServiceClient client) {
+    this.proxy = client;
   }
 
   /**
@@ -49,7 +49,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
       @Nonnull final String acl,
       @Nonnull final String contentType,
       @Nonnull final String body) {
-    return putObjectInternal(bucket, key, acl, contentType, body);
+    return proxy.putObject(bucket, key, acl, contentType, body);
   }
 
   /**
@@ -68,7 +68,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
       @Nonnull final String acl,
       @Nonnull final String contentType,
       @Nonnull final Binary body) {
-    return putObjectInternal(bucket, key, acl, contentType, body);
+    return proxy.putObject(bucket, key, acl, contentType, body);
   }
 
   /**
@@ -87,7 +87,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
       @Nonnull final String acl,
       @Nonnull final String contentType,
       @Nonnull final byte[] body) {
-    return putObjectInternal(bucket, key, acl, contentType, body);
+    return proxy.putObject(bucket, key, acl, contentType, body);
   }
 
   /**
@@ -106,7 +106,7 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
       @Nonnull final String acl,
       @Nonnull final String contentType,
       @Nonnull final InputStream body) throws IOException {
-    return putObjectInternal(bucket, key, acl, contentType, body);
+    return proxy.putObject(bucket, key, acl, contentType, body);
   }
 
   /**
@@ -127,6 +127,6 @@ public final class AwsS3ServiceClientImpl extends CoreAwsS3ServiceClient
       @Nonnull final String acl,
       @Nonnull final String contentType
   ) {
-    return signPolicyInternal(bucket, key, acl, contentType);
+    return proxy.signPolicy(bucket, key, acl, contentType);
   }
 }

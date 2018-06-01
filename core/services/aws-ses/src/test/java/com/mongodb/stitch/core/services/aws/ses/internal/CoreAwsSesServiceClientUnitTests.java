@@ -23,7 +23,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import com.mongodb.stitch.core.services.aws.ses.AwsSesSendResult;
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.util.List;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
@@ -36,7 +37,7 @@ public class CoreAwsSesServiceClientUnitTests {
   @Test
   @SuppressWarnings("unchecked")
   public void testSendMessage() {
-    final CoreStitchService service = Mockito.mock(CoreStitchService.class);
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreAwsSesServiceClient client = new CoreAwsSesServiceClient(service);
 
     final String to = "eliot@10gen.com";
@@ -50,7 +51,7 @@ public class CoreAwsSesServiceClientUnitTests {
     Mockito.doReturn(new AwsSesSendResult(expectedMessageId))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
 
-    final AwsSesSendResult result = client.sendEmailInternal(to, from, subject, body);
+    final AwsSesSendResult result = client.sendEmail(to, from, subject, body);
     assertEquals(result.getMessageId(), expectedMessageId);
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
@@ -76,7 +77,7 @@ public class CoreAwsSesServiceClientUnitTests {
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
-    assertThrows(() -> client.sendEmailInternal(to, from, subject, body),
+    assertThrows(() -> client.sendEmail(to, from, subject, body),
         IllegalArgumentException.class);
   }
 }

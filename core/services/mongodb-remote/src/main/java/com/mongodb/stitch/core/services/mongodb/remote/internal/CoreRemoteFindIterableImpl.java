@@ -18,7 +18,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
-import com.mongodb.stitch.core.services.internal.CoreStitchService;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import java.util.Collection;
 import java.util.Iterator;
@@ -36,7 +36,7 @@ public class CoreRemoteFindIterableImpl<DocumentT, ResultT>
   CoreRemoteFindIterableImpl(
       final Bson filter,
       final Class<ResultT> resultClass,
-      final CoreStitchService service,
+      final CoreStitchServiceClient service,
       final Operations<DocumentT> operations
   ) {
     super(service, resultClass, operations);

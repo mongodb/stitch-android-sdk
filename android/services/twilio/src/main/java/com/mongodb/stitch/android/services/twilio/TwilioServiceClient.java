@@ -21,9 +21,10 @@ import android.support.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchService;
+import com.mongodb.stitch.android.core.services.internal.StitchServiceClient;
 import com.mongodb.stitch.android.services.twilio.internal.TwilioServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.services.twilio.internal.CoreTwilioServiceClient;
 
 /**
  * The Twilio service client.
@@ -61,12 +62,12 @@ public interface TwilioServiceClient {
   NamedServiceClientFactory<TwilioServiceClient> Factory =
       new NamedServiceClientFactory<TwilioServiceClient>() {
         @Override
-        public TwilioServiceClientImpl getClient(
-            final StitchService service,
+        public TwilioServiceClient getClient(
+            final StitchServiceClient service,
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {
-          return new TwilioServiceClientImpl(service, dispatcher);
+          return new TwilioServiceClientImpl(new CoreTwilioServiceClient(service), dispatcher);
         }
       };
 }
