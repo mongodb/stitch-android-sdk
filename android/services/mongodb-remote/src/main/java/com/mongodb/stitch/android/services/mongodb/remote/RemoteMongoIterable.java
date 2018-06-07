@@ -35,7 +35,7 @@ public interface RemoteMongoIterable<ResultT> {
    * @return a cursor of the operation represented by this iterable.
    */
   @NonNull
-  RemoteMongoCursor<ResultT> iterator();
+  Task<RemoteMongoCursor<ResultT>> iterator();
 
   /**
    * Helper to return the first item in the iterator or null.

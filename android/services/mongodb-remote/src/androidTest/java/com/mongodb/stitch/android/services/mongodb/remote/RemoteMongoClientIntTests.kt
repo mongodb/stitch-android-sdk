@@ -120,29 +120,29 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
     fun testFind() {
         val coll = getTestColl()
         var iter = coll.find()
-        assertFalse(Tasks.await(iter.iterator().hasNext()))
+        assertFalse(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
         assertNull(Tasks.await(iter.first()))
 
         val doc1 = Document("hello", "world")
         val doc2 = Document("hello", "friend")
         doc2["proj"] = "field"
         Tasks.await(coll.insertMany(listOf(doc1, doc2)))
-        assertTrue(Tasks.await(iter.iterator().hasNext()))
+        assertTrue(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
         assertEquals(withoutId(doc1), withoutId(Tasks.await(iter.first())))
-        assertEquals(withoutId(doc2), withoutId(Tasks.await(iter
+        assertEquals(withoutId(doc2), withoutId(Tasks.await(Tasks.await(iter
                 .limit(1)
-                .sort(Document("_id", -1)).iterator().next())))
+                .sort(Document("_id", -1)).iterator()).next())))
 
         iter = coll.find(doc1)
-        assertTrue(Tasks.await(iter.iterator().hasNext()))
-        assertEquals(withoutId(doc1), withoutId(Tasks.await(iter.iterator().next())))
+        assertTrue(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
+        assertEquals(withoutId(doc1), withoutId(Tasks.await(Tasks.await(iter.iterator()).next())))
 
         iter = coll.find().filter(doc1)
-        assertTrue(Tasks.await(iter.iterator().hasNext()))
-        assertEquals(withoutId(doc1), withoutId(Tasks.await(iter.iterator().next())))
+        assertTrue(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
+        assertEquals(withoutId(doc1), withoutId(Tasks.await(Tasks.await(iter.iterator()).next())))
 
         assertEquals(Document("proj", "field"),
-                withoutId(Tasks.await(coll.find(doc2).projection(Document("proj", 1)).iterator().next())))
+                withoutId(Tasks.await(Tasks.await(coll.find(doc2).projection(Document("proj", 1)).iterator()).next())))
 
         var count = 0
         Tasks.await(coll.find().forEach {
@@ -156,7 +156,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
 
         assertEquals(listOf(doc1, doc2), Tasks.await<MutableList<Document>>(coll.find().into(mutableListOf())))
 
-        val asyncIter = iter.iterator()
+        val asyncIter = Tasks.await(iter.iterator())
         assertEquals(doc1, Tasks.await(asyncIter.tryNext()))
 
         try {
@@ -173,21 +173,21 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
     fun testAggregate() {
         val coll = getTestColl()
         var iter = coll.aggregate(listOf())
-        assertFalse(Tasks.await(iter.iterator().hasNext()))
+        assertFalse(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
         assertNull(Tasks.await(iter.first()))
 
         val doc1 = Document("hello", "world")
         val doc2 = Document("hello", "friend")
         Tasks.await(coll.insertMany(listOf(doc1, doc2)))
-        assertTrue(Tasks.await(iter.iterator().hasNext()))
+        assertTrue(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
         assertEquals(withoutId(doc1), withoutId(Tasks.await(iter.first())))
 
         iter = coll.aggregate(listOf(Document("\$sort", Document("_id", -1)), Document("\$limit", 1)))
-        assertEquals(withoutId(doc2), withoutId(Tasks.await(iter.iterator().next())))
+        assertEquals(withoutId(doc2), withoutId(Tasks.await(Tasks.await(iter.iterator()).next())))
 
         iter = coll.aggregate(listOf(Document("\$match", doc1)))
-        assertTrue(Tasks.await(iter.iterator().hasNext()))
-        assertEquals(withoutId(doc1), withoutId(Tasks.await(iter.iterator().next())))
+        assertTrue(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
+        assertEquals(withoutId(doc1), withoutId(Tasks.await(Tasks.await(iter.iterator()).next())))
 
         try {
             Tasks.await(coll.aggregate(listOf(Document("\$who", 1))).first())
@@ -409,8 +409,8 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
 
         val iter = coll2.aggregate(
                 listOf(Document("\$match", Document())), CustomType::class.java)
-        assertTrue(Tasks.await(iter.iterator().hasNext()))
-        assertEquals(expected, Tasks.await(iter.iterator().next()))
+        assertTrue(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
+        assertEquals(expected, Tasks.await(Tasks.await(iter.iterator()).next()))
     }
 
     private fun withoutIds(documents: Collection<Document>): Collection<Document> {

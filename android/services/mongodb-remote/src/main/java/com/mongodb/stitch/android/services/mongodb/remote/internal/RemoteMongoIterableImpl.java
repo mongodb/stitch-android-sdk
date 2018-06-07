@@ -41,8 +41,13 @@ public class RemoteMongoIterableImpl<ResultT> implements RemoteMongoIterable<Res
   }
 
   @NonNull
-  public RemoteMongoCursor<ResultT> iterator() {
-    return new RemoteMongoCursorImpl<>(proxy.iterator(), dispatcher);
+  public Task<RemoteMongoCursor<ResultT>> iterator() {
+    return dispatcher.dispatchTask(new Callable<RemoteMongoCursor<ResultT>>() {
+      @Override
+      public RemoteMongoCursor<ResultT> call() {
+        return new RemoteMongoCursorImpl<>(proxy.iterator(), dispatcher);
+        }
+    });
   }
 
   @NonNull
