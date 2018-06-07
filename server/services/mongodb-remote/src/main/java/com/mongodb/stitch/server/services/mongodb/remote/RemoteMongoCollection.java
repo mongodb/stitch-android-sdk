@@ -142,7 +142,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param pipeline the aggregation pipeline
    * @return an iterable containing the result of the aggregation operation
    */
-  AggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline);
+  RemoteAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline);
 
   /**
    * Aggregates documents according to the specified aggregation pipeline.
@@ -152,7 +152,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param <ResultT>   the target document type of the iterable.
    * @return an iterable containing the result of the aggregation operation
    */
-  <ResultT> AggregateIterable<ResultT> aggregate(
+  <ResultT> RemoteAggregateIterable<ResultT> aggregate(
       final List<? extends Bson> pipeline,
       final Class<ResultT> resultClass);
 

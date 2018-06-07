@@ -24,7 +24,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
-import com.mongodb.stitch.server.services.mongodb.remote.AggregateIterable;
+import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
 import java.util.List;
@@ -158,7 +158,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @param pipeline the aggregation pipeline
    * @return an iterable containing the result of the aggregation operation
    */
-  public AggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
+  public RemoteAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
     return new RemoteAggregateIterableImpl<>(proxy.aggregate(pipeline));
   }
 
@@ -170,7 +170,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @param <ResultT>   the target document type of the iterable.
    * @return an iterable containing the result of the aggregation operation
    */
-  public <ResultT> AggregateIterable<ResultT> aggregate(
+  public <ResultT> RemoteAggregateIterable<ResultT> aggregate(
       final List<? extends Bson> pipeline,
       final Class<ResultT> resultClass
   ) {

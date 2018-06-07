@@ -17,12 +17,12 @@
 package com.mongodb.stitch.android.services.mongodb.remote.internal;
 
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.services.mongodb.remote.AggregateIterable;
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteAggregateIterable;
 
 class RemoteAggregateIterableImpl<ResultT>
     extends RemoteMongoIterableImpl<ResultT>
-    implements AggregateIterable<ResultT> {
+    implements RemoteAggregateIterable<ResultT> {
 
   RemoteAggregateIterableImpl(
       final CoreRemoteAggregateIterable<ResultT> iterable,

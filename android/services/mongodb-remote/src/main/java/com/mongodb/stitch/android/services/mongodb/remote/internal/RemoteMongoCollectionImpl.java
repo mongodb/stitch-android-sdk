@@ -19,7 +19,7 @@ package com.mongodb.stitch.android.services.mongodb.remote.internal;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.android.services.mongodb.remote.AggregateIterable;
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
@@ -181,7 +181,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @param pipeline the aggregation pipeline
    * @return an iterable containing the result of the aggregation operation
    */
-  public AggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
+  public RemoteAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
     return new RemoteAggregateIterableImpl<>(proxy.aggregate(pipeline), dispatcher);
   }
 
@@ -193,7 +193,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @param <ResultT>   the target document type of the iterable.
    * @return an iterable containing the result of the aggregation operation
    */
-  public <ResultT> AggregateIterable<ResultT> aggregate(
+  public <ResultT> RemoteAggregateIterable<ResultT> aggregate(
       final List<? extends Bson> pipeline,
       final Class<ResultT> resultClass
   ) {

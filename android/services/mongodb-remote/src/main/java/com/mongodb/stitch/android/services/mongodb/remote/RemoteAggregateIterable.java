@@ -21,6 +21,6 @@ package com.mongodb.stitch.android.services.mongodb.remote;
  *
  * @param <ResultT> The type of the result.
  */
-public interface AggregateIterable<ResultT> extends RemoteMongoIterable<ResultT> {
+public interface RemoteAggregateIterable<ResultT> extends RemoteMongoIterable<ResultT> {
 
 }
