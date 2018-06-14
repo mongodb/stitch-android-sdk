@@ -95,8 +95,8 @@ public class CoreFcmServiceClient {
       if (notification.getClickAction() != null) {
         notifDoc.put(SendFields.NOTIFICATION_CLICK_ACTION_FIELD, notification.getClickAction());
       }
-      if (notification.getBodyLockKey() != null) {
-        notifDoc.put(SendFields.NOTIFICATION_BODY_LOC_KEY_FIELD, notification.getBodyLockKey());
+      if (notification.getBodyLocKey() != null) {
+        notifDoc.put(SendFields.NOTIFICATION_BODY_LOC_KEY_FIELD, notification.getBodyLocKey());
       }
       if (notification.getBodyLocArgs() != null) {
         notifDoc.put(SendFields.NOTIFICATION_BODY_LOC_ARGS_FIELD, notification.getBodyLocArgs());

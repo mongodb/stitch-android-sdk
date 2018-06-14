@@ -27,7 +27,7 @@ public final class FcmSendMessageNotification {
   private final String body;
   private final String sound;
   private final String clickAction;
-  private final String bodyLockKey;
+  private final String bodyLocKey;
   private final String bodyLocArgs;
   private final String titleLocKey;
   private final String titleLocArgs;
@@ -41,7 +41,7 @@ public final class FcmSendMessageNotification {
       final String body,
       final String sound,
       final String clickAction,
-      final String bodyLockKey,
+      final String bodyLocKey,
       final String bodyLocArgs,
       final String titleLocKey,
       final String titleLocArgs,
@@ -54,7 +54,7 @@ public final class FcmSendMessageNotification {
     this.body = body;
     this.sound = sound;
     this.clickAction = clickAction;
-    this.bodyLockKey = bodyLockKey;
+    this.bodyLocKey = bodyLocKey;
     this.bodyLocArgs = bodyLocArgs;
     this.titleLocKey = titleLocKey;
     this.titleLocArgs = titleLocArgs;
@@ -112,8 +112,8 @@ public final class FcmSendMessageNotification {
    *         text to the user's current localization.
    */
   @Nullable
-  public String getBodyLockKey() {
-    return bodyLockKey;
+  public String getBodyLocKey() {
+    return bodyLocKey;
   }
 
   /**
@@ -202,7 +202,7 @@ public final class FcmSendMessageNotification {
     private String body;
     private String sound;
     private String clickAction;
-    private String bodyLockKey;
+    private String bodyLocKey;
     private String bodyLocArgs;
     private String titleLocKey;
     private String titleLocArgs;
@@ -264,12 +264,12 @@ public final class FcmSendMessageNotification {
      * Sets the key to the body string in the app's string resources to use to localize the body
      * text to the user's current localization.
      *
-     * @param bodyLockKey the key to the body string in the app's string resources to use to
+     * @param bodyLocKey the key to the body string in the app's string resources to use to
      *                    localize the body text to the user's current localization.
      * @return the builder.
      */
-    public Builder withBodyLockKey(@Nonnull final String bodyLockKey) {
-      this.bodyLockKey = bodyLockKey;
+    public Builder withBodyLocKey(@Nonnull final String bodyLocKey) {
+      this.bodyLocKey = bodyLocKey;
       return this;
     }
 
@@ -373,7 +373,7 @@ public final class FcmSendMessageNotification {
           body,
           sound,
           clickAction,
-          bodyLockKey,
+          bodyLocKey,
           bodyLocArgs,
           titleLocKey,
           titleLocArgs,

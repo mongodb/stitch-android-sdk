@@ -59,7 +59,7 @@ public class FcmSendMessageRequestUnitTests {
         .withBadge(badge)
         .withBody(body)
         .withBodyLocArgs(bodyLocArgs)
-        .withBodyLockKey(bodyLocKey)
+        .withBodyLocKey(bodyLocKey)
         .withClickAction(clickAction)
         .withColor(color)
         .withIcon(icon)
@@ -91,7 +91,7 @@ public class FcmSendMessageRequestUnitTests {
     assertEquals(badge, fullRequest.getNotification().getBadge());
     assertEquals(body, fullRequest.getNotification().getBody());
     assertEquals(bodyLocArgs, fullRequest.getNotification().getBodyLocArgs());
-    assertEquals(bodyLocKey, fullRequest.getNotification().getBodyLockKey());
+    assertEquals(bodyLocKey, fullRequest.getNotification().getBodyLocKey());
     assertEquals(clickAction, fullRequest.getNotification().getClickAction());
     assertEquals(color, fullRequest.getNotification().getColor());
     assertEquals(icon, fullRequest.getNotification().getIcon());

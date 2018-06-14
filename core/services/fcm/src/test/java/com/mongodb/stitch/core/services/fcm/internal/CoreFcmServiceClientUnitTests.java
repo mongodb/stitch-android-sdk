@@ -69,7 +69,7 @@ public class CoreFcmServiceClientUnitTests {
         .withBadge(badge)
         .withBody(body)
         .withBodyLocArgs(bodyLocArgs)
-        .withBodyLockKey(bodyLocKey)
+        .withBodyLocKey(bodyLocKey)
         .withClickAction(clickAction)
         .withColor(color)
         .withIcon(icon)
