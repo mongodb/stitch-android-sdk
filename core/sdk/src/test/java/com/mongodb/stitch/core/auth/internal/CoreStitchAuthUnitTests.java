@@ -25,6 +25,8 @@ import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestRefreshToken
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestUserProfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.StitchServiceErrorCode;
 import com.mongodb.stitch.core.StitchServiceException;
@@ -77,6 +80,7 @@ import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.types.ObjectId;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 
 public class CoreStitchAuthUnitTests {
 
@@ -481,6 +485,96 @@ public class CoreStitchAuthUnitTests {
         registry);
     assertEquals(expectedObjectId, ct.getId());
     assertEquals(42, ct.getIntValue());
+  }
+
+  @Test
+  public void testProfileRequestFailureEdgeCases() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+    final StitchAuth auth =
+            new StitchAuth(
+                    requestClient,
+                    routes,
+                    new MemoryStorage());
+
+    // Scenario 1: User is logged out -> attempts login -> initial login succeeds
+    //                                -> profile request fails -> user is logged out
+
+    doThrow(new StitchRequestException(
+            new Exception("profile request failed"), StitchRequestErrorCode.TRANSPORT_ERROR))
+            .when(requestClient)
+            .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/profile")));
+
+    try {
+      auth.loginWithCredentialInternal(new AnonymousCredential());
+      fail("expected login to fail because of profile request");
+    } catch (Exception e) {
+      // do nothing
+    }
+
+    assertFalse(auth.isLoggedIn());
+    assertNull(auth.getUser());
+
+    // Scenario 2: User is logged in -> attempts login into other account -> initial login succeeds
+    //                               -> profile request fails -> original user is logged out
+    doReturn(new Response(getTestUserProfile().toString()))
+            .doThrow(
+                    new StitchRequestException(
+                    new Exception("profile request failed"),
+                    StitchRequestErrorCode.TRANSPORT_ERROR)
+            )
+            .when(requestClient)
+            .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/profile")));
+
+    assertNotNull(auth.loginWithCredentialInternal(new AnonymousCredential()));
+
+    doThrow(new StitchRequestException(
+            new Exception("profile request failed"), StitchRequestErrorCode.TRANSPORT_ERROR))
+            .when(requestClient)
+            .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/profile")));
+
+    try {
+      auth.loginWithCredentialInternal(
+              new UserPasswordCredential("foo", "bar")
+      );
+    } catch (Exception e) {
+      // do nothing
+    }
+
+    assertFalse(auth.isLoggedIn());
+    assertNull(auth.getUser());
+
+    // Scenario 3: User is logged in -> attempt to link to other identity
+    //                               -> initial link request succeeds
+    //                               -> profile request fails -> error thrown
+    //                               -> original user is still logged in
+    doReturn(new Response(getTestUserProfile().toString()))
+            .doThrow(
+                    new StitchRequestException(
+                    new Exception("profile request failed"),
+                    StitchRequestErrorCode.TRANSPORT_ERROR
+            ))
+            .when(requestClient)
+            .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/profile")));
+
+    final CoreStitchUser userToBeLinked =
+            auth.loginWithCredentialInternal(new AnonymousCredential());
+
+    doThrow(new StitchRequestException(
+            new Exception("profile request failed"), StitchRequestErrorCode.TRANSPORT_ERROR))
+            .when(requestClient)
+            .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/profile")));
+
+    try {
+      auth.linkUserWithCredentialInternal(
+              userToBeLinked, new UserPasswordCredential("hello ", "friend")
+      );
+    } catch (Exception e) {
+      // do nothing
+    }
+
+    assertTrue(auth.isLoggedIn());
+    assertEquals(userToBeLinked.getId(), auth.getUser().getId());
   }
 
   protected static class StitchAuth extends CoreStitchAuth<CoreStitchUserImpl> {

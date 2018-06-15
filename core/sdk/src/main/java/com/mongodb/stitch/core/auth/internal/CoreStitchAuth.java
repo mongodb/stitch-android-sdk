@@ -334,7 +334,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   // callers of doLogin should be synchronized before calling in.
   private StitchUserT doLogin(final StitchCredential credential, final boolean asLinkRequest) {
     final Response response = doLoginRequest(credential, asLinkRequest);
-    final StitchUserT user = processLoginResponse(credential, response);
+    final StitchUserT user = processLoginResponse(credential, response, asLinkRequest);
     onAuthEvent();
     return user;
   }
@@ -363,13 +363,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   private StitchUserT processLoginResponse(
-      final StitchCredential credential, final Response response) {
+      final StitchCredential credential, final Response response, final boolean asLinkRequest) {
     AuthInfo newAuthInfo;
     try {
       newAuthInfo = AuthInfo.readFromApi(response.getBody());
     } catch (final IOException e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
+
+    // Preserve old auth info in case of profile request failure
+    final AuthInfo oldInfo = authInfo;
+    final StitchUserT oldUser = currentUser;
 
     newAuthInfo =
         authInfo.merge(
@@ -383,7 +387,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 null));
 
     // Provisionally set so we can make a profile request
-    final AuthInfo oldInfo = authInfo;
     authInfo = newAuthInfo;
     currentUser =
         getUserFactory()
@@ -397,9 +400,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     try {
       profile = doGetUserProfile();
     } catch (final Exception ex) {
-      // Back out of setting authInfo
-      authInfo = oldInfo;
-      currentUser = null;
+      // If this was a link request, back out of setting authInfo and reset any created user. This
+      // will keep the currently logged in user logged in if the profile request failed, and in
+      // this particular edge case the user is linked, but they are logged in with their older
+      // credentials.
+      if (asLinkRequest) {
+        authInfo = oldInfo;
+        currentUser = oldUser;
+      } else { // otherwise if this was a normal login request, log the user out
+        clearAuth();
+      }
+
       throw ex;
     }
 
