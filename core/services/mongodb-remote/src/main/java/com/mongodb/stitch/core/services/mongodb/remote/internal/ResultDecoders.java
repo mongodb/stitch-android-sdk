@@ -40,16 +40,22 @@ class ResultDecoders {
     public RemoteUpdateResult decode(final BsonReader reader, final DecoderContext decoderContext) {
       final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
       keyPresent(Fields.MATCHED_COUNT_FIELD, document);
+      keyPresent(Fields.MODIFIED_COUNT_FIELD, document);
       final long matchedCount = document.getNumber(Fields.MATCHED_COUNT_FIELD).longValue();
+      final long modifiedCount = document.getNumber(Fields.MODIFIED_COUNT_FIELD).longValue();
       if (!document.containsKey(Fields.UPSERTED_ID_FIELD)) {
-        return new RemoteUpdateResult(matchedCount, null);
+        return new RemoteUpdateResult(matchedCount, modifiedCount, null);
       }
 
-      return new RemoteUpdateResult(matchedCount, document.get(Fields.UPSERTED_ID_FIELD));
+      return new RemoteUpdateResult(
+          matchedCount,
+          modifiedCount,
+          document.get(Fields.UPSERTED_ID_FIELD));
     }
 
     private static final class Fields {
       static final String MATCHED_COUNT_FIELD = "matchedCount";
+      static final String MODIFIED_COUNT_FIELD = "modifiedCount";
       static final String UPSERTED_ID_FIELD = "upsertedId";
     }
   }

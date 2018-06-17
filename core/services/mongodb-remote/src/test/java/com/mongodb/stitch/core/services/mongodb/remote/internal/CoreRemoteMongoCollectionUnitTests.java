@@ -482,13 +482,14 @@ public class CoreRemoteMongoCollectionUnitTests {
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final BsonObjectId id = new BsonObjectId();
-    doReturn(new RemoteUpdateResult(1, id))
+    doReturn(new RemoteUpdateResult(1, 1, id))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
 
     final Document expectedFilter = new Document("one", 2);
     final Document expectedUpdate = new Document("three", 4);
     RemoteUpdateResult result = coll.updateOne(expectedFilter, expectedUpdate);
     assertEquals(1, result.getMatchedCount());
+    assertEquals(1, result.getModifiedCount());
     assertEquals(id, result.getUpsertedId());
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
@@ -516,6 +517,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     result = coll.updateOne(expectedFilter, expectedUpdate, new RemoteUpdateOptions().upsert(true));
     assertEquals(1, result.getMatchedCount());
+    assertEquals(1, result.getModifiedCount());
     assertEquals(id, result.getUpsertedId());
     verify(service, times(2))
         .callFunctionInternal(
@@ -545,13 +547,14 @@ public class CoreRemoteMongoCollectionUnitTests {
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final BsonObjectId id = new BsonObjectId();
-    doReturn(new RemoteUpdateResult(1, id))
+    doReturn(new RemoteUpdateResult(1, 1, id))
         .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
 
     final Document expectedFilter = new Document("one", 2);
     final Document expectedUpdate = new Document("three", 4);
     RemoteUpdateResult result = coll.updateMany(expectedFilter, expectedUpdate);
     assertEquals(1, result.getMatchedCount());
+    assertEquals(1, result.getModifiedCount());
     assertEquals(id, result.getUpsertedId());
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
@@ -580,6 +583,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     result = coll.updateMany(
         expectedFilter, expectedUpdate, new RemoteUpdateOptions().upsert(true));
     assertEquals(1, result.getMatchedCount());
+    assertEquals(1, result.getModifiedCount());
     assertEquals(id, result.getUpsertedId());
     verify(service, times(2))
         .callFunctionInternal(
