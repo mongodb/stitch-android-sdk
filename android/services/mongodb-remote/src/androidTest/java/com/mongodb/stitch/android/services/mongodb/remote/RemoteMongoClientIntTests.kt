@@ -310,13 +310,16 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         val doc1 = Document("hello", "world")
         var result = Tasks.await(coll.updateOne(Document(), doc1))
         assertEquals(0, result.matchedCount)
+        assertEquals(0, result.modifiedCount)
         assertNull(result.upsertedId)
 
         result = Tasks.await(coll.updateOne(Document(), doc1, RemoteUpdateOptions().upsert(true)))
         assertEquals(0, result.matchedCount)
+        assertEquals(0, result.modifiedCount)
         assertNotNull(result.upsertedId)
         result = Tasks.await(coll.updateOne(Document(), Document("\$set", Document("woof", "meow"))))
         assertEquals(1, result.matchedCount)
+        assertEquals(1, result.modifiedCount)
         assertNull(result.upsertedId)
         val expectedDoc = Document("hello", "world")
         expectedDoc["woof"] = "meow"
@@ -338,18 +341,22 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         val doc1 = Document("hello", "world")
         var result = Tasks.await(coll.updateMany(Document(), doc1))
         assertEquals(0, result.matchedCount)
+        assertEquals(0, result.modifiedCount)
         assertNull(result.upsertedId)
 
         result = Tasks.await(coll.updateMany(Document(), doc1, RemoteUpdateOptions().upsert(true)))
         assertEquals(0, result.matchedCount)
+        assertEquals(0, result.modifiedCount)
         assertNotNull(result.upsertedId)
         result = Tasks.await(coll.updateMany(Document(), Document("\$set", Document("woof", "meow"))))
         assertEquals(1, result.matchedCount)
+        assertEquals(1, result.modifiedCount)
         assertNull(result.upsertedId)
 
         Tasks.await(coll.insertOne(Document()))
         result = Tasks.await(coll.updateMany(Document(), Document("\$set", Document("woof", "meow"))))
         assertEquals(2, result.matchedCount)
+        assertEquals(2, result.modifiedCount)
 
         val expectedDoc1 = Document("hello", "world")
         expectedDoc1["woof"] = "meow"

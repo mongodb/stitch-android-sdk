@@ -26,27 +26,43 @@ import org.bson.BsonValue;
 public class RemoteUpdateResult {
 
   private final long matchedCount;
+  private final long modifiedCount;
   private final BsonValue upsertedId;
 
   /**
    * Constructs a result.
    *
    * @param matchedCount the number of documents matched by the query.
+   * @param modifiedCount the number of documents modified.
    * @param upsertedId the _id of the inserted document if the replace resulted in an inserted
    *                   document, otherwise null.
    */
-  public RemoteUpdateResult(final long matchedCount, final BsonValue upsertedId) {
+  public RemoteUpdateResult(
+      final long matchedCount,
+      final long modifiedCount,
+      final BsonValue upsertedId
+  ) {
     this.matchedCount = matchedCount;
+    this.modifiedCount = modifiedCount;
     this.upsertedId = upsertedId;
   }
 
   /**
-   * Gets the number of documents matched by the query.
+   * Returns the number of documents matched by the query.
    *
-   * @return the number of documents matched
+   * @return the number of documents matched.
    */
   public long getMatchedCount() {
     return matchedCount;
+  }
+
+  /**
+   * Returns the number of documents modified.
+   *
+   * @return the number of documents modified.
+   */
+  public long getModifiedCount() {
+    return modifiedCount;
   }
 
   /**
