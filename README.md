@@ -28,12 +28,15 @@ Add the following to the build.gradle for your app module:
 implementation 'org.mongodb:stitch-android-sdk:4.0.0'
 ```
 
+This will start you off with the core SDK functionality as well as the remote MongoDB service.
+
 For customized dependencies use the following:
 
 ```gradle
 implementation 'org.mongodb:stitch-android-core:4.0.0'
 implementation 'org.mongodb:stitch-android-services-aws-s3:4.0.0'
 implementation 'org.mongodb:stitch-android-services-aws-ses:4.0.0'
+implementation 'org.mongodb:stitch-android-services-fcm:4.0.0'
 implementation 'org.mongodb:stitch-android-services-http:4.0.0'
 implementation 'org.mongodb:stitch-android-services-mongodb-remote:4.0.0'
 implementation 'org.mongodb:stitch-android-services-twilio:4.0.0'
@@ -47,12 +50,15 @@ Add the following to the build.gradle for your module:
 implementation 'org.mongodb:stitch-server-sdk:4.0.0'
 ```
 
+This will start you off with the core SDK functionality as well as the remote MongoDB service.
+
 For customized dependencies use the following:
 
 ```gradle
 implementation 'org.mongodb:stitch-server-core:4.0.0'
 implementation 'org.mongodb:stitch-server-services-aws-s3:4.0.0'
 implementation 'org.mongodb:stitch-server-services-aws-ses:4.0.0'
+implementation 'org.mongodb:stitch-server-services-fcm:4.0.0'
 implementation 'org.mongodb:stitch-server-services-http:4.0.0'
 implementation 'org.mongodb:stitch-server-services-mongodb-local:4.0.0'
 implementation 'org.mongodb:stitch-server-services-mongodb-remote:4.0.0'
