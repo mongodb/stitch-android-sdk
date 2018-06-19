@@ -59,7 +59,7 @@ public interface TwilioServiceClient {
       @NonNull final String body,
       @NonNull final String mediaUrl);
 
-  NamedServiceClientFactory<TwilioServiceClient> Factory =
+  NamedServiceClientFactory<TwilioServiceClient> factory =
       new NamedServiceClientFactory<TwilioServiceClient>() {
         @Override
         public TwilioServiceClient getClient(

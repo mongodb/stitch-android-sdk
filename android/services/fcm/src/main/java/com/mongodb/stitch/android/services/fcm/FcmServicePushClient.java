@@ -45,7 +45,7 @@ public interface FcmServicePushClient {
    */
   Task<Void> deregister();
 
-  NamedPushClientFactory<FcmServicePushClient> Factory =
+  NamedPushClientFactory<FcmServicePushClient> factory =
       new NamedPushClientFactory<FcmServicePushClient>() {
         @Override
         public FcmServicePushClient getClient(

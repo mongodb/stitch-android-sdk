@@ -53,7 +53,7 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
         pass: String
     ): String {
         val emailPassClient = client.auth.getProviderClient(
-                UserPasswordAuthProviderClient.Factory
+                UserPasswordAuthProviderClient.factory
         )
 
         Tasks.await(emailPassClient.registerWithEmail(email, pass))

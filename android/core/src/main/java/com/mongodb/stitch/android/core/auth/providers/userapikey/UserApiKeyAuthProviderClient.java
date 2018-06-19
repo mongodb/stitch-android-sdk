@@ -82,7 +82,7 @@ public interface UserApiKeyAuthProviderClient {
    */
   Task<Void> disableApiKey(@NonNull final ObjectId id);
 
-  AuthProviderClientFactory<UserApiKeyAuthProviderClient> Factory =
+  AuthProviderClientFactory<UserApiKeyAuthProviderClient> factory =
       new AuthProviderClientFactory<UserApiKeyAuthProviderClient>() {
         @Override
         public UserApiKeyAuthProviderClient getClient(

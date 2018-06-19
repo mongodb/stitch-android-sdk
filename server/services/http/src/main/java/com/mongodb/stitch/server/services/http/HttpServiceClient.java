@@ -37,6 +37,6 @@ public interface HttpServiceClient {
    */
   HttpResponse execute(@Nonnull final HttpRequest request);
 
-  NamedServiceClientFactory<HttpServiceClient> Factory =
+  NamedServiceClientFactory<HttpServiceClient> factory =
       (service, appInfo) -> new HttpServiceClientImpl(new CoreHttpServiceClient(service));
 }

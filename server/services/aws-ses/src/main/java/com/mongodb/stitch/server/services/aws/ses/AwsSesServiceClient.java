@@ -42,6 +42,6 @@ public interface AwsSesServiceClient {
       @Nonnull final String subject,
       @Nonnull final String body);
 
-  NamedServiceClientFactory<AwsSesServiceClient> Factory =
+  NamedServiceClientFactory<AwsSesServiceClient> factory =
       (service, appInfo) -> new AwsSesServiceClientImpl(new CoreAwsSesServiceClient(service));
 }

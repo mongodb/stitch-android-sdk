@@ -65,7 +65,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
-        mongoClientOpt = client.getServiceClient(RemoteMongoClient.Factory, "mongodb1")
+        mongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
     }
 
     private fun getTestColl(): RemoteMongoCollection<Document> {

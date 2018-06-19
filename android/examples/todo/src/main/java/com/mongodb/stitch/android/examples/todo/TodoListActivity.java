@@ -49,7 +49,7 @@ public class TodoListActivity extends AppCompatActivity {
 
     // Set up Stitch and local MongoDB mobile client
     final StitchAppClient client = Stitch.getDefaultAppClient();
-    final MongoClient mongoClient = client.getServiceClient(LocalMongoDbService.ClientFactory);
+    final MongoClient mongoClient = client.getServiceClient(LocalMongoDbService.clientFactory);
     items =
         mongoClient
             .getDatabase(TodoItem.TODO_LIST_DATABASE)

@@ -107,7 +107,7 @@ public class FcmActivity extends AppCompatActivity {
 
     // get the push client
     final FcmServicePushClient pushClient =
-        client.getPush().getClient(FcmServicePushClient.Factory, "gcm");
+        client.getPush().getClient(FcmServicePushClient.factory, "gcm");
 
     pushClient.register(FirebaseInstanceId.getInstance().getToken())
         .addOnCompleteListener(new OnCompleteListener<Void>() {
@@ -132,7 +132,7 @@ public class FcmActivity extends AppCompatActivity {
 
     // get the push client
     final FcmServicePushClient pushClient =
-        client.getPush().getClient(FcmServicePushClient.Factory, "gcm");
+        client.getPush().getClient(FcmServicePushClient.factory, "gcm");
 
     pushClient.deregister().addOnCompleteListener(new OnCompleteListener<Void>() {
       @Override
@@ -154,7 +154,7 @@ public class FcmActivity extends AppCompatActivity {
   public void sendToNews(final View view) {
     // get a client
     final StitchAppClient client = Stitch.getDefaultAppClient();
-    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.Factory, "gcm");
+    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.factory, "gcm");
     fcmClient.sendMessageTo("/topics/news", new FcmSendMessageRequest.Builder()
         .withPriority(FcmSendMessagePriority.HIGH)
         .withNotification(new FcmSendMessageNotification.Builder()
@@ -166,7 +166,7 @@ public class FcmActivity extends AppCompatActivity {
   public void sendToSelf(final View view) {
     // get a client
     final StitchAppClient client = Stitch.getDefaultAppClient();
-    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.Factory, "gcm");
+    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.factory, "gcm");
     fcmClient.sendMessageToUsers(
         Collections.singletonList(Objects.requireNonNull(client.getAuth().getUser()).getId()),
         new FcmSendMessageRequest.Builder()

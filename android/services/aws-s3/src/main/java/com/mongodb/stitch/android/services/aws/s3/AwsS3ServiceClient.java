@@ -122,7 +122,7 @@ public interface AwsS3ServiceClient {
       @NonNull final String acl,
       @NonNull final String contentType);
 
-  NamedServiceClientFactory<AwsS3ServiceClient> Factory =
+  NamedServiceClientFactory<AwsS3ServiceClient> factory =
       new NamedServiceClientFactory<AwsS3ServiceClient>() {
         @Override
         public AwsS3ServiceClient getClient(

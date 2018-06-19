@@ -48,7 +48,7 @@ class TwilioServiceClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
 
-        val twilio = client.getServiceClient(TwilioServiceClient.Factory, "twilio1")
+        val twilio = client.getServiceClient(TwilioServiceClient.factory, "twilio1")
 
         // Sending a random message to an invalid number should fail
         val to = "+15005550010"

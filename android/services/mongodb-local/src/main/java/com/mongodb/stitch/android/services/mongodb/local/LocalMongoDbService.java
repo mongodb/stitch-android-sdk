@@ -29,7 +29,7 @@ import com.mongodb.stitch.core.services.mongodb.local.internal.CoreLocalMongoDbS
 import org.bson.Document;
 
 /**
- * The LocalMongoDbService is used to access {@link LocalMongoDbService#ClientFactory} which
+ * The LocalMongoDbService is used to access {@link LocalMongoDbService#clientFactory} which
  * provides MongoClients used for local storage using the embedded MongoDB platform.
  */
 public final class LocalMongoDbService extends CoreLocalMongoDbService {
@@ -37,7 +37,7 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
   private static final String TAG = LocalMongoDbService.class.getSimpleName();
 
   private static final String ADMIN_DATABASE_NAME = "admin";
-  public static final ServiceClientFactory<MongoClient> ClientFactory =
+  public static final ServiceClientFactory<MongoClient> clientFactory =
       new ServiceClientFactory<MongoClient>() {
 
         @Override

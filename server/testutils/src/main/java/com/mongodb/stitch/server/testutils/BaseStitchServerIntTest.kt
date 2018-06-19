@@ -51,7 +51,7 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
         pass: String
     ): String {
         val emailPassClient = client.auth.getProviderClient(
-                UserPasswordAuthProviderClient.Factory
+                UserPasswordAuthProviderClient.factory
         )
 
         emailPassClient.registerWithEmail(email, pass)

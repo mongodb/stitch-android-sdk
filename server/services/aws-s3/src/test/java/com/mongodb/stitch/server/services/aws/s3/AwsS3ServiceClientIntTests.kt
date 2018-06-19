@@ -59,7 +59,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
 
-        val awsS3 = client.getServiceClient(AwsS3ServiceClient.Factory, "awss31")
+        val awsS3 = client.getServiceClient(AwsS3ServiceClient.factory, "awss31")
 
         // Putting to an bad bucket should fail
         val bucket = "notmystuff"
@@ -150,7 +150,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
 
-        val awsS3 = client.getServiceClient(AwsS3ServiceClient.Factory, "awss31")
+        val awsS3 = client.getServiceClient(AwsS3ServiceClient.factory, "awss31")
 
         val bucket = "notmystuff"
         val key = ObjectId().toHexString()

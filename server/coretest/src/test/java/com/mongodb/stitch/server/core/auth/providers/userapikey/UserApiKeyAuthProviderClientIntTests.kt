@@ -37,7 +37,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getProviderClient(
-                UserApiKeyAuthProviderClient.Factory
+                UserApiKeyAuthProviderClient.factory
         )
 
         val key = apiKeyClient.createApiKey("key_test")
@@ -57,7 +57,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getProviderClient(
-                UserApiKeyAuthProviderClient.Factory
+                UserApiKeyAuthProviderClient.factory
         )
 
         val key = apiKeyClient.createApiKey("key_test")
@@ -79,7 +79,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getProviderClient(
-                UserApiKeyAuthProviderClient.Factory
+                UserApiKeyAuthProviderClient.factory
         )
 
         val keys = (0..3).map {
@@ -102,7 +102,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
         registerAndLoginWithUserPass(app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getProviderClient(
-                UserApiKeyAuthProviderClient.Factory
+                UserApiKeyAuthProviderClient.factory
         )
 
         val key = apiKeyClient.createApiKey("key_test")
@@ -127,7 +127,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getProviderClient(
-                UserApiKeyAuthProviderClient.Factory
+                UserApiKeyAuthProviderClient.factory
         )
 
         try {
@@ -146,7 +146,7 @@ class UserApiKeyAuthProviderClientIntTests : BaseStitchServerIntTest() {
                 app.second, client, email = "test@10gen.com", pass = "hunter2")
 
         val apiKeyClient = client.auth.getProviderClient(
-                UserApiKeyAuthProviderClient.Factory
+                UserApiKeyAuthProviderClient.factory
         )
 
         try {

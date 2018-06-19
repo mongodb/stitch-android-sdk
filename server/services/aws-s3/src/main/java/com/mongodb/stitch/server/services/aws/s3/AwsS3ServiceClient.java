@@ -118,6 +118,6 @@ public interface AwsS3ServiceClient {
       @Nonnull final String acl,
       @Nonnull final String contentType);
 
-  NamedServiceClientFactory<AwsS3ServiceClient> Factory =
+  NamedServiceClientFactory<AwsS3ServiceClient> factory =
       (service, appInfo) -> new AwsS3ServiceClientImpl(new CoreAwsS3ServiceClient(service));
 }

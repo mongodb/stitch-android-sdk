@@ -145,7 +145,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         )
 
         val client = getAppClient(app.first)
-        val userPassClient = client.auth.getProviderClient(UserPasswordAuthProviderClient.Factory)
+        val userPassClient = client.auth.getProviderClient(UserPasswordAuthProviderClient.factory)
 
         val email = "user@10gen.com"
         val password = "password"

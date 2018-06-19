@@ -36,7 +36,7 @@ public interface RemoteMongoClient {
    */
   RemoteMongoDatabase getDatabase(final String databaseName);
 
-  NamedServiceClientFactory<RemoteMongoClient> Factory =
+  NamedServiceClientFactory<RemoteMongoClient> factory =
       new NamedServiceClientFactory<RemoteMongoClient>() {
         @Override
         public RemoteMongoClient getClient(

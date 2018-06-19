@@ -47,7 +47,7 @@ public interface AwsSesServiceClient {
       @NonNull final String subject,
       @NonNull final String body);
 
-  NamedServiceClientFactory<AwsSesServiceClient> Factory =
+  NamedServiceClientFactory<AwsSesServiceClient> factory =
       new NamedServiceClientFactory<AwsSesServiceClient>() {
         @Override
         public AwsSesServiceClient getClient(

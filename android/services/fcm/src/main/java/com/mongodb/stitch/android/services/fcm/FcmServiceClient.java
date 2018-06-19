@@ -65,7 +65,7 @@ public interface FcmServiceClient {
       final Collection<String> registrationTokens,
       final FcmSendMessageRequest request);
 
-  NamedServiceClientFactory<FcmServiceClient> Factory =
+  NamedServiceClientFactory<FcmServiceClient> factory =
       new NamedServiceClientFactory<FcmServiceClient>() {
         @Override
         public FcmServiceClient getClient(

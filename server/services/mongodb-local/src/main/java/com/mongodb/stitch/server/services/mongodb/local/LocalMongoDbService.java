@@ -21,11 +21,11 @@ import com.mongodb.stitch.core.services.mongodb.local.internal.CoreLocalMongoDbS
 import com.mongodb.stitch.server.core.services.internal.ServiceClientFactory;
 
 /**
- * The LocalMongoDbService is used to access {@link LocalMongoDbService#ClientFactory} which
+ * The LocalMongoDbService is used to access {@link LocalMongoDbService#clientFactory} which
  * provides MongoClients used for local storage using the embedded MongoDB platform.
  */
 public final class LocalMongoDbService extends CoreLocalMongoDbService {
 
-  public static final ServiceClientFactory<MongoClient> ClientFactory =
+  public static final ServiceClientFactory<MongoClient> clientFactory =
       (service, appInfo) -> CoreLocalMongoDbService.getClient(appInfo);
 }

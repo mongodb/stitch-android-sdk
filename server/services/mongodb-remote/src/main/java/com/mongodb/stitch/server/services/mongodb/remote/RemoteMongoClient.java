@@ -33,6 +33,6 @@ public interface RemoteMongoClient {
    */
   RemoteMongoDatabase getDatabase(final String databaseName);
 
-  NamedServiceClientFactory<RemoteMongoClient> Factory =
+  NamedServiceClientFactory<RemoteMongoClient> factory =
       (service, appInfo) -> new RemoteMongoClientImpl(new CoreRemoteMongoClientImpl(service));
 }

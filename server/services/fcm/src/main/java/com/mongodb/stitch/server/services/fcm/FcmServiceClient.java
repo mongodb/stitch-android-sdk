@@ -61,6 +61,6 @@ public interface FcmServiceClient {
       final Collection<String> registrationTokens,
       final FcmSendMessageRequest request);
 
-  NamedServiceClientFactory<FcmServiceClient> Factory =
+  NamedServiceClientFactory<FcmServiceClient> factory =
       (service, appInfo) -> new FcmServiceClientImpl(new CoreFcmServiceClient(service));
 }

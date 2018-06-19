@@ -49,7 +49,7 @@ class FcmServicePushClientIntTests : BaseStitchAndroidIntTest() {
         val client = getAppClient(app.first)
         Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
 
-        val fcm = client.push.getClient(FcmServicePushClient.Factory, "gcm")
+        val fcm = client.push.getClient(FcmServicePushClient.factory, "gcm")
 
         // Can register and deregister multiple times.
         Tasks.await(fcm.register("hello"))

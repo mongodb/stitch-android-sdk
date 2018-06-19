@@ -41,7 +41,7 @@ public interface HttpServiceClient {
    */
   Task<HttpResponse> execute(@NonNull final HttpRequest request);
 
-  NamedServiceClientFactory<HttpServiceClient> Factory =
+  NamedServiceClientFactory<HttpServiceClient> factory =
       new NamedServiceClientFactory<HttpServiceClient>() {
         @Override
         public HttpServiceClient getClient(

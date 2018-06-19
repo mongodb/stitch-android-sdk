@@ -38,7 +38,7 @@ class HttpServiceClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
 
-        val httpClient = client.getServiceClient(HttpServiceClient.Factory, "http1")
+        val httpClient = client.getServiceClient(HttpServiceClient.factory, "http1")
 
         // Specifying a request with form and body should fail
         var badUrl = "http:/aol.com"

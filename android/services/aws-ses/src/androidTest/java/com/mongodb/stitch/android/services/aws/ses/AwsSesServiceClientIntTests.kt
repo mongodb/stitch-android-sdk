@@ -57,7 +57,7 @@ class AwsSesServiceClientIntTests : BaseStitchAndroidIntTest() {
         val client = getAppClient(app.first)
         Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
 
-        val awsSes = client.getServiceClient(AwsSesServiceClient.Factory, "awsses1")
+        val awsSes = client.getServiceClient(AwsSesServiceClient.factory, "awsses1")
 
         // Sending a random email to an invalid email should fail
         val to = "eliot@stitch-dev.10gen.cc"

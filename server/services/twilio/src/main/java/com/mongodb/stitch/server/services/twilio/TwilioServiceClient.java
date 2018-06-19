@@ -52,6 +52,6 @@ public interface TwilioServiceClient {
       @Nonnull final String body,
       @Nonnull final String mediaUrl);
 
-  NamedServiceClientFactory<TwilioServiceClient> Factory =
+  NamedServiceClientFactory<TwilioServiceClient> factory =
       (service, appInfo) -> new TwilioServiceClientImpl(new CoreTwilioServiceClient(service));
 }

@@ -79,7 +79,7 @@ public interface UserPasswordAuthProviderClient {
    */
   Task<Void> sendResetPasswordEmail(@NonNull final String email);
 
-  AuthProviderClientFactory<UserPasswordAuthProviderClient> Factory =
+  AuthProviderClientFactory<UserPasswordAuthProviderClient> factory =
       new AuthProviderClientFactory<UserPasswordAuthProviderClient>() {
         @Override
         public UserPasswordAuthProviderClient getClient(

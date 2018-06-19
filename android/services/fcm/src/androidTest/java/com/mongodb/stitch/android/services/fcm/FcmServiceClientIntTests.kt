@@ -59,7 +59,7 @@ class FcmServiceClientIntTests : BaseStitchAndroidIntTest() {
         val client = getAppClient(app.first)
         Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
 
-        val fcm = client.getServiceClient(FcmServiceClient.Factory, "gcm")
+        val fcm = client.getServiceClient(FcmServiceClient.factory, "gcm")
 
         val collapseKey = "one"
         val contentAvaialble = true
