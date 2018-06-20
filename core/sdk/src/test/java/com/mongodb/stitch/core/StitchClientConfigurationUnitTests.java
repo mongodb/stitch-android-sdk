@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.core;
 
-import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -39,51 +38,15 @@ public class StitchClientConfigurationUnitTests {
     final Storage storage = new MemoryStorage();
     final Transport transport = (Request request) -> new Response("good");
 
-    // A minimum of baseUrl, storage, and transport must be set
-    StitchClientConfiguration.Builder builder = new StitchClientConfiguration.Builder();
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder.withBaseUrl(baseUrl);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder = new StitchClientConfiguration.Builder();
-    builder.withStorage(storage);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder = new StitchClientConfiguration.Builder();
-    builder.withTransport(transport);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder.withDefaultRequestTimeout(1500L);
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder = new StitchClientConfiguration.Builder();
-    builder.withBaseUrl(baseUrl);
-    builder.withStorage(storage);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder = new StitchClientConfiguration.Builder();
-    builder.withBaseUrl(baseUrl);
-    builder.withTransport(transport);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder = new StitchClientConfiguration.Builder();
-    builder.withStorage(storage);
-    builder.withTransport(transport);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    // Minimum satisfied
-    builder = new StitchClientConfiguration.Builder();
+    final StitchClientConfiguration.Builder builder = new StitchClientConfiguration.Builder();
     builder.withBaseUrl(baseUrl);
     builder.withStorage(storage);
     builder.withTransport(transport);
     builder.withDefaultRequestTimeout(1500L);
+    builder.withStorage(storage);
+    builder.withTransport(transport);
+    builder.withStorage(storage);
+    builder.withTransport(transport);
     StitchClientConfiguration config = builder.build();
 
     assertEquals(config.getBaseUrl(), baseUrl);

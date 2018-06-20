@@ -142,7 +142,7 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.0.0'
 In the case that you don't want a default initialized StitchAppClient by setting up the resource values, you can use the following code once to initialize a client for a given app id that you copied earlier:
 
 ```java
-final StitchAppClient client = Stitch.initializeAppClient(StitchAppClientConfiguration.Builder.forApp("YOUR_APP_ID"));
+final StitchAppClient client = Stitch.initializeAppClient("YOUR_APP_ID");
 ```
 
 You can use the client returned there or anywhere else in your app you can use the following:

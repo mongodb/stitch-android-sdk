@@ -43,12 +43,16 @@ public final class StitchAppClientImpl implements StitchAppClient {
   /**
    * Constructs an app client with the given configuration.
    *
+   * @param clientAppId the client app id for the app.
    * @param config the configuration to use for the app client.
    */
-  public StitchAppClientImpl(final StitchAppClientConfiguration config) {
+  public StitchAppClientImpl(
+      final String clientAppId,
+      final StitchAppClientConfiguration config
+  ) {
     this.info =
         new StitchAppClientInfo(
-            config.getClientAppId(),
+            clientAppId,
             config.getDataDirectory(),
             config.getLocalAppName(),
             config.getLocalAppVersion(),

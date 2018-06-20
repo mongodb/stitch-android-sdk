@@ -75,11 +75,12 @@ public final class StitchInitProvider extends ContentProvider {
                 AppSettingsResourceNames.BASE_URL, "string", getContext().getPackageName());
 
     if (baseUrlId == 0) {
-      Stitch.initializeDefaultAppClient(StitchAppClientConfiguration.Builder.forApp(clientAppId));
+      Stitch.initializeDefaultAppClient(clientAppId);
     } else {
       final String baseUrl = getContext().getResources().getString(baseUrlId);
       Stitch.initializeDefaultAppClient(
-          StitchAppClientConfiguration.Builder.forApp(clientAppId, baseUrl));
+          clientAppId,
+          new StitchAppClientConfiguration.Builder().withBaseUrl(baseUrl).build());
     }
     Log.i(TAG, String.format("Automatically initialized app '%s' as default app", clientAppId));
   }

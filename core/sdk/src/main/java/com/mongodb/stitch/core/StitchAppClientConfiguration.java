@@ -26,29 +26,16 @@ import org.bson.codecs.configuration.CodecRegistry;
  * MongoDB Stitch application.
  */
 public final class StitchAppClientConfiguration extends StitchClientConfiguration {
-  private final String clientAppId;
   private final String localAppName;
   private final String localAppVersion;
 
   private StitchAppClientConfiguration(
       final StitchClientConfiguration config,
-      final String clientAppId,
       final String localAppName,
       final String localAppVersion) {
     super(config);
-    this.clientAppId = clientAppId;
     this.localAppVersion = localAppVersion;
     this.localAppName = localAppName;
-  }
-
-  /**
-   * Gets the client app id of the Stitch application that this client is going to communicate with.
-   *
-   * @return the client app id of the Stitch application that this client is going to
-   *         communicate with.
-   */
-  public String getClientAppId() {
-    return clientAppId;
   }
 
   /**
@@ -82,7 +69,6 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
    * A builder that can build a {@link StitchAppClientConfiguration }object.
    */
   public static class Builder extends StitchClientConfiguration.Builder {
-    private String clientAppId;
     private String localAppName;
     private String localAppVersion;
 
@@ -93,46 +79,8 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
 
     private Builder(final StitchAppClientConfiguration config) {
       super(config);
-      clientAppId = config.clientAppId;
       localAppVersion = config.localAppVersion;
       localAppName = config.localAppName;
-    }
-
-    /**
-     * Returns a builder for a given client app id.
-     *
-     * @param clientAppId the client app id of the app.
-     * @return a builder for the given client app id.
-     */
-    public static Builder forApp(final String clientAppId) {
-      return new Builder().withClientAppId(clientAppId);
-    }
-
-    /**
-     * Returns a builder for a given client app id and a Stitch app server base URL. This is
-     * only used during internal development of this SDK.
-     *
-     * @param clientAppId the client app id of the app.
-     * @param baseUrl the base URL of Stitch app servers.
-     * @return a builder for the given client app id and the Stitch app server base URL.
-     */
-    public static Builder forApp(final String clientAppId, final String baseUrl) {
-      final Builder builder = new Builder();
-      builder.withBaseUrl(baseUrl);
-      return builder.withClientAppId(clientAppId);
-    }
-
-    /**
-     * Sets the client app id of the Stitch application that this client is going to communicate
-     * with.
-     *
-     * @param clientAppId the client app id of the Stitch application that this client is going to
-     *                    communicate with.
-     * @return the builder.
-     */
-    public Builder withClientAppId(final String clientAppId) {
-      this.clientAppId = clientAppId;
-      return this;
     }
 
     /**
@@ -155,17 +103,6 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
     public Builder withLocalAppVersion(final String localAppVersion) {
       this.localAppVersion = localAppVersion;
       return this;
-    }
-
-    /**
-     * Gets the client app id of the Stitch application that this client is going to communicate
-     * with.
-     *
-     * @return the client app id of the Stitch application that this client is going to communicate
-     *         with.
-     */
-    public String getClientAppId() {
-      return clientAppId;
     }
 
     /**
@@ -264,12 +201,8 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
      * @return the built {@link StitchAppClientConfiguration}.
      */
     public StitchAppClientConfiguration build() {
-      if (clientAppId == null || clientAppId.isEmpty()) {
-        throw new IllegalArgumentException("clientAppId must be set to a non-empty string");
-      }
-
       final StitchClientConfiguration config = super.build();
-      return new StitchAppClientConfiguration(config, clientAppId, localAppName, localAppVersion);
+      return new StitchAppClientConfiguration(config, localAppName, localAppVersion);
     }
   }
 }

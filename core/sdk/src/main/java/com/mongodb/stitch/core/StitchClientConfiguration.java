@@ -292,22 +292,6 @@ public class StitchClientConfiguration {
      * @return the built {@link StitchAppClientConfiguration}.
      */
     public StitchClientConfiguration build() {
-      if (baseUrl == null || baseUrl.isEmpty()) {
-        throw new IllegalArgumentException("baseUrl must be set");
-      }
-
-      if (storage == null) {
-        throw new IllegalArgumentException("storage must be set");
-      }
-
-      if (transport == null) {
-        throw new IllegalArgumentException("transport must be set");
-      }
-
-      if (defaultRequestTimeout == null) {
-        throw new IllegalArgumentException("defaultRequestTimeout must be set");
-      }
-
       if (codecRegistry == null) {
         codecRegistry = BsonUtils.DEFAULT_CODEC_REGISTRY;
       }
