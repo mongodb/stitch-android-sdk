@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.core;
 
-import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -43,40 +42,15 @@ public class StitchAppClientConfigurationUnitTests {
     final Storage storage = new MemoryStorage();
     final Transport transport = (Request request) -> new Response("good");
 
-    // A minimum of clientAppId, baseUrl, storage, and transport must be set; latter 3 tested
-    // elsewhere
     final StitchAppClientConfiguration.Builder builder = new StitchAppClientConfiguration.Builder();
-    assertThrows(builder::build, IllegalArgumentException.class);
-
     builder.withBaseUrl(baseUrl);
     builder.withStorage(storage);
     builder.withTransport(transport);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder.withClientAppId("");
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder.withClientAppId(null);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    builder.withClientAppId(clientAppId);
-
-    assertThrows(builder::build, IllegalArgumentException.class);
-
-    // Minimum satisfied
     builder.withDefaultRequestTimeout(1500L);
-
-    builder.build();
-
-    builder
-        .withLocalAppVersion(localAppVersion)
-        .withLocalAppName(localAppName);
+    builder.withLocalAppVersion(localAppVersion);
+    builder.withLocalAppName(localAppName);
     StitchAppClientConfiguration config = builder.build();
 
-    assertEquals(config.getClientAppId(), clientAppId);
     assertEquals(config.getLocalAppVersion(), localAppVersion);
     assertEquals(config.getLocalAppName(), localAppName);
     assertEquals(config.getBaseUrl(), baseUrl);
@@ -90,7 +64,6 @@ public class StitchAppClientConfigurationUnitTests {
 
     config = builder.build();
 
-    assertEquals(config.getClientAppId(), clientAppId);
     assertEquals(config.getLocalAppVersion(), localAppVersion);
     assertEquals(config.getLocalAppName(), localAppName);
     assertEquals(config.getBaseUrl(), baseUrl);

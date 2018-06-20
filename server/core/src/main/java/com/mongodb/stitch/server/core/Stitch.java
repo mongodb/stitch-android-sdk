@@ -24,6 +24,8 @@ import com.mongodb.stitch.server.core.internal.StitchAppClientImpl;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+
 /**
  * The entry point into the Server SDK. This class is responsible for allowing one to initialize
  * {@link StitchAppClient}s and work with Stitch.
@@ -53,7 +55,7 @@ public final class Stitch {
 
   /**
    * Gets the default initialized app client. If one has not been set, then an error will be thrown.
-   * {@link Stitch#initializeDefaultAppClient(StitchAppClientConfiguration.Builder)} should be used
+   * {@link Stitch#initializeDefaultAppClient(String)} should be used
    * to initialize the default app client.
    *
    * @return The default initialized app client.
@@ -73,7 +75,9 @@ public final class Stitch {
    * @param clientAppId the client app id of the app client to get.
    * @return the app client associated with the client app id.
    */
-  public static synchronized StitchAppClient getAppClient(final String clientAppId) {
+  public static synchronized StitchAppClient getAppClient(
+      @Nonnull final String clientAppId
+  ) {
     ensureInitialized();
     if (!appClients.containsKey(clientAppId)) {
       throw new IllegalStateException(
@@ -97,13 +101,30 @@ public final class Stitch {
    * Initializes the default app client for Stitch to use when using {@link
    * Stitch#getDefaultAppClient()}. Can only be called once.
    *
-   * @param configBuilder the configuration to use to build the app client.
+   * @param clientAppId the client app id to initialize an app client for.
    * @return the app client that was just initialized.
    */
   public static synchronized StitchAppClient initializeDefaultAppClient(
-      final StitchAppClientConfiguration.Builder configBuilder) {
+      @Nonnull final String clientAppId
+  ) {
+    return initializeDefaultAppClient(
+        clientAppId,
+        new StitchAppClientConfiguration.Builder().build());
+  }
+
+  /**
+   * Initializes the default app client for Stitch to use when using {@link
+   * Stitch#getDefaultAppClient()}. Can only be called once.
+   *
+   * @param clientAppId the client app id to initialize an app client for.
+   * @param config the configuration to use to build the app client.
+   * @return the app client that was just initialized.
+   */
+  public static synchronized StitchAppClient initializeDefaultAppClient(
+      @Nonnull final String clientAppId,
+      @Nonnull final StitchAppClientConfiguration config
+  ) {
     ensureInitialized();
-    final String clientAppId = configBuilder.getClientAppId();
     if (clientAppId == null || clientAppId.isEmpty()) {
       throw new IllegalArgumentException("clientAppId must be set to a non-empty string");
     }
@@ -112,7 +133,7 @@ public final class Stitch {
           String.format(
               "default app can only be set once; currently set to '%s'", defaultClientAppId));
     }
-    final StitchAppClient client = initializeAppClient(configBuilder);
+    final StitchAppClient client = initializeAppClient(clientAppId, config);
     defaultClientAppId = clientAppId;
     return client;
   }
@@ -121,13 +142,28 @@ public final class Stitch {
    * Initializes an app client for Stitch to use when using {@link Stitch#getAppClient(String)}}.
    * Can only be called once per client app id.
    *
-   * @param configBuilder the configuration to use to build the app client.
+   * @param clientAppId the client app id to initialize an app client for.
    * @return the app client that was just initialized.
    */
   public static synchronized StitchAppClient initializeAppClient(
-      final StitchAppClientConfiguration.Builder configBuilder) {
+      @Nonnull final String clientAppId
+  ) {
+    return initializeAppClient(clientAppId, new StitchAppClientConfiguration.Builder().build());
+  }
+
+  /**
+   * Initializes an app client for Stitch to use when using {@link Stitch#getAppClient(String)}}.
+   * Can only be called once per client app id.
+   *
+   * @param clientAppId the client app id to initialize an app client for.
+   * @param config the configuration to use to build the app client.
+   * @return the app client that was just initialized.
+   */
+  public static synchronized StitchAppClient initializeAppClient(
+      @Nonnull final String clientAppId,
+      @Nonnull final StitchAppClientConfiguration config
+  ) {
     ensureInitialized();
-    final String clientAppId = configBuilder.getClientAppId();
     if (clientAppId == null || clientAppId.isEmpty()) {
       throw new IllegalArgumentException("clientAppId must be set to a non-empty string");
     }
@@ -137,26 +173,22 @@ public final class Stitch {
           String.format("client for app '%s' has already been initialized", clientAppId));
     }
 
-    if (configBuilder.getStorage() == null) {
-      configBuilder.withStorage(new MemoryStorage());
+    final StitchAppClientConfiguration.Builder builder = config.builder();
+    if (builder.getStorage() == null) {
+      builder.withStorage(new MemoryStorage());
     }
-    if (configBuilder.getTransport() == null) {
-      configBuilder.withTransport(new OkHttpTransport());
+    if (builder.getTransport() == null) {
+      builder.withTransport(new OkHttpTransport());
     }
-    if (configBuilder.getDefaultRequestTimeout() == null) {
-      configBuilder.withDefaultRequestTimeout(DEFAULT_DEFAULT_REQUEST_TIMEOUT);
+    if (builder.getDefaultRequestTimeout() == null) {
+      builder.withDefaultRequestTimeout(DEFAULT_DEFAULT_REQUEST_TIMEOUT);
     }
-    if (configBuilder.getBaseUrl() == null || configBuilder.getBaseUrl().isEmpty()) {
-      configBuilder.withBaseUrl(DEFAULT_BASE_URL);
-    }
-
-    final StitchAppClientConfiguration config = configBuilder.build();
-    if (appClients.containsKey(config.getClientAppId())) {
-      return appClients.get(config.getClientAppId());
+    if (builder.getBaseUrl() == null || builder.getBaseUrl().isEmpty()) {
+      builder.withBaseUrl(DEFAULT_BASE_URL);
     }
 
-    final StitchAppClientImpl client = new StitchAppClientImpl(configBuilder.build());
-    appClients.put(config.getClientAppId(), client);
+    final StitchAppClientImpl client = new StitchAppClientImpl(clientAppId, builder.build());
+    appClients.put(clientAppId, client);
     return client;
   }
 }

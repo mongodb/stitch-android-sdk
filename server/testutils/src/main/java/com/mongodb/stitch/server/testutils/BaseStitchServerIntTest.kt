@@ -36,9 +36,10 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
         if (Stitch.hasAppClient(app.clientAppId)) {
             return Stitch.getAppClient(app.clientAppId)
         }
-        val client = Stitch.initializeAppClient(StitchAppClientConfiguration.Builder()
-                .withClientAppId(app.clientAppId)
-                .withBaseUrl(getStitchBaseURL()))
+        val client = Stitch.initializeAppClient(
+                app.clientAppId,
+                StitchAppClientConfiguration.Builder()
+                        .withBaseUrl(getStitchBaseURL()).build())
         clients.add(client)
         return client
     }
