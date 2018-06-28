@@ -34,24 +34,7 @@ public final class Stitch {
   private static final String DEFAULT_BASE_URL = "https://stitch.mongodb.com";
   private static final Long DEFAULT_DEFAULT_REQUEST_TIMEOUT = 15000L;
   private static final Map<String, StitchAppClient> appClients = new HashMap<>();
-  private static boolean initialized;
   private static String defaultClientAppId;
-
-  /** Initializes the Stitch SDK so that app clients can be created. */
-  public static synchronized void initialize() {
-    if (initialized) {
-      return;
-    }
-
-    initialized = true;
-    System.out.println("Initialized Stitch SDK");
-  }
-
-  private static synchronized void ensureInitialized() {
-    if (!initialized) {
-      throw new IllegalStateException("Stitch not initialized yet; please call initialize() first");
-    }
-  }
 
   /**
    * Gets the default initialized app client. If one has not been set, then an error will be thrown.
@@ -61,7 +44,6 @@ public final class Stitch {
    * @return The default initialized app client.
    */
   public static synchronized StitchAppClient getDefaultAppClient() {
-    ensureInitialized();
     if (defaultClientAppId == null) {
       throw new IllegalStateException("default app client has not yet been initialized/set");
     }
@@ -78,7 +60,6 @@ public final class Stitch {
   public static synchronized StitchAppClient getAppClient(
       @Nonnull final String clientAppId
   ) {
-    ensureInitialized();
     if (!appClients.containsKey(clientAppId)) {
       throw new IllegalStateException(
           String.format("client for app '%s' has not yet been initialized", clientAppId));
@@ -93,7 +74,6 @@ public final class Stitch {
    * @return if an app client has been initialized by its client app id.
    */
   public static synchronized boolean hasAppClient(final String clientAppId) {
-    ensureInitialized();
     return appClients.containsKey(clientAppId);
   }
 
@@ -124,7 +104,6 @@ public final class Stitch {
       @Nonnull final String clientAppId,
       @Nonnull final StitchAppClientConfiguration config
   ) {
-    ensureInitialized();
     if (clientAppId == null || clientAppId.isEmpty()) {
       throw new IllegalArgumentException("clientAppId must be set to a non-empty string");
     }
@@ -163,7 +142,6 @@ public final class Stitch {
       @Nonnull final String clientAppId,
       @Nonnull final StitchAppClientConfiguration config
   ) {
-    ensureInitialized();
     if (clientAppId == null || clientAppId.isEmpty()) {
       throw new IllegalArgumentException("clientAppId must be set to a non-empty string");
     }
