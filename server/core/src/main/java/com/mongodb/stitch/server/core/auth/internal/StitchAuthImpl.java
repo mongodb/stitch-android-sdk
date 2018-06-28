@@ -87,8 +87,8 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     if (appInfo.getLocalAppVersion() != null) {
       info.put(DeviceFields.APP_VERSION, appInfo.getLocalAppVersion());
     }
-    info.put(DeviceFields.PLATFORM, System.getProperty("java.version", ""));
-    info.put(DeviceFields.PLATFORM_VERSION, "java-server");
+    info.put(DeviceFields.PLATFORM, "java-server");
+    info.put(DeviceFields.PLATFORM_VERSION, System.getProperty("java.version", ""));
 
     final String packageVersion = Stitch.class.getPackage().getImplementationVersion();
     if (packageVersion != null && !packageVersion.isEmpty()) {

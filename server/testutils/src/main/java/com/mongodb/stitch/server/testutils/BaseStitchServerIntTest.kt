@@ -19,7 +19,6 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
     @Before
     override fun setup() {
         super.setup()
-        Stitch.initialize()
     }
 
     @After
