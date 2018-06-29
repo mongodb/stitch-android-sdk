@@ -157,6 +157,7 @@ functions:
           set -e
           source ./creds
           cd stitch-java-sdk
+          export CI_BUILD_NUMBER="${build_id}"
           if [ -z "${github_pr_number}" ]
           then
             if [ "${is_patch}" = "true" ]; then
