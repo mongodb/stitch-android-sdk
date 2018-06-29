@@ -7,8 +7,8 @@ cd $DIR
 cd ..
 
 BUMP_TYPE=$1
-if [ "$BUMP_TYPE" != "snapshot" ] && [ "$BUMP_TYPE" != "beta" ] && [ "$BUMP_TYPE" != "patch" ] && [ "$BUMP_TYPE" != "minor" ] && [ "$BUMP_TYPE" != "major" ]; then
-	echo $"Usage: $0 <snapshot|beta|patch|minor|major>"
+if [ "$BUMP_TYPE" != "snapshot" ] && [ "$BUMP_TYPE" != "beta" ] && [ "$BUMP_TYPE" != "patch" ] && [ "$BUMP_TYPE" != "minor" ] && [ "$BUMP_TYPE" != "major" ] && [ "$BUMP_TYPE" != "release" ]; then
+	echo $"Usage: $0 <snapshot|beta|patch|minor|major|release>"
 	exit 1
 fi
 
@@ -45,10 +45,13 @@ elif [ "$BUMP_TYPE" == "minor" ]; then
 	NEW_VERSION_PATCH=0
 	NEW_VERSION_QUALIFIER=""
 	NEW_VERSION_QUALIFIER_INC=""
-else
+elif [ "$BUMP_TYPE" == "minor" ]; then
 	NEW_VERSION_MAJOR=$(($LAST_VERSION_MAJOR+1))
 	NEW_VERSION_MINOR=0
 	NEW_VERSION_PATCH=0
+	NEW_VERSION_QUALIFIER=""
+	NEW_VERSION_QUALIFIER_INC=""
+else
 	NEW_VERSION_QUALIFIER=""
 	NEW_VERSION_QUALIFIER_INC=""
 fi

@@ -11,7 +11,7 @@ The official [MongoDB Stitch](https://stitch.mongodb.com/) SDK for Android/Java.
 - [Example Usage](#example-usage)
 
 ## Documentation
-* [API/Javadoc Documentation](https://s3.amazonaws.com/stitch-sdks/java/docs/4.0.0/index.html)
+* [API/Javadoc Documentation](https://s3.amazonaws.com/stitch-sdks/java/docs/4.0.1/index.html)
 * [MongoDB Stitch Documentation](https://docs.mongodb.com/stitch/)
 
 ## Discussion
@@ -20,12 +20,14 @@ The official [MongoDB Stitch](https://stitch.mongodb.com/) SDK for Android/Java.
 
 ## Installation
 
+The SDK artifacts are hosted by JCenter/Bintray at https://bintray.com/mongodb/MongoDB. Use the ` jcenter()` repository to get these artifacts.
+
 ### Android
 
 Add the following to the build.gradle for your app module:
 
 ```gradle
-implementation 'org.mongodb:stitch-android-sdk:4.0.0'
+implementation 'org.mongodb:stitch-android-sdk:4.0.1'
 ```
 
 This will start you off with the core SDK functionality as well as the remote MongoDB service.
@@ -33,13 +35,13 @@ This will start you off with the core SDK functionality as well as the remote Mo
 For customized dependencies use the following:
 
 ```gradle
-implementation 'org.mongodb:stitch-android-core:4.0.0'
-implementation 'org.mongodb:stitch-android-services-aws-s3:4.0.0'
-implementation 'org.mongodb:stitch-android-services-aws-ses:4.0.0'
-implementation 'org.mongodb:stitch-android-services-fcm:4.0.0'
-implementation 'org.mongodb:stitch-android-services-http:4.0.0'
-implementation 'org.mongodb:stitch-android-services-mongodb-remote:4.0.0'
-implementation 'org.mongodb:stitch-android-services-twilio:4.0.0'
+implementation 'org.mongodb:stitch-android-core:4.0.1'
+implementation 'org.mongodb:stitch-android-services-aws-s3:4.0.1'
+implementation 'org.mongodb:stitch-android-services-aws-ses:4.0.1'
+implementation 'org.mongodb:stitch-android-services-fcm:4.0.1'
+implementation 'org.mongodb:stitch-android-services-http:4.0.1'
+implementation 'org.mongodb:stitch-android-services-mongodb-remote:4.0.1'
+implementation 'org.mongodb:stitch-android-services-twilio:4.0.1'
 ```
 
 ### Server/Java
@@ -47,7 +49,7 @@ implementation 'org.mongodb:stitch-android-services-twilio:4.0.0'
 Add the following to the build.gradle for your module:
 
 ```gradle
-implementation 'org.mongodb:stitch-server-sdk:4.0.0'
+implementation 'org.mongodb:stitch-server-sdk:4.0.1'
 ```
 
 This will start you off with the core SDK functionality as well as the remote MongoDB service.
@@ -55,14 +57,14 @@ This will start you off with the core SDK functionality as well as the remote Mo
 For customized dependencies use the following:
 
 ```gradle
-implementation 'org.mongodb:stitch-server-core:4.0.0'
-implementation 'org.mongodb:stitch-server-services-aws-s3:4.0.0'
-implementation 'org.mongodb:stitch-server-services-aws-ses:4.0.0'
-implementation 'org.mongodb:stitch-server-services-fcm:4.0.0'
-implementation 'org.mongodb:stitch-server-services-http:4.0.0'
-implementation 'org.mongodb:stitch-server-services-mongodb-local:4.0.0'
-implementation 'org.mongodb:stitch-server-services-mongodb-remote:4.0.0'
-implementation 'org.mongodb:stitch-server-services-twilio:4.0.0'
+implementation 'org.mongodb:stitch-server-core:4.0.1'
+implementation 'org.mongodb:stitch-server-services-aws-s3:4.0.1'
+implementation 'org.mongodb:stitch-server-services-aws-ses:4.0.1'
+implementation 'org.mongodb:stitch-server-services-fcm:4.0.1'
+implementation 'org.mongodb:stitch-server-services-http:4.0.1'
+implementation 'org.mongodb:stitch-server-services-mongodb-local:4.0.1'
+implementation 'org.mongodb:stitch-server-services-mongodb-remote:4.0.1'
+implementation 'org.mongodb:stitch-server-services-twilio:4.0.1'
 ```
 
 ## Example Usage
@@ -84,7 +86,7 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.0.0'
 3. In your build.gradle for your app module, add the following to your dependencies block:
 
 	```gradle
-    implementation 'org.mongodb:stitch-android-sdk:4.0.0'
+    implementation 'org.mongodb:stitch-android-sdk:4.0.1'
     ```
 4. Android Studio will prompt you to sync your changes in your project; hit Sync Now.
 

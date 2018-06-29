@@ -272,7 +272,7 @@ subprojects {
                         }
                         if (!mavenSyncUser.isEmpty()) {
                             mavenCentralSync {
-                                sync = true
+                                sync = false
                                 owner.user = mavenSyncUser
                                 password = mavenSyncPassword
                                 close = '1'
