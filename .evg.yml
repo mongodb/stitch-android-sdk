@@ -142,32 +142,33 @@ functions:
 
           echo "Emulator is ready"
 
-  "publish_codecov":
+  "publish_coveralls":
     - command: shell.exec
       params:
         shell: "bash"
         silent: true
         script: |
           set -e
-          echo export CODECOV_TOKEN=${codecov_token} >> creds
+          echo export COVERALLS_REPO_TOKEN=${coveralls_repo_token} >> creds
     - command: shell.exec
       params:
         shell: "bash"
         script: |
+          set -e
           source ./creds
           cd stitch-java-sdk
-
           if [ -z "${github_pr_number}" ]
           then
             if [ "${is_patch}" = "true" ]; then
               exit 0
             fi
-            bash <(curl -s https://codecov.io/bash) -C ${revision} -b ${build_id}
           else
             PR_INFO=`curl https://api.github.com/repos/${github_org}/${github_repo}/pulls/${github_pr_number}`
             BRANCH=`echo $PR_INFO | python -c "import sys, json; print json.load(sys.stdin)['head']['ref']"`
-            bash <(curl -s https://codecov.io/bash) -B $BRANCH -C ${revision} -P ${github_pr_number} -b ${build_id}
+            export CI_BRANCH=$BRANCH
+            export CI_PULL_REQUEST=${github_pr_number}
           fi
+          ./gradlew coveralls
 
 tasks:
   - name: lint
@@ -197,7 +198,7 @@ tasks:
             echo "running java tests"
             echo "test.stitch.baseURL=http://localhost:9090" >> local.properties
             ./gradlew test jacocoTestReport --info --continue --warning-mode=all < /dev/null
-      - func: "publish_codecov"
+      - func: "publish_coveralls"
 
   - name: run_android_tests
     commands:
@@ -216,7 +217,7 @@ tasks:
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
             ./gradlew connectedAndroidTest jacocoTestReport --info --continue --warning-mode=all < /dev/null
-      - func: "publish_codecov"
+      - func: "publish_coveralls"
 
 post:
   - command: attach.xunit_results
