@@ -9,10 +9,15 @@ buildscript {
         jcenter()
         mavenLocal()
         mavenCentral()
+        repositories {
+            maven {
+                url 'http://dl.bintray.com/edaniels/gradle-plugins'
+            }
+        }
     }
     dependencies {
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
-        classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.8.2'
+        classpath 'org.edaniels.gradle.plugin:coveralls-gradle-plugin:2.8.2'
     }
 }
 
