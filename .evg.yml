@@ -157,12 +157,14 @@ functions:
           set -e
           source ./creds
           cd stitch-java-sdk
+          export CI_NAME="evergreen"
           export CI_BUILD_NUMBER="${build_id}"
           if [ -z "${github_pr_number}" ]
           then
             if [ "${is_patch}" = "true" ]; then
               exit 0
             fi
+            export CI_BRANCH=${branch_name}
           else
             PR_INFO=`curl https://api.github.com/repos/${github_org}/${github_repo}/pulls/${github_pr_number}`
             BRANCH=`echo $PR_INFO | python -c "import sys, json; print json.load(sys.stdin)['head']['ref']"`
