@@ -223,6 +223,10 @@ subprojects {
                     }
                 }
             }
+
+            coveralls {
+                jacocoReportPath = 'build/reports/coverage/debug/report.xml'
+            }
         }
 
         tasks.withType(FindBugs) {

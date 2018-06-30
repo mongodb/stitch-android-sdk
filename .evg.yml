@@ -265,6 +265,24 @@ post:
       content_type: text/html
       permissions: public-read
 
+  - name: finalize_coverage
+    depends_on:
+      - name: run_core_tests
+        variant: "linux-64"
+        status: '*'
+      - name: run_android_tests
+        variant: "linux-64-android"
+        status: '*'
+    commands:
+      - func: "setup_environment"
+      - command: shell.exec
+        params:
+          silent: true
+          script: |
+            set -e
+            source ./creds
+            curl -k -X POST "https://coveralls.io/webhook?repo_token=$COVERALLS_TOKEN" -H "Content-Type: application/json" -d "{\"payload\": {\"build_num\": \"${build_id}\", \"status\": \"done\"}}"
+
 buildvariants:
 - name: linux-64
   display_name: Linux-64
@@ -276,6 +294,7 @@ buildvariants:
   tasks:
     - name: lint
     - name: run_core_tests
+    - name: finalize_coverage
 - name: linux-64-android
   display_name: Linux-64-Android
   run_on:
