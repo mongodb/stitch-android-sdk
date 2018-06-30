@@ -159,6 +159,8 @@ functions:
           cd stitch-java-sdk
           export CI_NAME="evergreen"
           export CI_BUILD_NUMBER="${build_id}"
+          export COVERALLS_PARALLEL=true
+          export COVERALLS_GIT_COMMIT=${revision}
           if [ -z "${github_pr_number}" ]
           then
             if [ "${is_patch}" = "true" ]; then
@@ -200,7 +202,7 @@ tasks:
 
             echo "running java tests"
             echo "test.stitch.baseURL=http://localhost:9090" >> local.properties
-            ./gradlew test jacocoTestReport --info --continue --warning-mode=all < /dev/null
+            ./gradlew test jacocoTestReport --continue --warning-mode=all < /dev/null
       - func: "publish_coveralls"
 
   - name: run_android_tests
@@ -219,7 +221,7 @@ tasks:
 
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
-            ./gradlew connectedAndroidTest jacocoTestReport --info --continue --warning-mode=all < /dev/null
+            ./gradlew connectedAndroidTest jacocoTestReport --continue --warning-mode=all < /dev/null
       - func: "publish_coveralls"
 
 post:
