@@ -233,7 +233,13 @@ tasks:
         variant: "linux-64-android"
         status: '*'
     commands:
-      - func: "setup_environment"
+      - command: shell.exec
+        params:
+          shell: "bash"
+          silent: true
+          script: |
+            set -e
+            echo export COVERALLS_TOKEN=${coveralls_repo_token} >> creds
       - command: shell.exec
         params:
           silent: true
