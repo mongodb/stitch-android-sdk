@@ -158,7 +158,7 @@ functions:
           source ./creds
           cd stitch-java-sdk
           export CI_NAME="evergreen"
-          export CI_BUILD_NUMBER="${build_id}"
+          export CI_BUILD_NUMBER="${version_id}"
           export COVERALLS_PARALLEL=true
           export COVERALLS_GIT_COMMIT=${revision}
           if [ -z "${github_pr_number}" ]
@@ -246,7 +246,7 @@ tasks:
           script: |
             set -e
             source ./creds
-            curl -k -X POST "https://coveralls.io/webhook?repo_token=$COVERALLS_TOKEN" -H "Content-Type: application/json" -d "{\"payload\": {\"build_num\": \"${build_id}\", \"status\": \"done\"}}"
+            curl -k -X POST "https://coveralls.io/webhook?repo_token=$COVERALLS_TOKEN" -H "Content-Type: application/json" -d "{\"payload\": {\"build_num\": \"${version_id}\", \"status\": \"done\"}}"
 
 post:
   - command: attach.xunit_results
