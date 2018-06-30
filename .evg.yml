@@ -224,6 +224,24 @@ tasks:
             ./gradlew connectedAndroidTest jacocoTestReport --continue --warning-mode=all < /dev/null
       - func: "publish_coveralls"
 
+  - name: finalize_coverage
+    depends_on:
+      - name: run_core_tests
+        variant: "linux-64"
+        status: '*'
+      - name: run_android_tests
+        variant: "linux-64-android"
+        status: '*'
+    commands:
+      - func: "setup_environment"
+      - command: shell.exec
+        params:
+          silent: true
+          script: |
+            set -e
+            source ./creds
+            curl -k -X POST "https://coveralls.io/webhook?repo_token=$COVERALLS_TOKEN" -H "Content-Type: application/json" -d "{\"payload\": {\"build_num\": \"${build_id}\", \"status\": \"done\"}}"
+
 post:
   - command: attach.xunit_results
     params:
@@ -264,24 +282,6 @@ post:
       bucket: stitch-test-artifacts
       content_type: text/html
       permissions: public-read
-
-  - name: finalize_coverage
-    depends_on:
-      - name: run_core_tests
-        variant: "linux-64"
-        status: '*'
-      - name: run_android_tests
-        variant: "linux-64-android"
-        status: '*'
-    commands:
-      - func: "setup_environment"
-      - command: shell.exec
-        params:
-          silent: true
-          script: |
-            set -e
-            source ./creds
-            curl -k -X POST "https://coveralls.io/webhook?repo_token=$COVERALLS_TOKEN" -H "Content-Type: application/json" -d "{\"payload\": {\"build_num\": \"${build_id}\", \"status\": \"done\"}}"
 
 buildvariants:
 - name: linux-64
