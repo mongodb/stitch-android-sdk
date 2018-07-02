@@ -11,7 +11,7 @@ buildscript {
 
 dependencies {
     implementation project(':core:stitch-core-sdk')
-    api('org.mongodb:mongodb-driver-embedded:3.8.0-beta3') // TODO: Replace with published 3.8.0
+    api('org.mongodb:mongodb-driver-embedded:3.8.0') // TODO: Replace with published 3.8.0
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_7
