@@ -47,6 +47,21 @@ public final class CoreStitchAppClient {
   }
 
   /**
+   * Calls the specified Stitch function.
+   *
+   * @param name the name of the Stitch function to call.
+   * @param args the arguments to pass to the Stitch function.
+   * @param requestTimeout the number of milliseconds the client should wait for a response from the
+   *                       server before failing with an error.
+   */
+  public void callFunctionInternal(
+      final String name,
+      final List<?> args,
+      final @Nullable Long requestTimeout) {
+    this.functionService.callFunctionInternal(name, args, requestTimeout);
+  }
+
+  /**
    * Calls the specified Stitch function, and decodes the response into a value using the provided
    * {@link Decoder}.
    *

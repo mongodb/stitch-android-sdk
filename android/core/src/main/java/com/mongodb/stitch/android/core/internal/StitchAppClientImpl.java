@@ -114,6 +114,34 @@ public final class StitchAppClientImpl implements StitchAppClient {
   }
 
   @Override
+  public Task<Void> callFunction(final String name, final List<?> args) {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            coreClient.callFunctionInternal(name, args, null);
+            return null;
+          }
+        });
+  }
+
+  @Override
+  public Task<Void> callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout
+  ) {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            coreClient.callFunctionInternal(name, args, requestTimeout);
+            return null;
+          }
+        });
+  }
+
+  @Override
   public <ResultT> Task<ResultT> callFunction(
       final String name, final List<?> args, final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(

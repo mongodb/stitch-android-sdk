@@ -96,6 +96,20 @@ public final class StitchAppClientImpl implements StitchAppClient {
   }
 
   @Override
+  public void callFunction(
+      final String name, final List<?> args) {
+    coreClient.callFunctionInternal(name, args, null);
+  }
+
+  @Override
+  public void callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout) {
+    coreClient.callFunctionInternal(name, args, requestTimeout);
+  }
+
+  @Override
   public <ResultT> ResultT callFunction(
       final String name, final List<?> args, final Class<ResultT> resultClass) {
     return coreClient.callFunctionInternal(name, args, null, resultClass);

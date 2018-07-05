@@ -72,6 +72,33 @@ public interface StitchAppClient extends Closeable {
   <T> T getServiceClient(final ServiceClientFactory<T> factory);
 
   /**
+   * Calls the specified Stitch function.
+   *
+   * @param name the name of the Stitch function to call.
+   * @param args the arguments to pass to the function.
+   * @return a {@link Task} that completes when the function call completes.
+   */
+  Task<Void> callFunction(
+      final String name,
+      final List<?> args);
+
+  /**
+   * Calls the specified Stitch function.
+   * Also accepts a timeout in milliseconds. Use this for functions that may run longer than the
+   * client-wide default timeout (15 seconds by default).
+   *
+   * @param name the name of the Stitch function to call.
+   * @param args the arguments to pass to the function.
+   * @param requestTimeout the number of milliseconds the client should wait for a response from the
+   *                       server before failing with an error.
+   * @return a {@link Task} containing the decoded value.
+   */
+  Task<Void> callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout);
+
+  /**
    * Calls the specified Stitch function, and decodes the response into an instance of the specified
    * type. The response will be decoded using the codec registry specified when the client was
    * configured. If no codec registry was configured, a default codec registry will be used. The
