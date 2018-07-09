@@ -17,6 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.nio.charset.StandardCharsets
+import java.time.Duration
 import java.util.Arrays
 import java.util.HashMap
 
@@ -84,25 +85,34 @@ class HttpServiceClientIntTests : BaseStitchServerIntTest() {
             assertEquals(StitchServiceErrorCode.HTTP_ERROR, ex.errorCode)
         }
 
-        // A correctly specific request should succeed
-        val goodRequest = HttpRequest.Builder()
-                .withUrl("https://httpbin.org/delete")
-                .withMethod(method)
-                .withBody(body)
-                .withCookies(cookies)
-                .withHeaders(headers)
-                .build()
-        val response = httpClient.execute(goodRequest)
-        assertEquals("200 OK", response.status)
-        assertEquals(200, response.statusCode)
-        assertTrue(response.contentLength in 300..400)
-        assertNotNull(response.body)
-        val dataDoc = Document.parse(String(response.body!!))
-        assertTrue(Arrays.equals(
-                body,
-                dataDoc.getString("data").toByteArray(StandardCharsets.UTF_8)))
-        val headersDoc = dataDoc.get("headers") as Document
-        assertEquals("value1,value2", headersDoc["Myheader"])
-        assertEquals("bob=barker", headersDoc["Cookie"])
+        val retryAttempts = 3
+        for (i in 1..retryAttempts) {
+            // A correctly specific request should succeed
+            val goodRequest = HttpRequest.Builder()
+                    .withUrl("https://httpbin.org/delete")
+                    .withMethod(method)
+                    .withBody(body)
+                    .withCookies(cookies)
+                    .withHeaders(headers)
+                    .build()
+            val response = httpClient.execute(goodRequest)
+
+            if (i != retryAttempts && response.statusCode != 200) {
+                Thread.sleep(Duration.ofSeconds(5).toMillis())
+                continue
+            }
+
+            assertEquals("200 OK", response.status)
+            assertEquals(200, response.statusCode)
+            assertTrue(response.contentLength in 300..400)
+            assertNotNull(response.body)
+            val dataDoc = Document.parse(String(response.body!!))
+            assertTrue(Arrays.equals(
+                    body,
+                    dataDoc.getString("data").toByteArray(StandardCharsets.UTF_8)))
+            val headersDoc = dataDoc.get("headers") as Document
+            assertEquals("value1,value2", headersDoc["Myheader"])
+            assertEquals("bob=barker", headersDoc["Cookie"])
+        }
     }
 }
