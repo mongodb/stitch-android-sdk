@@ -42,7 +42,7 @@ class DeleteOneOperation implements Operation<RemoteDeleteResult> {
     args.put("collection", namespace.getCollectionName());
     args.put("query", filter);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "deleteOne",
         Collections.singletonList(args),
         ResultDecoders.deleteResultDecoder);

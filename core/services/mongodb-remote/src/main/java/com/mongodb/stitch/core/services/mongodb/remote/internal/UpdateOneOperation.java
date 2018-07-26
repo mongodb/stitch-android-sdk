@@ -53,7 +53,7 @@ class UpdateOneOperation implements Operation<RemoteUpdateResult> {
     args.put("update", update);
     args.put("upsert", upsert);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "updateOne",
         Collections.singletonList(args),
         ResultDecoders.updateResultDecoder);

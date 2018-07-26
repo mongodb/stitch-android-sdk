@@ -49,7 +49,7 @@ public class CoreAwsSesServiceClientUnitTests {
 
 
     Mockito.doReturn(new AwsSesSendResult(expectedMessageId))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final AwsSesSendResult result = client.sendEmail(to, from, subject, body);
     assertEquals(result.getMessageId(), expectedMessageId);
@@ -59,7 +59,7 @@ public class CoreAwsSesServiceClientUnitTests {
     final ArgumentCaptor<Decoder<AwsSesSendResult>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -76,7 +76,7 @@ public class CoreAwsSesServiceClientUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> client.sendEmail(to, from, subject, body),
         IllegalArgumentException.class);
   }

@@ -32,6 +32,7 @@ enum class FcmActions {
 }
 
 sealed class RuleCreator {
+    data class Aws(val name: String, val actions: Set<String>) : RuleCreator()
     data class AwsS3(val name: String, val actions: Set<AwsS3Actions>) : RuleCreator()
     data class AwsSes(val name: String, val actions: Set<AwsSesActions>) : RuleCreator()
     data class Fcm(val name: String, val actions: Set<FcmActions>) : RuleCreator()

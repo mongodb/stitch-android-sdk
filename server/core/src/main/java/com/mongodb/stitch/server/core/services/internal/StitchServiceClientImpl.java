@@ -16,30 +16,53 @@
 
 package com.mongodb.stitch.server.core.services.internal;
 
-import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
-import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.server.core.services.StitchServiceClient;
 
 import java.util.List;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public final class StitchServiceClientImpl
-    extends CoreStitchServiceClientImpl implements StitchServiceClient {
+public final class StitchServiceClientImpl implements StitchServiceClient {
 
-  public StitchServiceClientImpl(
-      final StitchAuthRequestClient requestClient,
-      final StitchServiceRoutes routes,
-      final String name,
-      final CodecRegistry codecRegistry
-  ) {
-    super(requestClient, routes, name, codecRegistry);
+  private final CoreStitchServiceClient proxy;
+
+  public StitchServiceClientImpl(final CoreStitchServiceClient proxy) {
+    this.proxy = proxy;
+  }
+
+  @Override
+  public void callFunction(final String name, final List<?> args) {
+    proxy.callFunction(name, args);
+  }
+
+  @Override
+  public <ResultT> ResultT callFunction(
+      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
+    return proxy.callFunction(name, args, null, resultDecoder);
   }
 
   @Override
   public <ResultT> ResultT callFunction(
       final String name, final List<?> args, final Class<ResultT> resultClass) {
-    return callFunctionInternal(name, args, null, resultClass);
+    return proxy.callFunction(name, args, null, resultClass);
+  }
+
+  @Override
+  public <ResultT> ResultT callFunction(
+      final String name,
+      final List<?> args,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry) {
+    return proxy.callFunction(name, args, null, resultClass, codecRegistry);
+  }
+
+  @Override
+  public void callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout) {
+    proxy.callFunction(name, args, requestTimeout);
   }
 
   @Override
@@ -48,13 +71,7 @@ public final class StitchServiceClientImpl
       final List<?> args,
       final Long requestTimeout,
       final Class<ResultT> resultClass) {
-    return callFunctionInternal(name, args, requestTimeout, resultClass);
-  }
-
-  @Override
-  public <ResultT> ResultT callFunction(
-      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
-    return callFunctionInternal(name, args, null, resultDecoder);
+    return proxy.callFunction(name, args, requestTimeout, resultClass);
   }
 
   @Override
@@ -63,6 +80,31 @@ public final class StitchServiceClientImpl
       final List<?> args,
       final Long requestTimeout,
       final Decoder<ResultT> resultDecoder) {
-    return callFunctionInternal(name, args, requestTimeout, resultDecoder);
+    return proxy.callFunction(name, args, requestTimeout, resultDecoder);
+  }
+
+  @Override
+  public <ResultT> ResultT callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry) {
+    return proxy.callFunction(
+        name,
+        args,
+        requestTimeout,
+        resultClass,
+        codecRegistry);
+  }
+
+  @Override
+  public CodecRegistry getCodecRegistry() {
+    return proxy.getCodecRegistry();
+  }
+
+  @Override
+  public StitchServiceClient withCodecRegistry(final CodecRegistry codecRegistry) {
+    return new StitchServiceClientImpl(proxy.withCodecRegistry(codecRegistry));
   }
 }

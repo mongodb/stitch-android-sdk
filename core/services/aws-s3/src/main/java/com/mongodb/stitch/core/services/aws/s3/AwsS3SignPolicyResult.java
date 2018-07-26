@@ -18,7 +18,10 @@ package com.mongodb.stitch.core.services.aws.s3;
 
 /**
  * The result of an AWS S3 sign policy request.
+ *
+ * @deprecated use AwsServiceClient instead.
  */
+@Deprecated
 public class AwsS3SignPolicyResult {
   private final String policy;
   private final String signature;

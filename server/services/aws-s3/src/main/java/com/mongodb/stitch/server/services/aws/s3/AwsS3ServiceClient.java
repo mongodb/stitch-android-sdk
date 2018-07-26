@@ -28,7 +28,10 @@ import org.bson.types.Binary;
 
 /**
  * The AWS S3 service client.
+ *
+ * @deprecated use AwsServiceClient instead.
  */
+@Deprecated
 public interface AwsS3ServiceClient {
 
   /**

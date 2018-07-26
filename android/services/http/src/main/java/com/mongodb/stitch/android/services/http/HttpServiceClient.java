@@ -21,12 +21,12 @@ import android.support.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchServiceClient;
 import com.mongodb.stitch.android.services.http.internal.HttpServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.http.HttpRequest;
 import com.mongodb.stitch.core.services.http.HttpResponse;
 import com.mongodb.stitch.core.services.http.internal.CoreHttpServiceClient;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 /**
  * The HTTP service client.
@@ -45,7 +45,7 @@ public interface HttpServiceClient {
       new NamedServiceClientFactory<HttpServiceClient>() {
         @Override
         public HttpServiceClient getClient(
-            final StitchServiceClient service,
+            final CoreStitchServiceClient service,
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {

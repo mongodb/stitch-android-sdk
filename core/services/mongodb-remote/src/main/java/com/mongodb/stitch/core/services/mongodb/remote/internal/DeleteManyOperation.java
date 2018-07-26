@@ -43,7 +43,7 @@ class DeleteManyOperation implements Operation<RemoteDeleteResult> {
     args.put("collection", namespace.getCollectionName());
     args.put("query", filter);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "deleteMany",
         Collections.singletonList(args),
         ResultDecoders.deleteResultDecoder);

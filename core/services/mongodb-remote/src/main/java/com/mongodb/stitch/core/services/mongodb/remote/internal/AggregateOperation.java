@@ -61,7 +61,7 @@ class AggregateOperation<T> implements Operation<Collection<T>> {
     args.put("collection", namespace.getCollectionName());
     args.put("pipeline", pipeline);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "aggregate",
         Collections.singletonList(args),
         new CollectionDecoder<>(decoder));

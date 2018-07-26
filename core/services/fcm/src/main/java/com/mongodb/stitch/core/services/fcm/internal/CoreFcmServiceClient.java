@@ -38,7 +38,7 @@ public class CoreFcmServiceClient {
   ) {
     final Document args = getSendMessageRequest(request);
     args.put(SendFields.TO_FIELD, to);
-    return service.callFunctionInternal(
+    return service.callFunction(
         SEND_ACTION, Collections.singletonList(args), ResultDecoders.sendMessageResponseDecoder);
   }
 
@@ -48,7 +48,7 @@ public class CoreFcmServiceClient {
   ) {
     final Document args = getSendMessageRequest(request);
     args.put(SendFields.USER_IDS_FIELD, userIds);
-    return service.callFunctionInternal(
+    return service.callFunction(
         SEND_ACTION, Collections.singletonList(args), ResultDecoders.sendMessageResponseDecoder);
   }
 
@@ -58,7 +58,7 @@ public class CoreFcmServiceClient {
   ) {
     final Document args = getSendMessageRequest(request);
     args.put(SendFields.REGISTRATION_TOKENS_FIELD, registrationTokens);
-    return service.callFunctionInternal(
+    return service.callFunction(
         SEND_ACTION, Collections.singletonList(args), ResultDecoders.sendMessageResponseDecoder);
   }
 

@@ -103,7 +103,7 @@ public class CoreFcmServiceClientUnitTests {
             failureDetails);
 
     doReturn(result)
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final String to = "who";
     assertEquals(result, client.sendMessageTo(to, fullRequest));
@@ -113,7 +113,7 @@ public class CoreFcmServiceClientUnitTests {
     final ArgumentCaptor<Decoder<FcmSendMessageResult>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -151,7 +151,7 @@ public class CoreFcmServiceClientUnitTests {
     assertEquals(result, client.sendMessageToRegistrationTokens(registrationTokens, fullRequest));
 
     verify(service, times(2))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -168,7 +168,7 @@ public class CoreFcmServiceClientUnitTests {
     assertEquals(result, client.sendMessageToUsers(userIds, fullRequest));
 
     verify(service, times(3))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -183,7 +183,7 @@ public class CoreFcmServiceClientUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> {
       client.sendMessageTo(
               "who",

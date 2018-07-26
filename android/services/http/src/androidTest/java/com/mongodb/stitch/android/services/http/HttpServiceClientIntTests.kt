@@ -113,7 +113,7 @@ class HttpServiceClientIntTests : BaseStitchAndroidIntTest() {
 
             assertEquals("200 OK", response.status)
             assertEquals(200, response.statusCode)
-            assertTrue(response.contentLength in 300..400)
+            assertTrue(response.contentLength in 300..500)
             Assert.assertNotNull(response.body)
             val dataDoc = Document.parse(String(response.body!!))
             assertTrue(Arrays.equals(

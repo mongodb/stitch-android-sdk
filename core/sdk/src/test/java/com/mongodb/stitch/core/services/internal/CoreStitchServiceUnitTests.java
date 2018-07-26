@@ -42,7 +42,7 @@ import org.mockito.Mockito;
 public class CoreStitchServiceUnitTests {
 
   @Test
-  public void testCallFunctionInternal() {
+  public void testCallFunction() {
     final String serviceName = "svc1";
     final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
     final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
@@ -72,9 +72,9 @@ public class CoreStitchServiceUnitTests {
     expectedRequestDoc.put("arguments", args);
 
     assertEquals(
-        42, (int) coreStitchService.callFunctionInternal(
+        42, (int) coreStitchService.callFunction(
                 funcName, args, null, new IntegerCodec()));
-    assertEquals(42, (int) coreStitchService.callFunctionInternal(
+    assertEquals(42, (int) coreStitchService.callFunction(
             funcName, args, null, Integer.class));
 
     final ArgumentCaptor<StitchAuthDocRequest> docArgument =

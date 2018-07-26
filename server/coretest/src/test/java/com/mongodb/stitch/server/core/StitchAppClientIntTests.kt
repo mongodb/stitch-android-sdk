@@ -13,7 +13,6 @@ import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvi
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
-import com.mongodb.stitch.server.testutils.callFunction
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.Document
@@ -182,8 +181,8 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
 
         client.auth.loginWithCredential(AnonymousCredential())
 
-        val resultDoc = client.callFunction<Document>(
-                "testFunction", Arrays.asList(42, "hello")
+        val resultDoc = client.callFunction(
+                "testFunction", Arrays.asList(42, "hello"), Document::class.java
         )
 
         assertTrue(resultDoc.containsKey("intValue"))

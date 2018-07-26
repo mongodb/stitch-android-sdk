@@ -24,7 +24,10 @@ import javax.annotation.Nonnull;
 
 /**
  * The AWS SES service client.
+ *
+ * @deprecated use AwsServiceClient instead.
  */
+@Deprecated
 public interface AwsSesServiceClient {
 
   /**

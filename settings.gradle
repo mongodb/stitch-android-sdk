@@ -2,6 +2,7 @@ rootProject.name = 'Stitch-SDK'
 
 include ':core:sdk',
         ':core:admin-client',
+        ':core:services:aws',
         ':core:services:aws-s3',
         ':core:services:aws-ses',
         ':core:services:fcm',
@@ -15,6 +16,7 @@ include ':core:sdk',
         ':server:sdk',
         ':server:core',
         ':server:coretest',
+        ':server:services:aws',
         ':server:services:aws-s3',
         ':server:services:aws-ses',
         ':server:services:fcm',
@@ -28,6 +30,7 @@ include ':core:sdk',
         ':android:sdk',
         ':android:core',
         ':android:coretest',
+        ':android:services:aws',
         ':android:services:aws-s3',
         ':android:services:aws-ses',
         ':android:services:fcm',
@@ -42,6 +45,7 @@ include ':core:sdk',
 project(':core:sdk').name = 'stitch-core-sdk'
 project(':core:admin-client').name = 'stitch-core-admin-client'
 project(':core:services').name = 'core-services'
+project(':core:services:aws').name = 'stitch-core-services-aws'
 project(':core:services:aws-s3').name = 'stitch-core-services-aws-s3'
 project(':core:services:aws-ses').name = 'stitch-core-services-aws-ses'
 project(':core:services:fcm').name = 'stitch-core-services-fcm'
@@ -54,6 +58,7 @@ project(':server:sdk').name = 'stitch-server-sdk'
 project(':server:core').name = 'stitch-server-core'
 project(':server:coretest').name = 'stitch-server-coretest'
 project(':server:services').name = 'server-services'
+project(':server:services:aws').name = 'stitch-server-services-aws'
 project(':server:services:aws-s3').name = 'stitch-server-services-aws-s3'
 project(':server:services:aws-ses').name = 'stitch-server-services-aws-ses'
 project(':server:services:fcm').name = 'stitch-server-services-fcm'
@@ -66,6 +71,7 @@ project(':android:sdk').name = 'stitch-android-sdk'
 project(':android:core').name = 'stitch-android-core'
 project(':android:coretest').name = 'stitch-android-coretest'
 project(':android:services').name = 'android-services'
+project(':android:services:aws').name = 'stitch-android-services-aws'
 project(':android:services:aws-s3').name = 'stitch-android-services-aws-s3'
 project(':android:services:aws-ses').name = 'stitch-android-services-aws-ses'
 project(':android:services:fcm').name = 'stitch-android-services-fcm'

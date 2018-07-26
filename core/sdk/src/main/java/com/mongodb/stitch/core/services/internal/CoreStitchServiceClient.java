@@ -23,36 +23,49 @@ import org.bson.codecs.configuration.CodecRegistry;
 
 public interface CoreStitchServiceClient {
 
-  void callFunctionInternal(
+  void callFunction(
       final String name,
       final List<?> args);
 
-  <T> T callFunctionInternal(
+  <T> T callFunction(
       final String name,
       final List<?> args,
       final Decoder<T> resultDecoder);
 
-  <T> T callFunctionInternal(
+  <T> T callFunction(
       final String name,
       final List<?> args,
       final Class<T> resultClass);
 
-  void callFunctionInternal(
+  <T> T callFunction(
+      final String name,
+      final List<?> args,
+      final Class<T> resultClass,
+      final CodecRegistry codecRegistry);
+
+  void callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout);
 
-  <T> T callFunctionInternal(
+  <T> T callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
       final Decoder<T> resultDecoder);
 
-  <T> T callFunctionInternal(
+  <T> T callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
       final Class<T> resultClass);
+
+  <T> T callFunction(
+      final String name,
+      final List<?> args,
+      final @Nullable Long requestTimeout,
+      final Class<T> resultClass,
+      final CodecRegistry codecRegistry);
 
   CodecRegistry getCodecRegistry();
 

@@ -50,7 +50,7 @@ class CountOperation implements Operation<Long> {
     args.put("query", filter);
     args.put("limit", limit);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "count",
         Collections.singletonList(args),
         Long.class);

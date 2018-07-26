@@ -25,6 +25,10 @@ import java.io.InputStream;
 import javax.annotation.Nonnull;
 import org.bson.types.Binary;
 
+/**
+ * @deprecated use AwsServiceClient instead.
+ */
+@Deprecated
 public final class AwsS3ServiceClientImpl implements AwsS3ServiceClient {
 
   private final CoreAwsS3ServiceClient proxy;

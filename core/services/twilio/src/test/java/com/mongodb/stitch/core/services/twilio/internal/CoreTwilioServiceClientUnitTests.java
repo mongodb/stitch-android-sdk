@@ -45,7 +45,7 @@ public class CoreTwilioServiceClientUnitTests {
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
-    verify(service).callFunctionInternal(funcNameArg.capture(), funcArgsArg.capture());
+    verify(service).callFunction(funcNameArg.capture(), funcArgsArg.capture());
 
     assertEquals("send", funcNameArg.getValue());
     assertEquals(1, funcArgsArg.getValue().size());
@@ -57,7 +57,7 @@ public class CoreTwilioServiceClientUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any());
+        .when(service).callFunction(any(), any());
     assertThrows(() -> {
       client.sendMessage(to, from, body);
       return null;
@@ -78,7 +78,7 @@ public class CoreTwilioServiceClientUnitTests {
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
-    verify(service).callFunctionInternal(funcNameArg.capture(), funcArgsArg.capture());
+    verify(service).callFunction(funcNameArg.capture(), funcArgsArg.capture());
 
     assertEquals("send", funcNameArg.getValue());
     assertEquals(1, funcArgsArg.getValue().size());
@@ -91,7 +91,7 @@ public class CoreTwilioServiceClientUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any());
+        .when(service).callFunction(any(), any());
     assertThrows(() -> {
       client.sendMessage(to, from, body);
       return null;

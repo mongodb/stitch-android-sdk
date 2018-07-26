@@ -17,9 +17,9 @@
 package com.mongodb.stitch.server.core;
 
 import com.mongodb.stitch.server.core.auth.StitchAuth;
+import com.mongodb.stitch.server.core.services.StitchServiceClient;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.server.core.services.internal.ServiceClientFactory;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
@@ -60,6 +60,14 @@ public interface StitchAppClient extends Closeable {
    * @return A client to interact with the service.
    */
   <T> T getServiceClient(final ServiceClientFactory<T> factory);
+
+  /**
+   * Gets a general purpose client for the given named service.
+   *
+   * @param serviceName the name of the service.
+   * @return a client to interact with the service.
+   */
+  StitchServiceClient getServiceClient(final String serviceName);
 
   /**
    * Calls the specified Stitch function.

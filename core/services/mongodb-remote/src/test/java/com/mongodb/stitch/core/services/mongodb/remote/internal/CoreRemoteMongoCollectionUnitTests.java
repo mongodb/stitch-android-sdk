@@ -109,7 +109,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(42L)
-        .when(service).callFunctionInternal(any(), any(), any(Class.class));
+        .when(service).callFunction(any(), any(), any(Class.class));
     assertEquals(42, coll.count());
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
@@ -117,7 +117,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Class<Long>> resultClassArg =
         ArgumentCaptor.forClass(Class.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -136,7 +136,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     assertEquals(42, coll.count(expectedFilter, new RemoteCountOptions().limit(5)));
 
     verify(service, times(2))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -152,7 +152,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Class.class));
+        .when(service).callFunction(any(), any(), any(Class.class));
     assertThrows(coll::count,
         IllegalArgumentException.class);
   }
@@ -169,7 +169,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final Document doc2 = new Document("three", 4);
     final Collection<Document> docs = Arrays.asList(doc1, doc2);
     doReturn(docs)
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final CoreRemoteFindIterable<Document> iter = coll.find();
     assertEquals(docs, iter.into(new ArrayList<>()));
@@ -179,7 +179,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -206,7 +206,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     assertEquals(docs, iter.into(new ArrayList<>()));
     verify(service, times(2))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -221,13 +221,13 @@ public class CoreRemoteMongoCollectionUnitTests {
     assertEquals(CollectionDecoder.class, resultClassArg.getValue().getClass());
 
     doReturn(Arrays.asList(1, 2, 3))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertEquals(Arrays.asList(1, 2, 3),
         coll.find(expectedFilter, Integer.class).into(new ArrayList<>()));
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.find().first(),
         IllegalArgumentException.class);
   }
@@ -244,7 +244,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final Document doc2 = new Document("three", 4);
     final Collection<Document> docs = Arrays.asList(doc1, doc2);
     doReturn(docs)
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     CoreRemoteAggregateIterable<Document> iter = coll.aggregate(Collections.emptyList());
     assertEquals(docs, iter.into(new ArrayList<>()));
@@ -254,7 +254,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -275,7 +275,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     assertEquals(docs, iter.into(new ArrayList<>()));
     verify(service, times(2))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -288,7 +288,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.aggregate(Collections.emptyList()).first(),
         IllegalArgumentException.class);
   }
@@ -304,7 +304,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final Document doc1 = new Document("one", 2);
     final BsonObjectId id = new BsonObjectId();
     doReturn(new RemoteInsertOneResult(id))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final RemoteInsertOneResult result = coll.insertOne(doc1);
     assertEquals(id, result.getInsertedId());
@@ -315,7 +315,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -331,7 +331,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.insertOne(new Document()),
         IllegalArgumentException.class);
   }
@@ -353,7 +353,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     ids.put(0L, id1);
     ids.put(1L, id2);
     doReturn(new RemoteInsertManyResult(ids))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final RemoteInsertManyResult result = coll.insertMany(Arrays.asList(doc1, doc2));
     assertEquals(ids, result.getInsertedIds());
@@ -365,7 +365,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -384,7 +384,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.insertMany(Collections.singletonList(new Document())),
         IllegalArgumentException.class);
   }
@@ -398,7 +398,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(new RemoteDeleteResult(1))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final Document expectedFilter = new Document("one", 2);
     final RemoteDeleteResult result = coll.deleteOne(expectedFilter);
@@ -409,7 +409,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -426,7 +426,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.deleteOne(new Document()),
         IllegalArgumentException.class);
   }
@@ -440,7 +440,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(new RemoteDeleteResult(1))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final Document expectedFilter = new Document("one", 2);
     final RemoteDeleteResult result = coll.deleteMany(expectedFilter);
@@ -451,7 +451,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -468,7 +468,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.deleteMany(new Document()),
         IllegalArgumentException.class);
   }
@@ -483,7 +483,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     final BsonObjectId id = new BsonObjectId();
     doReturn(new RemoteUpdateResult(1, 1, id))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final Document expectedFilter = new Document("one", 2);
     final Document expectedUpdate = new Document("three", 4);
@@ -497,7 +497,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -520,7 +520,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     assertEquals(1, result.getModifiedCount());
     assertEquals(id, result.getUpsertedId());
     verify(service, times(2))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -533,7 +533,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.updateOne(new Document(), new Document()),
         IllegalArgumentException.class);
   }
@@ -548,7 +548,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     final BsonObjectId id = new BsonObjectId();
     doReturn(new RemoteUpdateResult(1, 1, id))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final Document expectedFilter = new Document("one", 2);
     final Document expectedUpdate = new Document("three", 4);
@@ -562,7 +562,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -586,7 +586,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     assertEquals(1, result.getModifiedCount());
     assertEquals(id, result.getUpsertedId());
     verify(service, times(2))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -599,7 +599,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.updateMany(new Document(), new Document()),
         IllegalArgumentException.class);
   }

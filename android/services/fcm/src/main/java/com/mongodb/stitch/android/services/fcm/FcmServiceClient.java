@@ -19,12 +19,13 @@ package com.mongodb.stitch.android.services.fcm;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchServiceClient;
 import com.mongodb.stitch.android.services.fcm.internal.FcmServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.fcm.FcmSendMessageRequest;
 import com.mongodb.stitch.core.services.fcm.FcmSendMessageResult;
 import com.mongodb.stitch.core.services.fcm.internal.CoreFcmServiceClient;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+
 import java.util.Collection;
 
 /**
@@ -69,7 +70,7 @@ public interface FcmServiceClient {
       new NamedServiceClientFactory<FcmServiceClient>() {
         @Override
         public FcmServiceClient getClient(
-            final StitchServiceClient service,
+            final CoreStitchServiceClient service,
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {
