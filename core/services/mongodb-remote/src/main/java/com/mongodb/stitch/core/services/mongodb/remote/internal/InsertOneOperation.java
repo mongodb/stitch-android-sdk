@@ -41,7 +41,7 @@ class InsertOneOperation implements Operation<RemoteInsertOneResult> {
     args.put("collection", namespace.getCollectionName());
     args.put("document", document);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "insertOne",
         Collections.singletonList(args),
         ResultDecoders.insertOneResultDecoder);

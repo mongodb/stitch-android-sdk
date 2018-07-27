@@ -41,7 +41,7 @@ public class CoreTwilioServiceClient {
     if (mediaUrl != null) {
       args.put("mediaUrl", mediaUrl);
     }
-    service.callFunctionInternal("send", Collections.singletonList(args));
+    service.callFunction("send", Collections.singletonList(args));
   }
 
   public void sendMessage(final String to, final String from, final String body) {

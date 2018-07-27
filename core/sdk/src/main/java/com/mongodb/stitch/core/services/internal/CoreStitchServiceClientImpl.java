@@ -72,14 +72,14 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     return reqBuilder.build(codecRegistry);
   }
 
-  public void callFunctionInternal(
+  public void callFunction(
       final String name,
       final List<?> args
   ) {
     requestClient.doAuthenticatedRequest(getCallServiceFunctionRequest(name, args, null));
   }
 
-  public <T> T callFunctionInternal(
+  public <T> T callFunction(
       final String name,
       final List<?> args,
       final Decoder<T> resultDecoder) {
@@ -87,7 +87,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         getCallServiceFunctionRequest(name, args, null), resultDecoder);
   }
 
-  public <T> T callFunctionInternal(
+  public <T> T callFunction(
       final String name,
       final List<?> args,
       final Class<T> resultClass) {
@@ -95,7 +95,16 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         getCallServiceFunctionRequest(name, args, null), resultClass, codecRegistry);
   }
 
-  public void callFunctionInternal(
+  public <T> T callFunction(
+      final String name,
+      final List<?> args,
+      final Class<T> resultClass,
+      final CodecRegistry codecRegistry) {
+    return requestClient.doAuthenticatedRequest(
+        getCallServiceFunctionRequest(name, args, null), resultClass, codecRegistry);
+  }
+
+  public void callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout
@@ -103,7 +112,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     requestClient.doAuthenticatedRequest(getCallServiceFunctionRequest(name, args, requestTimeout));
   }
 
-  public <T> T callFunctionInternal(
+  public <T> T callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
@@ -112,11 +121,21 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         getCallServiceFunctionRequest(name, args, requestTimeout), resultDecoder);
   }
 
-  public <T> T callFunctionInternal(
+  public <T> T callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
       final Class<T> resultClass) {
+    return requestClient.doAuthenticatedRequest(
+        getCallServiceFunctionRequest(name, args, requestTimeout), resultClass, codecRegistry);
+  }
+
+  public <T> T callFunction(
+      final String name,
+      final List<?> args,
+      final @Nullable Long requestTimeout,
+      final Class<T> resultClass,
+      final CodecRegistry codecRegistry) {
     return requestClient.doAuthenticatedRequest(
         getCallServiceFunctionRequest(name, args, requestTimeout), resultClass, codecRegistry);
   }

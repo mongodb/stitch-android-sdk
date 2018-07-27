@@ -3,6 +3,7 @@ package com.mongodb.stitch.core.admin.services
 import com.fasterxml.jackson.annotation.JsonProperty
 
 sealed class ServiceConfigs {
+    data class Aws(val accessKeyId: String, val secretAccessKey: String) : ServiceConfigs()
     data class AwsS3(val region: String, val accessKeyId: String, val secretAccessKey: String) : ServiceConfigs()
     data class AwsSes(val region: String, val accessKeyId: String, val secretAccessKey: String) : ServiceConfigs()
     data class Fcm(@JsonProperty("senderId") val senderId: String, @JsonProperty("apiKey") val apiKey: String) : ServiceConfigs()

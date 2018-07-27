@@ -104,7 +104,7 @@ class FindOperation<T> implements Operation<Collection<T>> {
     args.put("project", projection);
     args.put("sort", sort);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "find",
         Collections.singletonList(args),
         new CollectionDecoder<>(decoder));

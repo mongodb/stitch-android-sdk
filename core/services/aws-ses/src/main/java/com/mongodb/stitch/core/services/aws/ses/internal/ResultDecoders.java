@@ -25,6 +25,10 @@ import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.DocumentCodec;
 
+/**
+ * @deprecated use AwsServiceClient instead.
+ */
+@Deprecated
 class ResultDecoders {
 
   static final Decoder<AwsSesSendResult> sendResultDecoder = new AwsSesSendResultDecoder();

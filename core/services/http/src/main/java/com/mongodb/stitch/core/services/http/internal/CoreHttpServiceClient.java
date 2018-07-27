@@ -82,7 +82,7 @@ public class CoreHttpServiceClient {
       args.put(RequestAction.HTTP_FOLLOW_REDIRECTS_PARAM, request.getFollowRedirects());
     }
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         action,
         Collections.singletonList(args),
         ResultDecoders.httpResponseDecoder);

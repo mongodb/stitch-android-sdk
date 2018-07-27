@@ -27,6 +27,10 @@ import java.util.Collections;
 import org.bson.Document;
 import org.bson.types.Binary;
 
+/**
+ * @deprecated use AwsServiceClient instead.
+ */
+@Deprecated
 public class CoreAwsS3ServiceClient {
 
   private final CoreStitchServiceClient service;
@@ -48,7 +52,7 @@ public class CoreAwsS3ServiceClient {
     args.put(PutAction.ACL_PARAM, acl);
     args.put(PutAction.CONTENT_TYPE_PARAM, contentType);
     args.put(PutAction.BODY_PARAM, body);
-    return service.callFunctionInternal(
+    return service.callFunction(
         PutAction.ACTION_NAME,
         Collections.singletonList(args),
         ResultDecoders.putObjectResultDecoder);
@@ -105,7 +109,7 @@ public class CoreAwsS3ServiceClient {
     args.put(SignPolicyAction.KEY_PARAM, key);
     args.put(SignPolicyAction.ACL_PARAM, acl);
     args.put(SignPolicyAction.CONTENT_TYPE_PARAM, contentType);
-    return service.callFunctionInternal(
+    return service.callFunction(
         SignPolicyAction.ACTION_NAME,
         Collections.singletonList(args),
         ResultDecoders.signPolicyResultDecoder);

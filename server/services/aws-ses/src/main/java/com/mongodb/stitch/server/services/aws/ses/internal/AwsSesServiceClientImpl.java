@@ -21,6 +21,10 @@ import com.mongodb.stitch.core.services.aws.ses.internal.CoreAwsSesServiceClient
 import com.mongodb.stitch.server.services.aws.ses.AwsSesServiceClient;
 import javax.annotation.Nonnull;
 
+/**
+ * @deprecated use AwsServiceClient instead.
+ */
+@Deprecated
 public final class AwsSesServiceClientImpl implements AwsSesServiceClient {
 
   private final CoreAwsSesServiceClient proxy;

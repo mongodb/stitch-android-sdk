@@ -26,6 +26,10 @@ import com.mongodb.stitch.core.services.aws.ses.internal.CoreAwsSesServiceClient
 
 import java.util.concurrent.Callable;
 
+/**
+ * @deprecated use AwsServiceClient instead.
+ */
+@Deprecated
 public final class AwsSesServiceClientImpl implements AwsSesServiceClient {
 
   private final CoreAwsSesServiceClient proxy;

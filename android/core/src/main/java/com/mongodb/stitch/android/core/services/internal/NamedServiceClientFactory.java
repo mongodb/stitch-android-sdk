@@ -18,10 +18,11 @@ package com.mongodb.stitch.android.core.services.internal;
 
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 public interface NamedServiceClientFactory<T> {
   T getClient(
-      final StitchServiceClient serviceClient,
+      final CoreStitchServiceClient serviceClient,
       final StitchAppClientInfo appInfo,
       final TaskDispatcher dispatcher);
 }

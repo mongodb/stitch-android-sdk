@@ -78,7 +78,7 @@ public class CoreHttpServiceClientUnitTests {
             "body".getBytes(StandardCharsets.UTF_8));
 
     doReturn(response)
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final HttpResponse result = client.execute(request);
     assertEquals(result, response);
@@ -88,7 +88,7 @@ public class CoreHttpServiceClientUnitTests {
     final ArgumentCaptor<Decoder<HttpResponse>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -109,7 +109,7 @@ public class CoreHttpServiceClientUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> client.execute(request),
         IllegalArgumentException.class);
   }

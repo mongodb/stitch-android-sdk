@@ -42,7 +42,7 @@ class InsertManyOperation implements Operation<RemoteInsertManyResult> {
     args.put("collection", namespace.getCollectionName());
     args.put("documents", documents);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "insertMany",
         Collections.singletonList(args),
         ResultDecoders.insertManyResultDecoder);

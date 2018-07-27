@@ -54,11 +54,11 @@ public final class CoreStitchAppClient {
    * @param requestTimeout the number of milliseconds the client should wait for a response from the
    *                       server before failing with an error.
    */
-  public void callFunctionInternal(
+  public void callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout) {
-    this.functionService.callFunctionInternal(name, args, requestTimeout);
+    this.functionService.callFunction(name, args, requestTimeout);
   }
 
   /**
@@ -73,12 +73,12 @@ public final class CoreStitchAppClient {
    * @param <T> the type into which the Stitch response will be decoded.
    * @return the decoded value.
    */
-  public <T> T callFunctionInternal(
+  public <T> T callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
       final Decoder<T> decoder) {
-    return this.functionService.callFunctionInternal(name, args, requestTimeout, decoder);
+    return this.functionService.callFunction(name, args, requestTimeout, decoder);
   }
 
   /**
@@ -96,12 +96,12 @@ public final class CoreStitchAppClient {
    * @param <T> the type into which the Stitch response will be decoded.
    * @return the decoded value.
    */
-  public <T> T callFunctionInternal(
+  public <T> T callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
       final Class<T> resultClass) {
-    return this.functionService.callFunctionInternal(name, args, requestTimeout, resultClass);
+    return this.functionService.callFunction(name, args, requestTimeout, resultClass);
   }
 
   /**
@@ -117,7 +117,7 @@ public final class CoreStitchAppClient {
   * @param codecRegistry the codec registry that will be used to encode/decode the function call.
   * @return the decoded value.
   */
-  public <T> T callFunctionInternal(
+  public <T> T callFunction(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout,
@@ -126,6 +126,6 @@ public final class CoreStitchAppClient {
   ) {
     return this.functionService
         .withCodecRegistry(codecRegistry)
-        .callFunctionInternal(name, args, requestTimeout, resultClass);
+        .callFunction(name, args, requestTimeout, resultClass);
   }
 }

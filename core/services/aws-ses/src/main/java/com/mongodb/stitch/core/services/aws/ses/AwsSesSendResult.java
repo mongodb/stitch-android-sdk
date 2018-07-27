@@ -26,7 +26,10 @@ import org.bson.codecs.DocumentCodec;
 
 /**
  * The result of an AWS SES send request.
+ *
+ * @deprecated use AwsServiceClient instead.
  */
+@Deprecated
 public class AwsSesSendResult {
   private final String messageId;
 

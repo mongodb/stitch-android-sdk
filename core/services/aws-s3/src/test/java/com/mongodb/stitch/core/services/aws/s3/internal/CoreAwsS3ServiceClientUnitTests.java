@@ -56,7 +56,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     final String expectedLocation = "awsLocation";
 
     Mockito.doReturn(new AwsS3PutObjectResult(expectedLocation))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     AwsS3PutObjectResult result =
         client.putObject(bucket, key, acl, contentType, body);
@@ -67,7 +67,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     final ArgumentCaptor<Decoder<AwsS3PutObjectResult>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -89,7 +89,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     assertEquals(result.getLocation(), expectedLocation);
 
     verify(service, times(2))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -105,7 +105,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     assertEquals(result.getLocation(), expectedLocation);
 
     verify(service, times(3))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -121,7 +121,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     assertEquals(result.getLocation(), expectedLocation);
 
     verify(service, times(4))
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -133,7 +133,7 @@ public class CoreAwsS3ServiceClientUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> client.putObject(bucket, key, acl, contentType, body),
         IllegalArgumentException.class);
   }
@@ -161,7 +161,7 @@ public class CoreAwsS3ServiceClientUnitTests {
         expectedAlgorithm,
         expectedDate,
         expectedCredential))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
 
     final AwsS3SignPolicyResult result =
         client.signPolicy(bucket, key, acl, contentType);
@@ -177,7 +177,7 @@ public class CoreAwsS3ServiceClientUnitTests {
     final ArgumentCaptor<Decoder<AwsS3SignPolicyResult>> resultClassArg =
         ArgumentCaptor.forClass(Decoder.class);
     verify(service)
-        .callFunctionInternal(
+        .callFunction(
             funcNameArg.capture(),
             funcArgsArg.capture(),
             resultClassArg.capture());
@@ -194,7 +194,7 @@ public class CoreAwsS3ServiceClientUnitTests {
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunctionInternal(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> client.signPolicy(bucket, key, acl, contentType),
         IllegalArgumentException.class);
   }

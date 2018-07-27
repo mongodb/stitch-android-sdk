@@ -53,7 +53,7 @@ class UpdateManyOperation implements Operation<RemoteUpdateResult> {
     args.put("update", update);
     args.put("upsert", upsert);
 
-    return service.callFunctionInternal(
+    return service.callFunction(
         "updateMany",
         Collections.singletonList(args),
         ResultDecoders.updateResultDecoder);

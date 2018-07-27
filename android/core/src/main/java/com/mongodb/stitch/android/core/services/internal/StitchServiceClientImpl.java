@@ -18,26 +18,48 @@ package com.mongodb.stitch.android.core.services.internal;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
-import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
+import com.mongodb.stitch.android.core.services.StitchServiceClient;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public final class StitchServiceClientImpl
-    extends CoreStitchServiceClientImpl implements StitchServiceClient {
+public final class StitchServiceClientImpl implements StitchServiceClient {
+  private final CoreStitchServiceClient proxy;
   private final TaskDispatcher dispatcher;
 
   public StitchServiceClientImpl(
-      final StitchAuthRequestClient requestClient,
-      final StitchServiceRoutes routes,
-      final String name,
-      final CodecRegistry codecRegistry,
-      final TaskDispatcher dispatcher) {
-    super(requestClient, routes, name, codecRegistry);
+      final CoreStitchServiceClient proxy,
+      final TaskDispatcher dispatcher
+  ) {
+    this.proxy = proxy;
     this.dispatcher = dispatcher;
+  }
+
+  @Override
+  public Task<Void> callFunction(
+      final String name, final List<?> args) {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            proxy.callFunction(name, args);
+            return null;
+          }
+        });
+  }
+
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
+    return dispatcher.dispatchTask(
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return proxy.callFunction(name, args, null, resultDecoder);
+          }
+        });
   }
 
   @Override
@@ -47,7 +69,37 @@ public final class StitchServiceClientImpl
         new Callable<ResultT>() {
           @Override
           public ResultT call() {
-            return callFunctionInternal(name, args, null, resultClass);
+            return proxy.callFunction(name, args, null, resultClass);
+          }
+        });
+  }
+
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name,
+      final List<?> args,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry) {
+    return dispatcher.dispatchTask(
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return proxy.callFunction(name, args, null, resultClass, codecRegistry);
+          }
+        });
+  }
+
+  @Override
+  public Task<Void> callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout) {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            proxy.callFunction(name, args, requestTimeout);
+            return null;
           }
         });
   }
@@ -62,19 +114,7 @@ public final class StitchServiceClientImpl
         new Callable<ResultT>() {
           @Override
           public ResultT call() {
-            return callFunctionInternal(name, args, requestTimeout, resultClass);
-          }
-        });
-  }
-
-  @Override
-  public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
-    return dispatcher.dispatchTask(
-        new Callable<ResultT>() {
-          @Override
-          public ResultT call() {
-            return callFunctionInternal(name, args, null, resultDecoder);
+            return proxy.callFunction(name, args, requestTimeout, resultClass);
           }
         });
   }
@@ -89,8 +129,39 @@ public final class StitchServiceClientImpl
         new Callable<ResultT>() {
           @Override
           public ResultT call() {
-            return callFunctionInternal(name, args, requestTimeout, resultDecoder);
+            return proxy.callFunction(name, args, requestTimeout, resultDecoder);
           }
         });
+  }
+
+  @Override
+  public <ResultT> Task<ResultT> callFunction(
+      final String name,
+      final List<?> args,
+      final Long requestTimeout,
+      final Class<ResultT> resultClass,
+      final CodecRegistry codecRegistry) {
+    return dispatcher.dispatchTask(
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return proxy.callFunction(
+                name,
+                args,
+                requestTimeout,
+                resultClass,
+                codecRegistry);
+          }
+        });
+  }
+
+  @Override
+  public CodecRegistry getCodecRegistry() {
+    return proxy.getCodecRegistry();
+  }
+
+  @Override
+  public StitchServiceClient withCodecRegistry(final CodecRegistry codecRegistry) {
+    return new StitchServiceClientImpl(proxy.withCodecRegistry(codecRegistry), dispatcher);
   }
 }

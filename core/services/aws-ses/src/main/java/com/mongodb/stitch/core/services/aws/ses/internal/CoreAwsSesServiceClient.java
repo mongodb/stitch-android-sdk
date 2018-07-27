@@ -22,6 +22,10 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import java.util.Collections;
 import org.bson.Document;
 
+/**
+ * @deprecated use AwsServiceClient instead.
+ */
+@Deprecated
 public class CoreAwsSesServiceClient {
 
   private final CoreStitchServiceClient service;
@@ -41,7 +45,7 @@ public class CoreAwsSesServiceClient {
     args.put("fromAddress", fromAddress);
     args.put("subject", subject);
     args.put("body", body);
-    return service.callFunctionInternal(
+    return service.callFunction(
         "send",
         Collections.singletonList(args),
         ResultDecoders.sendResultDecoder);
