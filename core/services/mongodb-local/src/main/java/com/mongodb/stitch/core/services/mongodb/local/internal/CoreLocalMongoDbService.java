@@ -49,7 +49,10 @@ public abstract class CoreLocalMongoDbService {
     final String dbPath = String.format(
         "%s/%s/local_mongodb/0/", dataDir, appInfo.getClientAppId());
     final MongoClient client =
-        MongoClients.create(MongoClientSettings.builder().dbPath(dbPath).build());
+        MongoClients.create(MongoClientSettings.builder()
+            .dbPath(dbPath)
+            .codecRegistry(appInfo.getCodecRegistry())
+            .build());
 
     localInstances.put(instanceKey, client);
     return client;
