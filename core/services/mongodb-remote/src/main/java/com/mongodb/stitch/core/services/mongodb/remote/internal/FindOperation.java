@@ -28,7 +28,7 @@ import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 
-class FindOperation<T> implements Operation<Collection<T>> {
+public class FindOperation<T> implements Operation<Collection<T>> {
 
   private final MongoNamespace namespace;
   private final Decoder<T> decoder;
@@ -56,7 +56,7 @@ class FindOperation<T> implements Operation<Collection<T>> {
    * @param filter the filter, which may be null.
    * @return this
    */
-  FindOperation<T> filter(final BsonDocument filter) {
+  public FindOperation<T> filter(final BsonDocument filter) {
     this.filter = filter;
     return this;
   }
@@ -67,7 +67,7 @@ class FindOperation<T> implements Operation<Collection<T>> {
    * @param limit the limit, which may be null
    * @return this
    */
-  FindOperation<T> limit(final int limit) {
+  public FindOperation<T> limit(final int limit) {
     this.limit = limit;
     return this;
   }
@@ -78,7 +78,7 @@ class FindOperation<T> implements Operation<Collection<T>> {
    * @param projection the project document, which may be null.
    * @return this
    */
-  FindOperation<T> projection(final BsonDocument projection) {
+  public FindOperation<T> projection(final BsonDocument projection) {
     this.projection = projection;
     return this;
   }
@@ -89,7 +89,7 @@ class FindOperation<T> implements Operation<Collection<T>> {
    * @param sort the sort criteria, which may be null.
    * @return this
    */
-  FindOperation<T> sort(final BsonDocument sort) {
+  public FindOperation<T> sort(final BsonDocument sort) {
     this.sort = sort;
     return this;
   }

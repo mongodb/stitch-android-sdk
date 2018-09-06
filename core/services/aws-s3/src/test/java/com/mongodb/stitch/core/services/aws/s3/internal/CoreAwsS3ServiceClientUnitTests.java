@@ -42,7 +42,7 @@ import org.mockito.Mockito;
 public class CoreAwsS3ServiceClientUnitTests {
 
   @Test
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   public void testPutObject() throws IOException {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreAwsS3ServiceClient client = new CoreAwsS3ServiceClient(service);
@@ -139,7 +139,7 @@ public class CoreAwsS3ServiceClientUnitTests {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   public void testSignPolicy() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreAwsS3ServiceClient client = new CoreAwsS3ServiceClient(service);

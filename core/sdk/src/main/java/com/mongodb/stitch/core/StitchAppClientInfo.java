@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core;
 
+import com.mongodb.stitch.core.internal.common.AuthMonitor;
+import com.mongodb.stitch.core.internal.net.NetworkMonitor;
+
 import org.bson.codecs.configuration.CodecRegistry;
 
 /** A class providing basic information about a Stitch app client. */
@@ -25,6 +28,8 @@ public final class StitchAppClientInfo {
   private final String localAppName;
   private final String localAppVersion;
   private final CodecRegistry codecRegistry;
+  private final NetworkMonitor networkMonitor;
+  private final AuthMonitor authMonitor;
 
   /**
    * Constructs the {@link StitchAppClientInfo}.
@@ -36,18 +41,25 @@ public final class StitchAppClientInfo {
    * @param localAppName the name of the local application.
    * @param localAppVersion the current version of the local application.
    * @param codecRegistry the codec registry being used for encoding/decoding of JSON.
+   * @param networkMonitor the network monitor that the client will used to check internet status.
+   * @param authMonitor the auth monitor that the client will used to check auth status.
    */
   public StitchAppClientInfo(
       final String clientAppId,
       final String dataDirectory,
       final String localAppName,
       final String localAppVersion,
-      final CodecRegistry codecRegistry) {
+      final CodecRegistry codecRegistry,
+      final NetworkMonitor networkMonitor,
+      final AuthMonitor authMonitor
+  ) {
     this.clientAppId = clientAppId;
     this.dataDirectory = dataDirectory;
     this.localAppName = localAppName;
     this.localAppVersion = localAppVersion;
     this.codecRegistry = codecRegistry;
+    this.networkMonitor = networkMonitor;
+    this.authMonitor = authMonitor;
   }
 
   /**
@@ -94,5 +106,23 @@ public final class StitchAppClientInfo {
    */
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;
+  }
+
+  /**
+   * Gets the {@link NetworkMonitor} that the client will used to check internet status.
+   *
+   * @return the {@link NetworkMonitor} that the client will used to check internet status.
+   */
+  public NetworkMonitor getNetworkMonitor() {
+    return networkMonitor;
+  }
+
+  /**
+   * Gets the {@link AuthMonitor} that the client will used to check auth status.
+   *
+   * @return the {@link AuthMonitor} that the client will used to check auth status.
+   */
+  public AuthMonitor getAuthMonitor() {
+    return authMonitor;
   }
 }

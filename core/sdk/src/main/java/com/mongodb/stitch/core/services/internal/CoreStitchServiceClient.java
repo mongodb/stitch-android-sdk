@@ -23,6 +23,9 @@ import org.bson.codecs.configuration.CodecRegistry;
 
 public interface CoreStitchServiceClient {
 
+  @Nullable
+  String getName();
+
   void callFunction(
       final String name,
       final List<?> args);

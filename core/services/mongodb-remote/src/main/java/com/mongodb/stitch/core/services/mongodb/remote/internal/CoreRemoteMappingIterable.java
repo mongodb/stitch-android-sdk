@@ -24,12 +24,12 @@ import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-class CoreRemoteMappingIterable<U, V> implements CoreRemoteMongoIterable<V> {
+public class CoreRemoteMappingIterable<U, V> implements CoreRemoteMongoIterable<V> {
 
   private final CoreRemoteMongoIterable<U> iterable;
   private final Function<U, V> mapper;
 
-  CoreRemoteMappingIterable(
+  public CoreRemoteMappingIterable(
       final CoreRemoteMongoIterable<U> iterable,
       final Function<U, V> mapper
   ) {

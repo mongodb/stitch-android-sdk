@@ -176,7 +176,6 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
         operations);
   }
 
-
   /**
    * Aggregates documents according to the specified aggregation pipeline.
    *

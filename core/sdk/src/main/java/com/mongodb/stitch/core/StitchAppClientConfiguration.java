@@ -17,8 +17,8 @@
 package com.mongodb.stitch.core;
 
 import com.mongodb.stitch.core.internal.common.Storage;
+import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.internal.net.Transport;
-
 import org.bson.codecs.configuration.CodecRegistry;
 
 /**
@@ -192,6 +192,18 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
      */
     public Builder withCodecRegistry(final CodecRegistry codecRegistry) {
       super.withCodecRegistry(codecRegistry);
+      return this;
+    }
+
+    /**
+     * Sets the {@link NetworkMonitor} that the client will used to check internet status.
+     *
+     * @param networkMonitor the {@link NetworkMonitor} that the client will use check internet
+     *                       status.
+     * @return the builder.
+     */
+    public Builder withNetworkMonitor(final NetworkMonitor networkMonitor) {
+      super.withNetworkMonitor(networkMonitor);
       return this;
     }
 

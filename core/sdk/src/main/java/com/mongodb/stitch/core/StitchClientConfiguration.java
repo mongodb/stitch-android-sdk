@@ -18,6 +18,7 @@ package com.mongodb.stitch.core;
 
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.Storage;
+import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.internal.net.Transport;
 
 import org.bson.codecs.configuration.CodecRegistries;
@@ -34,6 +35,7 @@ public class StitchClientConfiguration {
   private final Transport transport;
   private final Long defaultRequestTimeout;
   private final CodecRegistry codecRegistry;
+  private final NetworkMonitor networkMonitor;
 
   StitchClientConfiguration(final StitchClientConfiguration config) {
     this.baseUrl = config.baseUrl;
@@ -42,6 +44,7 @@ public class StitchClientConfiguration {
     this.transport = config.transport;
     this.defaultRequestTimeout = config.defaultRequestTimeout;
     this.codecRegistry = config.codecRegistry;
+    this.networkMonitor = config.networkMonitor;
   }
 
   private StitchClientConfiguration(
@@ -50,13 +53,16 @@ public class StitchClientConfiguration {
       final String dataDirectory,
       final Transport transport,
       final Long defaultRequestTimeout,
-      final CodecRegistry codecRegistry) {
+      final CodecRegistry codecRegistry,
+      final NetworkMonitor networkMonitor
+  ) {
     this.baseUrl = baseUrl;
     this.storage = storage;
     this.dataDirectory = dataDirectory;
     this.transport = transport;
     this.defaultRequestTimeout = defaultRequestTimeout;
     this.codecRegistry = codecRegistry;
+    this.networkMonitor = networkMonitor;
   }
 
   /**
@@ -119,6 +125,15 @@ public class StitchClientConfiguration {
   }
 
   /**
+   * Gets the network monitor.
+   *
+   * @return the network monitor.
+   */
+  public NetworkMonitor getNetworkMonitor() {
+    return networkMonitor;
+  }
+
+  /**
    * Gets the builder form of this configuration.
    *
    * @return the builder form of this configuration.
@@ -137,6 +152,7 @@ public class StitchClientConfiguration {
     private Transport transport;
     private Long defaultRequestTimeout;
     private CodecRegistry codecRegistry;
+    private NetworkMonitor networkMonitor;
 
     /**
      * Constructs a new builder.
@@ -150,6 +166,7 @@ public class StitchClientConfiguration {
       transport = config.transport;
       defaultRequestTimeout = config.defaultRequestTimeout;
       codecRegistry = config.codecRegistry;
+      networkMonitor = config.networkMonitor;
     }
 
     /**
@@ -228,6 +245,18 @@ public class StitchClientConfiguration {
     }
 
     /**
+     * Sets the {@link NetworkMonitor} that the client will used to check internet status.
+     *
+     * @param networkMonitor the {@link NetworkMonitor} that the client will use check internet
+     *                       status.
+     * @return the builder.
+     */
+    public Builder withNetworkMonitor(final NetworkMonitor networkMonitor) {
+      this.networkMonitor = networkMonitor;
+      return this;
+    }
+
+    /**
      * Gets the base URL of the Stitch server that the client will communicate with.
      *
      * @return the base URL of the Stitch server that the client will communicate with.
@@ -287,6 +316,15 @@ public class StitchClientConfiguration {
     }
 
     /**
+     * Gets the {@link NetworkMonitor} that the client will used to check internet status.
+     *
+     * @return the {@link NetworkMonitor} that the client will used to check internet status.
+     */
+    public NetworkMonitor getNetworkMonitor() {
+      return networkMonitor;
+    }
+
+    /**
      * Builds the {@link StitchAppClientConfiguration}.
      *
      * @return the built {@link StitchAppClientConfiguration}.
@@ -297,7 +335,13 @@ public class StitchClientConfiguration {
       }
 
       return new StitchClientConfiguration(
-          baseUrl, storage, dataDirectory, transport, defaultRequestTimeout, codecRegistry);
+          baseUrl,
+          storage,
+          dataDirectory,
+          transport,
+          defaultRequestTimeout,
+          codecRegistry,
+          networkMonitor);
     }
   }
 }
