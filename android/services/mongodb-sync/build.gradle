@@ -4,7 +4,8 @@ apply plugin: 'digital.wup.android-maven-publish'
 apply plugin: 'jacoco-android'
 apply plugin: 'com.jfrog.bintray'
 
-ext.pomDisplayName = "Android Sync MongoDB Service"
+// TODO: Add back for publishing
+//ext.pomDisplayName = "Android Sync MongoDB Service"
 
 buildscript {
     dependencies {

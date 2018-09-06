@@ -352,11 +352,10 @@ public class TodoListActivity extends AppCompatActivity {
   private void addTodoItem(final String task) {
     final Document newItem =
         new Document().append(TodoItem.TASK_KEY, task).append(TodoItem.CHECKED_KEY, false);
-    final BsonValue id =
-        items.insertOneAndSync(
-            newItem,
-            DefaultSyncConflictResolvers.<Document>remoteWins(),
-            itemUpdateListener).getInsertedId();
+    items.insertOneAndSync(
+        newItem,
+        DefaultSyncConflictResolvers.<Document>remoteWins(),
+        itemUpdateListener);
     todoAdapter.updateItems(getItems());
   }
 

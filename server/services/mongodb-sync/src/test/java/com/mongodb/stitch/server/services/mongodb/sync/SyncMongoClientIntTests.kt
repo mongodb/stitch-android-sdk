@@ -81,7 +81,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         client.auth.loginWithCredential(AnonymousCredential())
         mongoClientOpt = client.getServiceClient(SyncMongoClient.Factory, "mongodb1")
         (mongoClient as SyncMongoClientImpl).dataSynchronizer.stop()
-        remoteMongoClientOpt = client.getServiceClient(RemoteMongoClient.Factory, "mongodb1")
+        remoteMongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         goOnline()
     }
 

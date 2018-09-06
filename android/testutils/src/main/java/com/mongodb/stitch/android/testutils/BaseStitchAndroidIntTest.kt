@@ -19,7 +19,7 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
 
     private var clients: MutableList<StitchAppClient> = mutableListOf()
 
-    class TestNetworkMonitor: NetworkMonitor {
+    class TestNetworkMonitor : NetworkMonitor {
         var connectedState = false
         override fun isConnected(): Boolean {
             return connectedState
@@ -32,7 +32,6 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
     companion object {
         val testNetworkMonitor = TestNetworkMonitor()
     }
-
 
     @Before
     override fun setup() {

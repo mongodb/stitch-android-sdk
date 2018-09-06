@@ -21,7 +21,8 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
-import javax.annotation.Nullable;
+
+import javax.annotation.Nonnull;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
@@ -50,7 +51,7 @@ class FindOneByIdOperation<T> implements Operation<T> {
     this.remoteCollection = remoteCollection;
   }
 
-  public T execute(@Nullable final CoreStitchServiceClient service) {
+  public T execute(@Nonnull final CoreStitchServiceClient service) {
     final T localDocument =
         this.dataSynchronizer.findOneById(
             namespace, documentId, resultClass, service.getCodecRegistry());

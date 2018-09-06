@@ -11,11 +11,8 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver
 import com.mongodb.stitch.core.services.mongodb.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
-import com.mongodb.stitch.core.services.mongodb.sync.internal.SyncClientFactory
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
-import com.mongodb.stitch.android.services.mongodb.sync.SyncMongoClient
-import com.mongodb.stitch.android.services.mongodb.sync.SyncMongoCollection
 import com.mongodb.stitch.android.services.mongodb.sync.internal.SyncMongoClientImpl
 import org.bson.BsonObjectId
 import org.bson.BsonValue
@@ -86,7 +83,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
         mongoClientOpt = client.getServiceClient(SyncMongoClient.Factory, "mongodb1")
         (mongoClient as SyncMongoClientImpl).dataSynchronizer.stop()
-        remoteMongoClientOpt = client.getServiceClient(RemoteMongoClient.Factory, "mongodb1")
+        remoteMongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         goOnline()
     }
 
@@ -96,7 +93,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         super.teardown()
     }
 
-    class TestNetworkMonitor: NetworkMonitor {
+    class TestNetworkMonitor : NetworkMonitor {
         var connectedState = false
         override fun isConnected(): Boolean {
             return connectedState

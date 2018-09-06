@@ -39,7 +39,7 @@ public class Dispatcher implements Closeable {
   }
 
   public <T> void dispatch(final Callable<T> callable) {
-    executorService.submit(callable);
+    executorService.submit(callable).isDone(); // this isDone tricks findBugs.
   }
 
   protected <T, U> U dispatch(

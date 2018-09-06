@@ -10,17 +10,15 @@ import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import com.mongodb.stitch.server.core.Stitch
 import com.mongodb.stitch.server.core.StitchAppClient
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient
-import org.apache.commons.io.FileUtils
 import org.junit.After
 import org.junit.Before
-import java.io.File
 
 open class BaseStitchServerIntTest : BaseStitchIntTest() {
 
     private var clients: MutableList<StitchAppClient> = mutableListOf()
     private val dataDir = System.getProperty("java.io.tmpdir")
 
-    class TestNetworkMonitor: NetworkMonitor {
+    class TestNetworkMonitor : NetworkMonitor {
         var connectedState = false
         override fun isConnected(): Boolean {
             return connectedState

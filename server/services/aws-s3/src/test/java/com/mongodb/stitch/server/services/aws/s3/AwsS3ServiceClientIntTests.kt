@@ -44,6 +44,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     fun testPutObject() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)
@@ -135,6 +136,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     fun testSignPolicy() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)

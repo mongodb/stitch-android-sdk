@@ -19,10 +19,10 @@ package com.mongodb.stitch.android.services.mongodb.sync;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
-import com.mongodb.stitch.android.core.services.internal.StitchServiceClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.sync.internal.SyncMongoClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.sync.internal.SyncClientFactory;
 import java.io.Closeable;
 import java.util.Set;
@@ -59,7 +59,7 @@ public interface SyncMongoClient extends RemoteMongoClient, Closeable {
       new NamedServiceClientFactory<SyncMongoClient>() {
         @Override
         public SyncMongoClient getClient(
-            final StitchServiceClient service,
+            final CoreStitchServiceClient service,
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {

@@ -56,10 +56,13 @@ class UpdateOneByIdOperation<T> implements Operation<RemoteUpdateResult> {
     final UpdateResult localResult =
         this.dataSynchronizer.updateOneById(namespace, documentId, update);
     if (localResult.getMatchedCount() == 1) {
-      return new RemoteUpdateResult(localResult.getMatchedCount(), null);
+      return new RemoteUpdateResult(
+          localResult.getMatchedCount(),
+          localResult.getModifiedCount(),
+          null);
     }
     if (!this.networkMonitor.isConnected()) {
-      return new RemoteUpdateResult(0, null);
+      return new RemoteUpdateResult(0, 0, null);
     }
 
     final BsonDocument filter = new BsonDocument("_id", documentId);

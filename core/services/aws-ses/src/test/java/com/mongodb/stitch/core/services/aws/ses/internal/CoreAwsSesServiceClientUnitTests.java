@@ -35,7 +35,7 @@ import org.mockito.Mockito;
 public class CoreAwsSesServiceClientUnitTests {
 
   @Test
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "deprecation"})
   public void testSendMessage() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     final CoreAwsSesServiceClient client = new CoreAwsSesServiceClient(service);

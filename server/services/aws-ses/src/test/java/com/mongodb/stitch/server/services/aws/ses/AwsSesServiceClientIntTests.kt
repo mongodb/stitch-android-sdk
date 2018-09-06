@@ -36,6 +36,7 @@ class AwsSesServiceClientIntTests : BaseStitchServerIntTest() {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     fun testSendEmail() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)

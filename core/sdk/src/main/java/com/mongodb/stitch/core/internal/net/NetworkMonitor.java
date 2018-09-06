@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 
 public interface NetworkMonitor {
   boolean isConnected();
+
   void addNetworkStateListener(@Nonnull final StateListener listener);
 
   interface StateListener {

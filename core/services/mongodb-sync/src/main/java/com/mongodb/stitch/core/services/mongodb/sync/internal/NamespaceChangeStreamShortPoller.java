@@ -138,7 +138,7 @@ final class NamespaceChangeStreamShortPoller {
       if ((instanceConfig.getLastRemoteClusterTime() != null)) {
         remoteClusterTime = instanceConfig.getLastRemoteClusterTime();
       } else {
-        remoteClusterTime = service.callFunctionInternal(
+        remoteClusterTime = service.callFunction(
             "__stitch_alpha_getClusterTime",
             Collections.singletonList(args),
             BsonTimestamp.class);
@@ -159,16 +159,15 @@ final class NamespaceChangeStreamShortPoller {
     final List<Map.Entry<BsonValue, ChangeEvent<BsonDocument>>> remoteChangeEvents;
     try {
       remoteChangeEvents =
-          service.callFunctionInternal(
+          service.callFunction(
               "__stitch_alpha_watch",
               Collections.singletonList(args),
               ChangeEvent.changeEventsDecoder);
     } catch (final StitchServiceException ex) {
-      if (ex.getErrorCode() == StitchServiceErrorCode.MONGODB_ERROR) {
-        if (ex.getMessage().contains("40615")) {
-          // Resume token bad, drop it.
-          nsConfig.setLastRemoteResumeToken(null);
-        }
+      if (ex.getErrorCode() == StitchServiceErrorCode.MONGODB_ERROR
+          && ex.getMessage().contains("40615")) {
+        // Resume token bad, drop it.
+        nsConfig.setLastRemoteResumeToken(null);
       }
       logger.error(String.format(
           Locale.US,

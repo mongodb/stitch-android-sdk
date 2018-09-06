@@ -2,7 +2,8 @@ apply plugin: 'java-library'
 apply plugin: 'kotlin'
 apply plugin: 'com.jfrog.bintray'
 
-ext.pomDisplayName = "Server Sync MongoDB Service"
+// TODO: Add back for publishing
+//ext.pomDisplayName = "Server Sync MongoDB Service"
 
 buildscript {
     dependencies {
