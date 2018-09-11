@@ -1103,12 +1103,13 @@ public class DataSynchronizer {
     getLocalCollection(namespace).insertOne(docToInsert);
     final ChangeEvent<BsonDocument> event =
         changeEventForLocalInsert(namespace, docToInsert, true);
-    syncConfig.addSynchronizedDocument(
+    CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
         namespace,
         BsonUtils.getDocumentId(docToInsert),
         conflictResolver,
-        documentCodec)
-        .setSomePendingWrites(logicalT, event);
+        documentCodec);
+    config.setSomePendingWrites(logicalT, event);
+    checkState(config);
     addAndStartListeningToNamespace(namespace);
     if (eventListener != null) {
       watchDocument(namespace, BsonUtils.getDocumentId(docToInsert), eventListener, documentCodec);
@@ -1152,6 +1153,7 @@ public class DataSynchronizer {
         logicalT,
         event);
     emitEvent(documentId, event);
+    checkState(config);
     return UpdateResult.acknowledged(1, 1L, null);
   }
 
@@ -1256,6 +1258,7 @@ public class DataSynchronizer {
     config.setSomePendingWrites(
         logicalT, event);
     emitEvent(documentId, event);
+    checkState(config);
     return result;
   }
 
@@ -1399,6 +1402,12 @@ public class DataSynchronizer {
     }
   }
 
+  private void checkState(CoreDocumentSynchronizationConfig config) {
+      if (config.getState() == CoreDocumentSynchronizationConfig.State.DESYNC) {
+          desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+          config.resetState();
+      }
+  }
   // ----- Utilities -----
 
   /**
