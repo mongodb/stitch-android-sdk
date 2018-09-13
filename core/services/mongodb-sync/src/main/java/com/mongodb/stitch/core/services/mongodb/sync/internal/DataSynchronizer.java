@@ -1243,9 +1243,6 @@ public class DataSynchronizer {
       final BsonValue documentId
   ) {
     // TODO: lock down id
-      for (Object obj : localClient.getDatabase(namespace.getDatabaseName()).getCollection(namespace.getCollectionName()).find()) {
-          System.out.println(obj);
-      }
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
     if (config == null) {
