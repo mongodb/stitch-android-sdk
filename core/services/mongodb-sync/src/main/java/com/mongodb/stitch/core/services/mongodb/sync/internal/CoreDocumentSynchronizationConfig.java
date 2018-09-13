@@ -47,10 +47,6 @@ import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 
 class CoreDocumentSynchronizationConfig {
-  enum State {
-      NONE,
-      DESYNC
-  }
 
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
@@ -61,7 +57,6 @@ class CoreDocumentSynchronizationConfig {
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
   private long lastResolution;
   private BsonValue lastKnownRemoteVersion;
-  private State state;
 
   // TODO: How can this be trimmed? The same version could appear after we see it once. That
   // may be a non-issue.
@@ -86,7 +81,6 @@ class CoreDocumentSynchronizationConfig {
     this.lastKnownRemoteVersion = null;
     this.committedVersions = new HashSet<>();
     this.lastUncommittedChangeEvent = null;
-    this.state = State.NONE;
   }
 
   CoreDocumentSynchronizationConfig(
@@ -105,7 +99,6 @@ class CoreDocumentSynchronizationConfig {
     this.lastKnownRemoteVersion = config.lastKnownRemoteVersion;
     this.committedVersions = config.committedVersions;
     this.lastUncommittedChangeEvent = config.lastUncommittedChangeEvent;
-    this.state = State.NONE;
   }
 
   private CoreDocumentSynchronizationConfig(
@@ -126,7 +119,6 @@ class CoreDocumentSynchronizationConfig {
     this.docsColl = null;
     this.conflictResolver = null;
     this.documentCodec = null;
-    this.state = State.NONE;
   }
 
   static BsonDocument getDocFilter(
@@ -153,7 +145,7 @@ class CoreDocumentSynchronizationConfig {
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent =
-          this.coalesceChangeEvents(this.lastUncommittedChangeEvent, changeEvent);
+          coalesceChangeEvents(this.lastUncommittedChangeEvent, changeEvent);
       this.lastResolution = atTime;
       docsColl.replaceOne(
           getDocFilter(namespace, documentId),
@@ -235,15 +227,7 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-    public State getState() {
-      return state;
-    }
-
-    public void resetState() {
-      this.state = State.NONE;
-    }
-
-    public BsonValue getDocumentId() {
+  public BsonValue getDocumentId() {
     docLock.readLock().lock();
     try {
       return documentId;
@@ -332,7 +316,7 @@ class CoreDocumentSynchronizationConfig {
    * @param newestChangeEvent the newest change event known about for a document.
    * @return the possibly coalesced change event.
    */
-  private ChangeEvent<BsonDocument> coalesceChangeEvents(
+  private static ChangeEvent<BsonDocument> coalesceChangeEvents(
       final ChangeEvent<BsonDocument> lastUncommittedChangeEvent,
       final ChangeEvent<BsonDocument> newestChangeEvent
   ) {
@@ -356,9 +340,6 @@ class CoreDocumentSynchronizationConfig {
                 null,
                 newestChangeEvent.isLocalWritePending()
             );
-          case DELETE:
-            this.state = State.DESYNC;
-            break;
           default:
             break;
         }

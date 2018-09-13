@@ -154,7 +154,8 @@ public class DataSynchronizer {
     for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
       this.instanceChangeStreamListener.addNamespace(ns);
     }
-    this.instanceChangeStreamListener.start();
+    // TODO: Add back in
+//    this.instanceChangeStreamListener.start();
 
     this.logger =
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
@@ -1103,13 +1104,11 @@ public class DataSynchronizer {
     getLocalCollection(namespace).insertOne(docToInsert);
     final ChangeEvent<BsonDocument> event =
         changeEventForLocalInsert(namespace, docToInsert, true);
-    CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
+    syncConfig.addSynchronizedDocument(
         namespace,
         BsonUtils.getDocumentId(docToInsert),
         conflictResolver,
-        documentCodec);
-    config.setSomePendingWrites(logicalT, event);
-    checkState(config);
+        documentCodec).setSomePendingWrites(logicalT, event);
     addAndStartListeningToNamespace(namespace);
     if (eventListener != null) {
       watchDocument(namespace, BsonUtils.getDocumentId(docToInsert), eventListener, documentCodec);
@@ -1153,7 +1152,6 @@ public class DataSynchronizer {
         logicalT,
         event);
     emitEvent(documentId, event);
-    checkState(config);
     return UpdateResult.acknowledged(1, 1L, null);
   }
 
@@ -1245,20 +1243,30 @@ public class DataSynchronizer {
       final BsonValue documentId
   ) {
     // TODO: lock down id
+      for (Object obj : localClient.getDatabase(namespace.getDatabaseName()).getCollection(namespace.getCollectionName()).find()) {
+          System.out.println(obj);
+      }
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
     if (config == null) {
       return DeleteResult.acknowledged(0);
     }
 
-    final DeleteResult result = getLocalCollection(namespace)
+      final DeleteResult result = getLocalCollection(namespace)
         .deleteOne(getDocumentIdFilter(documentId));
     final ChangeEvent<BsonDocument> event =
         changeEventForLocalDelete(namespace, documentId, true);
+
+    if (config.getLastUncommittedChangeEvent() != null &&
+          config.getLastUncommittedChangeEvent().getOperationType() ==
+            ChangeEvent.OperationType.INSERT) {
+        desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+        return result;
+    }
+
     config.setSomePendingWrites(
         logicalT, event);
     emitEvent(documentId, event);
-    checkState(config);
     return result;
   }
 
@@ -1400,13 +1408,6 @@ public class DataSynchronizer {
     } finally {
       listenersLock.unlock();
     }
-  }
-
-  private void checkState(CoreDocumentSynchronizationConfig config) {
-      if (config.getState() == CoreDocumentSynchronizationConfig.State.DESYNC) {
-          desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
-          config.resetState();
-      }
   }
   // ----- Utilities -----
 
