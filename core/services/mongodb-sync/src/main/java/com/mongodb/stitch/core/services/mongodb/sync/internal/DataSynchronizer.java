@@ -1245,15 +1245,17 @@ public class DataSynchronizer {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
+
     if (config == null) {
       return DeleteResult.acknowledged(0);
     }
 
-      final DeleteResult result = getLocalCollection(namespace)
+    final DeleteResult result = getLocalCollection(namespace)
         .deleteOne(getDocumentIdFilter(documentId));
     final ChangeEvent<BsonDocument> event =
         changeEventForLocalDelete(namespace, documentId, true);
 
+    // this block is to trigger coalescence for a delete after insert
     if (config.getLastUncommittedChangeEvent() != null &&
           config.getLastUncommittedChangeEvent().getOperationType() ==
             ChangeEvent.OperationType.INSERT) {

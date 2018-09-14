@@ -156,7 +156,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     @Test
     fun testWatch() {
-        testSyncInBothDirections({
+        testSyncInBothDirections {
             val coll = getTestColl()
 
             val remoteColl = getTestCollRemote()
@@ -200,10 +200,10 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             // 2. insertOneAndSync should work offline and then sync the document when online.
             goOffline()
             val doc3 = Document("so", "syncy")
-            val insResult = coll.insertOneAndSync(doc3, {
+            val insResult = coll.insertOneAndSync(doc3) {
                 _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
                 Document("hello", "world")
-            })
+            }
             assertEquals(doc3, withoutVersionId(coll.findOneById(insResult.insertedId)!!))
             listenAndSync()
             assertNull(remoteColl.find(Document("_id", doc3["_id"])).first())
@@ -235,7 +235,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             listenAndSync()
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
-        })
+        }
     }
 
     @Test
@@ -330,7 +330,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     @Test
     fun testUpdateLocalWins() {
-        testSyncInBothDirections({
+        testSyncInBothDirections {
             val coll = getTestColl()
 
             val remoteColl = getTestCollRemote()
@@ -360,12 +360,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             listenAndSync()
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
-        })
+        }
     }
 
     @Test
     fun testDeleteOneByIdNoConflict() {
-        testSyncInBothDirections({
+        testSyncInBothDirections {
             val coll = getTestColl()
 
             val remoteColl = getTestCollRemote()
@@ -392,7 +392,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             listenAndSync()
             assertNull(remoteColl.find(doc1Filter).first())
             assertNull(coll.findOneById(doc1Id))
-        })
+        }
     }
 
     @Test
