@@ -154,7 +154,8 @@ public class DataSynchronizer {
     for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
       this.instanceChangeStreamListener.addNamespace(ns);
     }
-    this.instanceChangeStreamListener.start();
+    // TODO: Add back in
+//    this.instanceChangeStreamListener.start();
 
     this.logger =
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
@@ -1107,8 +1108,7 @@ public class DataSynchronizer {
         namespace,
         BsonUtils.getDocumentId(docToInsert),
         conflictResolver,
-        documentCodec)
-        .setSomePendingWrites(logicalT, event);
+        documentCodec).setSomePendingWrites(logicalT, event);
     addAndStartListeningToNamespace(namespace);
     if (eventListener != null) {
       watchDocument(namespace, BsonUtils.getDocumentId(docToInsert), eventListener, documentCodec);
@@ -1245,6 +1245,7 @@ public class DataSynchronizer {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
+
     if (config == null) {
       return DeleteResult.acknowledged(0);
     }
@@ -1253,6 +1254,15 @@ public class DataSynchronizer {
         .deleteOne(getDocumentIdFilter(documentId));
     final ChangeEvent<BsonDocument> event =
         changeEventForLocalDelete(namespace, documentId, true);
+
+    // this block is to trigger coalescence for a delete after insert
+    if (config.getLastUncommittedChangeEvent() != null &&
+          config.getLastUncommittedChangeEvent().getOperationType() ==
+            ChangeEvent.OperationType.INSERT) {
+        desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+        return result;
+    }
+
     config.setSomePendingWrites(
         logicalT, event);
     emitEvent(documentId, event);
@@ -1398,7 +1408,6 @@ public class DataSynchronizer {
       listenersLock.unlock();
     }
   }
-
   // ----- Utilities -----
 
   /**

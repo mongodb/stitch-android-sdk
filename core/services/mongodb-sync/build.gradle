@@ -1,5 +1,6 @@
 apply plugin: 'java-library'
 apply plugin: 'com.jfrog.bintray'
+apply plugin: 'kotlin'
 
 // TODO: Add back for publishing
 //ext.pomDisplayName = "Core Sync MongoDB Service"
@@ -7,6 +8,7 @@ apply plugin: 'com.jfrog.bintray'
 buildscript {
     dependencies {
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
     }
 }
 
@@ -15,6 +17,17 @@ dependencies {
     implementation project(':core:core-services:stitch-core-services-mongodb-remote')
 
     api('org.mongodb:mongodb-driver-embedded:3.8.1')
+
+    testImplementation project(':core:stitch-core-admin-client')
+    testImplementation project(':core:stitch-core-testutils')
+
+    testImplementation project(':core:core-services:stitch-core-services-mongodb-local')
+    testImplementation project(":server:stitch-server-sdk")
+    testImplementation project(':server:server-services:stitch-server-services-mongodb-remote')
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation "org.mockito:mockito-core:2.18.3"
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_7
