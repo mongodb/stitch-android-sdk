@@ -23,6 +23,7 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteAggregateIterabl
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteAggregateIterableImpl;
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteFindIterableImpl;
+import com.mongodb.stitch.android.services.mongodb.sync.Sync;
 import com.mongodb.stitch.android.services.mongodb.sync.SyncMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
@@ -30,14 +31,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
-import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
 import com.mongodb.stitch.core.services.mongodb.sync.internal.CoreSyncMongoCollection;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -46,6 +42,7 @@ public final class SyncMongoCollectionImpl<DocumentT>
 
   private final CoreSyncMongoCollection<DocumentT> proxy;
   private final TaskDispatcher dispatcher;
+  private final Sync<DocumentT> sync;
 
   SyncMongoCollectionImpl(
       final CoreSyncMongoCollection<DocumentT> coll,
@@ -53,6 +50,7 @@ public final class SyncMongoCollectionImpl<DocumentT>
   ) {
     this.proxy = coll;
     this.dispatcher = dispatcher;
+    this.sync = new SyncImpl<>(coll.sync(), dispatcher);
   }
 
   /**
@@ -348,158 +346,8 @@ public final class SyncMongoCollectionImpl<DocumentT>
     });
   }
 
-  /**
-   * Requests that the given document _id be synchronized.
-   * @param documentId the document _id to synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   */
-  public void sync(
-      final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver
-  ) {
-    proxy.sync(documentId, conflictResolver);
-  }
-
-
-  /**
-   * Requests that the given document _id be synchronized.
-   * @param documentId the document _id to synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @param eventListener the event listener to invoke when a a change event happens for the
-   *                      document.
-   */
-  public void sync(
-      final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver,
-      final ChangeEventListener<DocumentT> eventListener) {
-    proxy.sync(documentId, conflictResolver, eventListener);
-  }
-
-  /**
-   * Returns the set of synchronized documents in a namespace.
-   *
-   * @return the set of synchronized documents in a namespace.
-   */
   @Override
-  public Set<DocumentSynchronizationConfig> getSynchronizedDocuments() {
-    return proxy.getSynchronizedDocuments();
-  }
-
-  /**
-   * Stops synchronizing the given document _id. Any uncommitted writes will be lost.
-   *
-   * @param documentId the _id of the document to desynchronize.
-   */
-  @Override
-  public void desync(final BsonValue documentId) {
-    proxy.desync(documentId);
-  }
-
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return a task containing the document if found locally or remotely.
-   */
-  public Task<DocumentT> findOneById(final BsonValue documentId) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOneById(documentId);
-      }
-    });
-  }
-
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param resultClass the class to decode each document into
-   * @param <ResultT>   the target document type of the iterable.
-   * @return a task containing the document if found locally or remotely.
-   */
-  public <ResultT> Task<ResultT> findOneById(
-      final BsonValue documentId,
-      final Class<ResultT> resultClass
-  ) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOneById(documentId, resultClass);
-      }
-    });
-  }
-
-  /**
-   * Updates a document by the given id. It is first searched for in the local synchronized cache
-   * and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param update the update specifier.
-   * @return a task containing the result of the local or remote update.
-   */
-  public Task<RemoteUpdateResult> updateOneById(
-      final BsonValue documentId,
-      final Bson update
-  ) {
-    return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
-      @Override
-      public RemoteUpdateResult call() {
-        return proxy.updateOneById(documentId, update);
-      }
-    });
-  }
-
-  /**
-   * Inserts a single document and begins to synchronize it.
-   *
-   * @param document the document to insert and synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @return the result of the insertion.
-   */
-  public RemoteInsertOneResult insertOneAndSync(
-      final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver
-  ) {
-    return proxy.insertOneAndSync(document, conflictResolver);
-  }
-
-  /**
-   * Inserts a single document and begins to synchronize it.
-   *
-   * @param document the document to insert and synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @param eventListener the event listener to invoke when a a change event happens for the
-   *                      document.
-   * @return the result of the insertion.
-   */
-  public RemoteInsertOneResult insertOneAndSync(
-      final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver,
-      final ChangeEventListener<DocumentT> eventListener
-  ) {
-    return proxy.insertOneAndSync(document, conflictResolver, eventListener);
-  }
-
-  /**
-   * Deletes a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return a task containing the result of the local or remote update.
-   */
-  public Task<RemoteDeleteResult> deleteOneById(final BsonValue documentId) {
-    return dispatcher.dispatchTask(new Callable<RemoteDeleteResult>() {
-      @Override
-      public RemoteDeleteResult call() {
-        return proxy.deleteOneById(documentId);
-      }
-    });
+  public Sync<DocumentT> sync() {
+    return this.sync;
   }
 }

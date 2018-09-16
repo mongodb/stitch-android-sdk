@@ -30,6 +30,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteAggreg
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
+import com.mongodb.stitch.core.services.mongodb.sync.CoreSync;
 import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
 import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
 import java.util.HashSet;
@@ -48,9 +49,9 @@ public class CoreSyncMongoCollectionImpl<DocumentT> implements CoreSyncMongoColl
   private final CoreRemoteMongoCollection<DocumentT> proxy;
   private final DataSynchronizer dataSynchronizer;
   private final NetworkMonitor networkMonitor;
-  private final SyncOperations<DocumentT> syncOperations;
   private final CoreStitchServiceClient service;
   private final MongoDatabase tempDb;
+  private final CoreSync<DocumentT> sync;
 
   CoreSyncMongoCollectionImpl(
       final CoreRemoteMongoCollection<DocumentT> proxy,
@@ -62,14 +63,22 @@ public class CoreSyncMongoCollectionImpl<DocumentT> implements CoreSyncMongoColl
     this.proxy = proxy;
     this.dataSynchronizer = dataSynchronizer;
     this.networkMonitor = networkMonitor;
-    this.syncOperations = new SyncOperations<>(
+    this.sync = new CoreSyncImpl<>(
         proxy.getNamespace(),
         proxy.getDocumentClass(),
         dataSynchronizer,
-        networkMonitor,
-        proxy.getCodecRegistry(),
-        proxy,
-        tempDb);
+        service,
+        new SyncOperations<>(
+                proxy.getNamespace(),
+                proxy.getDocumentClass(),
+                dataSynchronizer,
+                networkMonitor,
+                proxy.getCodecRegistry(),
+                proxy,
+                tempDb),
+        proxy.getCodecRegistry()
+    );
+
     this.service = service.withCodecRegistry(proxy.getCodecRegistry());
     this.tempDb = tempDb;
   }
@@ -181,33 +190,12 @@ public class CoreSyncMongoCollectionImpl<DocumentT> implements CoreSyncMongoColl
     return find(filter, proxy.getDocumentClass());
   }
 
-  /**
-   * Finds all documents in the collection.
-   *
-   * @param filter      the query filter
-   * @param resultClass the class to decode each document into
-   * @param <ResultT>   the target document type of the iterable.
-   * @return the find iterable interface
-   */
-  public <ResultT> CoreRemoteFindIterable<ResultT> find(
-      final Bson filter,
-      final Class<ResultT> resultClass
-  ) {
-    return createFindIterable(filter, resultClass);
-  }
+    @Override
+    public <ResultT> CoreRemoteFindIterable<ResultT> find(Bson filter, Class<ResultT> resultClass) {
+        return this.proxy.find(filter, resultClass);
+    }
 
-  private <ResultT> CoreRemoteFindIterable<ResultT> createFindIterable(
-      final Bson filter,
-      final Class<ResultT> resultClass
-  ) {
-    return new CoreSyncFindIterableImpl<>(
-        filter,
-        resultClass,
-        service,
-        syncOperations);
-  }
-
-  /**
+    /**
    * Aggregates documents according to the specified aggregation pipeline.
    *
    * @param pipeline the aggregation pipeline
@@ -333,151 +321,12 @@ public class CoreSyncMongoCollectionImpl<DocumentT> implements CoreSyncMongoColl
     return proxy.updateMany(filter, update, updateOptions);
   }
 
-  /*
-     Sync enabled functionality.
-   */
-
   /**
-   * Requests that the given document _id be synchronized.
-   * @param documentId the document _id to synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   */
-  public void sync(
-      final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver
-  ) {
-    dataSynchronizer.syncDocumentFromRemote(
-        getNamespace(), documentId, conflictResolver, getCodecRegistry().get(getDocumentClass()));
-  }
-
-  /**
-   * Requests that the given document _id be synchronized.
-   * @param documentId the document _id to synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @param eventListener the event listener to invoke when a a change event happens for the
-   *                      document.
-   */
-  public void sync(
-      final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver,
-      final ChangeEventListener<DocumentT> eventListener
-  ) {
-    dataSynchronizer.syncDocumentFromRemote(
-        getNamespace(), documentId, conflictResolver, getCodecRegistry().get(getDocumentClass()));
-    dataSynchronizer.watchDocument(
-        getNamespace(), documentId, eventListener, getCodecRegistry().get(getDocumentClass()));
-  }
-
-  /**
-   * Returns the set of synchronized documents in a namespace.
+   * A set of synchronization related operations at the collection level.
    *
-   * @return the set of synchronized documents in a namespace.
+   * @return a set of sync related operations
    */
-  @Override
-  public Set<DocumentSynchronizationConfig> getSynchronizedDocuments() {
-    final Set<DocumentSynchronizationConfig> configs = new HashSet<>();
-    for (final CoreDocumentSynchronizationConfig config :
-        dataSynchronizer.getSynchronizedDocuments(proxy.getNamespace())) {
-      configs.add(new DocumentSynchronizationConfigImpl(config));
-    }
-    return configs;
-  }
-
-  /**
-   * Stops synchronizing the given document _id. Any uncommitted writes will be lost.
-   *
-   * @param documentId the _id of the document to desynchronize.
-   */
-  @Override
-  public void desync(final BsonValue documentId) {
-    dataSynchronizer.desyncDocumentFromRemote(getNamespace(), documentId);
-  }
-
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return the document if found locally or remotely.
-   */
-  @Nullable
-  public DocumentT findOneById(final BsonValue documentId) {
-    return findOneById(documentId, proxy.getDocumentClass());
-  }
-
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param resultClass the class to decode each document into
-   * @param <ResultT>   the target document type of the iterable.
-   * @return the document if found locally or remotely.
-   */
-  @Nullable
-  public <ResultT> ResultT findOneById(
-      final BsonValue documentId,
-      final Class<ResultT> resultClass
-  ) {
-    return syncOperations.findOneById(documentId, resultClass).execute(service);
-  }
-
-  /**
-   * Updates a document by the given id. It is first searched for in the local synchronized cache
-   * and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param update the update specifier.
-   * @return the result of the local or remote update.
-   */
-  public RemoteUpdateResult updateOneById(final BsonValue documentId, final Bson update) {
-    return syncOperations.updateOneById(documentId, update).execute(service);
-  }
-
-  /**
-   * Inserts a single document and begins to synchronize it.
-   *
-   * @param document the document to insert and synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @return the result of the insertion.
-   */
-  public RemoteInsertOneResult insertOneAndSync(
-      final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver
-  ) {
-    return syncOperations.insertOneAndSync(document, conflictResolver).execute(service);
-  }
-
-  /**
-   * Inserts a single document and begins to synchronize it.
-   *
-   * @param document the document to insert and synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @param eventListener the event listener to invoke when a a change event happens for the
-   *                      document.
-   * @return the result of the insertion.
-   */
-  public RemoteInsertOneResult insertOneAndSync(
-      final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver,
-      final ChangeEventListener<DocumentT> eventListener
-  ) {
-    return syncOperations
-        .insertOneAndSync(document, conflictResolver, eventListener).execute(service);
-  }
-
-  /**
-   * Deletes a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return the result of the local or remote update.
-   */
-  public RemoteDeleteResult deleteOneById(final BsonValue documentId) {
-    return syncOperations.deleteOneById(documentId).execute(service);
+  public CoreSync<DocumentT> sync() {
+      return this.sync;
   }
 }

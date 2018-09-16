@@ -16,18 +16,8 @@
 
 package com.mongodb.stitch.android.services.mongodb.sync;
 
-import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
-import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
-import java.util.Set;
-import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.conversions.Bson;
 
 /**
  * The SyncMongoCollection interface.
@@ -59,103 +49,9 @@ public interface SyncMongoCollection<DocumentT> extends RemoteMongoCollection<Do
   SyncMongoCollection<DocumentT> withCodecRegistry(final CodecRegistry codecRegistry);
 
   /**
-   * Requests that the given document _id be synchronized.
-   * @param documentId the document _id to synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   */
-  void sync(final BsonValue documentId, final SyncConflictResolver<DocumentT> conflictResolver);
-
-  /**
-   * Requests that the given document _id be synchronized.
-   * @param documentId the document _id to synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @param eventListener the event listener to invoke when a a change event happens for the
-   *                      document.
-   */
-  void sync(
-      final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver,
-      final ChangeEventListener<DocumentT> eventListener);
-
-  /**
-   * Returns the set of synchronized documents in a namespace.
+   * A set of synchronization related operations at the collection level.
    *
-   * @return the set of synchronized documents in a namespace.
+   * @return a set of sync related operations
    */
-  Set<DocumentSynchronizationConfig> getSynchronizedDocuments();
-
-  /**
-   * Stops synchronizing the given document _id. Any uncommitted writes will be lost.
-   *
-   * @param documentId the _id of the document to desynchronize.
-   */
-  void desync(final BsonValue documentId);
-
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return a task containing the document if found locally or remotely.
-   */
-  Task<DocumentT> findOneById(final BsonValue documentId);
-
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param resultClass the class to decode each document into
-   * @param <ResultT>   the target document type of the iterable.
-   * @return a task containing the document if found locally or remotely.
-   */
-  <ResultT> Task<ResultT> findOneById(final BsonValue documentId, final Class<ResultT> resultClass);
-
-  /**
-   * Updates a document by the given id. It is first searched for in the local synchronized cache
-   * and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param update the update specifier.
-   * @return a task containing the result of the local or remote update.
-   */
-  Task<RemoteUpdateResult> updateOneById(
-      final BsonValue documentId, final Bson update);
-
-  /**
-   * Inserts a single document and begins to synchronize it.
-   *
-   * @param document the document to insert and synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @return the result of the insertion.
-   */
-  RemoteInsertOneResult insertOneAndSync(
-      final DocumentT document, final SyncConflictResolver<DocumentT> conflictResolver);
-
-  /**
-   * Inserts a single document and begins to synchronize it.
-   *
-   * @param document the document to insert and synchronize.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @param eventListener the event listener to invoke when a a change event happens for the
-   *                      document.
-   * @return the result of the insertion.
-   */
-  RemoteInsertOneResult insertOneAndSync(
-      final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver,
-      final ChangeEventListener<DocumentT> eventListener);
-
-  /**
-   * Deletes a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return a task containing the result of the local or remote update.
-   */
-  Task<RemoteDeleteResult> deleteOneById(final BsonValue documentId);
+  Sync<DocumentT> sync();
 }

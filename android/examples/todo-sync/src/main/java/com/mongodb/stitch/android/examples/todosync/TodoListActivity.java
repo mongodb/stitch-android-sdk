@@ -38,6 +38,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
+import com.mongodb.stitch.android.services.mongodb.sync.Sync;
 import com.mongodb.stitch.android.services.mongodb.sync.SyncMongoClient;
 import com.mongodb.stitch.android.services.mongodb.sync.SyncMongoCollection;
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential;
@@ -50,6 +51,7 @@ import com.mongodb.stitch.core.services.mongodb.sync.internal.ChangeEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
@@ -91,14 +93,18 @@ public class TodoListActivity extends AppCompatActivity {
 
     final SyncMongoClient mongoClient = client.getServiceClient(
         SyncMongoClient.Factory, "Like");
-    items =
-        mongoClient
-            .getDatabase(TodoItem.TODO_LIST_DATABASE)
-            .getCollection(TodoItem.TODO_LIST_COLLECTION);
+    items = mongoClient
+      .getDatabase(TodoItem.TODO_LIST_DATABASE)
+      .getCollection(TodoItem.TODO_LIST_COLLECTION);
+
+    items.sync().configure(DefaultSyncConflictResolvers.<Document>remoteWins(), itemUpdateListener);
+
     lists =
         mongoClient
             .getDatabase(TODO_LISTS_DATABASE)
             .getCollection(TODO_LISTS_COLLECTION, BsonDocument.class);
+
+    lists.sync().configure(DefaultSyncConflictResolvers.<BsonDocument>remoteWins(), listUpdateListener);
 
     // Set up recycler view for to-do items
     final RecyclerView todoRecyclerView = findViewById(R.id.rv_todo_items);
@@ -120,7 +126,7 @@ public class TodoListActivity extends AppCompatActivity {
               updateDoc.append("$unset", new Document(TodoItem.DONE_DATE_KEY, ""));
             }
 
-            items.updateOneById(new BsonObjectId(itemId), updateDoc);
+            items.sync().updateOneById(new BsonObjectId(itemId), updateDoc);
           }
 
           @Override
@@ -131,30 +137,13 @@ public class TodoListActivity extends AppCompatActivity {
     todoRecyclerView.setAdapter(todoAdapter);
     todoAdapter.updateItems(getItems());
 
-    for (final DocumentSynchronizationConfig config : items.getSynchronizedDocuments()) {
-      items.sync(
-          config.getDocumentId(),
-          DefaultSyncConflictResolvers.<Document>remoteWins(),
-          new ChangeEventListener<Document>() {
-            @Override
-            public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
-              if (!event.isLocalWritePending()) {
-                touchList();
-              }
-            }
-          });
-    }
+    Set<BsonValue> syncedIds = items.sync().getSyncedIds();
+    items.sync().syncMany(syncedIds.toArray(new BsonValue[syncedIds.size()]));
 
-    if (lists.getSynchronizedDocuments().isEmpty()) {
-      lists.insertOneAndSync(
-          new BsonDocument("_id", new BsonString("mylist")),
-          DefaultSyncConflictResolvers.<BsonDocument>remoteWins(),
-          listUpdateListener);
+    if (lists.sync().getSyncedIds().isEmpty()) {
+      lists.sync().insertOneAndSync(new BsonDocument("_id", new BsonString("mylist")));
     } else {
-      lists.sync(
-          new BsonString("mylist"),
-          DefaultSyncConflictResolvers.<BsonDocument>remoteWins(),
-          listUpdateListener);
+      lists.sync().syncOne(new BsonString("mylist"));
     }
   }
 
@@ -169,9 +158,10 @@ public class TodoListActivity extends AppCompatActivity {
     @Override
     public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
       if (!event.isLocalWritePending()) {
-        lists.updateOneById(
+        lists.sync().updateOneById(
             new BsonString("mylist"),
             new BsonDocument("$inc", new BsonDocument("i", new BsonInt64(1))));
+        touchList();
       }
     }
   }
@@ -238,10 +228,7 @@ public class TodoListActivity extends AppCompatActivity {
             for (final Document doc : task.getResult()) {
               if (TodoItem.isTodoItem(doc)) {
                 final TodoItem item = new TodoItem(doc);
-                items.sync(
-                    new BsonObjectId(item.getId()),
-                    DefaultSyncConflictResolvers.<Document>remoteWins(),
-                    itemUpdateListener);
+                items.sync().syncOne(new BsonObjectId(item.getId()));
                 todoItems.add(item);
               }
             }
@@ -267,10 +254,7 @@ public class TodoListActivity extends AppCompatActivity {
             for (final Document doc : task.getResult()) {
               if (TodoItem.isTodoItem(doc)) {
                 final TodoItem item = new TodoItem(doc);
-                items.sync(
-                    new BsonObjectId(item.getId()),
-                    DefaultSyncConflictResolvers.<Document>remoteWins(),
-                    itemUpdateListener);;
+                items.sync().syncOne(new BsonObjectId(item.getId()));
                 todoItems.add(item);
               }
             }
@@ -343,7 +327,7 @@ public class TodoListActivity extends AppCompatActivity {
   }
 
   private void updateTodoItemTask(final ObjectId itemId, final String newTask) {
-    items.updateOneById(
+    items.sync().updateOneById(
         new BsonObjectId(itemId),
         new Document("$set", new Document(TodoItem.TASK_KEY, newTask)));
     todoAdapter.updateItems(getItems());
@@ -352,15 +336,12 @@ public class TodoListActivity extends AppCompatActivity {
   private void addTodoItem(final String task) {
     final Document newItem =
         new Document().append(TodoItem.TASK_KEY, task).append(TodoItem.CHECKED_KEY, false);
-    items.insertOneAndSync(
-        newItem,
-        DefaultSyncConflictResolvers.<Document>remoteWins(),
-        itemUpdateListener);
+    items.sync().insertOneAndSync(newItem);
     todoAdapter.updateItems(getItems());
   }
 
   private void touchList() {
-    lists.updateOneById(
+    lists.sync().updateOneById(
         new BsonString("mylist"),
         new BsonDocument("$inc", new BsonDocument("i", new BsonInt64(1))));
   }
@@ -372,7 +353,7 @@ public class TodoListActivity extends AppCompatActivity {
       public void onSuccess(final List<TodoItem> todoItems) {
         for (final TodoItem item : todoItems) {
           if (item.getChecked()) {
-            tasks.add(items.deleteOneById(new BsonObjectId(item.getId())));
+            tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
           }
         }
         Tasks.whenAllComplete(tasks).addOnCompleteListener(new OnCompleteListener<List<Task<?>>>() {
@@ -391,7 +372,7 @@ public class TodoListActivity extends AppCompatActivity {
       @Override
       public void onSuccess(final List<TodoItem> todoItems) {
         for (final TodoItem item : todoItems) {
-          tasks.add(items.deleteOneById(new BsonObjectId(item.getId())));
+          tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
         }
         Tasks.whenAllComplete(tasks).addOnCompleteListener(new OnCompleteListener<List<Task<?>>>() {
           @Override
