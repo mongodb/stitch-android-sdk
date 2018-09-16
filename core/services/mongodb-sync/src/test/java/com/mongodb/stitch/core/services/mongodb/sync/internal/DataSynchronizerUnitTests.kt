@@ -8,7 +8,7 @@ import com.mongodb.stitch.core.services.internal .CoreStitchServiceClient
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.*
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler
 import junit.framework.Assert.*
 import org.bson.*
 import org.bson.codecs.BsonDocumentCodec
@@ -160,8 +160,7 @@ class DataSynchronizerUnitTests {
 
     private fun insertOneAndSync(dataSpy: DataSynchronizer,
                                  doc: BsonDocument,
-                                 conflictResolver: SyncConflictResolver<BsonDocument> = SyncConflictResolver {
-                                     _, _, _ ->
+                                 conflictHandler: ConflictHandler<BsonDocument> = ConflictHandler { _, _, _ ->
                                      doc
                                  },
                                  changeEventListener: ChangeEventListener<BsonDocument> = ChangeEventListener {
@@ -170,7 +169,7 @@ class DataSynchronizerUnitTests {
         dataSpy.insertOneAndSync(
                 namespace,
                 doc,
-                conflictResolver,
+                conflictHandler,
                 changeEventListener,
                 BsonDocumentCodec()
         )

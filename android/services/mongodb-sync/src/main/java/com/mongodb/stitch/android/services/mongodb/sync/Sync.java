@@ -5,7 +5,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 
 import org.bson.BsonValue;
@@ -21,7 +21,7 @@ public interface Sync<DocumentT> {
    * @param changeEventListener the event listener to invoke when a a change event happens for the
    *                         document.
    */
-  void configure(SyncConflictResolver<DocumentT> conflictResolver,
+  void configure(ConflictHandler<DocumentT> conflictResolver,
                  ChangeEventListener<DocumentT> changeEventListener);
 
   /**

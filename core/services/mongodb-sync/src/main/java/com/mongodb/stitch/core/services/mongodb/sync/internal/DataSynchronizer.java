@@ -43,7 +43,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -910,7 +911,7 @@ public class DataSynchronizer {
    */
   @SuppressWarnings("unchecked")
   private static Object resolveConflictWithResolver(
-      final SyncConflictResolver conflictResolver,
+      final ConflictHandler conflictResolver,
       final BsonValue documentId,
       final ChangeEvent localEvent,
       final ChangeEvent remoteEvent
@@ -1010,7 +1011,7 @@ public class DataSynchronizer {
   public <T> void syncDocumentFromRemote(
       final MongoNamespace namespace,
       final BsonValue documentId,
-      final SyncConflictResolver<T> conflictResolver,
+      final ConflictHandler<T> conflictResolver,
       final Codec<T> documentCodec
   ) {
     syncConfig
@@ -1096,7 +1097,7 @@ public class DataSynchronizer {
   public <T> void insertOneAndSync(
       final MongoNamespace namespace,
       final BsonDocument document,
-      final SyncConflictResolver<T> conflictResolver,
+      final ConflictHandler<T> conflictResolver,
       final ChangeEventListener<T> eventListener,
       final Codec<T> documentCodec
   ) {

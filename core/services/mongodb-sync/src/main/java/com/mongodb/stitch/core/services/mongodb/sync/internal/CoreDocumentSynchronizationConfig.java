@@ -20,7 +20,7 @@ import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -51,7 +51,7 @@ class CoreDocumentSynchronizationConfig {
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
   private final BsonValue documentId;
-  private final SyncConflictResolver conflictResolver;
+  private final ConflictHandler conflictResolver;
   private final Codec documentCodec;
   private final ReadWriteLock docLock;
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
@@ -68,7 +68,7 @@ class CoreDocumentSynchronizationConfig {
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
       final BsonValue documentId,
-      final SyncConflictResolver conflictResolver,
+      final ConflictHandler conflictResolver,
       final Codec documentCodec
   ) {
     this.docsColl = docsColl;
@@ -86,7 +86,7 @@ class CoreDocumentSynchronizationConfig {
   CoreDocumentSynchronizationConfig(
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final CoreDocumentSynchronizationConfig config,
-      final SyncConflictResolver conflictResolver,
+      final ConflictHandler conflictResolver,
       final Codec documentCodec
   ) {
     this.docsColl = docsColl;
@@ -245,7 +245,7 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public SyncConflictResolver getConflictResolver() {
+  public ConflictHandler getConflictResolver() {
     docLock.readLock().lock();
     try {
       return conflictResolver;

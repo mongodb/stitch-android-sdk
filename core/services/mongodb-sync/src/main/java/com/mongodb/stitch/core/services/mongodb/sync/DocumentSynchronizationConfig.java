@@ -37,7 +37,7 @@ public interface DocumentSynchronizationConfig {
    * @return the conflict resolver for this document.
    */
   @Nullable
-  SyncConflictResolver getConflictResolver();
+  ConflictHandler getConflictResolver();
 
   /**
    * Returns whether or not this document has pending writes that have not yet been committed

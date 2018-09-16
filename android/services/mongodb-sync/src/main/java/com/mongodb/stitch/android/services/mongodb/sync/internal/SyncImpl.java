@@ -7,8 +7,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.sync.CoreSync;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteFindIterableImpl;
 
@@ -29,7 +29,7 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(SyncConflictResolver<DocumentT> conflictResolver,
+  public void configure(ConflictHandler<DocumentT> conflictResolver,
                         ChangeEventListener<DocumentT> changeEventListener) {
     this.proxy.configure(conflictResolver, changeEventListener);
   }

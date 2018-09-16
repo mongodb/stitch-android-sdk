@@ -20,8 +20,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -64,7 +64,7 @@ public interface SyncMongoCollection<DocumentT> extends RemoteMongoCollection<Do
    * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
    *                         and remote events.
    */
-  void sync(final BsonValue documentId, final SyncConflictResolver<DocumentT> conflictResolver);
+  void sync(final BsonValue documentId, final ConflictHandler<DocumentT> conflictResolver);
 
   /**
    * Requests that the given document _id be synchronized.
@@ -76,7 +76,7 @@ public interface SyncMongoCollection<DocumentT> extends RemoteMongoCollection<Do
    */
   void sync(
       final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver,
+      final ConflictHandler<DocumentT> conflictResolver,
       final ChangeEventListener<DocumentT> eventListener);
 
   /**
@@ -135,7 +135,7 @@ public interface SyncMongoCollection<DocumentT> extends RemoteMongoCollection<Do
    * @return the result of the insertion.
    */
   RemoteInsertOneResult insertOneAndSync(
-      final DocumentT document, final SyncConflictResolver<DocumentT> conflictResolver);
+      final DocumentT document, final ConflictHandler<DocumentT> conflictResolver);
 
   /**
    * Inserts a single document and begins to synchronize it.
@@ -149,7 +149,7 @@ public interface SyncMongoCollection<DocumentT> extends RemoteMongoCollection<Do
    */
   RemoteInsertOneResult insertOneAndSync(
       final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver,
+      final ConflictHandler<DocumentT> conflictResolver,
       final ChangeEventListener<DocumentT> eventListener);
 
   /**

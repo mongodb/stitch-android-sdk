@@ -9,7 +9,7 @@ import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.sync.DefaultSyncConflictResolvers
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.sync.internal.ChangeEvent
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection
@@ -377,7 +377,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
 
-            coll.sync(doc1Id, failingConflictResolver)
+            coll.sync(doc1Id, failingConflictHandler)
             listenAndSync()
 
             goOffline()
@@ -446,7 +446,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val remoteColl = getTestCollRemote()
 
             val docToInsert = Document("hello", "world")
-            val insertResult = coll.insertOneAndSync(docToInsert, failingConflictResolver)
+            val insertResult = coll.insertOneAndSync(docToInsert, failingConflictHandler)
 
             val doc = coll.findOneById(insertResult.insertedId)!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
@@ -474,7 +474,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val remoteColl = getTestCollRemote()
 
             val docToInsert = Document("hello", "world")
-            val insertResult = coll.insertOneAndSync(docToInsert, failingConflictResolver)
+            val insertResult = coll.insertOneAndSync(docToInsert, failingConflictHandler)
 
             val doc = coll.findOneById(insertResult.insertedId)!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
@@ -507,7 +507,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val remoteColl = getTestCollRemote()
 
             val docToInsert = Document("hello", "world")
-            val insertResult = coll.insertOneAndSync(docToInsert, failingConflictResolver)
+            val insertResult = coll.insertOneAndSync(docToInsert, failingConflictHandler)
             listenAndSync()
 
             val doc = coll.findOneById(insertResult.insertedId)!!
@@ -518,7 +518,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
 
             assertEquals(1, coll.deleteOneById(doc1Id).deletedCount)
-            coll.insertOneAndSync(doc, failingConflictResolver)
+            coll.insertOneAndSync(doc, failingConflictHandler)
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
 
@@ -549,7 +549,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
 
-            coll.sync(doc1Id, failingConflictResolver)
+            coll.sync(doc1Id, failingConflictHandler)
             listenAndSync()
 
             remoteColl.deleteOne(doc1Filter)
@@ -654,7 +654,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
 
-            coll.sync(doc1Id, failingConflictResolver)
+            coll.sync(doc1Id, failingConflictHandler)
             listenAndSync()
             assertEquals(doc, coll.findOneById(doc1Id))
 
@@ -765,7 +765,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val coll = getTestColl()
 
             val docToInsert = Document("hello", "world")
-            val doc1Id = coll.insertOneAndSync(docToInsert, failingConflictResolver).insertedId
+            val doc1Id = coll.insertOneAndSync(docToInsert, failingConflictHandler).insertedId
 
             assertEquals(docToInsert, withoutVersionId(coll.findOneById(doc1Id)!!))
             coll.desync(doc1Id)
@@ -869,7 +869,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         return newDocument
     }
 
-    private val failingConflictResolver: SyncConflictResolver<Document> = SyncConflictResolver({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+    private val failingConflictHandler: ConflictHandler<Document> = ConflictHandler({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
         fail("did not expect a conflict")
         throw IllegalStateException("unreachable")
     })

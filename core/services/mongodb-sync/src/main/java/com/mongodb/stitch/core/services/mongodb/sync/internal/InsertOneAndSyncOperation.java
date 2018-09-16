@@ -22,7 +22,7 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 import org.bson.codecs.Codec;
@@ -32,7 +32,7 @@ class InsertOneAndSyncOperation<T> implements Operation<RemoteInsertOneResult> {
   private final MongoNamespace namespace;
   private final BsonDocument document;
   private final DataSynchronizer dataSynchronizer;
-  private final SyncConflictResolver<T> conflictResolver;
+  private final ConflictHandler<T> conflictResolver;
   private final ChangeEventListener<T> eventListener;
   private final Codec<T> documentCodec;
 
@@ -40,7 +40,7 @@ class InsertOneAndSyncOperation<T> implements Operation<RemoteInsertOneResult> {
       final MongoNamespace namespace,
       final BsonDocument document,
       final DataSynchronizer dataSynchronizer,
-      final SyncConflictResolver<T> conflictResolver,
+      final ConflictHandler<T> conflictResolver,
       final ChangeEventListener<T> eventListener,
       final Codec<T> documentCodec
   ) {

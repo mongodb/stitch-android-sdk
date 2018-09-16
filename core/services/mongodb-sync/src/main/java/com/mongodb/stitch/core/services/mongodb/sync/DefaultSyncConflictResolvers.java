@@ -31,8 +31,8 @@ public final class DefaultSyncConflictResolvers {
    * @param <T> the type of class represented by the document in the change event.
    * @return the remote full document which may be null.
    */
-  public static <T> SyncConflictResolver<T> remoteWins() {
-    return new SyncConflictResolver<T>() {
+  public static <T> ConflictHandler<T> remoteWins() {
+    return new ConflictHandler<T>() {
       @Override
       public T resolveConflict(
           final BsonValue documentId,
@@ -50,8 +50,8 @@ public final class DefaultSyncConflictResolvers {
    * @param <T> the type of class represented by the document in the change event.
    * @return the local full document which may be null.
    */
-  public static <T> SyncConflictResolver<T> localWins() {
-    return new SyncConflictResolver<T>() {
+  public static <T> ConflictHandler<T> localWins() {
+    return new ConflictHandler<T>() {
       @Override
       public T resolveConflict(
           final BsonValue documentId,

@@ -24,8 +24,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
 import com.mongodb.stitch.core.services.mongodb.sync.internal.CoreSyncMongoCollection;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
@@ -294,7 +294,7 @@ public final class SyncMongoCollectionImpl<DocumentT>
    */
   public void sync(
       final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver
+      final ConflictHandler<DocumentT> conflictResolver
   ) {
     proxy.sync(documentId, conflictResolver);
   }
@@ -309,7 +309,7 @@ public final class SyncMongoCollectionImpl<DocumentT>
    */
   public void sync(
       final BsonValue documentId,
-      final SyncConflictResolver<DocumentT> conflictResolver,
+      final ConflictHandler<DocumentT> conflictResolver,
       final ChangeEventListener<DocumentT> eventListener
   ) {
     proxy.sync(documentId, conflictResolver);
@@ -389,7 +389,7 @@ public final class SyncMongoCollectionImpl<DocumentT>
    */
   public RemoteInsertOneResult insertOneAndSync(
       final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver
+      final ConflictHandler<DocumentT> conflictResolver
   ) {
     return proxy.insertOneAndSync(document, conflictResolver);
   }
@@ -406,7 +406,7 @@ public final class SyncMongoCollectionImpl<DocumentT>
    */
   public RemoteInsertOneResult insertOneAndSync(
       final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver,
+      final ConflictHandler<DocumentT> conflictResolver,
       final ChangeEventListener<DocumentT> eventListener
   ) {
     return proxy.insertOneAndSync(document, conflictResolver, eventListener);

@@ -21,10 +21,10 @@ import com.mongodb.stitch.core.services.mongodb.sync.internal.ChangeEvent;
 import org.bson.BsonValue;
 
 /**
- * SyncConflictResolver describes how to resolve a conflict between a local and remote event.
+ * ConflictHandler describes how to resolve a conflict between a local and remote event.
  * @param <DocumentT> the type of document involved in the conflict.
  */
-public interface SyncConflictResolver<DocumentT> {
+public interface ConflictHandler<DocumentT> {
 
   /**
    * Returns a resolution to the conflict between the given local and remote {@link ChangeEvent}s.

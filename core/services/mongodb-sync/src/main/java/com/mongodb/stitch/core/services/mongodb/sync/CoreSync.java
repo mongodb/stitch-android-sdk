@@ -18,7 +18,7 @@ public interface CoreSync<DocumentT> {
      * @param changeEventListener the event listener to invoke when a a change event happens for the
      *                         document.
      */
-    void configure(SyncConflictResolver<DocumentT> conflictResolver,
+    void configure(ConflictHandler<DocumentT> conflictResolver,
                    ChangeEventListener<DocumentT> changeEventListener);
 
     /**

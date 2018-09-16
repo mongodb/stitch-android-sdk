@@ -24,7 +24,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -164,7 +164,7 @@ class InstanceSynchronizationConfig
   public <T> CoreDocumentSynchronizationConfig addSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId,
-      final SyncConflictResolver<T> conflictResolver,
+      final ConflictHandler<T> conflictResolver,
       final Codec<T> documentCodec
   ) {
     return getNamespaceConfig(namespace)

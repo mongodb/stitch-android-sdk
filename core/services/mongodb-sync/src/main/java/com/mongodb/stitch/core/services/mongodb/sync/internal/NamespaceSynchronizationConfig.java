@@ -23,7 +23,7 @@ import com.mongodb.Block;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.ReplaceOptions;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -177,7 +177,7 @@ class NamespaceSynchronizationConfig
   public <T> CoreDocumentSynchronizationConfig addSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId,
-      final SyncConflictResolver<T> conflictResolver,
+      final ConflictHandler<T> conflictResolver,
       final Codec<T> documentCodec
   ) {
 

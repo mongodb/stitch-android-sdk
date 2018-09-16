@@ -4,7 +4,7 @@ import com.mongodb.MongoNamespace
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.sync.CoreSync
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.codecs.configuration.CodecRegistry
@@ -23,8 +23,7 @@ class CoreSyncUnitTests {
 
     private val changeEventListener: ChangeEventListener<BsonDocument> =
             ChangeEventListener { _, _ ->  }
-    private val conflictResolver: SyncConflictResolver<BsonDocument> = SyncConflictResolver {
-        documentId, localEvent, remoteEvent -> null }
+    private val conflictHandler: ConflictHandler<BsonDocument> = ConflictHandler { documentId, localEvent, remoteEvent -> null }
 
     private val coreSync: CoreSync<BsonDocument> by lazy {
         spy(CoreSyncImpl<BsonDocument>(
@@ -38,7 +37,7 @@ class CoreSyncUnitTests {
 
     @Before
     fun setup() {
-        coreSync.configure(conflictResolver, changeEventListener)
+        coreSync.configure(conflictHandler, changeEventListener)
     }
 
     @Test

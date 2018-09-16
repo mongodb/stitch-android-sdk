@@ -16,15 +16,16 @@
 
 package com.mongodb.stitch.core.services.mongodb.sync.internal;
 
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+
 import javax.annotation.Nullable;
 import org.bson.BsonValue;
 
 class DocumentSynchronizationConfigImpl implements DocumentSynchronizationConfig {
 
   private final BsonValue documentId;
-  private final SyncConflictResolver conflictResolver;
+  private final ConflictHandler conflictResolver;
   private final boolean hasUncommittedWrites;
 
   DocumentSynchronizationConfigImpl(final CoreDocumentSynchronizationConfig config) {
@@ -48,7 +49,7 @@ class DocumentSynchronizationConfigImpl implements DocumentSynchronizationConfig
    * @return the conflict resolver for this document.
    */
   @Nullable
-  public SyncConflictResolver getConflictResolver() {
+  public ConflictHandler getConflictResolver() {
     return conflictResolver;
   }
 

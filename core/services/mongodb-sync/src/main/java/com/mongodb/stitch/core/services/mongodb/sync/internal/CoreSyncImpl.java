@@ -8,7 +8,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.sync.CoreSync;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -27,7 +27,7 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     private final Class<DocumentT> documentClass;
     private final CoreStitchServiceClient service;
 
-    private SyncConflictResolver<DocumentT> conflictResolver;
+    private ConflictHandler<DocumentT> conflictResolver;
     private ChangeEventListener<DocumentT> changeEventListener;
 
     public CoreSyncImpl(MongoNamespace namespace,
@@ -45,7 +45,7 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     }
 
     @Override
-    public void configure(SyncConflictResolver<DocumentT> conflictResolver,
+    public void configure(ConflictHandler<DocumentT> conflictResolver,
                           ChangeEventListener<DocumentT> changeEventListener) {
         this.conflictResolver = conflictResolver;
         this.changeEventListener = changeEventListener;

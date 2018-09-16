@@ -29,17 +29,11 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteAggregateIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
-import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.sync.CoreSync;
-import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
-import java.util.HashSet;
+
 import java.util.List;
-import java.util.Set;
-import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 

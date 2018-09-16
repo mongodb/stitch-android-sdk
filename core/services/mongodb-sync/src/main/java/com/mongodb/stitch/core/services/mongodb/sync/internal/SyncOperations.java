@@ -29,7 +29,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operations;
 import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.sync.SyncConflictResolver;
+import com.mongodb.stitch.core.services.mongodb.sync.ConflictHandler;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -144,14 +144,14 @@ class SyncOperations<DocumentT> extends Operations<DocumentT> {
 
   public InsertOneAndSyncOperation insertOneAndSync(
       final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver
+      final ConflictHandler<DocumentT> conflictResolver
   ) {
     return insertOneAndSync(document, conflictResolver, null);
   }
 
   public InsertOneAndSyncOperation insertOneAndSync(
       final DocumentT document,
-      final SyncConflictResolver<DocumentT> conflictResolver,
+      final ConflictHandler<DocumentT> conflictResolver,
       final ChangeEventListener<DocumentT> eventListener
   ) {
     notNull("document", document);
