@@ -85,7 +85,7 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.0.5'
 	```gradle
     implementation 'org.mongodb:stitch-android-sdk:4.0.5'
     ```
-4. Android Studio will prompt you to sync your changes in your project; hit Sync Now.
+4. Android Studio will prompt you to sync your changes in your project; hit com.mongodb.stitch.server.services.mongodb.remote.Sync Now.
 
 #### Set up an Android Virtual Device
 

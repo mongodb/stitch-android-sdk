@@ -38,15 +38,13 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
-import com.mongodb.stitch.android.services.mongodb.sync.Sync;
-import com.mongodb.stitch.android.services.mongodb.sync.SyncMongoClient;
-import com.mongodb.stitch.android.services.mongodb.sync.SyncMongoCollection;
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.sync.DefaultSyncConflictResolvers;
-import com.mongodb.stitch.core.services.mongodb.sync.DocumentSynchronizationConfig;
-import com.mongodb.stitch.core.services.mongodb.sync.internal.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,8 +66,8 @@ public class TodoListActivity extends AppCompatActivity {
   private final ListUpdateListener listUpdateListener = new ListUpdateListener();
   private final ItemUpdateListener itemUpdateListener = new ItemUpdateListener();
   private TodoAdapter todoAdapter;
-  private SyncMongoCollection<BsonDocument> lists;
-  private SyncMongoCollection<Document> items;
+  private RemoteMongoCollection<BsonDocument> lists;
+  private RemoteMongoCollection<Document> items;
 
   private static final String TODO_LISTS_DATABASE = "todo";
   private static final String TODO_LISTS_COLLECTION = "lists";
@@ -91,8 +89,8 @@ public class TodoListActivity extends AppCompatActivity {
           }
         });
 
-    final SyncMongoClient mongoClient = client.getServiceClient(
-        SyncMongoClient.Factory, "Like");
+    final RemoteMongoClient mongoClient = client.getServiceClient(
+        RemoteMongoClient.factory, "Like");
     items = mongoClient
       .getDatabase(TodoItem.TODO_LIST_DATABASE)
       .getCollection(TodoItem.TODO_LIST_COLLECTION);

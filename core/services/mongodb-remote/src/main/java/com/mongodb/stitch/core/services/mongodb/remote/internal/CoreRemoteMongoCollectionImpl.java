@@ -19,6 +19,8 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
@@ -26,6 +28,11 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreSyncImpl;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncOperations;
+
 import java.util.List;
 import org.bson.BsonDocument;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -38,11 +45,19 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   private final Class<DocumentT> documentClass;
   private final CoreStitchServiceClient service;
   private final Operations<DocumentT> operations;
+  // Sync related fields
+  private final CoreSync<DocumentT> sync;
+  private final DataSynchronizer dataSynchronizer;
+  private final NetworkMonitor networkMonitor;
+  private final MongoDatabase tempDb;
 
   CoreRemoteMongoCollectionImpl(
-      final MongoNamespace namespace,
-      final Class<DocumentT> documentClass,
-      final CoreStitchServiceClient service
+    final MongoNamespace namespace,
+    final Class<DocumentT> documentClass,
+    final CoreStitchServiceClient service,
+    final DataSynchronizer dataSynchronizer,
+    final NetworkMonitor networkMonitor,
+    final MongoDatabase tempDb
   ) {
     notNull("namespace", namespace);
     notNull("documentClass", documentClass);
@@ -50,6 +65,25 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
     this.documentClass = documentClass;
     this.service = service;
     this.operations = new Operations<>(namespace, documentClass, service.getCodecRegistry());
+    this.dataSynchronizer = dataSynchronizer;
+    this.networkMonitor = networkMonitor;
+    this.tempDb = tempDb;
+
+    this.sync = new CoreSyncImpl<>(
+      getNamespace(),
+      getDocumentClass(),
+      dataSynchronizer,
+      service,
+      new SyncOperations<>(
+        getNamespace(),
+        getDocumentClass(),
+        dataSynchronizer,
+        networkMonitor,
+        getCodecRegistry(),
+        this,
+        tempDb),
+      getCodecRegistry()
+    );
   }
 
   /**
@@ -82,12 +116,23 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   public <NewDocumentT> CoreRemoteMongoCollection<NewDocumentT> withDocumentClass(
       final Class<NewDocumentT> clazz
   ) {
-    return new CoreRemoteMongoCollectionImpl<>(namespace, clazz, service);
+    return new CoreRemoteMongoCollectionImpl<>(
+      namespace,
+      clazz,
+      service,
+      dataSynchronizer,
+      networkMonitor,
+      tempDb);
   }
 
   public CoreRemoteMongoCollection<DocumentT> withCodecRegistry(final CodecRegistry codecRegistry) {
     return new CoreRemoteMongoCollectionImpl<>(
-        namespace, documentClass, service.withCodecRegistry(codecRegistry));
+      namespace,
+      documentClass,
+      service.withCodecRegistry(codecRegistry),
+      dataSynchronizer,
+      networkMonitor,
+      tempDb);
   }
 
   /**
@@ -330,5 +375,10 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   ) {
     return multi ? operations.updateMany(filter, update, updateOptions).execute(service)
         : operations.updateOne(filter, update, updateOptions).execute(service);
+  }
+
+  @Override
+  public CoreSync<DocumentT> sync() {
+    return this.sync;
   }
 }

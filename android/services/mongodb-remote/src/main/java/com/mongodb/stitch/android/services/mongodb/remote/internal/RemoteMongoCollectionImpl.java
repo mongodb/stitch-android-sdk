@@ -22,6 +22,7 @@ import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
+import com.mongodb.stitch.android.services.mongodb.remote.Sync;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -39,6 +40,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
 
   private final CoreRemoteMongoCollection<DocumentT> proxy;
   private final TaskDispatcher dispatcher;
+  private final Sync<DocumentT> sync;
 
   RemoteMongoCollectionImpl(
       final CoreRemoteMongoCollection<DocumentT> coll,
@@ -46,6 +48,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   ) {
     this.proxy = coll;
     this.dispatcher = dispatcher;
+    this.sync = new SyncImpl<>(this.proxy.sync(), this.dispatcher);
   }
 
   /**
@@ -339,5 +342,10 @@ public final class RemoteMongoCollectionImpl<DocumentT>
         return proxy.updateMany(filter, update, updateOptions);
       }
     });
+  }
+
+  @Override
+  public Sync<DocumentT> sync() {
+    return this.sync;
   }
 }

@@ -14,17 +14,8 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.services.mongodb.remote.internal;
-
-import java.io.Closeable;
-
-public interface CoreRemoteMongoClient extends Closeable {
-
-  /**
-   * Gets a {@link CoreRemoteMongoDatabase} instance for the given database name.
-   *
-   * @param databaseName the name of the database to retrieve
-   * @return a {@code CoreRemoteMongoDatabaseImpl} representing the specified database
-   */
-  CoreRemoteMongoDatabase getDatabase(final String databaseName);
-}
+/**
+ * This internal package contains the base implementation of the classes comprising the MongoDB
+ * SyncMongoClient.
+ */
+package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;

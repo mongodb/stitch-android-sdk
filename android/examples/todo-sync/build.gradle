@@ -20,7 +20,7 @@ android {
 
 dependencies {
     implementation project(':android:stitch-android-sdk')
-    implementation project(':android:android-services:stitch-android-services-mongodb-sync')
+    implementation project(':android:android-services:stitch-android-services-mongodb-remote')
     implementation "com.android.support:support-v4:${support_library_version}"
     implementation "com.android.support:appcompat-v7:${support_library_version}"
     implementation "com.android.support:recyclerview-v7:${support_library_version}"
