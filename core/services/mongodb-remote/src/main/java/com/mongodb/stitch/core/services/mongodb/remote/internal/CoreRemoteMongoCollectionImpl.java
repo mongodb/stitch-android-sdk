@@ -81,8 +81,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
         networkMonitor,
         getCodecRegistry(),
         this,
-        tempDb),
-      getCodecRegistry()
+        tempDb)
     );
   }
 

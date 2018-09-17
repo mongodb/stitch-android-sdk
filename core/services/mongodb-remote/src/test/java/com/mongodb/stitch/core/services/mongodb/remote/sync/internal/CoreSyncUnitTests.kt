@@ -5,7 +5,6 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.*
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.codecs.configuration.CodecRegistry
@@ -15,6 +14,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.*
 import junit.framework.Assert.*
 import org.bson.BsonString
+import org.bson.codecs.Codec
 import org.mockito.ArgumentMatchers
 
 class CoreSyncUnitTests {
@@ -26,19 +26,23 @@ class CoreSyncUnitTests {
             ChangeEventListener { _, _ -> }
     private val conflictHandler: ConflictHandler<BsonDocument> = ConflictHandler { documentId, localEvent, remoteEvent -> null }
 
+    private val namespace = MongoNamespace("foo", "bar")
     private val coreSync: CoreSync<BsonDocument> by lazy {
         spy(CoreSyncImpl<BsonDocument>(
-                MongoNamespace("foo", "bar"),
+                namespace,
                 BsonDocument::class.java,
                 dataSyncMock,
                 spy(CoreStitchServiceClient::class.java),
-                syncOpsMock,
-                mock(CodecRegistry::class.java)))
+                syncOpsMock))
     }
 
     @Before
     fun setup() {
-        coreSync.configure(conflictHandler, changeEventListener)
+        coreSync.configure(
+                namespace,
+                conflictHandler,
+                changeEventListener,
+                mock(Codec::class.java) as Codec<BsonDocument>)
     }
 
     @Test
@@ -50,11 +54,7 @@ class CoreSyncUnitTests {
         val oidCaptor = ArgumentCaptor.forClass(BsonObjectId::class.java)
 
         verify(dataSyncMock).syncDocumentFromRemote<BsonDocument>(
-                any(), oidCaptor.capture(), any(), any())
-
-        assertEquals(oidCaptor.value, oid)
-
-        verify(dataSyncMock).watchDocument<BsonDocument>(any(), oidCaptor.capture(), any(), any())
+                any(), oidCaptor.capture())
 
         assertEquals(oidCaptor.value, oid)
     }
@@ -155,7 +155,7 @@ class CoreSyncUnitTests {
     fun testInsertOneAndSync() {
         val doc = BsonDocument("foo", BsonString("bar"))
 
-        `when`(syncOpsMock.insertOneAndSync(any(), any(), any())).thenReturn(
+        `when`(syncOpsMock.insertOneAndSync(any())).thenReturn(
                 mock(InsertOneAndSyncOperation::class.java) as InsertOneAndSyncOperation<BsonDocument>
         )
 
@@ -163,7 +163,7 @@ class CoreSyncUnitTests {
 
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
 
-        verify(syncOpsMock).insertOneAndSync(docCaptor.capture(), any(), any())
+        verify(syncOpsMock).insertOneAndSync(docCaptor.capture())
 
         assertEquals(doc, docCaptor.value)
     }

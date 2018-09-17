@@ -30,7 +30,7 @@ class DocumentSynchronizationConfigImpl implements DocumentSynchronizationConfig
 
   DocumentSynchronizationConfigImpl(final CoreDocumentSynchronizationConfig config) {
     this.documentId = config.getDocumentId();
-    this.conflictResolver = config.getConflictResolver();
+    this.conflictResolver = config.getConflictHandler();
     this.hasUncommittedWrites = config.hasPendingWrites();
   }
 

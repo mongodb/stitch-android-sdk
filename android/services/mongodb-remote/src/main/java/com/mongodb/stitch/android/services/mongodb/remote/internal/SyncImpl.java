@@ -1,6 +1,7 @@
 package com.mongodb.stitch.android.services.mongodb.remote.internal;
 
 import com.google.android.gms.tasks.Task;
+import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.Sync;
@@ -12,6 +13,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 
 import org.bson.BsonValue;
+import org.bson.codecs.Codec;
 import org.bson.conversions.Bson;
 
 import java.util.Set;
@@ -28,9 +30,11 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(final ConflictHandler<DocumentT> conflictHandler,
-                        final ChangeEventListener<DocumentT> changeEventListener) {
-    this.proxy.configure(conflictHandler, changeEventListener);
+  public void configure(final MongoNamespace namespace,
+                        final ConflictHandler<DocumentT> conflictHandler,
+                        final ChangeEventListener<DocumentT> changeEventListener,
+                        final Codec<DocumentT> codec) {
+    this.proxy.configure(namespace, conflictHandler, changeEventListener, codec);
   }
 
   @Override

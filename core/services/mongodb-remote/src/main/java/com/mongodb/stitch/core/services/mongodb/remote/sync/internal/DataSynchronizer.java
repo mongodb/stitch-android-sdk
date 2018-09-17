@@ -100,7 +100,6 @@ public class DataSynchronizer {
   private Thread syncThread;
   private long logicalT = 0; // The current logical time or sync iteration.
 
-  private final Map<MongoNamespace, Map<BsonValue, DocumentListenerConfig>> nsEventListeners;
   private final Lock listenersLock;
   private final Dispatcher eventDispatcher;
 
@@ -118,7 +117,6 @@ public class DataSynchronizer {
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
     this.syncLock = new ReentrantLock();
-    this.nsEventListeners = new HashMap<>();
     this.listenersLock = new ReentrantLock();
     this.eventDispatcher = new Dispatcher();
 
@@ -181,6 +179,17 @@ public class DataSynchronizer {
     } finally {
       syncLock.unlock();
     }
+  }
+
+  public <T> void configure(MongoNamespace namespace,
+                            ConflictHandler<T> conflictHandler,
+                            ChangeEventListener<T> changeEventListener,
+                            Codec<T> codec) {
+    this.syncConfig.getNamespaceConfig(namespace).configure(
+      conflictHandler,
+      changeEventListener,
+      codec
+    );
   }
 
   /**
@@ -793,7 +802,7 @@ public class DataSynchronizer {
       final CoreDocumentSynchronizationConfig docConfig,
       final ChangeEvent<BsonDocument> remoteEvent
   ) {
-    if (docConfig.getConflictResolver() == null) {
+    if (docConfig.getConflictHandler() == null) {
       logger.warn(String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s no conflict resolver set; cannot resolve "
@@ -821,7 +830,7 @@ public class DataSynchronizer {
       final ChangeEvent transformedRemoteEvent =
           ChangeEvent.transformChangeEventForUser(remoteEvent, docConfig.getDocumentCodec());
       resolvedDocument = resolveConflictWithResolver(
-          docConfig.getConflictResolver(),
+          docConfig.getConflictHandler(),
           docConfig.getDocumentId(),
           transformedLocalEvent,
           transformedRemoteEvent);
@@ -1004,18 +1013,14 @@ public class DataSynchronizer {
    *
    * @param namespace the namespace to put the document in.
    * @param documentId the _id of the document.
-   * @param conflictResolver the conflict resolver that will handle any conflicts for this document.
-   * @param documentCodec the {@link Codec} that can encode/decode documents from the collection.
    * @param <T> the type of the document in the collection.
    */
   public <T> void syncDocumentFromRemote(
       final MongoNamespace namespace,
-      final BsonValue documentId,
-      final ConflictHandler<T> conflictResolver,
-      final Codec<T> documentCodec
+      final BsonValue documentId
   ) {
     syncConfig
-        .addSynchronizedDocument(namespace, documentId, conflictResolver, documentCodec);
+        .addSynchronizedDocument(namespace, documentId);
     addAndStartListeningToNamespace(namespace);
   }
 
@@ -1086,20 +1091,12 @@ public class DataSynchronizer {
    * Inserts a single document locally and being to synchronize it based on its _id. Inserting
    * a document with the same _id twice will result in a duplicate key exception.
    *
-   * @param <T> the type of the document in the collection.
    * @param namespace the namespace to put the document in.
    * @param document the document to insert.
-   * @param conflictResolver the conflict resolver that will handle any conflicts for this document.
-   * @param eventListener the event listener to invoke when a a change event happens for the
-   *                      document.
-   * @param documentCodec the {@link Codec} that can encode/decode documents from the collection.
    */
-  public <T> void insertOneAndSync(
+  public void insertOneAndSync(
       final MongoNamespace namespace,
-      final BsonDocument document,
-      final ConflictHandler<T> conflictResolver,
-      final ChangeEventListener<T> eventListener,
-      final Codec<T> documentCodec
+      final BsonDocument document
   ) {
     final BsonDocument docToInsert = withNewVersionId(document);
     getLocalCollection(namespace).insertOne(docToInsert);
@@ -1107,13 +1104,8 @@ public class DataSynchronizer {
         changeEventForLocalInsert(namespace, docToInsert, true);
     syncConfig.addSynchronizedDocument(
         namespace,
-        BsonUtils.getDocumentId(docToInsert),
-        conflictResolver,
-        documentCodec).setSomePendingWrites(logicalT, event);
+        BsonUtils.getDocumentId(docToInsert)).setSomePendingWrites(logicalT, event);
     addAndStartListeningToNamespace(namespace);
-    if (eventListener != null) {
-      watchDocument(namespace, BsonUtils.getDocumentId(docToInsert), eventListener, documentCodec);
-    }
     emitEvent(BsonUtils.getDocumentId(docToInsert), event);
   }
 
@@ -1334,37 +1326,6 @@ public class DataSynchronizer {
   }
 
   /**
-   * Requests that the given document be watched for change events.
-   *
-   * @param namespace the namespace where the document lives.
-   * @param documentId the _id of the document.
-   * @param eventListener the listener to invoke when an event happens.
-   * @param documentCodec the codec that can encode/decode the class of documents.
-   * @param <T> the type of the document in the collection.
-   */
-  // TODO: Allow multiple watchers per doc?
-  public <T> void watchDocument(
-      final MongoNamespace namespace,
-      final BsonValue documentId,
-      final ChangeEventListener<T> eventListener,
-      final Codec<T> documentCodec
-  ) {
-    listenersLock.lock();
-    try {
-      final Map<BsonValue, DocumentListenerConfig> docListeners;
-      if (!nsEventListeners.containsKey(namespace)) {
-        docListeners = new HashMap<>();
-        nsEventListeners.put(namespace, docListeners);
-      } else {
-        docListeners = nsEventListeners.get(namespace);
-      }
-      docListeners.put(documentId, new DocumentListenerConfig(eventListener, documentCodec));
-    } finally {
-      listenersLock.unlock();
-    }
-  }
-
-  /**
    * Emits a change event for the given document id.
    *
    * @param documentId the document that has a change event for it.
@@ -1373,27 +1334,24 @@ public class DataSynchronizer {
   private void emitEvent(final BsonValue documentId, final ChangeEvent<BsonDocument> event) {
     listenersLock.lock();
     try {
-      if (!nsEventListeners.containsKey(event.getNamespace())) {
+      NamespaceSynchronizationConfig namespaceSynchronizationConfig =
+        syncConfig.getNamespaceConfig(event.getNamespace());
+
+      if (namespaceSynchronizationConfig.getNamespaceListenerConfig() == null) {
         return;
       }
-      final Map<BsonValue, DocumentListenerConfig> docListeners =
-          nsEventListeners.get(event.getNamespace());
-      if (!docListeners.containsKey(documentId)) {
-        return;
-      }
-      final DocumentListenerConfig docListenerConfig = docListeners.get(documentId);
-      if (docListenerConfig == null) {
-        return;
-      }
+      final NamespaceListenerConfig namespaceListener =
+        namespaceSynchronizationConfig.getNamespaceListenerConfig();
+
       eventDispatcher.dispatch(new Callable<Object>() {
         @Override
         @SuppressWarnings("unchecked")
         public Object call() {
           try {
-            docListenerConfig.getEventListener().onEvent(
+            namespaceListener.getEventListener().onEvent(
                 documentId,
                 ChangeEvent.transformChangeEventForUser(
-                    event, docListenerConfig.getDocumentCodec()));
+                    event, namespaceListener.getDocumentCodec()));
           } catch (final Exception ex) {
             logger.error(String.format(
                 Locale.US,

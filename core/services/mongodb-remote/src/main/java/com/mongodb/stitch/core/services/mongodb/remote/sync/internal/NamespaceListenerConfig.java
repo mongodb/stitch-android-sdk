@@ -19,12 +19,12 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import org.bson.codecs.Codec;
 
-class DocumentListenerConfig {
+class NamespaceListenerConfig {
 
   private final ChangeEventListener eventListener;
   private final Codec documentCodec;
 
-  DocumentListenerConfig(
+  NamespaceListenerConfig(
       final ChangeEventListener eventListener,
       final Codec documentCodec
   ) {

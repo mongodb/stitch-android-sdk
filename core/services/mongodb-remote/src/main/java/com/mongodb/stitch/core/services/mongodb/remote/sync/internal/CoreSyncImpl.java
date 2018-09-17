@@ -12,7 +12,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
-import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.codecs.Codec;
 import org.bson.conversions.Bson;
 
 import java.util.Set;
@@ -23,43 +23,37 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     private final DataSynchronizer dataSynchronizer;
     private final SyncOperations<DocumentT> syncOperations;
     private final MongoNamespace namespace;
-    private final CodecRegistry codecRegistry;
     private final Class<DocumentT> documentClass;
     private final CoreStitchServiceClient service;
-
-    private ConflictHandler<DocumentT> conflictResolver;
-    private ChangeEventListener<DocumentT> changeEventListener;
 
     public CoreSyncImpl(final MongoNamespace namespace,
                         final Class<DocumentT> documentClass,
                         final DataSynchronizer dataSynchronizer,
                         final CoreStitchServiceClient service,
-                        final SyncOperations<DocumentT> syncOperations,
-                        final CodecRegistry codecRegistry) {
+                        final SyncOperations<DocumentT> syncOperations) {
         this.namespace = namespace;
         this.documentClass = documentClass;
         this.dataSynchronizer = dataSynchronizer;
         this.syncOperations = syncOperations;
-        this.codecRegistry = codecRegistry;
         this.service = service;
     }
 
     @Override
-    public void configure(final ConflictHandler<DocumentT> conflictResolver,
-                          final ChangeEventListener<DocumentT> changeEventListener) {
-        this.conflictResolver = conflictResolver;
-        this.changeEventListener = changeEventListener;
+    public void configure(final MongoNamespace namespace,
+                          final ConflictHandler<DocumentT> conflictResolver,
+                          final ChangeEventListener<DocumentT> changeEventListener,
+                          final Codec<DocumentT> codec) {
+        this.dataSynchronizer.configure(
+          namespace,
+          conflictResolver,
+          changeEventListener,
+          codec
+        );
     }
 
     @Override
     public void syncOne(final BsonValue id) {
-        this.dataSynchronizer.syncDocumentFromRemote(
-                this.namespace, id,
-                this.conflictResolver,
-                this.codecRegistry.get(this.documentClass)
-        );
-        dataSynchronizer.watchDocument(
-                namespace, id, changeEventListener, codecRegistry.get(documentClass));
+        this.dataSynchronizer.syncDocumentFromRemote(this.namespace, id);
     }
 
     @Override
@@ -136,8 +130,7 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     public RemoteInsertOneResult insertOneAndSync(
             final DocumentT document
     ) {
-        return syncOperations
-                .insertOneAndSync(document, conflictResolver, this.changeEventListener).execute(service);
+        return syncOperations.insertOneAndSync(document).execute(service);
     }
 
     /**

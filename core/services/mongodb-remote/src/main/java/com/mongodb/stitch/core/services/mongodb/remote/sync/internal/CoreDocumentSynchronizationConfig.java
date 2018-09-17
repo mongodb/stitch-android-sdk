@@ -51,7 +51,7 @@ class CoreDocumentSynchronizationConfig {
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
   private final BsonValue documentId;
-  private final ConflictHandler conflictResolver;
+  private final ConflictHandler conflictHandler;
   private final Codec documentCodec;
   private final ReadWriteLock docLock;
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
@@ -68,13 +68,13 @@ class CoreDocumentSynchronizationConfig {
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
       final BsonValue documentId,
-      final ConflictHandler conflictResolver,
+      final ConflictHandler conflictHandler,
       final Codec documentCodec
   ) {
     this.docsColl = docsColl;
     this.namespace = namespace;
     this.documentId = documentId;
-    this.conflictResolver = conflictResolver;
+    this.conflictHandler = conflictHandler;
     this.documentCodec = documentCodec;
     this.docLock = new ReentrantReadWriteLock();
     this.lastResolution = -1;
@@ -86,13 +86,13 @@ class CoreDocumentSynchronizationConfig {
   CoreDocumentSynchronizationConfig(
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final CoreDocumentSynchronizationConfig config,
-      final ConflictHandler conflictResolver,
+      final ConflictHandler conflictHandler,
       final Codec documentCodec
   ) {
     this.docsColl = docsColl;
     this.namespace = config.namespace;
     this.documentId = config.documentId;
-    this.conflictResolver = conflictResolver;
+    this.conflictHandler = conflictHandler;
     this.documentCodec = documentCodec;
     this.docLock = config.docLock;
     this.lastResolution = config.lastResolution;
@@ -117,7 +117,7 @@ class CoreDocumentSynchronizationConfig {
     this.lastUncommittedChangeEvent = lastUncommittedChangeEvent;
     this.docLock = new ReentrantReadWriteLock();
     this.docsColl = null;
-    this.conflictResolver = null;
+    this.conflictHandler = null;
     this.documentCodec = null;
   }
 
@@ -245,10 +245,10 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public ConflictHandler getConflictResolver() {
+  public ConflictHandler getConflictHandler() {
     docLock.readLock().lock();
     try {
-      return conflictResolver;
+      return conflictHandler;
     } finally {
       docLock.readLock().unlock();
     }

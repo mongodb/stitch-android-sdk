@@ -161,14 +161,11 @@ class InstanceSynchronizationConfig
     return getNamespaceConfig(namespace).getSynchronizedDocument(documentId);
   }
 
-  public <T> CoreDocumentSynchronizationConfig addSynchronizedDocument(
+  public CoreDocumentSynchronizationConfig addSynchronizedDocument(
       final MongoNamespace namespace,
-      final BsonValue documentId,
-      final ConflictHandler<T> conflictResolver,
-      final Codec<T> documentCodec
+      final BsonValue documentId
   ) {
-    return getNamespaceConfig(namespace)
-        .addSynchronizedDocument(namespace, documentId, conflictResolver, documentCodec);
+    return getNamespaceConfig(namespace).addSynchronizedDocument(namespace, documentId);
   }
 
   public void removeSynchronizedDocument(

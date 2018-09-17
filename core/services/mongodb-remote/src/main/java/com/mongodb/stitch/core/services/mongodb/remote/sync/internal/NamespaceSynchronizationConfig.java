@@ -23,6 +23,7 @@ import com.mongodb.Block;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
 import java.util.ArrayList;
@@ -55,6 +56,10 @@ class NamespaceSynchronizationConfig
   private final Map<BsonValue, CoreDocumentSynchronizationConfig> syncedDocuments;
   private final ReadWriteLock nsLock;
   private BsonValue lastRemoteResumeToken;
+
+  private NamespaceListenerConfig namespaceListenerConfig;
+  private ConflictHandler conflictHandler;
+  private Codec documentCodec;
 
   NamespaceSynchronizationConfig(
       final MongoCollection<NamespaceSynchronizationConfig> namespacesColl,
@@ -126,6 +131,14 @@ class NamespaceSynchronizationConfig
     this.nsLock = new ReentrantReadWriteLock();
   }
 
+  <T> void configure(ConflictHandler<T> conflictHandler,
+                     ChangeEventListener<T> changeEventListener,
+                     Codec<T> codec) {
+    this.conflictHandler = conflictHandler;
+    this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
+    this.documentCodec = codec;
+  }
+
   static BsonDocument getNsFilter(
       final MongoNamespace namespace
   ) {
@@ -136,6 +149,10 @@ class NamespaceSynchronizationConfig
 
   public MongoNamespace getNamespace() {
     return namespace;
+  }
+
+  NamespaceListenerConfig getNamespaceListenerConfig() {
+    return namespaceListenerConfig;
   }
 
   public boolean isDocumentSynchronized(final BsonValue documentId) {
@@ -174,11 +191,9 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  public <T> CoreDocumentSynchronizationConfig addSynchronizedDocument(
+  public CoreDocumentSynchronizationConfig addSynchronizedDocument(
       final MongoNamespace namespace,
-      final BsonValue documentId,
-      final ConflictHandler<T> conflictResolver,
-      final Codec<T> documentCodec
+      final BsonValue documentId
   ) {
 
     final CoreDocumentSynchronizationConfig newConfig;
@@ -189,13 +204,13 @@ class NamespaceSynchronizationConfig
           docsColl,
           namespace,
           documentId,
-          conflictResolver,
+          conflictHandler,
           documentCodec);
     } else {
       newConfig = new CoreDocumentSynchronizationConfig(
           docsColl,
           existingConfig,
-          conflictResolver,
+          conflictHandler,
           documentCodec);
     }
 

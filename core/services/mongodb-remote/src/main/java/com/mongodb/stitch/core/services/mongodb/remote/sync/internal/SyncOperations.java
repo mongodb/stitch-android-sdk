@@ -28,7 +28,6 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operations;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
 import org.bson.BsonDocument;
@@ -143,19 +142,9 @@ public class SyncOperations<DocumentT> extends Operations<DocumentT> {
   }
 
   public InsertOneAndSyncOperation insertOneAndSync(
-      final DocumentT document,
-      final ConflictHandler<DocumentT> conflictResolver
-  ) {
-    return insertOneAndSync(document, conflictResolver, null);
-  }
-
-  public InsertOneAndSyncOperation insertOneAndSync(
-      final DocumentT document,
-      final ConflictHandler<DocumentT> conflictResolver,
-      final ChangeEventListener<DocumentT> eventListener
+      final DocumentT document
   ) {
     notNull("document", document);
-    notNull("conflictResolver", conflictResolver);
     final DocumentT docToInsert;
     if (getCodec(codecRegistry, documentClass) instanceof CollectibleCodec) {
       docToInsert =
@@ -167,10 +156,7 @@ public class SyncOperations<DocumentT> extends Operations<DocumentT> {
     return new InsertOneAndSyncOperation<>(
         namespace,
         documentToBsonDocument(docToInsert, codecRegistry),
-        dataSynchronizer,
-        conflictResolver,
-        eventListener,
-        codecRegistry.get(documentClass));
+        dataSynchronizer);
   }
 
   DeleteOneByIdOperation deleteOneById(final BsonValue documentId) {

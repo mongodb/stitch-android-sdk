@@ -9,9 +9,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.*
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.LocalClientFactory
 import junit.framework.Assert.*
 import org.bson.*
 import org.bson.codecs.BsonDocumentCodec
@@ -192,7 +189,7 @@ class DataSynchronizerUnitTests {
         val eventListenerArg = ArgumentCaptor.forClass(changeEventListener::class.java)
         val documentCodecArg = ArgumentCaptor.forClass(BsonDocumentCodec::class.java)
 
-        verify(dataSpy).watchDocument(
+        verify(dataSpy).watchNamespace(
                 namespaceArg.capture(),
                 idArg.capture(),
                 eventListenerArg.capture(),

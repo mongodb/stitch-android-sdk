@@ -32,29 +32,19 @@ class InsertOneAndSyncOperation<T> implements Operation<RemoteInsertOneResult> {
   private final MongoNamespace namespace;
   private final BsonDocument document;
   private final DataSynchronizer dataSynchronizer;
-  private final ConflictHandler<T> conflictResolver;
-  private final ChangeEventListener<T> eventListener;
-  private final Codec<T> documentCodec;
 
   InsertOneAndSyncOperation(
       final MongoNamespace namespace,
       final BsonDocument document,
-      final DataSynchronizer dataSynchronizer,
-      final ConflictHandler<T> conflictResolver,
-      final ChangeEventListener<T> eventListener,
-      final Codec<T> documentCodec
+      final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
     this.document = document;
     this.dataSynchronizer = dataSynchronizer;
-    this.conflictResolver = conflictResolver;
-    this.eventListener = eventListener;
-    this.documentCodec = documentCodec;
   }
 
   public RemoteInsertOneResult execute(@Nullable final CoreStitchServiceClient service) {
-    this.dataSynchronizer.insertOneAndSync(
-        namespace, document, conflictResolver, eventListener, documentCodec);
+    this.dataSynchronizer.insertOneAndSync(namespace, document);
     return new RemoteInsertOneResult(BsonUtils.getDocumentId(document));
   }
 }
