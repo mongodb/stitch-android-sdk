@@ -242,7 +242,7 @@ public interface RemoteMongoCollection<DocumentT> {
       final RemoteUpdateOptions updateOptions);
 
   /**
-   * A set of synchronization related operations at the collection level.
+   * A set of synchronization related operations on this collection.
    *
    * @return set of sync operations for this collection
    */
