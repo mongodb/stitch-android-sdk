@@ -7,6 +7,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import org.bson.BsonValue;
 import org.bson.codecs.Codec;
@@ -22,9 +23,9 @@ public interface Sync<DocumentT> {
    * @param changeEventListener the event listener to invoke when a a change event happens for the
    *                         document.
    */
-  void configure(final MongoNamespace namespace,
-                 final ConflictHandler<DocumentT> conflictHandler,
-                 final ChangeEventListener<DocumentT> changeEventListener);
+  void configure(final ConflictHandler<DocumentT> conflictHandler,
+                 final ChangeEventListener<DocumentT> changeEventListener,
+                 final ErrorListener errorListener);
 
   /**
    * Requests that the given document _id be synchronized.

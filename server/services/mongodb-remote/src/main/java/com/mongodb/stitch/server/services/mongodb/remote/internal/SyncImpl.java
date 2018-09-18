@@ -1,13 +1,12 @@
 package com.mongodb.stitch.server.services.mongodb.remote.internal;
 
-import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
-import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.server.services.mongodb.remote.Sync;
 import com.mongodb.stitch.server.services.mongodb.remote.SyncFindIterable;
 
@@ -24,10 +23,10 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(final MongoNamespace namespace,
-                        final ConflictHandler<DocumentT> conflictResolver,
-                        final ChangeEventListener<DocumentT> changeEventListener) {
-    this.proxy.configure(namespace, conflictResolver, changeEventListener);
+  public void configure(final ConflictHandler<DocumentT> conflictResolver,
+                        final ChangeEventListener<DocumentT> changeEventListener,
+                        ErrorListener errorListener) {
+    this.proxy.configure(conflictResolver, changeEventListener, errorListener);
   }
 
   @Override

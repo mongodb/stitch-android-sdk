@@ -45,6 +45,7 @@ import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredentia
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent;
 
 import java.util.ArrayList;
@@ -98,9 +99,14 @@ public class TodoListActivity extends AppCompatActivity {
       .getCollection(TodoItem.TODO_LIST_COLLECTION);
 
     items.sync().configure(
-      new MongoNamespace(TODO_LISTS_DATABASE, TODO_LISTS_COLLECTION),
       DefaultSyncConflictResolvers.<Document>remoteWins(),
-      itemUpdateListener);
+      itemUpdateListener,
+      new ErrorListener() {
+        @Override
+        public void onError(BsonValue documentId, Error error) {
+          Log.e(TAG, error.getLocalizedMessage());
+        }
+      });
 
     lists =
         mongoClient
@@ -108,9 +114,14 @@ public class TodoListActivity extends AppCompatActivity {
             .getCollection(TODO_LISTS_COLLECTION, BsonDocument.class);
 
     lists.sync().configure(
-      new MongoNamespace(TODO_LISTS_DATABASE, TODO_LISTS_COLLECTION),
       DefaultSyncConflictResolvers.<BsonDocument>remoteWins(),
-      listUpdateListener);
+      listUpdateListener,
+      new ErrorListener() {
+        @Override
+        public void onError(BsonValue documentId, Error error) {
+          Log.e(TAG, error.getLocalizedMessage());
+        }
+      });
 
     // Set up recycler view for to-do items
     final RecyclerView todoRecyclerView = findViewById(R.id.rv_todo_items);

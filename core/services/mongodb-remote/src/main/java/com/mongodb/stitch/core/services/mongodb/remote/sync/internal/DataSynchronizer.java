@@ -44,6 +44,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoC
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -102,6 +103,8 @@ public class DataSynchronizer {
 
   private final Lock listenersLock;
   private final Dispatcher eventDispatcher;
+
+  private ErrorListener errorListener;
 
   public DataSynchronizer(
       final String instanceKey,
@@ -184,7 +187,9 @@ public class DataSynchronizer {
   public <T> void configure(MongoNamespace namespace,
                             ConflictHandler<T> conflictHandler,
                             ChangeEventListener<T> changeEventListener,
+                            ErrorListener errorListener,
                             Codec<T> codec) {
+    this.errorListener = errorListener;
     this.syncConfig.getNamespaceConfig(namespace).configure(
       conflictHandler,
       changeEventListener,
@@ -473,10 +478,11 @@ public class DataSynchronizer {
               docConfig.getDocumentId());
           return;
         default:
-          logger.error(String.format(
+          logError(docConfig.getDocumentId(),
+            String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s unknown operation type "
-                  + "occurred on the document: %s; dropping the event",
+                + "occurred on the document: %s; dropping the event",
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId(),
@@ -514,6 +520,18 @@ public class DataSynchronizer {
         nsConfig.getNamespace(),
         docConfig,
         remoteChangeEvent);
+  }
+
+  private void logError(BsonValue docId, String msg) {
+    this.logError(docId, msg, null);
+  }
+
+  private void logError(BsonValue docId, String msg, Exception ex) {
+    if (this.errorListener != null) {
+      this.errorListener.onError(docId, new Error(msg, ex));
+    }
+
+    this.logger.error(msg);
   }
 
   /**
@@ -576,13 +594,13 @@ public class DataSynchronizer {
             } catch (final StitchServiceException ex) {
               if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
                   || !ex.getMessage().contains("E11000")) {
-                logger.error(String.format(
-                    Locale.US,
-                    "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
-                    logicalT,
-                    nsConfig.getNamespace(),
-                    docConfig.getDocumentId(),
-                    ex));
+                this.logError(localChangeEvent.getId(), String.format(
+                  Locale.US,
+                  "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
+                  logicalT,
+                  nsConfig.getNamespace(),
+                  docConfig.getDocumentId(),
+                  ex), ex);
                 continue;
               }
               logger.info(String.format(
@@ -599,8 +617,14 @@ public class DataSynchronizer {
 
           case REPLACE: {
             if (localDoc == null) {
-              throw new IllegalStateException(
-                  "expected document to exist for local replace change event: %s");
+              IllegalStateException illegalStateException = new IllegalStateException(
+                "expected document to exist for local replace change event: %s");
+
+              logError(
+                docConfig.getDocumentId(),
+                illegalStateException.getMessage(),
+                illegalStateException
+              );
             }
             final DocumentVersionInfo versionInfo =
                 DocumentVersionInfo.getLocalVersionInfo(docConfig, localDoc);
@@ -612,13 +636,17 @@ public class DataSynchronizer {
                   versionInfo.getFilter(),
                   localDoc);
             } catch (final StitchServiceException ex) {
-              logger.error(String.format(
+              this.logError(
+                localChangeEvent.getId(),
+                String.format(
                   Locale.US,
                   "t='%d': syncLocalToRemote ns=%s documentId=%s exception replacing: %s",
                   logicalT,
                   nsConfig.getNamespace(),
                   docConfig.getDocumentId(),
-                  ex));
+                  ex),
+                ex
+              );
               continue;
             }
             if (result.getMatchedCount() == 0) {
@@ -636,8 +664,14 @@ public class DataSynchronizer {
 
           case UPDATE: {
             if (localDoc == null) {
-              throw new IllegalStateException(
-                  "expected document to exist for local update change event");
+              IllegalStateException illegalStateException = new IllegalStateException(
+                "expected document to exist for local update change event");
+
+              logError(
+                docConfig.getDocumentId(),
+                illegalStateException.getMessage(),
+                illegalStateException
+              );
             }
             final DocumentVersionInfo versionInfo =
                 DocumentVersionInfo.getLocalVersionInfo(docConfig, localDoc);
@@ -670,13 +704,17 @@ public class DataSynchronizer {
                       // See: changeEventForLocalUpdate for why we do this
                       ? localDoc : translatedUpdate);
             } catch (final StitchServiceException ex) {
-              logger.error(String.format(
+              logError(
+                docConfig.getDocumentId(),
+                String.format(
                   Locale.US,
                   "t='%d': syncLocalToRemote ns=%s documentId=%s exception updating: %s",
                   logicalT,
                   nsConfig.getNamespace(),
                   docConfig.getDocumentId(),
-                  ex));
+                  ex),
+                ex
+              );
               continue;
             }
             if (result.getMatchedCount() == 0) {
@@ -699,13 +737,17 @@ public class DataSynchronizer {
                   docConfig.getDocumentId(),
                   docConfig.getLastKnownRemoteVersion()));
             } catch (final StitchServiceException ex) {
-              logger.error(String.format(
+              logError(
+                docConfig.getDocumentId(),
+                String.format(
                   Locale.US,
                   "t='%d': syncLocalToRemote ns=%s documentId=%s exception deleting: %s",
                   logicalT,
                   nsConfig.getNamespace(),
                   docConfig.getDocumentId(),
-                  ex));
+                  ex),
+                ex
+              );
               continue;
             }
             if (result.getDeletedCount() == 0) {
@@ -730,14 +772,17 @@ public class DataSynchronizer {
           }
 
           default:
-            logger.error(String.format(
+            logError(
+              docConfig.getDocumentId(),
+              String.format(
                 Locale.US,
                 "t='%d': syncLocalToRemote ns=%s documentId=%s unknown operation type occurred "
-                    + "on the document: %s; dropping the event",
+                  + "on the document: %s; dropping the event",
                 logicalT,
                 nsConfig.getNamespace(),
                 docConfig.getDocumentId(),
-                localChangeEvent.getOperationType().toString()));
+                localChangeEvent.getOperationType().toString())
+            );
         }
 
         logger.info(String.format(
@@ -835,13 +880,15 @@ public class DataSynchronizer {
           transformedLocalEvent,
           transformedRemoteEvent);
     } catch (final Exception ex) {
-      logger.error(String.format(
+      logError(docConfig.getDocumentId(),
+        String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s resolution exception: %s",
           logicalT,
           namespace,
           docConfig.getDocumentId(),
-          ex));
+          ex),
+        ex);
       return;
     }
 
@@ -1353,12 +1400,14 @@ public class DataSynchronizer {
                 ChangeEvent.transformChangeEventForUser(
                     event, namespaceListener.getDocumentCodec()));
           } catch (final Exception ex) {
-            logger.error(String.format(
+            logError(documentId,
+              String.format(
                 Locale.US,
                 "emitEvent ns=%s documentId=%s emit exception: %s",
                 event.getNamespace(),
                 documentId,
-                ex));
+                ex),
+              ex);
           }
           return null;
         }
