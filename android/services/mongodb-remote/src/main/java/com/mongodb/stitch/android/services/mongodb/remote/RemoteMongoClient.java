@@ -21,7 +21,7 @@ import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFacto
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
 
 /**
  * The remote MongoClient used for working with data in MongoDB remotely via Stitch.
@@ -44,7 +44,9 @@ public interface RemoteMongoClient {
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {
-          return new RemoteMongoClientImpl(new CoreRemoteMongoClientImpl(service), dispatcher);
+          return new RemoteMongoClientImpl(
+            CoreRemoteClientFactory.getClient(service, appInfo),
+            dispatcher);
         }
       };
 }

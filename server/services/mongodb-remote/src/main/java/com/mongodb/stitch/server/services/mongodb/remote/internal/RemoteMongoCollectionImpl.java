@@ -27,6 +27,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoC
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
+import com.mongodb.stitch.server.services.mongodb.remote.Sync;
+
 import java.util.List;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -35,9 +37,11 @@ public final class RemoteMongoCollectionImpl<DocumentT>
     implements RemoteMongoCollection<DocumentT> {
 
   private final CoreRemoteMongoCollection<DocumentT> proxy;
+  private final Sync<DocumentT> sync;
 
   RemoteMongoCollectionImpl(final CoreRemoteMongoCollection<DocumentT> coll) {
     this.proxy = coll;
+    this.sync = new SyncImpl<>(this.proxy.sync());
   }
 
   /**
@@ -276,5 +280,10 @@ public final class RemoteMongoCollectionImpl<DocumentT>
       final RemoteUpdateOptions updateOptions
   ) {
     return proxy.updateMany(filter, update, updateOptions);
+  }
+
+  @Override
+  public Sync<DocumentT> sync() {
+    return this.sync;
   }
 }

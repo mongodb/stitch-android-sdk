@@ -20,7 +20,10 @@ import static com.mongodb.MongoNamespace.checkDatabaseNameValidity;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
 
 import org.bson.Document;
 
@@ -29,14 +32,25 @@ public class CoreRemoteMongoDatabaseImpl implements CoreRemoteMongoDatabase {
   private final String name;
   private final CoreStitchServiceClient service;
 
+  // Sync related fields
+  private final DataSynchronizer dataSynchronizer;
+  private final NetworkMonitor networkMonitor;
+  private final MongoDatabase tempDb;
+
   CoreRemoteMongoDatabaseImpl(
       final String name,
-      final CoreStitchServiceClient service
+      final CoreStitchServiceClient service,
+      final DataSynchronizer dataSynchronizer,
+      final NetworkMonitor networkMonitor,
+      final MongoDatabase tempDb
   ) {
     notNull("name", name);
     checkDatabaseNameValidity(name);
     this.name = name;
     this.service = service;
+    this.dataSynchronizer = dataSynchronizer;
+    this.networkMonitor = networkMonitor;
+    this.tempDb = tempDb;
   }
 
   /**
@@ -73,6 +87,10 @@ public class CoreRemoteMongoDatabaseImpl implements CoreRemoteMongoDatabase {
     return new CoreRemoteMongoCollectionImpl<>(
         new MongoNamespace(name, collectionName),
         documentClass,
-        service);
+        service,
+        dataSynchronizer,
+        networkMonitor,
+        tempDb
+    );
   }
 }

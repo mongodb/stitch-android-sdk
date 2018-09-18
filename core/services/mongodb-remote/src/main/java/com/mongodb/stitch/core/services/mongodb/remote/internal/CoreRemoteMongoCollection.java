@@ -23,6 +23,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 
 import java.util.List;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -236,4 +237,11 @@ public interface CoreRemoteMongoCollection<DocumentT> {
       final Bson filter,
       final Bson update,
       final RemoteUpdateOptions updateOptions);
+
+  /**
+   * A set of synchronization related operations at the collection level.
+   *
+   * @return set of sync operations for this collection
+  */
+  CoreSync<DocumentT> sync();
 }
