@@ -21,35 +21,35 @@ public interface Sync<DocumentT> {
    * @param changeEventListener the event listener to invoke when a a change event happens for the
    *                         document.
    */
-  void configure(ConflictHandler<DocumentT> conflictResolver,
-                 ChangeEventListener<DocumentT> changeEventListener,
-                 ErrorListener errorListener);
+  void configure(final ConflictHandler<DocumentT> conflictResolver,
+                 final ChangeEventListener<DocumentT> changeEventListener,
+                 final ErrorListener errorListener);
 
   /**
    * Requests that the given document _id be synchronized.
    * @param id the document _id to synchronize.
    */
-  void syncOne(BsonValue id);
+  void syncOne(final BsonValue id);
 
   /**
    * Requests that the given document _ids be synchronized.
    * @param ids the document _ids to synchronize.
    */
-  void syncMany(BsonValue... ids);
+  void syncMany(final BsonValue... ids);
 
   /**
    * Stops synchronizing the given document _id. Any uncommitted writes will be lost.
    *
    * @param id the _id of the document to desynchronize.
    */
-  void desyncOne(BsonValue id);
+  void desyncOne(final BsonValue id);
 
   /**
    * Stops synchronizing the given document _ids. Any uncommitted writes will be lost.
    *
    * @param ids the _ids of the documents to desynchronize.
    */
-  void desyncMany(BsonValue... ids);
+  void desyncMany(final BsonValue... ids);
 
   /**
    * Returns the set of synchronized document ids in a namespace.

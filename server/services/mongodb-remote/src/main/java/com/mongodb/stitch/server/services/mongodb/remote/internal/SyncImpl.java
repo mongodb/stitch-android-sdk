@@ -25,7 +25,7 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   @Override
   public void configure(final ConflictHandler<DocumentT> conflictResolver,
                         final ChangeEventListener<DocumentT> changeEventListener,
-                        ErrorListener errorListener) {
+                        final ErrorListener errorListener) {
     this.proxy.configure(conflictResolver, changeEventListener, errorListener);
   }
 
