@@ -675,9 +675,8 @@ public class DataSynchronizer {
 
           case UPDATE: {
             if (localDoc == null) {
-              IllegalStateException illegalStateException = new IllegalStateException(
+              final IllegalStateException illegalStateException = new IllegalStateException(
                 "expected document to exist for local update change event");
-
               emitError(
                 docConfig.getDocumentId(),
                 illegalStateException.getMessage(),
@@ -1411,8 +1410,7 @@ public class DataSynchronizer {
                 ChangeEvent.transformChangeEventForUser(
                     event, namespaceListener.getDocumentCodec()));
           } catch (final Exception ex) {
-            emitError(documentId,
-              String.format(
+            emitError(documentId,              String.format(
                 Locale.US,
                 "emitEvent ns=%s documentId=%s emit exception: %s",
                 event.getNamespace(),
