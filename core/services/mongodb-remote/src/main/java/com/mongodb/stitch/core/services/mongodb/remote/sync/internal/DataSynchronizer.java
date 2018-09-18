@@ -50,7 +50,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -478,7 +477,7 @@ public class DataSynchronizer {
               docConfig.getDocumentId());
           return;
         default:
-          logError(docConfig.getDocumentId(),
+          emitError(docConfig.getDocumentId(),
             String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s unknown operation type "
@@ -522,11 +521,11 @@ public class DataSynchronizer {
         remoteChangeEvent);
   }
 
-  private void logError(BsonValue docId, String msg) {
-    this.logError(docId, msg, null);
+  private void emitError(BsonValue docId, String msg) {
+    this.emitError(docId, msg, null);
   }
 
-  private void logError(BsonValue docId, String msg, Exception ex) {
+  private void emitError(BsonValue docId, String msg, Exception ex) {
     if (this.errorListener != null) {
       this.errorListener.onError(docId, new Error(msg, ex));
     }
@@ -594,7 +593,7 @@ public class DataSynchronizer {
             } catch (final StitchServiceException ex) {
               if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
                   || !ex.getMessage().contains("E11000")) {
-                this.logError(localChangeEvent.getId(), String.format(
+                this.emitError(localChangeEvent.getId(), String.format(
                   Locale.US,
                   "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
                   logicalT,
@@ -620,7 +619,7 @@ public class DataSynchronizer {
               IllegalStateException illegalStateException = new IllegalStateException(
                 "expected document to exist for local replace change event: %s");
 
-              logError(
+              emitError(
                 docConfig.getDocumentId(),
                 illegalStateException.getMessage(),
                 illegalStateException
@@ -636,7 +635,7 @@ public class DataSynchronizer {
                   versionInfo.getFilter(),
                   localDoc);
             } catch (final StitchServiceException ex) {
-              this.logError(
+              this.emitError(
                 localChangeEvent.getId(),
                 String.format(
                   Locale.US,
@@ -667,7 +666,7 @@ public class DataSynchronizer {
               IllegalStateException illegalStateException = new IllegalStateException(
                 "expected document to exist for local update change event");
 
-              logError(
+              emitError(
                 docConfig.getDocumentId(),
                 illegalStateException.getMessage(),
                 illegalStateException
@@ -704,7 +703,7 @@ public class DataSynchronizer {
                       // See: changeEventForLocalUpdate for why we do this
                       ? localDoc : translatedUpdate);
             } catch (final StitchServiceException ex) {
-              logError(
+              emitError(
                 docConfig.getDocumentId(),
                 String.format(
                   Locale.US,
@@ -737,7 +736,7 @@ public class DataSynchronizer {
                   docConfig.getDocumentId(),
                   docConfig.getLastKnownRemoteVersion()));
             } catch (final StitchServiceException ex) {
-              logError(
+              emitError(
                 docConfig.getDocumentId(),
                 String.format(
                   Locale.US,
@@ -772,7 +771,7 @@ public class DataSynchronizer {
           }
 
           default:
-            logError(
+            emitError(
               docConfig.getDocumentId(),
               String.format(
                 Locale.US,
@@ -880,7 +879,7 @@ public class DataSynchronizer {
           transformedLocalEvent,
           transformedRemoteEvent);
     } catch (final Exception ex) {
-      logError(docConfig.getDocumentId(),
+      emitError(docConfig.getDocumentId(),
         String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s resolution exception: %s",
@@ -1400,7 +1399,7 @@ public class DataSynchronizer {
                 ChangeEvent.transformChangeEventForUser(
                     event, namespaceListener.getDocumentCodec()));
           } catch (final Exception ex) {
-            logError(documentId,
+            emitError(documentId,
               String.format(
                 Locale.US,
                 "emitEvent ns=%s documentId=%s emit exception: %s",
