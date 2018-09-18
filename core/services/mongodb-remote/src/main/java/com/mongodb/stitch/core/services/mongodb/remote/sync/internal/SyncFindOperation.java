@@ -17,26 +17,17 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.stitch.core.internal.common.BsonUtils;
-import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.internal.FindOperation;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Set;
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
 
 class SyncFindOperation<T> implements Operation<Collection<T>> {
 
   private final MongoNamespace namespace;
-  private final FindOperation<BsonDocument> remoteFindOp;
   private final Class<T> resultClass;
   private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
-  private final MongoCollection<BsonDocument> tempCollection;
+
   private BsonDocument filter;
   private int limit;
   private BsonDocument projection;
@@ -49,18 +40,12 @@ class SyncFindOperation<T> implements Operation<Collection<T>> {
    */
   SyncFindOperation(
       final MongoNamespace namespace,
-      final FindOperation<BsonDocument> remoteFindOp,
       final Class<T> resultClass,
-      final DataSynchronizer dataSynchronizer,
-      final NetworkMonitor networkMonitor,
-      final MongoCollection<BsonDocument> tempCollection
+      final DataSynchronizer dataSynchronizer
   ) {
-    this.remoteFindOp = remoteFindOp;
     this.namespace = namespace;
     this.resultClass = resultClass;
     this.dataSynchronizer = dataSynchronizer;
-    this.networkMonitor = networkMonitor;
-    this.tempCollection = tempCollection;
   }
 
   /**
@@ -109,36 +94,7 @@ class SyncFindOperation<T> implements Operation<Collection<T>> {
 
   @Override
   public Collection<T> execute(final CoreStitchServiceClient service) {
-    final Collection<T> localResult = this.dataSynchronizer
+    return this.dataSynchronizer
         .find(namespace, filter, limit, projection, sort, resultClass, service.getCodecRegistry());
-    if (!this.networkMonitor.isConnected()) {
-      return localResult;
-    }
-
-    final Set<BsonValue> syncedIds =
-        this.dataSynchronizer.getSynchronizedDocumentIds(namespace);
-    final Collection<BsonDocument> remoteResult = remoteFindOp.projection(null).execute(service);
-
-    try {
-      for (final BsonDocument doc : remoteResult) {
-        if (syncedIds.contains(BsonUtils.getDocumentId(doc))) {
-          continue;
-        }
-        tempCollection.insertOne(doc);
-      }
-      final MongoCollection<T> userColl = tempCollection
-          .withDocumentClass(resultClass)
-          .withCodecRegistry(service.getCodecRegistry());
-      for (final T localDoc : localResult) {
-        userColl.insertOne(localDoc);
-      }
-      return userColl.find(filter)
-          .limit(limit)
-          .projection(projection)
-          .sort(sort)
-          .into(new ArrayList<T>());
-    } finally {
-      tempCollection.drop();
-    }
   }
 }

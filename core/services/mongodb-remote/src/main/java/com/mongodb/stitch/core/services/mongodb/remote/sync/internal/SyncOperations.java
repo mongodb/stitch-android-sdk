@@ -22,48 +22,32 @@ import static com.mongodb.stitch.core.internal.common.BsonUtils.getCodec;
 import static com.mongodb.stitch.core.internal.common.BsonUtils.toBsonDocument;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.client.MongoDatabase;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
-import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
-import com.mongodb.stitch.core.services.mongodb.remote.internal.Operations;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.codecs.CollectibleCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
 
-public class SyncOperations<DocumentT> extends Operations<DocumentT> {
+public class SyncOperations<DocumentT> {
 
   private final MongoNamespace namespace;
   private final Class<DocumentT> documentClass;
   private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
   private final CodecRegistry codecRegistry;
-  private final CoreRemoteMongoCollection<DocumentT> remoteCollection;
-  private final MongoDatabase tempDb;
 
   public SyncOperations(
       final MongoNamespace namespace,
       final Class<DocumentT> documentClass,
       final DataSynchronizer dataSynchronizer,
-      final NetworkMonitor networkMonitor,
-      final CodecRegistry codecRegistry,
-      final CoreRemoteMongoCollection<DocumentT> remoteCollection,
-      final MongoDatabase tempDb
+      final CodecRegistry codecRegistry
   ) {
-    super(namespace, documentClass, codecRegistry);
     this.namespace = namespace;
     this.documentClass = documentClass;
     this.dataSynchronizer = dataSynchronizer;
     this.codecRegistry = codecRegistry;
-    this.networkMonitor = networkMonitor;
-    this.remoteCollection = remoteCollection;
-    this.tempDb = tempDb;
   }
 
   <ResultT> SyncFindOperation<ResultT> findFirst(
@@ -101,13 +85,8 @@ public class SyncOperations<DocumentT> extends Operations<DocumentT> {
         codecRegistry);
     return new SyncFindOperation<>(
         findNamespace,
-        super.createFindOperation(namespace, filterDoc, BsonDocument.class, options)
-            .limit(options.getLimit())
-            .sort(sortDoc),
         resultClass,
-        dataSynchronizer,
-        networkMonitor,
-        tempDb.getCollection(new ObjectId().toHexString(), BsonDocument.class))
+        dataSynchronizer)
         .filter(filterDoc)
         .limit(options.getLimit())
         .projection(projDoc)
@@ -123,9 +102,7 @@ public class SyncOperations<DocumentT> extends Operations<DocumentT> {
         namespace,
         documentId,
         resultClass,
-        dataSynchronizer,
-        networkMonitor,
-        remoteCollection.withDocumentClass(resultClass));
+        dataSynchronizer);
   }
 
   UpdateOneByIdOperation<DocumentT> updateOneById(
@@ -136,9 +113,7 @@ public class SyncOperations<DocumentT> extends Operations<DocumentT> {
         namespace,
         documentId,
         toBsonDocument(update, documentClass, codecRegistry),
-        dataSynchronizer,
-        networkMonitor,
-        remoteCollection);
+        dataSynchronizer);
   }
 
   public InsertOneAndSyncOperation insertOneAndSync(
@@ -163,8 +138,6 @@ public class SyncOperations<DocumentT> extends Operations<DocumentT> {
     return new DeleteOneByIdOperation(
         namespace,
         documentId,
-        dataSynchronizer,
-        networkMonitor,
-        remoteCollection);
+        dataSynchronizer);
   }
 }

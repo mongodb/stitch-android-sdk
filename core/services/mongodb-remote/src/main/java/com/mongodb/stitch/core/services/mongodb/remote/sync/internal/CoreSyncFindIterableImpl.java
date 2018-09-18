@@ -20,8 +20,9 @@ import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
+
 import java.util.Collection;
 import java.util.Iterator;
 import javax.annotation.Nullable;
@@ -29,13 +30,13 @@ import org.bson.conversions.Bson;
 
 public class CoreSyncFindIterableImpl<DocumentT, ResultT>
     extends CoreSyncMongoIterableImpl<SyncOperations<DocumentT>, ResultT>
-    implements CoreRemoteFindIterable<ResultT> {
+    implements CoreSyncFindIterable<ResultT> {
 
   private final RemoteFindOptions findOptions;
 
   private Bson filter;
 
-  public CoreSyncFindIterableImpl(
+  CoreSyncFindIterableImpl(
       final Bson filter,
       final Class<ResultT> resultClass,
       final CoreStitchServiceClient service,

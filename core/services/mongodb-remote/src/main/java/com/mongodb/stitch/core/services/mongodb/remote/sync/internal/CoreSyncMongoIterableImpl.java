@@ -30,7 +30,6 @@ import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-// TODO: Merge this into CoreRemoteMongoIterableImpl with general OpsT
 public abstract class CoreSyncMongoIterableImpl<OpsT, ResultT>
     implements CoreRemoteMongoIterable<ResultT> {
 
@@ -38,7 +37,7 @@ public abstract class CoreSyncMongoIterableImpl<OpsT, ResultT>
   private final Class<ResultT> resultClass;
   private final OpsT operations;
 
-  public CoreSyncMongoIterableImpl(
+  CoreSyncMongoIterableImpl(
       final CoreStitchServiceClient service,
       final Class<ResultT> resultClass,
       final OpsT operations

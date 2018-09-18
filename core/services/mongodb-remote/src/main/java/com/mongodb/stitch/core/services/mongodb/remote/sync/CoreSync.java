@@ -4,10 +4,8 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable;
 
 import org.bson.BsonValue;
-import org.bson.codecs.Codec;
 import org.bson.conversions.Bson;
 
 import java.util.Set;
@@ -22,8 +20,7 @@ public interface CoreSync<DocumentT> {
      */
     void configure(final MongoNamespace namespace,
                    final ConflictHandler<DocumentT> conflictResolver,
-                   final ChangeEventListener<DocumentT> changeEventListener,
-                   final Codec<DocumentT> codec);
+                   final ChangeEventListener<DocumentT> changeEventListener);
 
     /**
      * Requests that the given document _id be synchronized.
@@ -63,7 +60,7 @@ public interface CoreSync<DocumentT> {
      *
      * @return the find iterable interface
      */
-    CoreRemoteFindIterable<DocumentT> find();
+    CoreSyncFindIterable<DocumentT> find();
 
     /**
      * Finds all documents in the collection that have been synchronized from the remote.
@@ -72,7 +69,7 @@ public interface CoreSync<DocumentT> {
      * @param <ResultT>   the target document type of the iterable.
      * @return the find iterable interface
      */
-    <ResultT> CoreRemoteFindIterable<ResultT> find(final Class<ResultT> resultClass);
+    <ResultT> CoreSyncFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
     /**
      * Finds all documents in the collection that have been synchronized from the remote.
@@ -80,7 +77,7 @@ public interface CoreSync<DocumentT> {
      * @param filter the query filter
      * @return the find iterable interface
      */
-    CoreRemoteFindIterable<DocumentT> find(final Bson filter);
+    CoreSyncFindIterable<DocumentT> find(final Bson filter);
 
     /**
      * Finds all documents in the collection that have been synchronized from the remote.
@@ -90,7 +87,7 @@ public interface CoreSync<DocumentT> {
      * @param <ResultT>   the target document type of the iterable.
      * @return the find iterable interface
      */
-    <ResultT> CoreRemoteFindIterable<ResultT> find(
+    <ResultT> CoreSyncFindIterable<ResultT> find(
             final Bson filter,
             final Class<ResultT> resultClass
     );

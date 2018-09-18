@@ -36,6 +36,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
@@ -91,18 +92,25 @@ public class TodoListActivity extends AppCompatActivity {
 
     final RemoteMongoClient mongoClient = client.getServiceClient(
         RemoteMongoClient.factory, "Like");
+
     items = mongoClient
       .getDatabase(TodoItem.TODO_LIST_DATABASE)
       .getCollection(TodoItem.TODO_LIST_COLLECTION);
 
-    items.sync().configure(DefaultSyncConflictResolvers.<Document>remoteWins(), itemUpdateListener);
+    items.sync().configure(
+      new MongoNamespace(TODO_LISTS_DATABASE, TODO_LISTS_COLLECTION),
+      DefaultSyncConflictResolvers.<Document>remoteWins(),
+      itemUpdateListener);
 
     lists =
         mongoClient
             .getDatabase(TODO_LISTS_DATABASE)
             .getCollection(TODO_LISTS_COLLECTION, BsonDocument.class);
 
-    lists.sync().configure(DefaultSyncConflictResolvers.<BsonDocument>remoteWins(), listUpdateListener);
+    lists.sync().configure(
+      new MongoNamespace(TODO_LISTS_DATABASE, TODO_LISTS_COLLECTION),
+      DefaultSyncConflictResolvers.<BsonDocument>remoteWins(),
+      listUpdateListener);
 
     // Set up recycler view for to-do items
     final RecyclerView todoRecyclerView = findViewById(R.id.rv_todo_items);

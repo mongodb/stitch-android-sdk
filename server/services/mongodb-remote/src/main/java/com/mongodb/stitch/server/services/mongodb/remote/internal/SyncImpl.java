@@ -1,5 +1,6 @@
 package com.mongodb.stitch.server.services.mongodb.remote.internal;
 
+import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
@@ -8,6 +9,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.Sync;
+import com.mongodb.stitch.server.services.mongodb.remote.SyncFindIterable;
 
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
@@ -22,9 +24,10 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(ConflictHandler<DocumentT> conflictResolver,
-                        ChangeEventListener<DocumentT> changeEventListener) {
-    this.proxy.configure(conflictResolver, changeEventListener);
+  public void configure(final MongoNamespace namespace,
+                        final ConflictHandler<DocumentT> conflictResolver,
+                        final ChangeEventListener<DocumentT> changeEventListener) {
+    this.proxy.configure(namespace, conflictResolver, changeEventListener);
   }
 
   @Override
@@ -53,24 +56,24 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public RemoteFindIterable<DocumentT> find() {
-      return new RemoteFindIterableImpl<>(proxy.find());
+  public SyncFindIterable<DocumentT> find() {
+      return new SyncFindIterableImpl<>(proxy.find());
   }
 
   @Override
-  public RemoteFindIterable<DocumentT> find(final Bson filter) {
-    return new RemoteFindIterableImpl<>(proxy.find(filter));
+  public SyncFindIterable<DocumentT> find(final Bson filter) {
+    return new SyncFindIterableImpl<>(proxy.find(filter));
   }
 
   @Override
-  public <ResultT> RemoteFindIterable<ResultT> find(final Class<ResultT> resultClass) {
-    return new RemoteFindIterableImpl<>(proxy.find(resultClass));
+  public <ResultT> SyncFindIterable<ResultT> find(final Class<ResultT> resultClass) {
+    return new SyncFindIterableImpl<>(proxy.find(resultClass));
   }
 
   @Override
-  public <ResultT> RemoteFindIterable<ResultT> find(final Bson filter,
+  public <ResultT> SyncFindIterable<ResultT> find(final Bson filter,
                                                     final Class<ResultT> resultClass) {
-    return new RemoteFindIterableImpl<>(proxy.find(filter, resultClass));
+    return new SyncFindIterableImpl<>(proxy.find(filter, resultClass));
   }
 
   @Override

@@ -9,6 +9,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIt
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -41,13 +42,12 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     @Override
     public void configure(final MongoNamespace namespace,
                           final ConflictHandler<DocumentT> conflictResolver,
-                          final ChangeEventListener<DocumentT> changeEventListener,
-                          final Codec<DocumentT> codec) {
+                          final ChangeEventListener<DocumentT> changeEventListener) {
         this.dataSynchronizer.configure(
           namespace,
           conflictResolver,
           changeEventListener,
-          codec
+          this.service.getCodecRegistry().get(documentClass)
         );
     }
 
@@ -145,17 +145,17 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     }
 
     @Override
-    public CoreRemoteFindIterable<DocumentT> find() {
+    public CoreSyncFindIterable<DocumentT> find() {
         return this.find(new BsonDocument(), documentClass);
     }
 
     @Override
-    public CoreRemoteFindIterable<DocumentT> find(Bson filter) {
+    public CoreSyncFindIterable<DocumentT> find(Bson filter) {
         return this.find(filter, documentClass);
     }
 
     @Override
-    public <ResultT> CoreRemoteFindIterable<ResultT> find(Class<ResultT> resultClass) {
+    public <ResultT> CoreSyncFindIterable<ResultT> find(Class<ResultT> resultClass) {
         return this.find(new BsonDocument(), resultClass);
     }
 
@@ -167,14 +167,14 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
      * @param <ResultT>   the target document type of the iterable.
      * @return the find iterable interface
      */
-    public <ResultT> CoreRemoteFindIterable<ResultT> find(
+    public <ResultT> CoreSyncFindIterable<ResultT> find(
             final Bson filter,
             final Class<ResultT> resultClass
     ) {
         return createFindIterable(filter, resultClass);
     }
 
-    private <ResultT> CoreRemoteFindIterable<ResultT> createFindIterable(
+    private <ResultT> CoreSyncFindIterable<ResultT> createFindIterable(
             final Bson filter,
             final Class<ResultT> resultClass
     ) {

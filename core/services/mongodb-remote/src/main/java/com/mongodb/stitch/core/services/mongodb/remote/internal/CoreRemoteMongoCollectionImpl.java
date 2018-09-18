@@ -78,10 +78,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
         getNamespace(),
         getDocumentClass(),
         dataSynchronizer,
-        networkMonitor,
-        getCodecRegistry(),
-        this,
-        tempDb)
+        getCodecRegistry())
     );
   }
 

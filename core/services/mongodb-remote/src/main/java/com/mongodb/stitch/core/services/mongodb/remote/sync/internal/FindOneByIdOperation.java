@@ -17,7 +17,6 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
@@ -32,33 +31,24 @@ class FindOneByIdOperation<T> implements Operation<T> {
   private final BsonValue documentId;
   private final Class<T> resultClass;
   private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
-  private final CoreRemoteMongoCollection<T> remoteCollection;
 
   FindOneByIdOperation(
       final MongoNamespace namespace,
       final BsonValue documentId,
       final Class<T> resultClass,
-      final DataSynchronizer dataSynchronizer,
-      final NetworkMonitor networkMonitor,
-      final CoreRemoteMongoCollection<T> remoteCollection
+      final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
     this.documentId = documentId;
     this.resultClass = resultClass;
     this.dataSynchronizer = dataSynchronizer;
-    this.networkMonitor = networkMonitor;
-    this.remoteCollection = remoteCollection;
   }
 
   public T execute(@Nonnull final CoreStitchServiceClient service) {
-    final T localDocument =
-        this.dataSynchronizer.findOneById(
-            namespace, documentId, resultClass, service.getCodecRegistry());
-    if (localDocument != null || !this.networkMonitor.isConnected()) {
-      return localDocument;
-    }
-    final BsonDocument filter = new BsonDocument("_id", documentId);
-    return remoteCollection.find(filter).first();
+    return this.dataSynchronizer.findOneById(
+      namespace,
+      documentId,
+      resultClass,
+      service.getCodecRegistry());
   }
 }

@@ -32,21 +32,15 @@ class DeleteOneByIdOperation implements Operation<RemoteDeleteResult> {
   private final MongoNamespace namespace;
   private final BsonValue documentId;
   private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
-  private final CoreRemoteMongoCollection remoteCollection;
 
   DeleteOneByIdOperation(
       final MongoNamespace namespace,
       final BsonValue documentId,
-      final DataSynchronizer dataSynchronizer,
-      final NetworkMonitor networkMonitor,
-      final CoreRemoteMongoCollection remoteCollection
+      final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
     this.documentId = documentId;
     this.dataSynchronizer = dataSynchronizer;
-    this.networkMonitor = networkMonitor;
-    this.remoteCollection = remoteCollection;
   }
 
   public RemoteDeleteResult execute(@Nullable final CoreStitchServiceClient service) {
@@ -55,11 +49,6 @@ class DeleteOneByIdOperation implements Operation<RemoteDeleteResult> {
     if (localResult.getDeletedCount() == 1) {
       return new RemoteDeleteResult(localResult.getDeletedCount());
     }
-    if (!this.networkMonitor.isConnected()) {
-      return new RemoteDeleteResult(0);
-    }
-
-    final BsonDocument filter = new BsonDocument("_id", documentId);
-    return remoteCollection.deleteOne(filter);
+    return new RemoteDeleteResult(0);
   }
 }

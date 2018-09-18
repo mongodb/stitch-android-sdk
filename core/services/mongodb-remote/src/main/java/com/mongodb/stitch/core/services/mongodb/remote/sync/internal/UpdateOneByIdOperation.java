@@ -33,23 +33,17 @@ class UpdateOneByIdOperation<T> implements Operation<RemoteUpdateResult> {
   private final BsonValue documentId;
   private final BsonDocument update;
   private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
-  private final CoreRemoteMongoCollection<T> remoteCollection;
 
   UpdateOneByIdOperation(
       final MongoNamespace namespace,
       final BsonValue documentId,
       final BsonDocument update,
-      final DataSynchronizer dataSynchronizer,
-      final NetworkMonitor networkMonitor,
-      final CoreRemoteMongoCollection<T> remoteCollection
+      final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
     this.documentId = documentId;
     this.update = update;
     this.dataSynchronizer = dataSynchronizer;
-    this.networkMonitor = networkMonitor;
-    this.remoteCollection = remoteCollection;
   }
 
   public RemoteUpdateResult execute(@Nullable final CoreStitchServiceClient service) {
@@ -61,11 +55,7 @@ class UpdateOneByIdOperation<T> implements Operation<RemoteUpdateResult> {
           localResult.getModifiedCount(),
           null);
     }
-    if (!this.networkMonitor.isConnected()) {
-      return new RemoteUpdateResult(0, 0, null);
-    }
 
-    final BsonDocument filter = new BsonDocument("_id", documentId);
-    return remoteCollection.updateOne(filter, update);
+    return new RemoteUpdateResult(0, 0, null);
   }
 }

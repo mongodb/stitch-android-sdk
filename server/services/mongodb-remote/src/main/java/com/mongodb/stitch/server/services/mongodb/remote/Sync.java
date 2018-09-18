@@ -1,5 +1,6 @@
 package com.mongodb.stitch.server.services.mongodb.remote;
 
+import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
@@ -19,7 +20,8 @@ public interface Sync<DocumentT> {
    * @param changeEventListener the event listener to invoke when a a change event happens for the
    *                         document.
    */
-  void configure(ConflictHandler<DocumentT> conflictResolver,
+  void configure(MongoNamespace namespace,
+                 ConflictHandler<DocumentT> conflictResolver,
                  ChangeEventListener<DocumentT> changeEventListener);
 
   /**
@@ -60,7 +62,7 @@ public interface Sync<DocumentT> {
    *
    * @return the find iterable interface
    */
-  RemoteFindIterable<DocumentT> find();
+  SyncFindIterable<DocumentT> find();
 
   /**
    * Finds all documents in the collection.
@@ -69,7 +71,7 @@ public interface Sync<DocumentT> {
    * @param <ResultT>   the target document type of the iterable.
    * @return the find iterable interface
    */
-  <ResultT> RemoteFindIterable<ResultT> find(final Class<ResultT> resultClass);
+  <ResultT> SyncFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
   /**
    * Finds all documents in the collection.
@@ -77,7 +79,7 @@ public interface Sync<DocumentT> {
    * @param filter the query filter
    * @return the find iterable interface
    */
-  RemoteFindIterable<DocumentT> find(final Bson filter);
+  SyncFindIterable<DocumentT> find(final Bson filter);
 
   /**
    * Finds all documents in the collection.
@@ -87,7 +89,7 @@ public interface Sync<DocumentT> {
    * @param <ResultT>   the target document type of the iterable.
    * @return the find iterable interface
    */
-  <ResultT> RemoteFindIterable<ResultT> find(
+  <ResultT> SyncFindIterable<ResultT> find(
     final Bson filter,
     final Class<ResultT> resultClass
   );

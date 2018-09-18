@@ -24,8 +24,7 @@ public interface Sync<DocumentT> {
    */
   void configure(final MongoNamespace namespace,
                  final ConflictHandler<DocumentT> conflictHandler,
-                 final ChangeEventListener<DocumentT> changeEventListener,
-                 final Codec<DocumentT> codec);
+                 final ChangeEventListener<DocumentT> changeEventListener);
 
   /**
    * Requests that the given document _id be synchronized.
@@ -65,7 +64,7 @@ public interface Sync<DocumentT> {
    *
    * @return the find iterable interface
    */
-  RemoteFindIterable<DocumentT> find();
+  SyncFindIterable<DocumentT> find();
 
   /**
    * Finds all documents in the collection that have been synchronized from the remote.
@@ -74,7 +73,7 @@ public interface Sync<DocumentT> {
    * @param <ResultT>   the target document type of the iterable.
    * @return the find iterable interface
    */
-  <ResultT> RemoteFindIterable<ResultT> find(final Class<ResultT> resultClass);
+  <ResultT> SyncFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
   /**
    * Finds all documents in the collection that have been synchronized from the remote.
@@ -82,7 +81,7 @@ public interface Sync<DocumentT> {
    * @param filter the query filter
    * @return the find iterable interface
    */
-  RemoteFindIterable<DocumentT> find(final Bson filter);
+  SyncFindIterable<DocumentT> find(final Bson filter);
 
   /**
    * Finds all documents in the collection that have been synchronized from the remote.
@@ -92,7 +91,7 @@ public interface Sync<DocumentT> {
    * @param <ResultT>   the target document type of the iterable.
    * @return the find iterable interface
    */
-  <ResultT> RemoteFindIterable<ResultT> find(
+  <ResultT> SyncFindIterable<ResultT> find(
     final Bson filter,
     final Class<ResultT> resultClass
   );
