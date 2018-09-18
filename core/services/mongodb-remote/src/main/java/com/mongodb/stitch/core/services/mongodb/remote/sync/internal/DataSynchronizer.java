@@ -1410,7 +1410,7 @@ public class DataSynchronizer {
                 ChangeEvent.transformChangeEventForUser(
                     event, namespaceListener.getDocumentCodec()));
           } catch (final Exception ex) {
-            emitError(documentId,              String.format(
+            emitError(documentId, String.format(
                 Locale.US,
                 "emitEvent ns=%s documentId=%s emit exception: %s",
                 event.getNamespace(),
