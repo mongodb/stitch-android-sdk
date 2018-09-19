@@ -10,6 +10,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -40,15 +41,16 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     }
 
     @Override
-    public void configure(final MongoNamespace namespace,
-                          final ConflictHandler<DocumentT> conflictResolver,
-                          final ChangeEventListener<DocumentT> changeEventListener) {
-        this.dataSynchronizer.configure(
-          namespace,
-          conflictResolver,
-          changeEventListener,
-          this.service.getCodecRegistry().get(documentClass)
-        );
+    public void configure(final ConflictHandler<DocumentT> conflictResolver,
+                          final ChangeEventListener<DocumentT> changeEventListener,
+                          final ErrorListener errorListener) {
+      this.dataSynchronizer.configure(
+        namespace,
+        conflictResolver,
+        changeEventListener,
+        errorListener,
+        this.service.getCodecRegistry().get(documentClass)
+      );
     }
 
     @Override

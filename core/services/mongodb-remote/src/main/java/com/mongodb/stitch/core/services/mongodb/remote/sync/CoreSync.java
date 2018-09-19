@@ -18,9 +18,9 @@ public interface CoreSync<DocumentT> {
      * @param changeEventListener the event listener to invoke when a a change event happens for the
      *                         document.
      */
-    void configure(final MongoNamespace namespace,
-                   final ConflictHandler<DocumentT> conflictResolver,
-                   final ChangeEventListener<DocumentT> changeEventListener);
+    void configure(final ConflictHandler<DocumentT> conflictResolver,
+                   final ChangeEventListener<DocumentT> changeEventListener,
+                   final ErrorListener errorListener);
 
     /**
      * Requests that the given document _id be synchronized.

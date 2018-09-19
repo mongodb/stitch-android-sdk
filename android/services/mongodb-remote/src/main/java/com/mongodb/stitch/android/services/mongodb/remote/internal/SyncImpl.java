@@ -12,6 +12,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import org.bson.BsonValue;
 import org.bson.codecs.Codec;
@@ -31,10 +32,10 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(final MongoNamespace namespace,
-                        final ConflictHandler<DocumentT> conflictHandler,
-                        final ChangeEventListener<DocumentT> changeEventListener) {
-    this.proxy.configure(namespace, conflictHandler, changeEventListener);
+  public void configure(final ConflictHandler<DocumentT> conflictHandler,
+                        final ChangeEventListener<DocumentT> changeEventListener,
+                        final ErrorListener errorListener) {
+    this.proxy.configure(conflictHandler, changeEventListener, errorListener);
   }
 
   @Override
