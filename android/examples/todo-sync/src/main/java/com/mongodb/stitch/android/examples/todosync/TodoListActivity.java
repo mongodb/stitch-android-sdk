@@ -36,7 +36,6 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
@@ -174,7 +173,7 @@ public class TodoListActivity extends AppCompatActivity {
   private class ItemUpdateListener implements ChangeEventListener<Document> {
     @Override
     public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
-      if (!event.isLocalWritePending()) {
+      if (!event.hasUncommittedWrites()) {
         lists.sync().updateOneById(
             new BsonString("mylist"),
             new BsonDocument("$inc", new BsonDocument("i", new BsonInt64(1))));

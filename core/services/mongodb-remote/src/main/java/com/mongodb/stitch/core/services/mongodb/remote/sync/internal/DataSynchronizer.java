@@ -403,7 +403,7 @@ public class DataSynchronizer {
       final ChangeEvent<BsonDocument> remoteChangeEvent,
       final MongoCollection<BsonDocument> localColl
   ) {
-    if (docConfig.hasPendingWrites() && docConfig.getLastResolution() == logicalT) {
+    if (docConfig.hasUncommittedWrites() && docConfig.getLastResolution() == logicalT) {
       logger.info(String.format(
           Locale.US,
           "t='%d': syncRemoteChangeEventToLocal have writes for %s but happened at same t; "
@@ -562,7 +562,7 @@ public class DataSynchronizer {
           getRemoteCollection(nsConfig.getNamespace());
 
       for (final CoreDocumentSynchronizationConfig docConfig : nsConfig) {
-        if (!docConfig.hasPendingWrites()) {
+        if (!docConfig.hasUncommittedWrites()) {
           continue;
         }
         if (docConfig.getLastResolution() == logicalT) {

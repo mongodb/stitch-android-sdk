@@ -94,7 +94,7 @@ public final class ChangeEvent<DocumentT> {
     return updateDescription;
   }
 
-  public boolean isLocalWritePending() {
+  public boolean hasUncommittedWrites() {
     return localWritePending;
   }
 
@@ -432,6 +432,6 @@ public final class ChangeEvent<DocumentT> {
         event.getNamespace(),
         event.getDocumentKey(),
         event.getUpdateDescription(),
-        event.isLocalWritePending());
+        event.hasUncommittedWrites());
   }
 }

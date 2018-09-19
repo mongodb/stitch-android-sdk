@@ -263,7 +263,7 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public boolean hasPendingWrites() {
+  public boolean hasUncommittedWrites() {
     docLock.readLock().lock();
     try {
       return lastUncommittedChangeEvent != null;
@@ -338,7 +338,7 @@ class CoreDocumentSynchronizationConfig {
                 newestChangeEvent.getNamespace(),
                 newestChangeEvent.getDocumentKey(),
                 null,
-                newestChangeEvent.isLocalWritePending()
+                newestChangeEvent.hasUncommittedWrites()
             );
           default:
             break;
@@ -357,7 +357,7 @@ class CoreDocumentSynchronizationConfig {
                 newestChangeEvent.getNamespace(),
                 newestChangeEvent.getDocumentKey(),
                 null,
-                newestChangeEvent.isLocalWritePending()
+                newestChangeEvent.hasUncommittedWrites()
             );
           default:
             break;
