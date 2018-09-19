@@ -13,5 +13,5 @@ public interface ErrorListener {
    * @param documentId the _id of the document related to the error.
    * @param error the error.
    */
-  void onError(final BsonValue documentId, final Error error);
+  void onError(final BsonValue documentId, final Exception error);
 }

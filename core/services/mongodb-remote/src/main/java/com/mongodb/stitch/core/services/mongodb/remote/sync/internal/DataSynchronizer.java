@@ -521,13 +521,25 @@ public class DataSynchronizer {
         remoteChangeEvent);
   }
 
-  private void emitError(BsonValue docId, String msg) {
+  private void emitError(final BsonValue docId, final String msg) {
     this.emitError(docId, msg, null);
   }
 
-  private void emitError(BsonValue docId, String msg, Exception ex) {
+  private void emitError(final BsonValue docId, final String msg, Exception ex) {
     if (this.errorListener != null) {
-      this.errorListener.onError(docId, new Error(msg, ex));
+      final Exception dispatchException;
+      if (ex == null) {
+        dispatchException = new DataSynchronizerException(msg);
+      } else {
+        dispatchException = ex;
+      }
+      this.eventDispatcher.dispatch(new Callable<Object>() {
+        @Override
+        public Object call() {
+          errorListener.onError(docId, dispatchException);
+          return null;
+        }
+      });
     }
 
     this.logger.error(msg);
@@ -616,7 +628,7 @@ public class DataSynchronizer {
 
           case REPLACE: {
             if (localDoc == null) {
-              IllegalStateException illegalStateException = new IllegalStateException(
+              final IllegalStateException illegalStateException = new IllegalStateException(
                 "expected document to exist for local replace change event: %s");
 
               emitError(
