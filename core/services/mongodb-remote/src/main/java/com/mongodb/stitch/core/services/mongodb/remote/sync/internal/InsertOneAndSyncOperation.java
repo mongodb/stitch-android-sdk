@@ -21,11 +21,8 @@ import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
-import org.bson.codecs.Codec;
 
 class InsertOneAndSyncOperation<T> implements Operation<RemoteInsertOneResult> {
 

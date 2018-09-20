@@ -57,6 +57,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -156,7 +157,7 @@ public class DataSynchronizer {
       this.instanceChangeStreamListener.addNamespace(ns);
     }
     // TODO: Add back in
-//    this.instanceChangeStreamListener.start();
+    // this.instanceChangeStreamListener.start();
 
     this.logger =
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
@@ -183,16 +184,16 @@ public class DataSynchronizer {
     }
   }
 
-  public <T> void configure(MongoNamespace namespace,
-                            ConflictHandler<T> conflictHandler,
-                            ChangeEventListener<T> changeEventListener,
-                            ErrorListener errorListener,
-                            Codec<T> codec) {
+  public <T> void configure(final MongoNamespace namespace,
+                            final ConflictHandler<T> conflictHandler,
+                            final ChangeEventListener<T> changeEventListener,
+                            final ErrorListener errorListener,
+                            final Codec<T> codec) {
     this.errorListener = errorListener;
     this.syncConfig.getNamespaceConfig(namespace).configure(
-      conflictHandler,
-      changeEventListener,
-      codec
+        conflictHandler,
+        changeEventListener,
+        codec
     );
   }
 
@@ -392,10 +393,10 @@ public class DataSynchronizer {
   /**
    * Attempts to synchronize the given remote change event into the local database.
    *
-   * @param nsConfig the namespace configuration.
-   * @param docConfig the document configuration related to the event.
+   * @param nsConfig          the namespace configuration.
+   * @param docConfig         the document configuration related to the event.
    * @param remoteChangeEvent the remote change event to synchronize into the local database.
-   * @param localColl the local collection where the document lives.
+   * @param localColl         the local collection where the document lives.
    */
   private void syncRemoteChangeEventToLocal(
       final NamespaceSynchronizationConfig nsConfig,
@@ -478,14 +479,14 @@ public class DataSynchronizer {
           return;
         default:
           emitError(docConfig.getDocumentId(),
-            String.format(
-              Locale.US,
-              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s unknown operation type "
-                + "occurred on the document: %s; dropping the event",
-              logicalT,
-              nsConfig.getNamespace(),
-              docConfig.getDocumentId(),
-              remoteChangeEvent.getOperationType().toString()));
+              String.format(
+                  Locale.US,
+                  "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s unknown operation type "
+                      + "occurred on the document: %s; dropping the event",
+                  logicalT,
+                  nsConfig.getNamespace(),
+                  docConfig.getDocumentId(),
+                  remoteChangeEvent.getOperationType().toString()));
           break;
       }
     }
@@ -525,7 +526,7 @@ public class DataSynchronizer {
     this.emitError(docId, msg, null);
   }
 
-  private void emitError(final BsonValue docId, final String msg, Exception ex) {
+  private void emitError(final BsonValue docId, final String msg, final Exception ex) {
     if (this.errorListener != null) {
       final Exception dispatchException;
       if (ex == null) {
@@ -606,21 +607,21 @@ public class DataSynchronizer {
               if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
                   || !ex.getMessage().contains("E11000")) {
                 this.emitError(localChangeEvent.getId(), String.format(
-                  Locale.US,
-                  "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
-                  logicalT,
-                  nsConfig.getNamespace(),
-                  docConfig.getDocumentId(),
-                  ex), ex);
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId(),
+                      ex), ex);
                 continue;
               }
               logger.info(String.format(
-                  Locale.US,
-                  "t='%d': syncLocalToRemote ns=%s documentId=%s duplicate key exception on "
+                    Locale.US,
+                    "t='%d': syncLocalToRemote ns=%s documentId=%s duplicate key exception on "
                       + "insert; raising conflict",
-                  logicalT,
-                  nsConfig.getNamespace(),
-                  docConfig.getDocumentId()));
+                    logicalT,
+                    nsConfig.getNamespace(),
+                    docConfig.getDocumentId()));
               isConflicted = true;
             }
             break;
@@ -629,12 +630,12 @@ public class DataSynchronizer {
           case REPLACE: {
             if (localDoc == null) {
               final IllegalStateException illegalStateException = new IllegalStateException(
-                "expected document to exist for local replace change event: %s");
+                  "expected document to exist for local replace change event: %s");
 
               emitError(
-                docConfig.getDocumentId(),
-                illegalStateException.getMessage(),
-                illegalStateException
+                  docConfig.getDocumentId(),
+                  illegalStateException.getMessage(),
+                  illegalStateException
               );
             }
             final DocumentVersionInfo versionInfo =
@@ -648,15 +649,15 @@ public class DataSynchronizer {
                   localDoc);
             } catch (final StitchServiceException ex) {
               this.emitError(
-                localChangeEvent.getId(),
-                String.format(
-                  Locale.US,
-                  "t='%d': syncLocalToRemote ns=%s documentId=%s exception replacing: %s",
-                  logicalT,
-                  nsConfig.getNamespace(),
-                  docConfig.getDocumentId(),
-                  ex),
-                ex
+                  localChangeEvent.getId(),
+                  String.format(
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s exception replacing: %s",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId(),
+                      ex),
+                  ex
               );
               continue;
             }
@@ -676,11 +677,11 @@ public class DataSynchronizer {
           case UPDATE: {
             if (localDoc == null) {
               final IllegalStateException illegalStateException = new IllegalStateException(
-                "expected document to exist for local update change event");
+                  "expected document to exist for local update change event");
               emitError(
-                docConfig.getDocumentId(),
-                illegalStateException.getMessage(),
-                illegalStateException
+                  docConfig.getDocumentId(),
+                  illegalStateException.getMessage(),
+                  illegalStateException
               );
             }
             final DocumentVersionInfo versionInfo =
@@ -715,15 +716,15 @@ public class DataSynchronizer {
                       ? localDoc : translatedUpdate);
             } catch (final StitchServiceException ex) {
               emitError(
-                docConfig.getDocumentId(),
-                String.format(
-                  Locale.US,
-                  "t='%d': syncLocalToRemote ns=%s documentId=%s exception updating: %s",
-                  logicalT,
-                  nsConfig.getNamespace(),
                   docConfig.getDocumentId(),
-                  ex),
-                ex
+                  String.format(
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s exception updating: %s",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId(),
+                      ex),
+                  ex
               );
               continue;
             }
@@ -748,15 +749,15 @@ public class DataSynchronizer {
                   docConfig.getLastKnownRemoteVersion()));
             } catch (final StitchServiceException ex) {
               emitError(
-                docConfig.getDocumentId(),
-                String.format(
-                  Locale.US,
-                  "t='%d': syncLocalToRemote ns=%s documentId=%s exception deleting: %s",
-                  logicalT,
-                  nsConfig.getNamespace(),
                   docConfig.getDocumentId(),
-                  ex),
-                ex
+                  String.format(
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s exception deleting: %s",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId(),
+                      ex),
+                  ex
               );
               continue;
             }
@@ -783,15 +784,15 @@ public class DataSynchronizer {
 
           default:
             emitError(
-              docConfig.getDocumentId(),
-              String.format(
-                Locale.US,
-                "t='%d': syncLocalToRemote ns=%s documentId=%s unknown operation type occurred "
-                  + "on the document: %s; dropping the event",
-                logicalT,
-                nsConfig.getNamespace(),
                 docConfig.getDocumentId(),
-                localChangeEvent.getOperationType().toString())
+                String.format(
+                    Locale.US,
+                    "t='%d': syncLocalToRemote ns=%s documentId=%s unknown operation type occurred "
+                        + "on the document: %s; dropping the event",
+                    logicalT,
+                    nsConfig.getNamespace(),
+                    docConfig.getDocumentId(),
+                    localChangeEvent.getOperationType().toString())
             );
         }
 
@@ -847,9 +848,9 @@ public class DataSynchronizer {
    * will result in either the document being desynchronized or being replaced with some resolved
    * state based on the conflict resolver specified for the document.
    *
-   * @param namespace the namespace where the document lives.
-   * @param docConfig the configuration of the document that describes the resolver and current
-   *                  state.
+   * @param namespace   the namespace where the document lives.
+   * @param docConfig   the configuration of the document that describes the resolver and current
+   *                    state.
    * @param remoteEvent the remote change event that is conflicting.
    */
   private void resolveConflict(
@@ -891,14 +892,14 @@ public class DataSynchronizer {
           transformedRemoteEvent);
     } catch (final Exception ex) {
       emitError(docConfig.getDocumentId(),
-        String.format(
-          Locale.US,
-          "t='%d': resolveConflict ns=%s documentId=%s resolution exception: %s",
-          logicalT,
-          namespace,
-          docConfig.getDocumentId(),
-          ex),
-        ex);
+          String.format(
+              Locale.US,
+              "t='%d': resolveConflict ns=%s documentId=%s resolution exception: %s",
+              logicalT,
+              namespace,
+              docConfig.getDocumentId(),
+              ex),
+          ex);
       return;
     }
 
@@ -970,9 +971,9 @@ public class DataSynchronizer {
    * the given conflict resolver.
    *
    * @param conflictResolver the conflict resolver to use.
-   * @param documentId the document id related to the conflicted events.
-   * @param localEvent the conflicted local event.
-   * @param remoteEvent the conflicted remote event.
+   * @param documentId       the document id related to the conflicted events.
+   * @param localEvent       the conflicted local event.
+   * @param remoteEvent      the conflicted remote event.
    * @return the resolution to the conflict.
    */
   @SuppressWarnings("unchecked")
@@ -1008,9 +1009,9 @@ public class DataSynchronizer {
   /**
    * Returns a synthesized change event for a remote document.
    *
-   * @param ns the namspace where the document lives.
+   * @param ns         the namspace where the document lives.
    * @param documentId the _id of the document.
-   * @param document the remote document.
+   * @param document   the remote document.
    * @return a synthesized change event for a remote document.
    */
   private ChangeEvent<BsonDocument> getSynthesizedRemoteChangeEventForDocument(
@@ -1068,9 +1069,9 @@ public class DataSynchronizer {
    * Requests that a document be synchronized by the given _id. Actual synchronization of the
    * document will happen later in a {@link DataSynchronizer#doSyncPass()} iteration.
    *
-   * @param namespace the namespace to put the document in.
+   * @param namespace  the namespace to put the document in.
    * @param documentId the _id of the document.
-   * @param <T> the type of the document in the collection.
+   * @param <T>        the type of the document in the collection.
    */
   public <T> void syncDocumentFromRemote(
       final MongoNamespace namespace,
@@ -1085,7 +1086,7 @@ public class DataSynchronizer {
    * Requests that a document be no longer be synchronized by the given _id. Any uncommitted writes
    * will be lost.
    *
-   * @param namespace the namespace to put the document in.
+   * @param namespace  the namespace to put the document in.
    * @param documentId the _id of the document.
    */
   public void desyncDocumentFromRemote(
@@ -1122,11 +1123,11 @@ public class DataSynchronizer {
    * Finds a single synchronized document by the given _id. If the document is not being
    * synchronized or has not yet been found remotely, null will be returned.
    *
-   * @param namespace the namespace to search for the document in.
-   * @param documentId the _id of the document.
-   * @param resultClass the {@link Class} that represents this document in the collection.
+   * @param namespace     the namespace to search for the document in.
+   * @param documentId    the _id of the document.
+   * @param resultClass   the {@link Class} that represents this document in the collection.
    * @param codecRegistry the {@link CodecRegistry} that contains a codec for resultClass.
-   * @param <T> the type of the document in the collection.
+   * @param <T>           the type of the document in the collection.
    * @return the synchronized document if it exists; null otherwise.
    */
   public <T> T findOneById(
@@ -1149,7 +1150,7 @@ public class DataSynchronizer {
    * a document with the same _id twice will result in a duplicate key exception.
    *
    * @param namespace the namespace to put the document in.
-   * @param document the document to insert.
+   * @param document  the document to insert.
    */
   public void insertOneAndSync(
       final MongoNamespace namespace,
@@ -1170,9 +1171,9 @@ public class DataSynchronizer {
    * Updates a single synchronized document by its given id with the given update specifiers.
    * No update will occur if the _id is not being synchronized.
    *
-   * @param namespace the namespace where the document lives.
+   * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
-   * @param update the update modifiers.
+   * @param update     the update modifiers.
    * @return the result of the update.
    */
   public UpdateResult updateOneById(
@@ -1209,9 +1210,9 @@ public class DataSynchronizer {
    * Replaces a single synchronized document by its given id with the given full document
    * replacement. No replacement will occur if the _id is not being synchronized.
    *
-   * @param namespace the namespace where the document lives.
+   * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
-   * @param document the replacement document.
+   * @param document   the replacement document.
    */
   private void replaceOrUpsertOneFromResolution(
       final MongoNamespace namespace,
@@ -1254,9 +1255,9 @@ public class DataSynchronizer {
    * Replaces a single synchronized document by its given id with the given full document
    * replacement. No replacement will occur if the _id is not being synchronized.
    *
-   * @param namespace the namespace where the document lives.
+   * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
-   * @param document the replacement document.
+   * @param document   the replacement document.
    */
   private void replaceOrUpsertOneFromRemote(
       final MongoNamespace namespace,
@@ -1284,7 +1285,7 @@ public class DataSynchronizer {
    * Deletes a single synchronized document by its given id. No deletion will occur if the _id is
    * not being synchronized.
    *
-   * @param namespace the namespace where the document lives.
+   * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
    * @return the result of the deletion.
    */
@@ -1306,11 +1307,11 @@ public class DataSynchronizer {
         changeEventForLocalDelete(namespace, documentId, true);
 
     // this block is to trigger coalescence for a delete after insert
-    if (config.getLastUncommittedChangeEvent() != null &&
-          config.getLastUncommittedChangeEvent().getOperationType() ==
-            ChangeEvent.OperationType.INSERT) {
-        desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
-        return result;
+    if (config.getLastUncommittedChangeEvent() != null
+        && config.getLastUncommittedChangeEvent().getOperationType()
+        == ChangeEvent.OperationType.INSERT) {
+      desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+      return result;
     }
 
     config.setSomePendingWrites(
@@ -1323,7 +1324,7 @@ public class DataSynchronizer {
    * Deletes a single synchronized document by its given id. No deletion will occur if the _id is
    * not being synchronized.
    *
-   * @param namespace the namespace where the document lives.
+   * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
    */
   private void deleteOneFromResolution(
@@ -1351,7 +1352,7 @@ public class DataSynchronizer {
    * Deletes a single synchronized document by its given id. No deletion will occur if the _id is
    * not being synchronized.
    *
-   * @param namespace the namespace where the document lives.
+   * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
    */
   private void deleteOneFromRemote(
@@ -1386,19 +1387,19 @@ public class DataSynchronizer {
    * Emits a change event for the given document id.
    *
    * @param documentId the document that has a change event for it.
-   * @param event the change event.
+   * @param event      the change event.
    */
   private void emitEvent(final BsonValue documentId, final ChangeEvent<BsonDocument> event) {
     listenersLock.lock();
     try {
-      NamespaceSynchronizationConfig namespaceSynchronizationConfig =
-        syncConfig.getNamespaceConfig(event.getNamespace());
+      final NamespaceSynchronizationConfig namespaceSynchronizationConfig =
+          syncConfig.getNamespaceConfig(event.getNamespace());
 
       if (namespaceSynchronizationConfig.getNamespaceListenerConfig() == null) {
         return;
       }
       final NamespaceListenerConfig namespaceListener =
-        namespaceSynchronizationConfig.getNamespaceListenerConfig();
+          namespaceSynchronizationConfig.getNamespaceListenerConfig();
 
       eventDispatcher.dispatch(new Callable<Object>() {
         @Override
@@ -1416,7 +1417,7 @@ public class DataSynchronizer {
                 event.getNamespace(),
                 documentId,
                 ex),
-              ex);
+                ex);
           }
           return null;
         }
@@ -1430,9 +1431,9 @@ public class DataSynchronizer {
   /**
    * Returns the local collection representing the given namespace.
    *
-   * @param namespace the namespace referring to the local collection.
+   * @param namespace   the namespace referring to the local collection.
    * @param resultClass the {@link Class} that represents documents in the collection.
-   * @param <T> the type documents in the collection.
+   * @param <T>         the type documents in the collection.
    * @return the local collection representing the given namespace.
    */
   private <T> MongoCollection<T> getLocalCollection(
@@ -1462,9 +1463,9 @@ public class DataSynchronizer {
   /**
    * Returns the remote collection representing the given namespace.
    *
-   * @param namespace the namespace referring to the remote collection.
+   * @param namespace   the namespace referring to the remote collection.
    * @param resultClass the {@link Class} that represents documents in the collection.
-   * @param <T> the type documents in the collection.
+   * @param <T>         the type documents in the collection.
    * @return the remote collection representing the given namespace.
    */
   private <T> CoreRemoteMongoCollection<T> getRemoteCollection(
@@ -1490,6 +1491,7 @@ public class DataSynchronizer {
 
   /**
    * Returns a query filter searching for the given document _id.
+   *
    * @param documentId the _id of the document to search for.
    * @return a query filter searching for the given document _id.
    */
@@ -1499,6 +1501,7 @@ public class DataSynchronizer {
 
   /**
    * Adds and returns a document with a new version id to the given document.
+   *
    * @param document the document to attach a new version to.
    * @return a document with a new version id to the given document.
    */
@@ -1510,6 +1513,7 @@ public class DataSynchronizer {
 
   /**
    * Adds and returns a document with a new version id set modifier to the given document.
+   *
    * @param document the document to attach a new version set modifier to.
    * @return a document with a new version id set modifier to the given document.
    */

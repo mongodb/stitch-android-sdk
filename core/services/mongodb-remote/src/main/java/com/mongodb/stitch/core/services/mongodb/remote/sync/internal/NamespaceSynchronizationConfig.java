@@ -131,9 +131,9 @@ class NamespaceSynchronizationConfig
     this.nsLock = new ReentrantReadWriteLock();
   }
 
-  <T> void configure(ConflictHandler<T> conflictHandler,
-                     ChangeEventListener<T> changeEventListener,
-                     Codec<T> codec) {
+  <T> void configure(final ConflictHandler<T> conflictHandler,
+                     final ChangeEventListener<T> changeEventListener,
+                     final Codec<T> codec) {
     this.conflictHandler = conflictHandler;
     this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
     this.documentCodec = codec;

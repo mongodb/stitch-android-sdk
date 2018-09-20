@@ -111,7 +111,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   @SuppressWarnings("unchecked")
   public void testCount() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(42L)
@@ -168,7 +169,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testFind() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -243,7 +245,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testAggregate() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -304,7 +307,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testInsertOne() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -347,7 +351,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testInsertMany() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -400,7 +405,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testDeleteOne() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(new RemoteDeleteResult(1))
@@ -442,7 +448,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testDeleteMany() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(new RemoteDeleteResult(1))
@@ -484,7 +491,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testUpdateOne() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final BsonObjectId id = new BsonObjectId();
@@ -549,7 +557,8 @@ public class CoreRemoteMongoCollectionUnitTests {
   public void testUpdateMany() {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, mock(StitchAppClientInfo.class));
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final BsonObjectId id = new BsonObjectId();
