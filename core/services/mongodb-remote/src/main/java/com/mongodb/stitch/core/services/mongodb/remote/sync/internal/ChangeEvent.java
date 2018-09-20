@@ -49,7 +49,7 @@ public final class ChangeEvent<DocumentT> {
   private final MongoNamespace ns;
   private final BsonDocument documentKey;
   private final UpdateDescription updateDescription;
-  private final boolean localWritePending;
+  private final boolean hasUncommittedWrites;
 
   ChangeEvent(
       final BsonDocument id,
@@ -58,7 +58,7 @@ public final class ChangeEvent<DocumentT> {
       final MongoNamespace ns,
       final BsonDocument documentKey,
       final UpdateDescription updateDescription,
-      final boolean localWritePending
+      final boolean hasUncommittedWrites
   ) {
     this.id = id;
     this.operationType = operationType;
@@ -67,7 +67,7 @@ public final class ChangeEvent<DocumentT> {
     this.documentKey = documentKey;
     this.updateDescription = updateDescription == null
         ? new UpdateDescription(null, null) : updateDescription;
-    this.localWritePending = localWritePending;
+    this.hasUncommittedWrites = hasUncommittedWrites;
   }
 
   public BsonDocument getId() {
@@ -95,7 +95,7 @@ public final class ChangeEvent<DocumentT> {
   }
 
   public boolean hasUncommittedWrites() {
-    return localWritePending;
+    return hasUncommittedWrites;
   }
 
   public enum OperationType {
