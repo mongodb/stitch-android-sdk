@@ -36,7 +36,6 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
@@ -99,11 +98,11 @@ public class TodoListActivity extends AppCompatActivity {
       .getCollection(TodoItem.TODO_LIST_COLLECTION);
 
     items.sync().configure(
-      DefaultSyncConflictResolvers.<Document>remoteWins(),
-      itemUpdateListener,
-      new ErrorListener() {
+        DefaultSyncConflictResolvers.<Document>remoteWins(),
+        itemUpdateListener,
+        new ErrorListener() {
         @Override
-        public void onError(BsonValue documentId, Error error) {
+        public void onError(final BsonValue documentId, final Exception error) {
           Log.e(TAG, error.getLocalizedMessage());
         }
       });
@@ -114,11 +113,11 @@ public class TodoListActivity extends AppCompatActivity {
             .getCollection(TODO_LISTS_COLLECTION, BsonDocument.class);
 
     lists.sync().configure(
-      DefaultSyncConflictResolvers.<BsonDocument>remoteWins(),
-      listUpdateListener,
-      new ErrorListener() {
+        DefaultSyncConflictResolvers.<BsonDocument>remoteWins(),
+        listUpdateListener,
+        new ErrorListener() {
         @Override
-        public void onError(BsonValue documentId, Error error) {
+        public void onError(final BsonValue documentId, final Exception error) {
           Log.e(TAG, error.getLocalizedMessage());
         }
       });
@@ -154,7 +153,7 @@ public class TodoListActivity extends AppCompatActivity {
     todoRecyclerView.setAdapter(todoAdapter);
     todoAdapter.updateItems(getItems());
 
-    Set<BsonValue> syncedIds = items.sync().getSyncedIds();
+    final Set<BsonValue> syncedIds = items.sync().getSyncedIds();
     items.sync().syncMany(syncedIds.toArray(new BsonValue[syncedIds.size()]));
 
     if (lists.sync().getSyncedIds().isEmpty()) {
@@ -174,7 +173,7 @@ public class TodoListActivity extends AppCompatActivity {
   private class ItemUpdateListener implements ChangeEventListener<Document> {
     @Override
     public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
-      if (!event.isLocalWritePending()) {
+      if (!event.hasUncommittedWrites()) {
         lists.sync().updateOneById(
             new BsonString("mylist"),
             new BsonDocument("$inc", new BsonDocument("i", new BsonInt64(1))));

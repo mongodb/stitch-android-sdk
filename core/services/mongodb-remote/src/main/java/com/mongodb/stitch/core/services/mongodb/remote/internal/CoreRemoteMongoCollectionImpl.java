@@ -51,14 +51,12 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   private final NetworkMonitor networkMonitor;
   private final MongoDatabase tempDb;
 
-  CoreRemoteMongoCollectionImpl(
-    final MongoNamespace namespace,
-    final Class<DocumentT> documentClass,
-    final CoreStitchServiceClient service,
-    final DataSynchronizer dataSynchronizer,
-    final NetworkMonitor networkMonitor,
-    final MongoDatabase tempDb
-  ) {
+  CoreRemoteMongoCollectionImpl(final MongoNamespace namespace,
+                                final Class<DocumentT> documentClass,
+                                final CoreStitchServiceClient service,
+                                final DataSynchronizer dataSynchronizer,
+                                final NetworkMonitor networkMonitor,
+                                final MongoDatabase tempDb) {
     notNull("namespace", namespace);
     notNull("documentClass", documentClass);
     this.namespace = namespace;

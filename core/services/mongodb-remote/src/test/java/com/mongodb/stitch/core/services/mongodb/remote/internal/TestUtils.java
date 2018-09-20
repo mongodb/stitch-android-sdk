@@ -23,7 +23,6 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.LocalClientFactory;
 
 import org.bson.Document;
 import org.mockito.Mockito;
@@ -37,7 +36,8 @@ final class TestUtils {
 
   static CoreRemoteMongoDatabase getDatabase(final String name) {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, Mockito.mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, Mockito.mock(StitchAppClientInfo.class));
     return client.getDatabase(name);
   }
 
@@ -52,7 +52,8 @@ final class TestUtils {
         requestClient,
         routes,
         BsonUtils.DEFAULT_CODEC_REGISTRY));
-    final CoreRemoteMongoClient client = CoreRemoteClientFactory.getClient(service, Mockito.mock(StitchAppClientInfo.class));
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(service, Mockito.mock(StitchAppClientInfo.class));
     final CoreRemoteMongoDatabase db = client.getDatabase("dbName1");
     return db.getCollection(name);
   }

@@ -1,6 +1,21 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.server.services.mongodb.remote;
 
-import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
@@ -8,11 +23,16 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
+import java.util.Set;
+
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
-import java.util.Set;
-
+/**
+ * A set of synchronization related operations for a collection.
+ *
+ * @param <DocumentT> type of document we are syncing on
+ */
 public interface Sync<DocumentT> {
   /**
    * Set the conflict resolver and and change event listener on this collection.
@@ -20,6 +40,8 @@ public interface Sync<DocumentT> {
    *                         and remote events.
    * @param changeEventListener the event listener to invoke when a a change event happens for the
    *                         document.
+   * @param errorListener the error listener to invoke when an irrecoverable error happens
+   *                      during data synchronization
    */
   void configure(final ConflictHandler<DocumentT> conflictResolver,
                  final ChangeEventListener<DocumentT> changeEventListener,
@@ -90,10 +112,7 @@ public interface Sync<DocumentT> {
    * @param <ResultT>   the target document type of the iterable.
    * @return the find iterable interface
    */
-  <ResultT> SyncFindIterable<ResultT> find(
-    final Bson filter,
-    final Class<ResultT> resultClass
-  );
+  <ResultT> SyncFindIterable<ResultT> find(final Bson filter, final Class<ResultT> resultClass);
 
   /**
    * Finds a single document by the given id. It is first searched for in the local synchronized
@@ -123,8 +142,7 @@ public interface Sync<DocumentT> {
    * @param update the update specifier.
    * @return a task containing the result of the local or remote update.
    */
-  RemoteUpdateResult updateOneById(
-    final BsonValue documentId, final Bson update);
+  RemoteUpdateResult updateOneById(final BsonValue documentId, final Bson update);
 
   /**
    * Inserts a single document and begins to synchronize it.

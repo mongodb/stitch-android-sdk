@@ -46,5 +46,5 @@ public interface DocumentSynchronizationConfig {
    * @return whether or not this document has pending writes that have not yet been committed
    *         remotely.
    */
-  boolean hasPendingWrites();
+  boolean hasUncommittedWrites();
 }

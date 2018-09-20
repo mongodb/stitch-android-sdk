@@ -31,7 +31,7 @@ class DocumentSynchronizationConfigImpl implements DocumentSynchronizationConfig
   DocumentSynchronizationConfigImpl(final CoreDocumentSynchronizationConfig config) {
     this.documentId = config.getDocumentId();
     this.conflictResolver = config.getConflictHandler();
-    this.hasUncommittedWrites = config.hasPendingWrites();
+    this.hasUncommittedWrites = config.hasUncommittedWrites();
   }
 
   /**
@@ -60,7 +60,7 @@ class DocumentSynchronizationConfigImpl implements DocumentSynchronizationConfig
    * @return whether or not this document has pending writes that have not yet been committed
    *         remotely.
    */
-  public boolean hasPendingWrites() {
+  public boolean hasUncommittedWrites() {
     return hasUncommittedWrites;
   }
 
