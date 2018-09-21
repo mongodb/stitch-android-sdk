@@ -64,7 +64,7 @@ public final class OkHttpTransport implements Transport {
     return reqBuilder.build();
   }
 
-  private static Response handleResponse(final okhttp3.Response response) {
+  static Response handleResponse(final okhttp3.Response response) {
     final ResponseBody body = response.body();
     final InputStream bodyStream;
     if (body != null) {
@@ -89,5 +89,10 @@ public final class OkHttpTransport implements Transport {
             .writeTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
             .build();
     return handleResponse(reqClient.newCall(buildRequest(request)).execute());
+  }
+
+  @Override
+  public EventStream stream(Request request) throws IOException {
+    return new OkHttpEventStream(client.newCall(buildRequest(request)).execute().body().source());
   }
 }

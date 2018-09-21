@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.auth.internal;
 
+import com.mongodb.stitch.core.internal.common.Stream;
 import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 
@@ -28,6 +29,10 @@ public interface StitchAuthRequestClient {
   <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq, final Decoder<T> decoder);
 
   <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq,
-                                   final Class<T> resultClass,
-                                   final CodecRegistry codecRegistry);
+                               final Class<T> resultClass,
+                               final CodecRegistry codecRegistry);
+
+  <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
+                                        final Class<T> resultClass,
+                                        final CodecRegistry codecRegistry);
 }

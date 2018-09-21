@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.services.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
+import com.mongodb.stitch.core.internal.common.Stream;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import java.util.List;
@@ -143,6 +144,16 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
       final CodecRegistry codecRegistry) {
     return requestClient.doAuthenticatedRequest(
         getCallServiceFunctionRequest(name, args, requestTimeout), resultClass, codecRegistry);
+  }
+
+  @Override
+  public <T> Stream<T> streamFunction(final String name,
+                                      final List<?> args,
+                                      final Class<T> resultClass,
+                                      final CodecRegistry codecRegistry) {
+    return requestClient.openAuthenticatedStream(
+        getCallServiceFunctionRequest(name, args, null), resultClass, codecRegistry
+    );
   }
 
   public CodecRegistry getCodecRegistry() {

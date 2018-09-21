@@ -28,6 +28,7 @@ import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.IoUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import com.mongodb.stitch.core.internal.common.Storage;
+import com.mongodb.stitch.core.internal.common.Stream;
 import com.mongodb.stitch.core.internal.net.Headers;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.Response;
@@ -194,6 +195,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
+  }
+
+  @Override
+  public <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
+                                               final Class<T> resultClass,
+                                               final CodecRegistry codecRegistry) {
+    return new Stream<>(
+        requestClient.doStreamRequest(prepareAuthRequest(stitchReq)),
+        resultClass,
+        codecRegistry
+    );
   }
 
   protected synchronized StitchUserT loginWithCredentialInternal(

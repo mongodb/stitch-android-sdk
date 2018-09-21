@@ -59,6 +59,7 @@ final class NamespaceChangeStreamShortPoller {
       final NetworkMonitor networkMonitor,
       final AuthMonitor authMonitor
   ) {
+
     this.namespace = namespace;
     this.instanceConfig = instanceConfig;
     this.nsConfig = nsConfig;
