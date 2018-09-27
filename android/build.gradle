@@ -1,6 +1,6 @@
 buildscript {
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.1.4'
+        classpath 'com.android.tools.build:gradle:3.2.0'
     }
 }
 
@@ -10,12 +10,17 @@ subprojects {
             android {
                 compileSdkVersion target_api
 
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_1_8
+                    targetCompatibility = JavaVersion.VERSION_1_8
+                }
+
                 defaultConfig {
                     targetSdkVersion target_api
                     versionCode 1
                     versionName "1.0"
-                    sourceCompatibility = JavaVersion.VERSION_1_7
-                    targetCompatibility = JavaVersion.VERSION_1_7
+                    sourceCompatibility = JavaVersion.VERSION_1_8
+                    targetCompatibility = JavaVersion.VERSION_1_8
 
                     testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 

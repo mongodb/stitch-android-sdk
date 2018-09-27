@@ -70,12 +70,10 @@ subprojects {
 
     ext {
         min_api = 21
-        target_api = 27
-        build_tools_version = '27.0.3'
-        architecture_components_version = '1.1.1'
-        support_library_version = '27.1.1'
+        target_api = 28
+        support_library_version = '28.0.0'
         google_play_services_version = '15.0.1'
-        kotlin_version = '1.2.51'
+        kotlin_version = '1.2.61'
         config_dir = configDir
     }
 

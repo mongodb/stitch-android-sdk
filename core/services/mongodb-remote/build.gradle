@@ -11,8 +11,8 @@ buildscript {
 
 dependencies {
     implementation project(':core:stitch-core-sdk')
-    api 'org.mongodb:mongodb-driver-core:3.8.0'
-    api('org.mongodb:mongodb-driver-embedded:3.8.1')
+    api 'org.mongodb:mongodb-driver-core:3.8.2'
+    api('org.mongodb:mongodb-driver-embedded:3.8.2')
 
     testImplementation project(':core:stitch-core-admin-client')
     testImplementation project(':core:stitch-core-testutils')
@@ -20,5 +20,5 @@ dependencies {
     testImplementation "org.mockito:mockito-core:2.18.3"
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_7
-targetCompatibility = JavaVersion.VERSION_1_7
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
