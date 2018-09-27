@@ -22,11 +22,14 @@ import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.common.Stream;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
+import com.mongodb.stitch.core.internal.net.StitchRequest;
+
 import java.util.List;
 import javax.annotation.Nullable;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.internal.Base64;
 
 public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   private final StitchAuthRequestClient requestClient;
@@ -53,6 +56,22 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     this.serviceRoutes = routes;
     this.serviceName = name;
     this.codecRegistry = codecRegistry;
+  }
+
+  private StitchRequest getStreamServiceFunctionRequest(
+      final String name,
+      final List<?> args) {
+    final Document body = new Document();
+    body.put("name", name);
+    if (serviceName != null) {
+      body.put("service", serviceName);
+    }
+    body.put("arguments", args);
+
+    final StitchRequest.Builder reqBuilder = new StitchRequest.Builder();
+    reqBuilder.withMethod(Method.GET).withPath(serviceRoutes.getFunctionCallRoute() +
+        ("?stitch_request=" + Base64.encode(body.toJson().getBytes())));
+    return reqBuilder.build();
   }
 
   private StitchAuthDocRequest getCallServiceFunctionRequest(
@@ -147,12 +166,24 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   }
 
   @Override
+  public <T> Stream<T> streamFunction(String name, List<?> args, Decoder<T> decoder) {
+    return requestClient.openAuthenticatedStream(
+        getStreamServiceFunctionRequest(name, args), decoder
+    );
+  }
+
+  @Override
+  public <T> Stream<T> streamFunction(String name, List<?> args, Class<T> resultClass) {
+    return this.streamFunction(name, args, resultClass, codecRegistry);
+  }
+
+  @Override
   public <T> Stream<T> streamFunction(final String name,
                                       final List<?> args,
                                       final Class<T> resultClass,
                                       final CodecRegistry codecRegistry) {
     return requestClient.openAuthenticatedStream(
-        getCallServiceFunctionRequest(name, args, null), resultClass, codecRegistry
+        getStreamServiceFunctionRequest(name, args), resultClass, codecRegistry
     );
   }
 

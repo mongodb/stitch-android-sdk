@@ -113,7 +113,7 @@ final class NamespaceChangeStreamShortPoller {
   }
 
   /**
-   * Does a short poll of the change stream.
+   * Does a short poll of the change next.
    */
   boolean poll() {
     logger.info("poll START");
@@ -172,7 +172,7 @@ final class NamespaceChangeStreamShortPoller {
       }
       logger.error(String.format(
           Locale.US,
-          "getRemoteChangeEventsForNamespace ns=%s exception on listening to change stream: %s",
+          "getRemoteChangeEventsForNamespace ns=%s exception on listening to change next: %s",
           nsConfig.getNamespace(),
           ex));
       logger.info("poll END");

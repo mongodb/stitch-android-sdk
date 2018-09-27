@@ -190,7 +190,6 @@ public final class ChangeEvent<DocumentT> {
     keyPresent(ChangeEventCoder.Fields.ID_FIELD, document);
     keyPresent(ChangeEventCoder.Fields.OPERATION_TYPE_FIELD, document);
     keyPresent(ChangeEventCoder.Fields.NS_FIELD, document);
-    keyPresent(ChangeEventCoder.Fields.DOCUMENT_KEY_FIELD, document);
 
     final BsonDocument nsDoc = document.getDocument(ChangeEventCoder.Fields.NS_FIELD);
     final ChangeEvent.UpdateDescription updateDescription;
@@ -233,7 +232,7 @@ public final class ChangeEvent<DocumentT> {
         new MongoNamespace(
             nsDoc.getString(ChangeEventCoder.Fields.NS_DB_FIELD).getValue(),
             nsDoc.getString(ChangeEventCoder.Fields.NS_COLL_FIELD).getValue()),
-        document.getDocument(ChangeEventCoder.Fields.DOCUMENT_KEY_FIELD),
+        document.getDocument(ChangeEventCoder.Fields.DOCUMENT_KEY_FIELD, null),
         updateDescription,
         nsDoc.getBoolean(
             ChangeEventCoder.Fields.WRITE_PENDING_FIELD,

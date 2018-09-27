@@ -17,6 +17,8 @@
 package com.mongodb.stitch.server.services.mongodb.remote.internal;
 
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoDatabase;
 
@@ -36,5 +38,9 @@ public final class RemoteMongoClientImpl implements RemoteMongoClient {
    */
   public RemoteMongoDatabase getDatabase(final String databaseName) {
     return new RemoteMongoDatabaseImpl(proxy.getDatabase(databaseName));
+  }
+
+  public DataSynchronizer getDataSynchronizer() {
+    return ((CoreRemoteMongoClientImpl)this.proxy).getDataSynchronizer();
   }
 }

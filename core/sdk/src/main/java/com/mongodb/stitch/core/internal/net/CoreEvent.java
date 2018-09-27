@@ -5,6 +5,7 @@ public class CoreEvent {
   private String data;
 
   CoreEvent() {
+    this.type = EventType.MESSAGE;
   }
 
   CoreEvent(EventType type, String data) {

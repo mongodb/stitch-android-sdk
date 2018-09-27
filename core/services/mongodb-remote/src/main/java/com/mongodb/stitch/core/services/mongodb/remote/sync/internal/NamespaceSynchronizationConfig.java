@@ -191,6 +191,14 @@ class NamespaceSynchronizationConfig
     }
   }
 
+  private Set<BsonValue> staleIds;
+  public void setStaleDocumentIds(Set<BsonValue> staleIds) {
+    this.staleIds = staleIds;
+  }
+  public Set<BsonValue> getStaleDocumentIds() {
+    return staleIds;
+  }
+
   public CoreDocumentSynchronizationConfig addSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId

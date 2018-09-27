@@ -175,28 +175,13 @@ class DataSynchronizerUnitTests {
                                  changeEventListener: ChangeEventListener<BsonDocument> = ChangeEventListener { _, _: ChangeEvent<BsonDocument> ->
                                  }): BsonValue {
         dataSpy.insertOneAndSync(
-                namespace,
-                doc,
-                conflictHandler,
-                changeEventListener,
-                BsonDocumentCodec()
+            namespace,
+            doc
         )
 
         assertTrue(dataSpy.getSynchronizedDocuments(namespace).size > 0)
 
-        val namespaceArg = ArgumentCaptor.forClass(MongoNamespace::class.java)
-        val idArg = ArgumentCaptor.forClass(BsonValue::class.java)
-        val eventListenerArg = ArgumentCaptor.forClass(changeEventListener::class.java)
-        val documentCodecArg = ArgumentCaptor.forClass(BsonDocumentCodec::class.java)
-
-        verify(dataSpy).watchNamespace(
-                namespaceArg.capture(),
-                idArg.capture(),
-                eventListenerArg.capture(),
-                documentCodecArg.capture()
-        )
-
-        insertedId = idArg.value
+        insertedId = dataSpy.getSynchronizedDocumentIds(namespace).first()
         return insertedId!!
     }
 }

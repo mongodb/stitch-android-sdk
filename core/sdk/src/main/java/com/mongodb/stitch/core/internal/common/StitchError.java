@@ -25,13 +25,16 @@ import com.mongodb.stitch.core.internal.net.ContentTypes;
 import com.mongodb.stitch.core.internal.net.Headers;
 import com.mongodb.stitch.core.internal.net.Response;
 import java.util.Locale;
+
+import org.bson.BsonReader;
 import org.bson.Document;
+import org.bson.codecs.Decoder;
+import org.bson.codecs.DecoderContext;
 
 /**
  * A set of utilities for handling errors that come back from Stitch app servers.
  */
 public final class StitchError {
-
   private StitchError() {}
 
   /**

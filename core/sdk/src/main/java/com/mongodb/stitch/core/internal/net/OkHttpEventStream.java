@@ -3,6 +3,7 @@ package com.mongodb.stitch.core.internal.net;
 import java.io.IOException;
 
 import okio.BufferedSource;
+import okio.ByteString;
 
 public class OkHttpEventStream extends EventStreamReader implements EventStream {
   private final BufferedSource source;
@@ -22,10 +23,18 @@ public class OkHttpEventStream extends EventStreamReader implements EventStream 
   }
 
   @Override
-  protected byte[] readBytes(int start, int end) throws IOException {
-    byte[] bytes = new byte[end - start];
-    this.source.read(bytes, start, end - start);
-    return bytes;
+  protected boolean exhausted() throws IOException {
+    return this.source.exhausted();
+  }
+
+  @Override
+  protected void readBytes(byte[] buffer) throws IOException {
+    this.source.read(buffer);
+  }
+
+  @Override
+  protected long indexOf(String element) throws IOException {
+    return this.source.indexOf(ByteString.encodeUtf8(element));
   }
 
   @Override

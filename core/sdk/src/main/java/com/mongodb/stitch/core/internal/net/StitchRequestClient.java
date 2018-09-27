@@ -69,7 +69,9 @@ public class StitchRequestClient {
 
   public EventStream doStreamRequest(final StitchRequest stitchReq) {
     try {
-      return transport.stream(buildRequest(stitchReq));
+      return transport.stream(
+          buildRequest(stitchReq)
+      );
     } catch (Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
     }

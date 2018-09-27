@@ -3,6 +3,7 @@ package com.mongodb.stitch.android.services.mongodb.remote
 import android.support.test.InstrumentationRegistry
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.services.ServiceConfigs
@@ -11,7 +12,7 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
-import com.mongodb.stitch.android.services.mongodb.sync.internal.SyncMongoClientImpl
+
 import org.bson.BsonObjectId
 import org.bson.BsonValue
 import org.bson.Document
@@ -32,8 +33,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
     private var remoteMongoClientOpt: RemoteMongoClient? = null
     private val remoteMongoClient: RemoteMongoClient
         get() = remoteMongoClientOpt!!
-    private var mongoClientOpt: SyncMongoClient? = null
-    private val mongoClient: SyncMongoClient
+    private var mongoClientOpt: RemoteMongoClient? = null
+    private val mongoClient: RemoteMongoClient
         get() = mongoClientOpt!!
     private var dbName = ObjectId().toHexString()
     private var collName = ObjectId().toHexString()
@@ -79,15 +80,14 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
         val client = getAppClient(app.first)
         Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
-        mongoClientOpt = client.getServiceClient(SyncMongoClient.Factory, "mongodb1")
-        (mongoClient as SyncMongoClientImpl).dataSynchronizer.stop()
+        mongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         remoteMongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         goOnline()
     }
 
     @After
     override fun teardown() {
-        mongoClientOpt?.close()
+        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
         super.teardown()
     }
 
@@ -101,7 +101,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         }
     }
 
-    private fun getTestColl(): SyncMongoCollection<Document> {
+    private fun getTestColl(): RemoteMongoCollection<Document> {
         val db = mongoClient.getDatabase(dbName)
         assertEquals(dbName, db.name)
         val coll = db.getCollection(collName)
@@ -119,7 +119,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
     @Test
     fun testWatch() {
-        testSyncInBothDirections({
+        testSyncInBothDirections {
             val coll = getTestColl()
 
             val remoteColl = getTestCollRemote()
@@ -134,15 +134,17 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
 
-            // start watching it and always set the value to hello world in a conflict
-            coll.sync(doc1Id, {
+            coll.sync().configure({
                 _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 val merged = localEvent.fullDocument.getInteger("foo") +
                         remoteEvent.fullDocument.getInteger("foo")
                 val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
                 newDocument["foo"] = merged
                 newDocument
-            })
+            }, null, null)
+
+            // start watching it and always set the value to hello world in a conflict
+            coll.sync().syncOne(doc1Id)
             listenAndSync()
 
             // 1. updating a document remotely should not be reflected until coming back online.
@@ -153,21 +155,22 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
                     doc1Update))
             assertEquals(1, result.matchedCount)
             listenAndSync()
-            assertEquals(doc, Tasks.await(coll.findOneById(doc1Id)))
+            assertEquals(doc, Tasks.await(coll.sync().findOneById(doc1Id)))
             goOnline()
             listenAndSync()
             val expectedDocument = Document(doc)
             expectedDocument["foo"] = 1
-            assertEquals(expectedDocument, Tasks.await(coll.findOneById(doc1Id)))
+            assertEquals(expectedDocument, Tasks.await(coll.sync().findOneById(doc1Id)))
 
             // 2. insertOneAndSync should work offline and then sync the document when online.
             goOffline()
             val doc3 = Document("so", "syncy")
-            val insResult = coll.insertOneAndSync(doc3, {
+            coll.sync().configure({
                 _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
                 Document("hello", "world")
-            })
-            assertEquals(doc3, withoutVersionId(Tasks.await(coll.findOneById(insResult.insertedId))!!))
+            }, null, null)
+            val insResult = coll.sync().insertOneAndSync(doc3)
+            assertEquals(doc3, withoutVersionId(Tasks.await(coll.sync().findOneById(insResult.insertedId))!!))
             listenAndSync()
             assertNull(remoteColl.find(Document("_id", doc3["_id"])).first())
             goOnline()
@@ -182,23 +185,23 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertEquals(1, result2.matchedCount)
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            val result3 = Tasks.await(coll.updateOneById(
+            val result3 = Tasks.await(coll.sync().updateOneById(
                     doc1Id,
                     doc1Update))
             assertEquals(1, result3.matchedCount)
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.sync().findOneById(doc1Id))!!))
             // first pass will invoke the conflict handler and update locally but not remotely yet
             listenAndSync()
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             expectedDocument["foo"] = 4
             expectedDocument.remove("fooOps")
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.sync().findOneById(doc1Id))!!))
             // second pass will update with the ack'd version id
             listenAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.sync().findOneById(doc1Id))!!))
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-        })
+        }
     }
 
 //    @Test
@@ -738,13 +741,13 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 //    }
 
     private fun listenAndSync() {
-        val dataSync = (mongoClient as SyncMongoClientImpl).dataSynchronizer
-        dataSync.doListenerSweep()
+        val dataSync = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
+//        dataSync.doListenerSweep()
         dataSync.doSyncPass()
     }
 
     private fun powerCycleDevice() {
-        (mongoClient as SyncMongoClientImpl).dataSynchronizer.reloadConfig()
+        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.reloadConfig()
     }
 
     private fun goOffline() {
@@ -805,13 +808,13 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         return newDocument
     }
 
-    private val failingConflictHandler: ConflictHandler<Document> = ConflictHandler({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+    private val failingConflictHandler: ConflictHandler<Document> = ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
         fail("did not expect a conflict")
         throw IllegalStateException("unreachable")
-    })
+    }
 
     private fun testSyncInBothDirections(testFun: () -> Unit) {
-        val dataSync = (mongoClient as SyncMongoClientImpl).dataSynchronizer
+        val dataSync = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
         println("running tests with L2R going first")
         dataSync.swapSyncDirection(true)
         testFun()

@@ -74,6 +74,14 @@ public interface CoreStitchServiceClient {
 
   <T> Stream<T> streamFunction(String name,
                                List<?> args,
+                               Class<T> resultClass);
+
+  <T> Stream<T> streamFunction(String name,
+                               List<?> args,
+                               Decoder<T> decoder);
+
+  <T> Stream<T> streamFunction(String name,
+                               List<?> args,
                                Class<T> resultClass,
                                final CodecRegistry codecRegistry);
 

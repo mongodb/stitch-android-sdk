@@ -29,6 +29,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
+import static com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE;
+
 public final class OkHttpTransport implements Transport {
 
   private final OkHttpClient client;
@@ -44,7 +46,7 @@ public final class OkHttpTransport implements Transport {
             .headers(Headers.of(request.getHeaders()));
     if (request.getBody() != null) {
       String contentType =
-          request.getHeaders().get(com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE);
+          request.getHeaders().get(CONTENT_TYPE);
       contentType = contentType == null ? "" : contentType;
       final RequestBody body = RequestBody.create(MediaType.parse(contentType), request.getBody());
       reqBuilder.method(request.getMethod().toString(), body);
@@ -93,6 +95,9 @@ public final class OkHttpTransport implements Transport {
 
   @Override
   public EventStream stream(Request request) throws IOException {
-    return new OkHttpEventStream(client.newCall(buildRequest(request)).execute().body().source());
+    request.getHeaders().put(CONTENT_TYPE, "text/event-next");
+    request.getHeaders().put("Accept", "text/event-stream");
+    okhttp3.Response response = client.newBuilder().readTimeout(60, TimeUnit.SECONDS).build().newCall(buildRequest(request)).execute();
+    return new OkHttpEventStream(response.body().source());
   }
 }

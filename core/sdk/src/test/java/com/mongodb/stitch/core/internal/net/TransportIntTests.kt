@@ -1,5 +1,6 @@
 package com.mongodb.stitch.core.internal.net
 
+import com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import org.junit.Test
@@ -22,10 +23,19 @@ internal class RoundTripHandler: HttpHandler {
 internal class StreamHandler: HttpHandler {
     @Throws(IOException::class)
     override fun handle(t: HttpExchange) {
-        val response = "data: poop\n\n"
-        t.sendResponseHeaders(200, response.length.toLong())
+        var x = 0
+        t.responseHeaders.set(CONTENT_TYPE, "text/event-next")
+        t.sendResponseHeaders(200, 0)
+
         val os = t.responseBody
-        os.write(response.toByteArray())
+        while (x < 10) {
+            val response = "data: poop${Math.random()}\n\n"
+            os.write(response.toByteArray())
+            x += 1
+            Thread.sleep((Math.random() * 100).toLong())
+            os.flush()
+        }
+        os.close()
     }
 }
 class TransportIntTests {
@@ -36,7 +46,7 @@ class TransportIntTests {
             lock.lock()
             val server = HttpServer.create(InetSocketAddress(8000), 0)
             server.createContext("/roundTrip", RoundTripHandler())
-            server.createContext("/stream", StreamHandler())
+            server.createContext("/next", StreamHandler())
             server.executor = null // creates a default executor
             server.start()
             if (lock.isLocked) {
@@ -65,12 +75,17 @@ class TransportIntTests {
 
         val stream = transport.stream(
                 Request.Builder().withUrl(
-                        "http://localhost:8000/stream"
+                        "http://localhost:8000/next"
                 ).withMethod(Method.GET).withTimeout(1000).build())
 
-        val event = stream.nextEvent()
+        while (stream.isOpen) {
+
+            val event = stream.nextEvent()
+            if (event.data != null)
+                println(event.data!!)
+        }
 //        val inputAsString = resp.body!!.bufferedReader().use { it.readText() }  // defaults to UTF-8
 
-        print(event.data)
+//        print(event.data)
     }
 }

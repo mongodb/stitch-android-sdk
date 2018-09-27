@@ -66,6 +66,10 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient {
     );
   }
 
+  public DataSynchronizer getDataSynchronizer() {
+    return dataSynchronizer;
+  }
+
   @Override
   public void close() {
     this.dataSynchronizer.stop();

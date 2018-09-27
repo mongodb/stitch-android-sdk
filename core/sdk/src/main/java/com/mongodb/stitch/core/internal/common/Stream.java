@@ -1,31 +1,38 @@
 package com.mongodb.stitch.core.internal.common;
 
+import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.net.Event;
 import com.mongodb.stitch.core.internal.net.EventStream;
 
+import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
 import java.io.IOException;
+import java.util.concurrent.SynchronousQueue;
 
 public class Stream<T> {
   private final EventStream eventStream;
-  private final Class<T> resultClass;
-  private final CodecRegistry codecRegistry;
+  private final Decoder<T> decoder;
+
+  public Stream(EventStream eventStream,
+                Decoder<T> decoder) {
+    this.eventStream = eventStream;
+    this.decoder = decoder;
+  }
 
   public Stream(EventStream eventStream,
                 Class<T> resultClass,
                 CodecRegistry codecRegistry) {
     this.eventStream = eventStream;
-    this.resultClass = resultClass;
-    this.codecRegistry = codecRegistry;
+    this.decoder = codecRegistry.get(resultClass);
   }
 
-  public T stream() throws Exception {
-    return this.streamEvent().getData();
+  public T next() throws Exception {
+    return this.nextEvent().getData();
   }
 
-  public Event<T> streamEvent() throws Exception {
-    return Event.fromCoreEvent(this.eventStream.nextEvent(), this.resultClass, this.codecRegistry);
+  public Event<T> nextEvent() throws Exception {
+    return Event.fromCoreEvent(this.eventStream.nextEvent(), this.decoder);
   }
 
   public boolean isOpen() {

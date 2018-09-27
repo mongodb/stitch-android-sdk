@@ -10,20 +10,27 @@ public abstract class EventStreamReader {
   private static final String EVENT = "vent: ";
   private static final int EVENT_LENGTH = EVENT.length();
 
-  private int position = 0;
-
   public EventStreamReader() {
   }
 
   protected abstract byte readByte() throws IOException;
 
-  protected abstract byte[] readBytes(final int start, final int end) throws IOException;
+  protected abstract void readBytes(final byte[] buffer) throws IOException;
+//  protected abstract byte[] readBytes(final int start, final int end) throws IOException;
+
+  protected abstract long indexOf(final String element) throws IOException;
+
+  protected abstract boolean exhausted() throws IOException;
 
   protected final CoreEvent readEvent() throws SSEError, IOException {
     CoreEvent coreEvent = new CoreEvent();
 
-    while (true) {
+    while (!this.exhausted()) {
       switch (readByte()) {
+        case ':':
+          readByte();
+          readByte();
+          continue;
         case '\r':
         case '\n':
           return coreEvent;
@@ -34,46 +41,50 @@ public abstract class EventStreamReader {
           coreEvent.setType(doReadEventType());
           break;
       }
-
-      position++;
     }
+
+    coreEvent.setType(EventType.EOF);
+    return coreEvent;
   }
 
   private EventType doReadEventType() throws SSEError, IOException {
-    String event = new String(readBytes(position, position + EVENT_LENGTH));
+    byte[] event = new byte[DATA_LENGTH];
+    readBytes(event);
 
-    if (!event.equals(EVENT)) {
+    String evStr = new String(event);
+    if (!evStr.equals(EVENT) && !evStr.equals("rror\"")) {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+      byte nextByte;
+      while (!this.exhausted() && (nextByte = readByte()) != '\n') {
+        baos.write(nextByte);
+      }
       throw new SSEError("malformed event key");
     }
-
-    position += EVENT_LENGTH;
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
     byte nextByte;
-    while ((nextByte = readByte()) != '\n') {
+    while (!this.exhausted() && (nextByte = readByte()) != '\n') {
       baos.write(nextByte);
-      position++;
     }
 
     return new String(baos.toByteArray()).equals("error") ? EventType.ERROR : EventType.MESSAGE;
   }
 
   private String doReadData() throws SSEError, IOException {
-    String data = new String(readBytes(position, position + DATA_LENGTH));
+    byte[] data = new byte[DATA_LENGTH];
+    readBytes(data);
 
-    if (!data.equals(DATA)) {
+    if (!new String(data).equals(DATA)) {
       throw new SSEError("malformed data key");
     }
-
-    position += DATA_LENGTH;
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
     byte nextByte;
     while ((nextByte = readByte()) != '\n') {
       baos.write(nextByte);
-      position++;
     }
 
     return new String(baos.toByteArray());
