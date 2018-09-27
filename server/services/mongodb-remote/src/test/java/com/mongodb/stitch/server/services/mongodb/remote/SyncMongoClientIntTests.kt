@@ -191,101 +191,101 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     @Test
     fun testWatch() {
-//        testSyncInBothDirections {
-//            val coll = getTestColl()
-//
-//            val remoteColl = getTestCollRemote()
-//
-//            val doc1 = Document("hello", "world")
-//            val doc2 = Document("hello", "friend")
-//            doc2["proj"] = "field"
-//            coll.insertOneAndSync(doc1)
-//
-//            // get the document
-//            val doc = coll.find(doc1).first()!!
-//            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
-//            val doc1Filter = Document("_id", doc1Id)
-//
-//            coll.sync().configure({
-//                _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
-//                System.out.println("handling conflict")
-//                val merged = localEvent.fullDocument.getInteger("foo") +
-//                        remoteEvent.fullDocument.getInteger("foo")
-//                val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
-//                newDocument["foo"] = merged
-//                newDocument
-//            }, { _, _ ->
-//            }, null)
-//
-//            val isLocked = AtomicBoolean(true)
-//            // start watching it and always set the value to hello world in a conflict
-//            coll.sync().syncOne(doc1Id)
-//
-//            syncPass()
-//            // 1. updating a document remotely should not be reflected until coming back online.
-//            goOffline()
-//            val doc1Update = Document("\$inc", Document("foo", 1))
-//            val result = remoteColl.updateOne(
-//                    doc1Filter,
-//                    doc1Update)
-//            assertEquals(1, result.matchedCount)
-//
-//            syncPass()
-//            assertEquals(doc, coll.sync().findOneById(doc1Id))
-//            goOnline()
-//            syncPass()
-//
-//            val expectedDocument = Document(doc)
-//            expectedDocument["foo"] = 1
-//            assertEquals(expectedDocument, coll.sync().findOneById(doc1Id))
-//
-//            // 2. insertOneAndSync should work offline and then sync the document when online.
-//            goOffline()
-//            val doc3 = Document("so", "syncy")
-//            coll.sync().configure({
-//                _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
-//                Document("hello", "world")
-//            }, { _, _ ->
-//            }, null)
-//            val insResult = coll.sync().insertOneAndSync(doc3)
-//            assertEquals(doc3, withoutVersionId(coll.sync().findOneById(insResult.insertedId)!!))
-//            syncPass()
-//            assertNull(remoteColl.find(Document("_id", doc3["_id"])).first())
-//            goOnline()
-//            syncPass()
-//            assertEquals(doc3, withoutVersionId(remoteColl.find(Document("_id", doc3["_id"])).first()!!))
-//
-//            // 3. updating a document locally that has been updated remotely should invoke the conflict
-//            // resolver.
-//            val result2 = remoteColl.updateOne(
-//                    doc1Filter,
-//                    withNewVersionIdSet(doc1Update))
-//            assertEquals(1, result2.matchedCount)
-//            expectedDocument["foo"] = 2
-//            assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
-//            val result3 = coll.sync().updateOneById(
-//                    doc1Id,
-//                    doc1Update)
-//            assertEquals(1, result3.matchedCount)
-//            expectedDocument["foo"] = 2
-//            assertEquals(expectedDocument, withoutVersionId(coll.sync().findOneById(doc1Id)!!))
-//            // first pass will invoke the conflict handler and update locally but not remotely yet
-//            queueDisposableWatcher(Callback {  })
-////            Thread { listenerSweep() }.start()
-//            syncPass()
-//            assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
-//            expectedDocument["foo"] = 4
-//            expectedDocument.remove("fooOps")
-//            assertEquals(expectedDocument, withoutVersionId(coll.sync().findOneById(doc1Id)!!))
-//            // second pass will update with the ack'd version id
-////            Thread { listenerSweep() }.start()
-//            isLocked.set(true)
-//            queueDisposableWatcher(Callback {  isLocked.set(false) })
-//
-//            syncPass()
-//            assertEquals(expectedDocument, withoutVersionId(coll.sync().findOneById(doc1Id)!!))
-//            assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
-//        }
+        testSyncInBothDirections {
+            val coll = getTestColl()
+
+            val remoteColl = getTestCollRemote()
+
+            val doc1 = Document("hello", "world")
+            val doc2 = Document("hello", "friend")
+            doc2["proj"] = "field"
+            coll.insertOneAndSync(doc1)
+
+            // get the document
+            val doc = coll.find(doc1).first()!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+            val doc1Filter = Document("_id", doc1Id)
+
+            coll.configure({
+                _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                System.out.println("handling conflict")
+                val merged = localEvent.fullDocument.getInteger("foo") +
+                        remoteEvent.fullDocument.getInteger("foo")
+                val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
+                newDocument["foo"] = merged
+                newDocument
+            }, { _, _ ->
+            }, null)
+
+            val isLocked = AtomicBoolean(true)
+            // start watching it and always set the value to hello world in a conflict
+            coll.syncOne(doc1Id)
+
+            syncPass()
+            // 1. updating a document remotely should not be reflected until coming back online.
+            goOffline()
+            val doc1Update = Document("\$inc", Document("foo", 1))
+            val result = remoteColl.updateOne(
+                    doc1Filter,
+                    doc1Update)
+            assertEquals(1, result.matchedCount)
+
+            syncPass()
+            assertEquals(doc, coll.findOneById(doc1Id))
+            goOnline()
+            syncPass()
+
+            val expectedDocument = Document(doc)
+            expectedDocument["foo"] = 1
+            assertEquals(expectedDocument, coll.findOneById(doc1Id))
+
+            // 2. insertOneAndSync should work offline and then sync the document when online.
+            goOffline()
+            val doc3 = Document("so", "syncy")
+            coll.configure({
+                _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                Document("hello", "world")
+            }, { _, _ ->
+            }, null)
+            val insResult = coll.insertOneAndSync(doc3)
+            assertEquals(doc3, withoutVersionId(coll.findOneById(insResult.insertedId)!!))
+            syncPass()
+            assertNull(remoteColl.find(Document("_id", doc3["_id"])).first())
+            goOnline()
+            syncPass()
+            assertEquals(doc3, withoutVersionId(remoteColl.find(Document("_id", doc3["_id"])).first()!!))
+
+            // 3. updating a document locally that has been updated remotely should invoke the conflict
+            // resolver.
+            val result2 = remoteColl.updateOne(
+                    doc1Filter,
+                    withNewVersionIdSet(doc1Update))
+            assertEquals(1, result2.matchedCount)
+            expectedDocument["foo"] = 2
+            assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
+            val result3 = coll.updateOneById(
+                    doc1Id,
+                    doc1Update)
+            assertEquals(1, result3.matchedCount)
+            expectedDocument["foo"] = 2
+            assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
+            // first pass will invoke the conflict handler and update locally but not remotely yet
+            queueDisposableWatcher(Callback {  })
+//            Thread { listenerSweep() }.start()
+            syncPass()
+            assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
+            expectedDocument["foo"] = 4
+            expectedDocument.remove("fooOps")
+            assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
+            // second pass will update with the ack'd version id
+//            Thread { listenerSweep() }.start()
+            isLocked.set(true)
+            queueDisposableWatcher(Callback {  isLocked.set(false) })
+
+            syncPass()
+            assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
+            assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
+        }
     }
 //
 //    @Test
