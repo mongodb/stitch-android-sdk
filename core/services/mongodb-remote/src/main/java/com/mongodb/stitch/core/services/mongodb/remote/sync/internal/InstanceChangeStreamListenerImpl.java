@@ -40,17 +40,21 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
   private final CoreStitchServiceClient service;
   private final NetworkMonitor networkMonitor;
   private final AuthMonitor authMonitor;
+  private final StaleDocumentFetcher staleDocumentFetcher;
 
   InstanceChangeStreamListenerImpl(
       final InstanceSynchronizationConfig instanceConfig,
       final CoreStitchServiceClient service,
       final NetworkMonitor networkMonitor,
-      final AuthMonitor authMonitor
+      final AuthMonitor authMonitor,
+      final StaleDocumentFetcher staleDocumentFetcher
   ) {
     this.instanceConfig = instanceConfig;
     this.service = service;
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
+    this.staleDocumentFetcher = staleDocumentFetcher;
+
     this.nsStreamers = new HashMap<>();
     this.instanceLock = new ReentrantReadWriteLock();
   }
@@ -61,8 +65,11 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
   public void start() {
     instanceLock.writeLock().lock();
     try {
-      for (final NamespaceChangeStreamListener streamer : nsStreamers.values()) {
-        streamer.start();
+      for (final Map.Entry<MongoNamespace, NamespaceChangeStreamListener> streamerEntry: nsStreamers.entrySet()) {
+        this.instanceConfig.getNamespaceConfig(streamerEntry.getKey()).setStaleDocumentIds(
+            staleDocumentFetcher.getStaleDocumentIds(streamerEntry.getKey())
+        );
+        streamerEntry.getValue().start();
       }
     } finally {
       instanceLock.writeLock().unlock();

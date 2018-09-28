@@ -21,6 +21,7 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Chan
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalReplace;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalUpdate;
 
+import com.mongodb.Function;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoClient;
@@ -88,7 +89,7 @@ import org.bson.diagnostics.Loggers;
 // TODO: Test delete/delete insert/insert update/update etc...
 // TODO: StitchReachabilityMonitor for when Stitch goes down and we can gracefully fail and give
 // you local only results.
-public class DataSynchronizer implements ErrorEmitter, EventEmitter {
+public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocumentFetcher {
 
   static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
 
@@ -158,15 +159,26 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter {
         syncConfig,
         service,
         networkMonitor,
-        authMonitor);
+        authMonitor,
+        this);
     for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
       this.instanceChangeStreamListener.addNamespace(ns);
     }
     // TODO: Add back in
-    // this.instanceChangeStreamListener.start();
+    this.instanceChangeStreamListener.start();
 
     this.logger =
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
+  }
+
+  @Override
+  public Set<BsonValue> getStaleDocumentIds(MongoNamespace namespace) {
+    return this.getRemoteCollection(namespace).find().map(new Function<BsonDocument, BsonValue>() {
+      @Override
+      public BsonValue apply(BsonDocument bsonDocument) {
+        return bsonDocument.get("_id");
+      }
+    }).into(new HashSet<BsonValue>());
   }
 
   /**
@@ -184,11 +196,14 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter {
           syncConfig,
           service,
           networkMonitor,
-          authMonitor);
+          authMonitor,
+          this
+      );
     } finally {
       syncLock.unlock();
     }
   }
+
 
   public <T> void configure(final MongoNamespace namespace,
                             final ConflictHandler<T> conflictHandler,
@@ -699,7 +714,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter {
             null,
             CodecRegistries.fromCodecs(new DocumentCodec()));
 
-        BsonValue docId = new BsonObjectId(document.getObjectId("_id"));
+        BsonValue docId = doc.get("_id");
         CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(docId);
 
@@ -891,7 +906,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter {
       final CoreDocumentSynchronizationConfig docConfig,
       final ChangeEvent<BsonDocument> remoteEvent
   ) {
-    if (docConfig.getConflictHandler() == null) {
+    if (this.syncConfig.getNamespaceConfig(namespace).getConflictHandler() == null) {
       logger.warn(String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s no conflict resolver set; cannot resolve "
@@ -919,7 +934,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter {
       final ChangeEvent transformedRemoteEvent =
           ChangeEvent.transformChangeEventForUser(remoteEvent, docConfig.getDocumentCodec());
       resolvedDocument = resolveConflictWithResolver(
-          docConfig.getConflictHandler(),
+          this.syncConfig.getNamespaceConfig(namespace).getConflictHandler(),
           docConfig.getDocumentId(),
           transformedLocalEvent,
           transformedRemoteEvent);
@@ -1407,12 +1422,8 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter {
   }
 
   private void addAndStartListeningToNamespace(final MongoNamespace namespace) {
-    Set<BsonValue> staleIds = new HashSet<>();
-    for (Document doc : remoteClient.getDatabase(namespace.getDatabaseName()).getCollection(namespace.getCollectionName()).find()) {
-      staleIds.add(new BsonObjectId(doc.getObjectId("_id")));
-    }
     syncConfig.getNamespaceConfig(namespace).setStaleDocumentIds(
-        staleIds
+        this.getStaleDocumentIds(namespace)
     );
     instanceChangeStreamListener.addNamespace(namespace);
     syncLock.lock();
@@ -1449,10 +1460,12 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter {
         @SuppressWarnings("unchecked")
         public Object call() {
           try {
-            namespaceListener.getEventListener().onEvent(
-                documentId,
-                ChangeEvent.transformChangeEventForUser(
-                    event, namespaceListener.getDocumentCodec()));
+            if (namespaceListener.getEventListener() != null) {
+              namespaceListener.getEventListener().onEvent(
+                  documentId,
+                  ChangeEvent.transformChangeEventForUser(
+                      event, namespaceListener.getDocumentCodec()));
+            }
           } catch (final Exception ex) {
             ex.printStackTrace();
             emitError(documentId, String.format(

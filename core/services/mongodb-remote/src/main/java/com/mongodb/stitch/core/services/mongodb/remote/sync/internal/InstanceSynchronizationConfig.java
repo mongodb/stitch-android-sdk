@@ -229,10 +229,6 @@ class InstanceSynchronizationConfig
     return getNamespaceConfig(namespace).getSynchronizedDocumentIds();
   }
 
-  public Set<BsonValue> getStaleDocumentIds(final MongoNamespace namespace) {
-    return getNamespaceConfig(namespace).getStaleDocumentIds();
-  }
-
   @Override
   public Iterator<NamespaceSynchronizationConfig> iterator() {
     instanceLock.readLock().lock();

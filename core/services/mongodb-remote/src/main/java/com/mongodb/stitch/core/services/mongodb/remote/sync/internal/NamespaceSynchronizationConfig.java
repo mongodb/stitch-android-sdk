@@ -26,12 +26,14 @@ import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
+import java.lang.ref.Reference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -58,7 +60,7 @@ class NamespaceSynchronizationConfig
   private BsonValue lastRemoteResumeToken;
 
   private NamespaceListenerConfig namespaceListenerConfig;
-  private ConflictHandler conflictHandler;
+  private AtomicReference<ConflictHandler> conflictHandler = new AtomicReference<>();
   private Codec documentCodec;
 
   NamespaceSynchronizationConfig(
@@ -86,7 +88,6 @@ class NamespaceSynchronizationConfig
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
             docConfig,
-            null,
             null));
       }
     });
@@ -113,7 +114,6 @@ class NamespaceSynchronizationConfig
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
             docConfig,
-            null,
             null));
       }
     });
@@ -134,9 +134,14 @@ class NamespaceSynchronizationConfig
   <T> void configure(final ConflictHandler<T> conflictHandler,
                      final ChangeEventListener<T> changeEventListener,
                      final Codec<T> codec) {
-    this.conflictHandler = conflictHandler;
-    this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
-    this.documentCodec = codec;
+    nsLock.writeLock().lock();
+    try {
+      this.conflictHandler.set(conflictHandler);
+      this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
+      this.documentCodec = codec;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
   }
 
   static BsonDocument getNsFilter(
@@ -212,13 +217,11 @@ class NamespaceSynchronizationConfig
           docsColl,
           namespace,
           documentId,
-          conflictHandler,
           documentCodec);
     } else {
       newConfig = new CoreDocumentSynchronizationConfig(
           docsColl,
           existingConfig,
-          conflictHandler,
           documentCodec);
     }
 
@@ -262,6 +265,15 @@ class NamespaceSynchronizationConfig
           getNsFilter(getNamespace()), this);
     } finally {
       nsLock.writeLock().unlock();
+    }
+  }
+
+  public ConflictHandler getConflictHandler() {
+    nsLock.readLock().lock();
+    try {
+      return conflictHandler.get();
+    } finally {
+      nsLock.readLock().unlock();
     }
   }
 

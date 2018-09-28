@@ -32,14 +32,6 @@ public interface DocumentSynchronizationConfig {
   BsonValue getDocumentId();
 
   /**
-   * Returns the conflict resolver for this document, if any.
-   *
-   * @return the conflict resolver for this document.
-   */
-  @Nullable
-  ConflictHandler getConflictResolver();
-
-  /**
    * Returns whether or not this document has pending writes that have not yet been committed
    * remotely.
    *

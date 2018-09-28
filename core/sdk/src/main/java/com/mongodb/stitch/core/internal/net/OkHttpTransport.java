@@ -98,6 +98,7 @@ public final class OkHttpTransport implements Transport {
     request.getHeaders().put(CONTENT_TYPE, "text/event-next");
     request.getHeaders().put("Accept", "text/event-stream");
     okhttp3.Response response = client.newBuilder().readTimeout(60, TimeUnit.SECONDS).build().newCall(buildRequest(request)).execute();
+
     return new OkHttpEventStream(response.body().source());
   }
 }

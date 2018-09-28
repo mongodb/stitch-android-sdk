@@ -16,7 +16,6 @@ public abstract class EventStreamReader {
   protected abstract byte readByte() throws IOException;
 
   protected abstract void readBytes(final byte[] buffer) throws IOException;
-//  protected abstract byte[] readBytes(final int start, final int end) throws IOException;
 
   protected abstract long indexOf(final String element) throws IOException;
 
@@ -25,7 +24,7 @@ public abstract class EventStreamReader {
   protected final CoreEvent readEvent() throws SSEError, IOException {
     CoreEvent coreEvent = new CoreEvent();
 
-    while (!this.exhausted()) {
+    while (!Thread.interrupted() && !this.exhausted()) {
       switch (readByte()) {
         case ':':
           readByte();
@@ -55,9 +54,8 @@ public abstract class EventStreamReader {
     if (!evStr.equals(EVENT) && !evStr.equals("rror\"")) {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-      byte nextByte;
-      while (!this.exhausted() && (nextByte = readByte()) != '\n') {
-        baos.write(nextByte);
+      while (!this.exhausted()) {
+        baos.write(readByte());
       }
       throw new SSEError("malformed event key");
     }

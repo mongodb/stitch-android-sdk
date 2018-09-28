@@ -46,29 +46,20 @@ class NamespaceChangeStreamRunner implements Runnable, NetworkMonitor.StateListe
 
   @Override
   public synchronized void run() {
-    do {
       final NamespaceChangeStreamListener listener = listenerRef.get();
       if (listener == null) {
         return;
       }
 
-      boolean successful = false;
       try {
-        successful = listener.stream();
+        listener.stream();
       } catch (final Throwable t) {
         logger.error("error happened during streaming:", t);
+      } finally {
+        System.out.println("STOPPING");
+        listener.stop();
+        listener.clearWatchers();
       }
-
-      try {
-        if (successful) {
-          wait(SHORT_SLEEP_MILLIS);
-        } else {
-          wait(LONG_SLEEP_MILLIS);
-        }
-      } catch (final InterruptedException e) {
-        return;
-      }
-    } while (true);
   }
 
   @Override

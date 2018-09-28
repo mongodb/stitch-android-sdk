@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -57,7 +58,7 @@ public class NamespaceChangeStreamListener {
     this.service = service;
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
-    this.events = new HashMap<>();
+    this.events = new ConcurrentHashMap<>();
     this.nsLock = new ReentrantReadWriteLock();
     this.logger =
         Loggers.getLogger(
@@ -92,13 +93,24 @@ public class NamespaceChangeStreamListener {
       if (streamThread == null) {
         return;
       }
+      System.out.println("INTERRUPTING");
+
+
       streamThread.interrupt();
       try {
-        streamThread.join();
-      } catch (final InterruptedException e) {
+        if (currentStream != null) {
+          currentStream.close();
+        }
+        System.out.println("JOINING");
+//        streamThread.join();
+        System.out.println("DONE JOINING");
+      } catch (final Exception e) {
+        System.out.println("INTERRUPTED EXCEPTION");
         return;
       }
       streamThread = null;
+    } catch(Exception e) {
+
     } finally {
       nsLock.writeLock().unlock();
     }
@@ -108,37 +120,46 @@ public class NamespaceChangeStreamListener {
     callbackQueue.add(callback);
   }
 
+  void clearWatchers() {
+    for (int i = 0; i < callbackQueue.size(); i++) {
+      callbackQueue.remove().onComplete(OperationResult.<ChangeEvent<BsonDocument>, Object>failedResultOf(null));
+    }
+  }
+
+  Stream<ChangeEvent<BsonDocument>> currentStream;
+
   /**
    * Opens the next next.
    */
-  boolean stream() {
+  void stream() {
     logger.info("stream START");
     if (!networkMonitor.isConnected()) {
       logger.info("stream END - Network disconnected");
-      return false;
+      return;
     }
     if (!authMonitor.isLoggedIn()) {
       logger.info("stream END - Logged out");
-      return false;
+      return;
     }
 
     if (nsConfig.getStaleDocumentIds().isEmpty()) {
       logger.info("stream END - No stale documents");
-      return false;
+      return;
     }
+
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());
     args.put("ids", nsConfig.getStaleDocumentIds());
 
-    Stream<ChangeEvent<BsonDocument>> stream =
+    currentStream =
         service.streamFunction(
             "watch",
             Collections.singletonList(args),
             ChangeEvent.changeEventCoder);
     try {
-      while (stream.isOpen()) {
-        Event<ChangeEvent<BsonDocument>> event = stream.nextEvent();
+      while (!Thread.interrupted() && currentStream.isOpen()) {
+        Event<ChangeEvent<BsonDocument>> event = currentStream.nextEvent();
         if (event.getEventType() == EventType.ERROR) {
           throw event.getError();
         }
@@ -147,21 +168,24 @@ public class NamespaceChangeStreamListener {
           events.put(event.getData().getId(), event.getData());
         }
 
-        System.out.println("Dequeing callback for event");
-        callbackQueue.remove().onComplete(OperationResult.successfulResultOf(event.getData()));
+        for (int i = 0; i < callbackQueue.size(); i++) {
+          logger.debug(
+              String.format("dequeuing callback for event: %s", event.getData())
+          );
+          callbackQueue.remove().onComplete(OperationResult.successfulResultOf(event.getData()));
+        }
       }
     } catch (final Exception ex) {
-      ex.printStackTrace();
       logger.error(String.format(
           Locale.US,
           "NamespaceChangeStreamListener::stream ns=%s exception on listening to change next: %s",
           nsConfig.getNamespace(),
           ex));
       logger.info("poll END");
-      return false;
     } finally {
       try {
-        stream.close();
+        currentStream.close();
+        clearWatchers();
       } catch (final IOException ioex) {
         logger.error(String.format(
             Locale.US,
@@ -172,8 +196,6 @@ public class NamespaceChangeStreamListener {
         logger.info("stream END");
       }
     }
-
-    return true;
   }
 
   /**
