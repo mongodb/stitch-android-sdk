@@ -171,14 +171,17 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
   }
 
+  public Set<BsonDocument> getStaleDocuments(MongoNamespace namespace) {
+    return this.getRemoteCollection(namespace).find().into(new HashSet<BsonDocument>());
+  }
+
   @Override
   public Set<BsonValue> getStaleDocumentIds(MongoNamespace namespace) {
-    return this.getRemoteCollection(namespace).find().map(new Function<BsonDocument, BsonValue>() {
-      @Override
-      public BsonValue apply(BsonDocument bsonDocument) {
-        return bsonDocument.get("_id");
-      }
-    }).into(new HashSet<BsonValue>());
+    Set<BsonValue> ids = new HashSet<>();
+    for (final BsonDocument document: getStaleDocuments(namespace)) {
+      ids.add(document.get("_id"));
+    }
+    return ids;
   }
 
   /**
@@ -666,9 +669,9 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
 
       logger.warn("getting sync'd doc ids");
       final Set<BsonValue> unseenIds = nsConfig.getSynchronizedDocumentIds();
-      unseenIds.addAll(this.getStaleDocumentIds(nsConfig.getNamespace()));
+      unseenIds.addAll(getStaleDocumentIds(nsConfig.getNamespace()));
 
-      for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry : remoteChangeEvents.entrySet()) {
+      for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry: remoteChangeEvents.entrySet()) {
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
 
@@ -684,6 +687,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(docId);
         if (docConfig == null) {
+          // means we aren't actually synchronizing on this remote doc
           continue;
         }
 
@@ -705,32 +709,8 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
           syncRemoteChangeEventToLocal(nsConfig, docConfig, remoteChangeEvent, localColl);
         }
       }
-
-//      for (BsonValue id: staleIds) {
-//        logger.warn("getting sync'd doc");
-//        final CoreDocumentSynchronizationConfig docConfig =
-//            nsConfig.getSynchronizedDocument(id);
-//
-//        // a document was inserted while we were offline
-//        if (docConfig == null) {
-////          final CoreRemoteMongoCollection<BsonDocument> remoteColl =
-////              getRemoteCollection(nsConfig.getNamespace());
-////          final ChangeEvent<BsonDocument> remoteChangeEvent =
-////              getSynthesizedRemoteChangeEventForDocument(remoteColl, id);
-////
-////          syncDocumentFromRemote(nsConfig.getNamespace(), id);
-////          syncRemoteChangeEventToLocal(nsConfig, docConfig, remoteChangeEvent, localColl);
-//        } else {
-//          unseenIds.remove(docConfig.getDocumentId());
-//          logger.warn("syncing remote change to local");
-//          final CoreRemoteMongoCollection<BsonDocument> remoteColl =
-//              getRemoteCollection(nsConfig.getNamespace());
-//          final ChangeEvent<BsonDocument> remoteChangeEvent =
-//              getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
-//          syncRemoteChangeEventToLocal(nsConfig, docConfig, remoteChangeEvent, localColl);
-//        }
-//      }
     }
+
 
     logger.info(String.format(
         Locale.US,
@@ -1568,7 +1548,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
    */
   private static BsonDocument withNewVersion(final BsonDocument document) {
     final BsonDocument newDocument = BsonUtils.copyOfDocument(document);
-    newDocument.put(DOCUMENT_VERSION_FIELD, new BsonInt64(0));
+    newDocument.put(DOCUMENT_VERSION_FIELD, new BsonString(UUID.randomUUID().toString()));
     return newDocument;
   }
 
