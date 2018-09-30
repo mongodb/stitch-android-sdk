@@ -58,7 +58,7 @@ public class NamespaceChangeStreamListener {
     this.service = service;
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
-    this.events = new ConcurrentHashMap<>();
+    this.events = new HashMap<>();
     this.nsLock = new ReentrantReadWriteLock();
     this.logger =
         Loggers.getLogger(
@@ -165,7 +165,9 @@ public class NamespaceChangeStreamListener {
         }
 
         if (event.getEventType() == EventType.MESSAGE) {
-          events.put(event.getData().getId(), event.getData());
+          nsLock.writeLock().lock();
+          events.put(event.getData().getDocumentKey(), event.getData());
+          nsLock.writeLock().unlock();
         }
 
         for (int i = 0; i < callbackQueue.size(); i++) {
@@ -176,6 +178,7 @@ public class NamespaceChangeStreamListener {
         }
       }
     } catch (final Exception ex) {
+      ex.printStackTrace();
       logger.error(String.format(
           Locale.US,
           "NamespaceChangeStreamListener::stream ns=%s exception on listening to change next: %s",
@@ -205,6 +208,12 @@ public class NamespaceChangeStreamListener {
    */
   @SuppressWarnings("unchecked")
   public Map<BsonValue, ChangeEvent<BsonDocument>> getEvents() {
-    return this.events;
+    nsLock.readLock().lock();
+    Map<BsonValue, ChangeEvent<BsonDocument>> events = new HashMap<>(this.events);
+    nsLock.readLock().unlock();
+    nsLock.writeLock().lock();
+    this.events.clear();
+    nsLock.writeLock().unlock();
+    return events;
   }
 }

@@ -56,7 +56,6 @@ class NamespaceChangeStreamRunner implements Runnable, NetworkMonitor.StateListe
       } catch (final Throwable t) {
         logger.error("error happened during streaming:", t);
       } finally {
-        System.out.println("STOPPING");
         listener.stop();
         listener.clearWatchers();
       }

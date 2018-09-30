@@ -9,6 +9,8 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
+import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation
+import com.mongodb.stitch.core.services.mongodb.remote.internal.Operations
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
@@ -159,29 +161,25 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val doc1 = Document("hello", "world")
             val doc2 = Document("hello", "friend")
             doc2["proj"] = "field"
-            coll.insertOneAndSync(doc1)
+            remoteColl.insertMany(listOf(doc1, doc2))
 
             // get the document
-            val doc = coll.find(doc1).first()!!
+            val doc = remoteColl.find(doc1).first()!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
 
+            // start watching it and always set the value to hello world in a conflict
             coll.configure({
                 _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
-                System.out.println("handling conflict")
                 val merged = localEvent.fullDocument.getInteger("foo") +
                         remoteEvent.fullDocument.getInteger("foo")
                 val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
                 newDocument["foo"] = merged
                 newDocument
-            }, { _, _ ->
-            }, null)
-
-            val isLocked = AtomicBoolean(true)
-            // start watching it and always set the value to hello world in a conflict
+            }, null, null)
             coll.syncOne(doc1Id)
+            watchAndSync { }
 
-            syncPass()
             // 1. updating a document remotely should not be reflected until coming back online.
             goOffline()
             val doc1Update = Document("\$inc", Document("foo", 1))
@@ -189,12 +187,10 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
                     doc1Filter,
                     doc1Update)
             assertEquals(1, result.matchedCount)
-
-            syncPass()
+            watchAndSync {  }
             assertEquals(doc, coll.findOneById(doc1Id))
             goOnline()
-            syncPass()
-
+            watchAndSync {  }
             val expectedDocument = Document(doc)
             expectedDocument["foo"] = 1
             assertEquals(expectedDocument, coll.findOneById(doc1Id))
@@ -202,17 +198,17 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             // 2. insertOneAndSync should work offline and then sync the document when online.
             goOffline()
             val doc3 = Document("so", "syncy")
+
             coll.configure({
                 _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
                 Document("hello", "world")
-            }, { _, _ ->
-            }, null)
+            }, null, null)
             val insResult = coll.insertOneAndSync(doc3)
             assertEquals(doc3, withoutVersionId(coll.findOneById(insResult.insertedId)!!))
-            syncPass()
+            watchAndSync {  }
             assertNull(remoteColl.find(Document("_id", doc3["_id"])).first())
             goOnline()
-            syncPass()
+            watchAndSync {  }
             assertEquals(doc3, withoutVersionId(remoteColl.find(Document("_id", doc3["_id"])).first()!!))
 
             // 3. updating a document locally that has been updated remotely should invoke the conflict
@@ -230,19 +226,13 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             // first pass will invoke the conflict handler and update locally but not remotely yet
-            queueDisposableWatcher(Callback {  })
-//            Thread { listenerSweep() }.start()
-            syncPass()
+            watchAndSync {  }
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
             expectedDocument["foo"] = 4
             expectedDocument.remove("fooOps")
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             // second pass will update with the ack'd version id
-//            Thread { listenerSweep() }.start()
-            isLocked.set(true)
-            queueDisposableWatcher(Callback {  isLocked.set(false) })
-
-            syncPass()
+            watchAndSync {  }
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
         }
@@ -273,7 +263,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
                 merged
             }, null, null)
             coll.syncOne(doc1Id)
-            watchAndSyncAndLock {  }
+            syncPass()
 
             // Update remote
             val remoteUpdate = withNewVersionIdSet(Document("\$set", Document("remote", "update")))
@@ -292,13 +282,13 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(expectedLocalDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
 
             // first pass will invoke the conflict handler and update locally but not remotely yet
-            watchAndSyncAndLock {  }
+            syncPass()
             assertEquals(expectedRemoteDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
             expectedLocalDocument["remote"] = "update"
             assertEquals(expectedLocalDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
 
             // second pass will update with the ack'd version id
-            watchAndSyncAndLock {  }
+            syncPass()
             assertEquals(expectedLocalDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             assertEquals(expectedLocalDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
         }
@@ -322,7 +312,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             coll.configure(DefaultSyncConflictResolvers.remoteWins(), null, null)
             coll.syncOne(doc1Id)
 
-            watchAndSync {}
+            val isLocked = AtomicBoolean(true)
+            watchAndSync {
+                if (it.geResult() != null && it.geResult().operationType == ChangeEvent.OperationType.UPDATE) {
+                    isLocked.set(false)
+                }
+            }
 
             val expectedDocument = Document(doc)
             var result = remoteColl.updateOne(doc1Filter, withNewVersionIdSet(Document("\$inc", Document("foo", 2))))
@@ -334,12 +329,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
 
-            watchAndSync {}
+            while (isLocked.get()) {}
 
+            syncPass()
             expectedDocument["foo"] = 3
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
-
-            watchAndSync {}
+            syncPass()
 
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
         }
@@ -578,19 +573,37 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
             coll.configure(failingConflictHandler, null, null)
             coll.syncOne(doc1Id)
-            watchAndSyncAndLock {  }
+
+            watchAndSync { }
+
+            assertEquals(coll.syncedIds.size, 1)
+
+            val isLocked = AtomicBoolean(true)
+            watchAndSync {
+                if (it.geResult() != null &&
+                        it.geResult().operationType == ChangeEvent.OperationType.DELETE) {
+                }
+                try {
+                    syncPass()
+                } finally {
+                    isLocked.set(false)
+                }
+            }
 
             remoteColl.deleteOne(doc1Filter)
 
-            watchAndSyncAndLock {  }
+            while (isLocked.get()) {}
+
             assertNull(remoteColl.find(doc1Filter).first())
             assertNull(coll.findOneById(doc1Id))
 
-            // This should not desync the document
+            // This should not re-sync the document
+            watchAndSync {}
             remoteColl.insertOne(doc)
-            watchAndSyncAndLock {  }
+            syncPass()
+
             assertEquals(doc, remoteColl.find(doc1Filter).first())
-            assertEquals(doc, coll.findOneById(doc1Id))
+            assertNull(coll.findOneById(doc1Id))
         }
     }
 
@@ -612,7 +625,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
                 Document("hello", "world")
             }, null, null)
             coll.syncOne(doc1Id)
-            watchAndSyncAndLock {  }
+            watchAndSync {  }
             assertEquals(doc, coll.findOneById(doc1Id))
             assertNotNull(coll.findOneById(doc1Id))
 
@@ -621,11 +634,11 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(1, coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1))).matchedCount)
 
             goOnline()
-            watchAndSyncAndLock {  }
+            watchAndSync {  }
             assertNull(remoteColl.find(doc1Filter).first())
             assertNotNull(coll.findOneById(doc1Id))
 
-            watchAndSyncAndLock {  }
+            watchAndSync {  }
             assertNotNull(remoteColl.find(doc1Filter).first())
             assertNotNull(coll.findOneById(doc1Id))
         }
@@ -649,7 +662,8 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
                 Document("hello", "again")
             }, null, null)
             coll.syncOne(doc1Id)
-            watchAndSyncAndLock {  }
+
+            syncPass()
 
             assertEquals(doc, coll.findOneById(doc1Id))
             assertNotNull(coll.findOneById(doc1Id))
@@ -659,13 +673,14 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(1, coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1))).matchedCount)
 
             goOnline()
-            watchAndSyncAndLock {  }
+            syncPass()
+
             assertEquals(doc, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
             val expectedDocument = Document("_id", doc1Id.value)
             expectedDocument["hello"] = "again"
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
 
-            watchAndSyncAndLock {  }
+            syncPass()
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
         }
@@ -687,12 +702,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
             coll.configure(failingConflictHandler, null, null)
             coll.syncOne(doc1Id)
-            watchAndSyncAndLock {  }
+            watchAndSync {  }
             assertEquals(doc, coll.findOneById(doc1Id))
 
             assertEquals(1, coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1))).matchedCount)
 
-            watchAndSyncAndLock {  }
+            watchAndSync {  }
             val expectedDocument = Document(withoutVersionId(doc))
             expectedDocument["foo"] = 1
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
@@ -718,7 +733,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
                 null
             }, null, null)
             coll.syncOne(doc1Id)
-            watchAndSyncAndLock {  }
+            watchAndSync {  }
             assertEquals(doc, coll.findOneById(doc1Id))
             assertNotNull(coll.findOneById(doc1Id))
 
@@ -734,7 +749,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertNull(coll.findOneById(doc1Id))
 
             goOnline()
-            watchAndSyncAndLock {  }
+            syncPass()
             assertNull(remoteColl.find(doc1Filter).first())
             assertNull(coll.findOneById(doc1Id))
         }
@@ -796,8 +811,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
 
             coll.syncOne(doc1Id)
-            watchAndSyncAndLock {
-                print(it)
+            watchAndSync {
             }
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
         }
@@ -835,13 +849,13 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
             val doc1Filter = Document("_id", doc1Id)
 
-            watchAndSync {  }
+            syncPass()
             val expectedDocument = Document(docToInsert)
             expectedDocument["friend"] = "welcome"
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             assertEquals(docToInsert, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
 
-            watchAndSync {  }
+            syncPass()
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
         }
@@ -856,9 +870,24 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     }
 
+    private fun watch(watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit) {
+        this.queueDisposableWatcher(Callback { watcher(it) })
+    }
+
     private fun watchAndSync(watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit) {
         this.queueDisposableWatcher(Callback { watcher(it) })
         this.syncPass()
+    }
+
+    private fun watchFor(operation: ChangeEvent.OperationType, watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit = {}) {
+        val isLocked = AtomicBoolean(true)
+        this.queueDisposableWatcher(Callback {
+            if (it.geResult() != null && it.geResult().operationType == operation) {
+                watcher(it)
+                isLocked.set(false)
+            }
+        })
+        while (isLocked.get()) {}
     }
 
     private fun watchAndSyncAndLock(watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit) {

@@ -666,17 +666,17 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
 
       logger.warn("getting sync'd doc ids");
       final Set<BsonValue> unseenIds = nsConfig.getSynchronizedDocumentIds();
+      unseenIds.addAll(this.getStaleDocumentIds(nsConfig.getNamespace()));
 
       for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry : remoteChangeEvents.entrySet()) {
-        logger.warn("getting sync'd doc");
         final CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(eventEntry.getKey());
+            nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
+
         if (docConfig == null) {
           // Not interested in this event.
           continue;
         }
         unseenIds.remove(docConfig.getDocumentId());
-        logger.warn("syncing remote change to local");
         syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue(), localColl);
       }
 
@@ -693,7 +693,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
             && localColl.find(getDocumentIdFilter(docConfig.getDocumentId())).first() == null) {
           logger.info(String.format(
               Locale.US,
-              "t='%d': syncRemoteToLocal ns=%s documentId=%s no change next info; looking up "
+              "t='%d': syncRemoteToLocal ns=%s documentId=%s no change stream info; looking up "
                   + "the document",
               logicalT,
               nsConfig.getNamespace(),
@@ -706,26 +706,30 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
         }
       }
 
-      for (Document document : remoteClient
-          .getDatabase(nsConfig.getNamespace().getDatabaseName())
-          .getCollection(nsConfig.getNamespace().getCollectionName()
-      ).find()) {
-        BsonDocument doc = document.toBsonDocument(
-            null,
-            CodecRegistries.fromCodecs(new DocumentCodec()));
-
-        BsonValue docId = doc.get("_id");
-        CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(docId);
-
-        if (docConfig == null) {
-          continue;
-        }
-        // REPLACE
-        syncRemoteChangeEventToLocal(nsConfig, docConfig,
-            changeEventForLocalReplace(nsConfig.getNamespace(), docId, doc, docConfig.hasUncommittedWrites()), localColl
-        );
-      }
+//      for (BsonValue id: staleIds) {
+//        logger.warn("getting sync'd doc");
+//        final CoreDocumentSynchronizationConfig docConfig =
+//            nsConfig.getSynchronizedDocument(id);
+//
+//        // a document was inserted while we were offline
+//        if (docConfig == null) {
+////          final CoreRemoteMongoCollection<BsonDocument> remoteColl =
+////              getRemoteCollection(nsConfig.getNamespace());
+////          final ChangeEvent<BsonDocument> remoteChangeEvent =
+////              getSynthesizedRemoteChangeEventForDocument(remoteColl, id);
+////
+////          syncDocumentFromRemote(nsConfig.getNamespace(), id);
+////          syncRemoteChangeEventToLocal(nsConfig, docConfig, remoteChangeEvent, localColl);
+//        } else {
+//          unseenIds.remove(docConfig.getDocumentId());
+//          logger.warn("syncing remote change to local");
+//          final CoreRemoteMongoCollection<BsonDocument> remoteColl =
+//              getRemoteCollection(nsConfig.getNamespace());
+//          final ChangeEvent<BsonDocument> remoteChangeEvent =
+//              getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
+//          syncRemoteChangeEventToLocal(nsConfig, docConfig, remoteChangeEvent, localColl);
+//        }
+//      }
     }
 
     logger.info(String.format(
@@ -771,7 +775,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
     final BsonDocument localDocument = localColl.find(docFilter).first();
 
     final BsonValue lastKnownRemoteVersion;
-    if (remoteDoc == null) {
+    if (remoteDoc == null || remoteDoc.size() == 0) {
       lastKnownRemoteVersion = null;
     } else {
       lastKnownRemoteVersion = DocumentVersionInfo
