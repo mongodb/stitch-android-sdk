@@ -67,7 +67,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     try {
       for (final Map.Entry<MongoNamespace, NamespaceChangeStreamListener> streamerEntry: nsStreamers.entrySet()) {
         this.instanceConfig.getNamespaceConfig(streamerEntry.getKey()).setStaleDocumentIds(
-            staleDocumentFetcher.getStaleDocumentIds(streamerEntry.getKey())
+            staleDocumentFetcher.getStaleDocumentIds(this.instanceConfig.getNamespaceConfig(streamerEntry.getKey()))
         );
         streamerEntry.getValue().start();
       }
@@ -151,11 +151,9 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
   public Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(
       final MongoNamespace namespace
   ) {
-    System.out.println("getting events for namespace");
     this.instanceLock.readLock().lock();
     final NamespaceChangeStreamListener streamer;
     try {
-      System.out.println("getting streamer for namespace");
       streamer = nsStreamers.get(namespace);
     } finally {
       this.instanceLock.readLock().unlock();
@@ -163,7 +161,6 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     if (streamer == null) {
       return new HashMap<>();
     }
-    System.out.println("fetching events");
     return streamer.getEvents();
   }
 }

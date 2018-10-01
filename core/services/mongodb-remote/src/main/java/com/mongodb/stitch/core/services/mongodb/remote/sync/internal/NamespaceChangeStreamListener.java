@@ -22,16 +22,12 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class NamespaceChangeStreamListener {
+public class NamespaceChangeStreamListener implements NetworkMonitor.StateListener {
   private final MongoNamespace namespace;
   private final InstanceSynchronizationConfig instanceConfig;
   private final NamespaceSynchronizationConfig nsConfig;
@@ -64,6 +60,17 @@ public class NamespaceChangeStreamListener {
         Loggers.getLogger(
             String.format("NamespaceChangeStreamListener-%s", namespace.toString()));
     this.callbackQueue = new ArrayDeque<>();
+    this.networkMonitor.addNetworkStateListener(this);
+  }
+
+  @Override
+  public void onNetworkStateChanged() {
+    if (!this.networkMonitor.isConnected()) {
+      this.stop();
+      this.nsConfig.setStale();
+    } else {
+      this.start();
+    }
   }
 
   /**
@@ -93,19 +100,17 @@ public class NamespaceChangeStreamListener {
       if (streamThread == null) {
         return;
       }
-      System.out.println("INTERRUPTING");
-
 
       streamThread.interrupt();
       try {
         if (currentStream != null) {
           currentStream.close();
         }
-        System.out.println("JOINING");
-//        streamThread.join();
-        System.out.println("DONE JOINING");
+
+        if (streamThread.isAlive()) {
+//          streamThread.join();
+        }
       } catch (final Exception e) {
-        System.out.println("INTERRUPTED EXCEPTION");
         return;
       }
       streamThread = null;
@@ -166,14 +171,12 @@ public class NamespaceChangeStreamListener {
 
         if (event.getEventType() == EventType.MESSAGE) {
           nsLock.writeLock().lock();
+          System.out.println(String.format("new event!: %s", event.getData().getOperationType()));
           events.put(event.getData().getDocumentKey(), event.getData());
           nsLock.writeLock().unlock();
         }
 
         for (int i = 0; i < callbackQueue.size(); i++) {
-          logger.debug(
-              String.format("dequeuing callback for event: %s", event.getData())
-          );
           callbackQueue.remove().onComplete(OperationResult.successfulResultOf(event.getData()));
         }
       }
@@ -184,7 +187,7 @@ public class NamespaceChangeStreamListener {
           "NamespaceChangeStreamListener::stream ns=%s exception on listening to change next: %s",
           nsConfig.getNamespace(),
           ex));
-      logger.info("poll END");
+      logger.info("stream END");
     } finally {
       try {
         currentStream.close();
@@ -209,11 +212,19 @@ public class NamespaceChangeStreamListener {
   @SuppressWarnings("unchecked")
   public Map<BsonValue, ChangeEvent<BsonDocument>> getEvents() {
     nsLock.readLock().lock();
-    Map<BsonValue, ChangeEvent<BsonDocument>> events = new HashMap<>(this.events);
-    nsLock.readLock().unlock();
+    Map<BsonValue, ChangeEvent<BsonDocument>> events;
+    try {
+       events = new HashMap<>(this.events);
+    } finally {
+      nsLock.readLock().unlock();
+    }
+
     nsLock.writeLock().lock();
-    this.events.clear();
-    nsLock.writeLock().unlock();
-    return events;
+    try {
+      this.events.clear();
+      return events;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
   }
 }

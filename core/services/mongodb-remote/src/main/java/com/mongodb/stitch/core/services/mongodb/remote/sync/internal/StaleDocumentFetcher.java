@@ -7,5 +7,5 @@ import org.bson.BsonValue;
 import java.util.Set;
 
 public interface StaleDocumentFetcher {
-  Set<BsonValue> getStaleDocumentIds(MongoNamespace namespace);
+  Set<BsonValue> getStaleDocumentIds(NamespaceSynchronizationConfig namespace);
 }

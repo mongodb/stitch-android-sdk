@@ -19,12 +19,22 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
     private val dataDir = System.getProperty("java.io.tmpdir")
 
     class TestNetworkMonitor : NetworkMonitor {
-        var connectedState = false
+        private var _connectedState = false
+        var connectedState: Boolean
+            set(value) {
+                _connectedState = value
+                listeners.forEach { it.onNetworkStateChanged() }
+            }
+            get() = _connectedState
+
+        var listeners = mutableListOf<NetworkMonitor.StateListener>()
+
         override fun isConnected(): Boolean {
             return connectedState
         }
+
         override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
-            return
+            listeners.add(listener)
         }
     }
 

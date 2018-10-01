@@ -57,7 +57,7 @@ public abstract class EventStreamReader {
       while (!this.exhausted()) {
         baos.write(readByte());
       }
-      throw new SSEError("malformed event key");
+      throw new SSEError(String.format("malformed event key: %s", new String(baos.toByteArray())));
     }
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

@@ -249,18 +249,6 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public void setFresh() {
-    isStale = false;
-  }
-
-  public void setStale() {
-    isStale = true;
-  }
-
-  public boolean isStale() {
-    return isStale;
-  }
-
   public boolean hasUncommittedWrites() {
     docLock.readLock().lock();
     try {

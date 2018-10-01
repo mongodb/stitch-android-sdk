@@ -197,8 +197,19 @@ class NamespaceSynchronizationConfig
   }
 
   private Set<BsonValue> staleIds;
+  private boolean isStale = true;
+  public void setStale() {
+    this.isStale = true;
+  }
+  public void setFresh() {
+    this.isStale = false;
+  }
+  public boolean isStale() {
+    return isStale;
+  }
   public void setStaleDocumentIds(Set<BsonValue> staleIds) {
     this.staleIds = staleIds;
+    this.setStale();
   }
   public Set<BsonValue> getStaleDocumentIds() {
     return staleIds;
