@@ -56,7 +56,6 @@ class CoreDocumentSynchronizationConfig {
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
   private long lastResolution;
   private BsonValue lastKnownRemoteVersion;
-  private boolean isStale = true;
 
   // TODO: How can this be trimmed? The same version could appear after we see it once. That
   // may be a non-issue.
@@ -168,6 +167,10 @@ class CoreDocumentSynchronizationConfig {
       this.lastUncommittedChangeEvent = changeEvent;
       this.lastResolution = atTime;
       this.lastKnownRemoteVersion = atVersion;
+
+      if (atVersion != null) {
+        this.committedVersions.add(atVersion);
+      }
       docsColl.replaceOne(
           getDocFilter(namespace, documentId),
           this);
@@ -240,14 +243,14 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public Codec getDocumentCodec() {
-    docLock.readLock().lock();
-    try {
-      return documentCodec;
-    } finally {
-      docLock.readLock().unlock();
-    }
-  }
+//  public Codec getDocumentCodec() {
+//    docLock.readLock().lock();
+//    try {
+//      return documentCodec;
+//    } finally {
+//      docLock.readLock().unlock();
+//    }
+//  }
 
   public boolean hasUncommittedWrites() {
     docLock.readLock().lock();

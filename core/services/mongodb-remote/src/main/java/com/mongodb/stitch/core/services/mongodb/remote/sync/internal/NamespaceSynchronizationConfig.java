@@ -62,6 +62,8 @@ class NamespaceSynchronizationConfig
   private NamespaceListenerConfig namespaceListenerConfig;
   private AtomicReference<ConflictHandler> conflictHandler = new AtomicReference<>();
   private Codec documentCodec;
+  private Set<BsonValue> staleIds;
+  private boolean isStale = true;
 
   NamespaceSynchronizationConfig(
       final MongoCollection<NamespaceSynchronizationConfig> namespacesColl,
@@ -187,7 +189,7 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  public Set<BsonValue> getSynchronizedDocumentIds() {
+  Set<BsonValue> getSynchronizedDocumentIds() {
     nsLock.readLock().lock();
     try {
       return new HashSet<>(syncedDocuments.keySet());
@@ -196,26 +198,32 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  private Set<BsonValue> staleIds;
-  private boolean isStale = true;
-  public void setStale() {
+  void setStale() {
     this.isStale = true;
   }
-  public void setFresh() {
+
+  void setFresh() {
     this.isStale = false;
   }
+
   public boolean isStale() {
     return isStale;
   }
-  public void setStaleDocumentIds(Set<BsonValue> staleIds) {
+
+  void setStaleDocumentIds(Set<BsonValue> staleIds) {
     this.staleIds = staleIds;
     this.setStale();
   }
-  public Set<BsonValue> getStaleDocumentIds() {
+
+  Set<BsonValue> getStaleDocumentIds() {
     return staleIds;
   }
 
-  public CoreDocumentSynchronizationConfig addSynchronizedDocument(
+  Codec getDocumentCodec() {
+    return documentCodec;
+  }
+
+  CoreDocumentSynchronizationConfig addSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {

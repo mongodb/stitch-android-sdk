@@ -29,7 +29,7 @@ internal class StreamHandler: HttpHandler {
 
         val os = t.responseBody
         while (x < 10) {
-            val response = "data: poop${Math.random()}\n\n"
+            val response = "data: foo${Math.random()}\n\n"
             os.write(response.toByteArray())
             x += 1
             Thread.sleep((Math.random() * 100).toLong())
@@ -79,13 +79,9 @@ class TransportIntTests {
                 ).withMethod(Method.GET).withTimeout(1000).build())
 
         while (stream.isOpen) {
-
             val event = stream.nextEvent()
             if (event.data != null)
                 println(event.data!!)
         }
-//        val inputAsString = resp.body!!.bufferedReader().use { it.readText() }  // defaults to UTF-8
-
-//        print(event.data)
     }
 }

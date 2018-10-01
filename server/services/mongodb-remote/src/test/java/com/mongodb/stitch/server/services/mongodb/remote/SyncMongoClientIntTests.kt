@@ -723,9 +723,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(doc, coll.findOneById(doc1Id))
             assertNotNull(coll.findOneById(doc1Id))
 
+            val isLocked = watchFor(ChangeEvent.OperationType.UPDATE)
+
             assertEquals(1, remoteColl.updateOne(doc1Filter, withNewVersionIdSet(Document("\$inc", Document("foo", 1)))).matchedCount)
             assertEquals(1, coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1))).matchedCount)
 
+            while (isLocked.get()) {}
             syncPass()
             val expectedDocument = Document(withoutVersionId(doc))
             expectedDocument["foo"] = 1
@@ -760,13 +763,10 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
             coll.syncOne(doc1Id)
+
             powerCycleDevice()
-
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-            syncPass() // does nothing
-
-            coll.syncOne(doc1Id)
-            syncPass() // syncs this time
+            syncPass()
 
             val expectedDocument = Document(doc)
             var result = remoteColl.updateOne(doc1Filter, withNewVersionIdSet(Document("\$inc", Document("foo", 2))))
@@ -775,7 +775,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
             powerCycleDevice()
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-            coll.syncOne(doc1Id)
+
             result = coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1)))
             assertEquals(1, result.matchedCount)
             expectedDocument["foo"] = 2
@@ -787,15 +787,14 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             syncPass() // does nothing with no conflict handler
 
             assertEquals(1, coll.syncedIds.size)
-            coll.syncOne(coll.syncedIds.toTypedArray()[0])
+            coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
             syncPass() // resolves the conflict
 
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
             powerCycleDevice()
-
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-            coll.syncOne(doc1Id)
+
             syncPass()
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
         }
@@ -854,10 +853,6 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     }
 
-    private fun watch(watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit) {
-        this.queueDisposableWatcher(Callback { watcher(it) })
-    }
-
     private fun watchAndSync(watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit) {
         this.queueDisposableWatcher(Callback { watcher(it) })
         this.syncPass()
@@ -895,12 +890,6 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     private fun goOnline() {
         testNetworkMonitor.connectedState = true
-    }
-
-    private fun withoutIds(documents: Collection<Document>): Collection<Document> {
-        val list = ArrayList<Document>(documents.size)
-        documents.forEach { list.add(withoutId(it)) }
-        return list
     }
 
     private fun withoutId(document: Document): Document {
