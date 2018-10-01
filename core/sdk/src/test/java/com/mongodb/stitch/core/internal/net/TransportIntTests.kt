@@ -5,11 +5,12 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import org.junit.Test
 import com.sun.net.httpserver.HttpServer
+import junit.framework.Assert.assertNotNull
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.util.concurrent.locks.ReentrantLock
 
-internal class RoundTripHandler: HttpHandler {
+internal class RoundTripHandler : HttpHandler {
     @Throws(IOException::class)
     override fun handle(t: HttpExchange) {
         val response = "This is the response"
@@ -20,7 +21,7 @@ internal class RoundTripHandler: HttpHandler {
     }
 }
 
-internal class StreamHandler: HttpHandler {
+internal class StreamHandler : HttpHandler {
     @Throws(IOException::class)
     override fun handle(t: HttpExchange) {
         var x = 0
@@ -38,6 +39,7 @@ internal class StreamHandler: HttpHandler {
         os.close()
     }
 }
+
 class TransportIntTests {
     val lock = ReentrantLock()
 
@@ -64,9 +66,7 @@ class TransportIntTests {
                         "http://localhost:8000/roundTrip"
                 ).withMethod(Method.GET).withTimeout(1000).build())
 
-        val inputAsString = resp.body!!.bufferedReader().use { it.readText() }  // defaults to UTF-8
-
-        print(inputAsString)
+        assertNotNull(resp.body!!.bufferedReader().use { it.readText() })
     }
 
     @Test
@@ -78,10 +78,18 @@ class TransportIntTests {
                         "http://localhost:8000/next"
                 ).withMethod(Method.GET).withTimeout(1000).build())
 
+        var x = 0
         while (stream.isOpen) {
             val event = stream.nextEvent()
-            if (event.data != null)
-                println(event.data!!)
+            println(event)
+            if (event.data != null) {
+                assert(event.data!!.contains("foo"))
+            }
+            if (event.type == EventType.EOF) {
+                break
+            }
+            x += 1
+            assert(x <= 10)
         }
     }
 }

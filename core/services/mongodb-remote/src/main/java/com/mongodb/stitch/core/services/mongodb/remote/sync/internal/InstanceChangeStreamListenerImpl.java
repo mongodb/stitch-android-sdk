@@ -22,11 +22,8 @@ import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.bson.BsonDocument;
@@ -65,9 +62,12 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
   public void start() {
     instanceLock.writeLock().lock();
     try {
-      for (final Map.Entry<MongoNamespace, NamespaceChangeStreamListener> streamerEntry: nsStreamers.entrySet()) {
+      for (final Map.Entry<MongoNamespace, NamespaceChangeStreamListener> streamerEntry :
+          nsStreamers.entrySet()) {
         this.instanceConfig.getNamespaceConfig(streamerEntry.getKey()).setStaleDocumentIds(
-            staleDocumentFetcher.getStaleDocumentIds(this.instanceConfig.getNamespaceConfig(streamerEntry.getKey()))
+            staleDocumentFetcher.getStaleDocumentIds(
+                this.instanceConfig.getNamespaceConfig(streamerEntry.getKey())
+            )
         );
         streamerEntry.getValue().start();
       }
@@ -91,7 +91,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
   }
 
   @Override
-  public void queueDisposableWatcher(Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+  public void queueDisposableWatcher(final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     for (final NamespaceChangeStreamListener streamers : nsStreamers.values()) {
       streamers.queueWatcher(watcher);
     }
@@ -111,7 +111,6 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
       final NamespaceChangeStreamListener streamer =
           new NamespaceChangeStreamListener(
               namespace,
-              instanceConfig,
               instanceConfig.getNamespaceConfig(namespace),
               service,
               networkMonitor,

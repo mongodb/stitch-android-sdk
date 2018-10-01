@@ -51,10 +51,8 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -66,13 +64,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
-import org.bson.BsonInt64;
-import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.Codec;
-import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.diagnostics.Logger;
@@ -176,7 +171,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
       @Override
       public void onNetworkStateChanged() {
         if (!networkMonitor.isConnected()) {
-          for (MongoNamespace mongoNamespace : syncConfig.getSynchronizedNamespaces()) {
+          for (final MongoNamespace mongoNamespace : syncConfig.getSynchronizedNamespaces()) {
             syncConfig.getNamespaceConfig(mongoNamespace).setStale();
           }
         }
@@ -184,29 +179,30 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
     });
   }
 
-  private Set<BsonDocument> getStaleDocuments(NamespaceSynchronizationConfig nsConfig) {
-    BsonArray ids = new BsonArray();
-    for (BsonValue bsonValue : nsConfig.getSynchronizedDocumentIds()) {
+  private Set<BsonDocument> getStaleDocuments(final NamespaceSynchronizationConfig nsConfig) {
+    final BsonArray ids = new BsonArray();
+    for (final BsonValue bsonValue : nsConfig.getSynchronizedDocumentIds()) {
       ids.add(new BsonDocument("_id", bsonValue));
     }
 
     if (ids.size() == 0) {
       return new HashSet<>();
     }
+
     return this.getRemoteCollection(nsConfig.getNamespace()).find(
         new Document("$or", ids)
     ).into(new HashSet<BsonDocument>());
   }
 
-  private Set<BsonValue> getStaleDocumentIds(Set<BsonDocument> staleDocuments) {
-    Set<BsonValue> ids = new HashSet<>();
+  private Set<BsonValue> getStaleDocumentIds(final Set<BsonDocument> staleDocuments) {
+    final Set<BsonValue> ids = new HashSet<>();
     for (final BsonDocument document: staleDocuments) {
       ids.add(document.get("_id"));
     }
     return ids;
   }
 
-  public Set<BsonValue> getStaleDocumentIds(NamespaceSynchronizationConfig nsConfig) {
+  public Set<BsonValue> getStaleDocumentIds(final NamespaceSynchronizationConfig nsConfig) {
     return getStaleDocumentIds(getStaleDocuments(nsConfig));
   }
 
@@ -695,12 +691,18 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
       final Set<BsonDocument> staleDocuments = getStaleDocuments(nsConfig);
       final Set<BsonValue> staleIds = getStaleDocumentIds(staleDocuments);
       final Map<BsonValue, BsonDocument> staleDocumentMap = new HashMap<>();
-      for (BsonDocument staleDocument : staleDocuments) {
+      for (final BsonDocument staleDocument : staleDocuments) {
         staleDocumentMap.put(staleDocument.get("_id"), staleDocument);
       }
 
-      for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry: remoteChangeEvents.entrySet()) {
-        System.out.println(String.format("consuming event: %s", eventEntry.getValue().getOperationType()));
+      for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry :
+          remoteChangeEvents.entrySet()) {
+        logger.info(String.format(
+            Locale.US,
+            "t='%d': syncRemoteToLocal consuming event of type: %s",
+            logicalT,
+            eventEntry.getValue().getOperationType()));
+
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
 
@@ -736,23 +738,21 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
             continue;
           }
 
-          logger.debug("nsconfig is stale!");
-          ChangeEvent<BsonDocument> event = changeEventForLocalReplace(
-              nsConfig.getNamespace(),
-              docId,
-              staleDocumentMap.get(docId),
-              false
-          );
           syncRemoteChangeEventToLocal(
               nsConfig,
               docConfig,
-              event,
+              changeEventForLocalReplace(
+                  nsConfig.getNamespace(),
+                  docId,
+                  staleDocumentMap.get(docId),
+                  false
+              ),
               localColl);
         }
       }
 
       if (nsConfig.isStale() && unseenIds.removeAll(staleIds)) {
-        for (BsonValue unseenId : unseenIds) {
+        for (final BsonValue unseenId : unseenIds) {
           final CoreDocumentSynchronizationConfig docConfig =
               nsConfig.getSynchronizedDocument(unseenId);
           if (docConfig == null || docConfig.getLastKnownRemoteVersion() == null) {
@@ -1036,7 +1036,9 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
       // Update the document locally which will keep the pending writes but with
       // a new version next time around.
       final BsonDocument docForStorage =
-          BsonUtils.documentToBsonDocument(resolvedDocument, syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
+          BsonUtils.documentToBsonDocument(
+              resolvedDocument,
+              syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
 
       logger.info(String.format(
           Locale.US,
@@ -1126,7 +1128,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
   /**
    * Asks the change next listener to do a sweep.
    */
-  public void queueDisposableWatcher(Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+  public void queueDisposableWatcher(final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     instanceChangeStreamListener.queueDisposableWatcher(watcher);
     instanceChangeStreamListener.start();
   }
@@ -1470,7 +1472,7 @@ public class DataSynchronizer implements ErrorEmitter, EventEmitter, StaleDocume
   }
 
   private void addAndStartListeningToNamespace(final MongoNamespace namespace) {
-    NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
+    final NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
     nsConfig.setStaleDocumentIds(this.getStaleDocumentIds(nsConfig));
     instanceChangeStreamListener.addNamespace(namespace);
     syncLock.lock();

@@ -69,8 +69,8 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     body.put("arguments", args);
 
     final StitchRequest.Builder reqBuilder = new StitchRequest.Builder();
-    reqBuilder.withMethod(Method.GET).withPath(serviceRoutes.getFunctionCallRoute() +
-        ("?stitch_request=" + Base64.encode(body.toJson().getBytes())));
+    reqBuilder.withMethod(Method.GET).withPath(serviceRoutes.getFunctionCallRoute()
+        + ("?stitch_request=" + Base64.encode(body.toJson().getBytes())));
     return reqBuilder.build();
   }
 
@@ -166,14 +166,18 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   }
 
   @Override
-  public <T> Stream<T> streamFunction(String name, List<?> args, Decoder<T> decoder) {
+  public <T> Stream<T> streamFunction(final String name,
+                                      final List<?> args,
+                                      final Decoder<T> decoder) {
     return requestClient.openAuthenticatedStream(
         getStreamServiceFunctionRequest(name, args), decoder
     );
   }
 
   @Override
-  public <T> Stream<T> streamFunction(String name, List<?> args, Class<T> resultClass) {
+  public <T> Stream<T> streamFunction(final String name,
+                                      final List<?> args,
+                                      final Class<T> resultClass) {
     return this.streamFunction(name, args, resultClass, codecRegistry);
   }
 

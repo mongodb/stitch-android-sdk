@@ -1,28 +1,43 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.internal.common;
 
-import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.net.Event;
 import com.mongodb.stitch.core.internal.net.EventStream;
+
+import java.io.IOException;
 
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-import java.io.IOException;
-import java.util.concurrent.SynchronousQueue;
 
 public class Stream<T> {
   private final EventStream eventStream;
   private final Decoder<T> decoder;
 
-  public Stream(EventStream eventStream,
-                Decoder<T> decoder) {
+  public Stream(final EventStream eventStream,
+                final Decoder<T> decoder) {
     this.eventStream = eventStream;
     this.decoder = decoder;
   }
 
-  public Stream(EventStream eventStream,
-                Class<T> resultClass,
-                CodecRegistry codecRegistry) {
+  public Stream(final EventStream eventStream,
+                final Class<T> resultClass,
+                final CodecRegistry codecRegistry) {
     this.eventStream = eventStream;
     this.decoder = codecRegistry.get(resultClass);
   }

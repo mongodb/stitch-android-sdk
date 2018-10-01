@@ -198,7 +198,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   @Override
-  public <T> Stream<T> openAuthenticatedStream(StitchRequest stitchReq, Decoder<T> decoder) {
+  public <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
+                                               final Decoder<T> decoder) {
     return new Stream<>(
         requestClient.doStreamRequest(stitchReq.builder().withPath(
             stitchReq.getPath() + "&stitch_at=" + getAuthInfo().getAccessToken()

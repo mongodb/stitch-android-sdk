@@ -2,14 +2,13 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.core.StitchAppClientInfo
-import com.mongodb.stitch.core.internal .common.AuthMonitor
-import com.mongodb.stitch.core.internal .net.NetworkMonitor
-import com.mongodb.stitch.core.services.internal .CoreStitchServiceClient
+import com.mongodb.stitch.core.internal.common.AuthMonitor
+import com.mongodb.stitch.core.internal.net.NetworkMonitor
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.*
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-import junit.framework.Assert.*
 import org.bson.*
 import org.bson.codecs.BsonDocumentCodec
 
@@ -17,6 +16,9 @@ import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
@@ -175,8 +177,8 @@ class DataSynchronizerUnitTests {
                                  changeEventListener: ChangeEventListener<BsonDocument> = ChangeEventListener { _, _: ChangeEvent<BsonDocument> ->
                                  }): BsonValue {
         dataSpy.insertOneAndSync(
-            namespace,
-            doc
+                namespace,
+                doc
         )
 
         assertTrue(dataSpy.getSynchronizedDocuments(namespace).size > 0)

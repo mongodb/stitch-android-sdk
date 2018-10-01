@@ -1,19 +1,34 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.internal.net;
 
 import java.io.IOException;
 
 import okio.BufferedSource;
-import okio.ByteString;
 
 public class OkHttpEventStream extends EventStreamReader implements EventStream {
   private final BufferedSource source;
 
-  OkHttpEventStream(BufferedSource source) {
+  OkHttpEventStream(final BufferedSource source) {
     this.source = source;
   }
 
   @Override
-  public CoreEvent nextEvent() throws SSEError, IOException {
+  public CoreEvent nextEvent() throws ServerSideEventError, IOException {
     return readEvent();
   }
 
@@ -23,18 +38,13 @@ public class OkHttpEventStream extends EventStreamReader implements EventStream 
   }
 
   @Override
-  protected boolean exhausted() throws IOException {
-    return this.source.exhausted();
+  protected boolean isActive() throws IOException {
+    return !this.source.exhausted();
   }
 
   @Override
-  protected void readBytes(byte[] buffer) throws IOException {
+  protected void readBytes(final byte[] buffer) throws IOException {
     this.source.read(buffer);
-  }
-
-  @Override
-  protected long indexOf(String element) throws IOException {
-    return this.source.indexOf(ByteString.encodeUtf8(element));
   }
 
   @Override

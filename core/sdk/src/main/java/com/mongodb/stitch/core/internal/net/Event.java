@@ -1,3 +1,19 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.internal.net;
 
 import com.mongodb.stitch.core.StitchServiceErrorCode;
@@ -7,12 +23,12 @@ import com.mongodb.stitch.core.internal.common.BsonUtils;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 
-public class Event<T> {
+public final class Event<T> {
   private final T data;
   private final StitchServiceException error;
   private final EventType eventType;
 
-  private Event(EventType eventType, String data, Decoder<T> decoder) {
+  private Event(final EventType eventType, final String data, final Decoder<T> decoder) {
     this.eventType = eventType;
 
     switch (eventType) {
@@ -21,7 +37,7 @@ public class Event<T> {
         this.error = null;
         break;
       case ERROR:
-        Document error = BsonUtils.parseValue(data, Document.class);
+        final Document error = BsonUtils.parseValue(data, Document.class);
         this.error = new StitchServiceException(
             error.getString("error"),
             StitchServiceErrorCode.fromCodeName(error.getString("error_code")));
@@ -34,8 +50,8 @@ public class Event<T> {
     }
   }
 
-  public static <T> Event<T> fromCoreEvent(CoreEvent coreEvent,
-                                           Decoder<T> decoder) {
+  public static <T> Event<T> fromCoreEvent(final CoreEvent coreEvent,
+                                           final Decoder<T> decoder) {
     return new Event<>(coreEvent.getType(), coreEvent.getData(), decoder);
   }
 

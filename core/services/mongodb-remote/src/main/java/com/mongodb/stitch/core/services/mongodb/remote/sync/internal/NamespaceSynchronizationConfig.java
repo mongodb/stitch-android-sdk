@@ -26,7 +26,6 @@ import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
-import java.lang.ref.Reference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -89,8 +88,7 @@ class NamespaceSynchronizationConfig
       ) {
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
-            docConfig,
-            null));
+            docConfig));
       }
     });
   }
@@ -115,8 +113,7 @@ class NamespaceSynchronizationConfig
       ) {
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
-            docConfig,
-            null));
+            docConfig));
       }
     });
   }
@@ -189,7 +186,7 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  Set<BsonValue> getSynchronizedDocumentIds() {
+  public Set<BsonValue> getSynchronizedDocumentIds() {
     nsLock.readLock().lock();
     try {
       return new HashSet<>(syncedDocuments.keySet());
@@ -210,7 +207,7 @@ class NamespaceSynchronizationConfig
     return isStale;
   }
 
-  void setStaleDocumentIds(Set<BsonValue> staleIds) {
+  void setStaleDocumentIds(final Set<BsonValue> staleIds) {
     this.staleIds = staleIds;
     this.setStale();
   }
@@ -235,13 +232,11 @@ class NamespaceSynchronizationConfig
       newConfig = new CoreDocumentSynchronizationConfig(
           docsColl,
           namespace,
-          documentId,
-          documentCodec);
+          documentId);
     } else {
       newConfig = new CoreDocumentSynchronizationConfig(
           docsColl,
-          existingConfig,
-          documentCodec);
+          existingConfig);
     }
 
     nsLock.writeLock().lock();

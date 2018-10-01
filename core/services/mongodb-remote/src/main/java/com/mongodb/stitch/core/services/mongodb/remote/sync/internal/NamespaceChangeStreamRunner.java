@@ -18,18 +18,14 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
-import org.bson.diagnostics.Logger;
-
 import java.lang.ref.WeakReference;
+
+import org.bson.diagnostics.Logger;
 
 /**
  * This runner runs {@link DataSynchronizer#doSyncPass()} on a periodic interval.
  */
 class NamespaceChangeStreamRunner implements Runnable, NetworkMonitor.StateListener {
-
-  private static final Long SHORT_SLEEP_MILLIS = 500L;
-  private static final Long LONG_SLEEP_MILLIS = 5000L;
-
   private final WeakReference<NamespaceChangeStreamListener> listenerRef;
   private final NetworkMonitor networkMonitor;
   private final Logger logger;
@@ -46,19 +42,19 @@ class NamespaceChangeStreamRunner implements Runnable, NetworkMonitor.StateListe
 
   @Override
   public synchronized void run() {
-      final NamespaceChangeStreamListener listener = listenerRef.get();
-      if (listener == null) {
-        return;
-      }
+    final NamespaceChangeStreamListener listener = listenerRef.get();
+    if (listener == null) {
+      return;
+    }
 
-      try {
-        listener.stream();
-      } catch (final Throwable t) {
-        logger.error("error happened during streaming:", t);
-      } finally {
-        listener.stop();
-        listener.clearWatchers();
-      }
+    try {
+      listener.stream();
+    } catch (final Throwable t) {
+      logger.error("error happened during streaming:", t);
+    } finally {
+      listener.close();
+      listener.clearWatchers();
+    }
   }
 
   @Override

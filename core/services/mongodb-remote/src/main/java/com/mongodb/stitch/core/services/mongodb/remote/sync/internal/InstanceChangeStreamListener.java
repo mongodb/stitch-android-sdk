@@ -19,9 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.Callback;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;

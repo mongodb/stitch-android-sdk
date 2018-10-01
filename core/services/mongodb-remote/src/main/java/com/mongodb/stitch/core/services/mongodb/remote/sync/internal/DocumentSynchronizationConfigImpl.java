@@ -16,10 +16,8 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DocumentSynchronizationConfig;
 
-import javax.annotation.Nullable;
 import org.bson.BsonValue;
 
 class DocumentSynchronizationConfigImpl implements DocumentSynchronizationConfig {

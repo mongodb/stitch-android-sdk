@@ -20,7 +20,7 @@ import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -51,7 +51,6 @@ class CoreDocumentSynchronizationConfig {
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
   private final BsonValue documentId;
-  private final Codec documentCodec;
   private final ReadWriteLock docLock;
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
   private long lastResolution;
@@ -66,13 +65,11 @@ class CoreDocumentSynchronizationConfig {
   CoreDocumentSynchronizationConfig(
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
-      final BsonValue documentId,
-      final Codec documentCodec
+      final BsonValue documentId
   ) {
     this.docsColl = docsColl;
     this.namespace = namespace;
     this.documentId = documentId;
-    this.documentCodec = documentCodec;
     this.docLock = new ReentrantReadWriteLock();
     this.lastResolution = -1;
     this.lastKnownRemoteVersion = null;
@@ -82,13 +79,11 @@ class CoreDocumentSynchronizationConfig {
 
   CoreDocumentSynchronizationConfig(
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
-      final CoreDocumentSynchronizationConfig config,
-      final Codec documentCodec
+      final CoreDocumentSynchronizationConfig config
   ) {
     this.docsColl = docsColl;
     this.namespace = config.namespace;
     this.documentId = config.documentId;
-    this.documentCodec = documentCodec;
     this.docLock = config.docLock;
     this.lastResolution = config.lastResolution;
     this.lastKnownRemoteVersion = config.lastKnownRemoteVersion;
@@ -112,7 +107,6 @@ class CoreDocumentSynchronizationConfig {
     this.lastUncommittedChangeEvent = lastUncommittedChangeEvent;
     this.docLock = new ReentrantReadWriteLock();
     this.docsColl = null;
-    this.documentCodec = null;
   }
 
   static BsonDocument getDocFilter(
@@ -129,7 +123,7 @@ class CoreDocumentSynchronizationConfig {
    * Sets that there are some pending writes that occurred at a time for an associated
    * locally emitted change event. This variant maintains the last version set.
    *
-   * @param atTime the time at which the write occurred.
+   * @param atTime      the time at which the write occurred.
    * @param changeEvent the description of the write/change.
    */
   public void setSomePendingWrites(
@@ -153,8 +147,8 @@ class CoreDocumentSynchronizationConfig {
    * Sets that there are some pending writes that occurred at a time for an associated
    * locally emitted change event. This variant updates the last version set.
    *
-   * @param atTime the time at which the write occurred.
-   * @param atVersion the version for which the write occurred.
+   * @param atTime      the time at which the write occurred.
+   * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
   public void setSomePendingWrites(
@@ -243,15 +237,6 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-//  public Codec getDocumentCodec() {
-//    docLock.readLock().lock();
-//    try {
-//      return documentCodec;
-//    } finally {
-//      docLock.readLock().unlock();
-//    }
-//  }
-
   public boolean hasUncommittedWrites() {
     docLock.readLock().lock();
     try {
@@ -302,7 +287,7 @@ class CoreDocumentSynchronizationConfig {
    * an unsynchronized insert and update is still an insert.
    *
    * @param lastUncommittedChangeEvent the last change event known about for a document.
-   * @param newestChangeEvent the newest change event known about for a document.
+   * @param newestChangeEvent          the newest change event known about for a document.
    * @return the possibly coalesced change event.
    */
   private static ChangeEvent<BsonDocument> coalesceChangeEvents(

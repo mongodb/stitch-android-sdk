@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
-import javax.annotation.Nullable;
 import org.bson.BsonValue;
 
 /**

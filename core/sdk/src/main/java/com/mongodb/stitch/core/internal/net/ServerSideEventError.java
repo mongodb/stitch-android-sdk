@@ -16,8 +16,8 @@
 
 package com.mongodb.stitch.core.internal.net;
 
-public enum EventType {
-  MESSAGE,
-  ERROR,
-  EOF
+public class ServerSideEventError extends Exception {
+  ServerSideEventError(final String msg) {
+    super(msg);
+  }
 }
