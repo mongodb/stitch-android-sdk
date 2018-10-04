@@ -37,23 +37,31 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
   private final CoreStitchServiceClient service;
   private final NetworkMonitor networkMonitor;
   private final AuthMonitor authMonitor;
-  private final StaleDocumentFetcher staleDocumentFetcher;
 
   InstanceChangeStreamListenerImpl(
       final InstanceSynchronizationConfig instanceConfig,
       final CoreStitchServiceClient service,
       final NetworkMonitor networkMonitor,
-      final AuthMonitor authMonitor,
-      final StaleDocumentFetcher staleDocumentFetcher
+      final AuthMonitor authMonitor
   ) {
     this.instanceConfig = instanceConfig;
     this.service = service;
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
-    this.staleDocumentFetcher = staleDocumentFetcher;
-
     this.nsStreamers = new HashMap<>();
     this.instanceLock = new ReentrantReadWriteLock();
+  }
+
+  public void start(final MongoNamespace namespace) {
+    instanceLock.writeLock().lock();
+    try {
+      if (nsStreamers.containsKey(namespace)) {
+        NamespaceChangeStreamListener streamer = nsStreamers.get(namespace);
+        streamer.start();
+      }
+    } finally {
+      instanceLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -64,11 +72,6 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     try {
       for (final Map.Entry<MongoNamespace, NamespaceChangeStreamListener> streamerEntry :
           nsStreamers.entrySet()) {
-        this.instanceConfig.getNamespaceConfig(streamerEntry.getKey()).setStaleDocumentIds(
-            staleDocumentFetcher.getStaleDocumentIds(
-                this.instanceConfig.getNamespaceConfig(streamerEntry.getKey())
-            )
-        );
         streamerEntry.getValue().start();
       }
     } finally {
@@ -91,9 +94,10 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
   }
 
   @Override
-  public void queueDisposableWatcher(final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
-    for (final NamespaceChangeStreamListener streamers : nsStreamers.values()) {
-      streamers.queueWatcher(watcher);
+  public void queueDisposableWatcher(final MongoNamespace namespace,
+                                     final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+    if (nsStreamers.containsKey(namespace)) {
+      nsStreamers.get(namespace).queueWatcher(watcher);
     }
   }
 

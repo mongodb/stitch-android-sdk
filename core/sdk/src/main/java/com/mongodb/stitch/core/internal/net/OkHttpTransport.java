@@ -32,6 +32,7 @@ import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
 public final class OkHttpTransport implements Transport {
+  private final static int STREAM_TIMEOUT_SECONDS = 60;
 
   private final OkHttpClient client;
 
@@ -66,7 +67,7 @@ public final class OkHttpTransport implements Transport {
     return reqBuilder.build();
   }
 
-  static Response handleResponse(final okhttp3.Response response) {
+  private static Response handleResponse(final okhttp3.Response response) {
     final ResponseBody body = response.body();
     final InputStream bodyStream;
     if (body != null) {
@@ -97,10 +98,12 @@ public final class OkHttpTransport implements Transport {
   public EventStream stream(final Request request) throws IOException {
     request.getHeaders().put(
         com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE,
-        "text/event-next");
-    request.getHeaders().put("Accept", "text/event-stream");
+        ContentTypes.TEXT_EVENT_STREAM);
+    request.getHeaders().put(
+        com.mongodb.stitch.core.internal.net.Headers.ACCEPT,
+        ContentTypes.TEXT_EVENT_STREAM);
     final okhttp3.Response response = client.newBuilder().readTimeout(
-        60, TimeUnit.SECONDS).build().newCall(buildRequest(request)).execute();
+        STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).build().newCall(buildRequest(request)).execute();
 
     final Response transportResponse = handleResponse(response);
     if (response.body() == null

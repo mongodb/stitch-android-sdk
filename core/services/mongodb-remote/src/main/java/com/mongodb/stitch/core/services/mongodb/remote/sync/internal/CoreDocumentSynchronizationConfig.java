@@ -20,6 +20,7 @@ import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.lang.NonNull;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ import org.bson.BsonArray;
 import org.bson.BsonBinary;
 import org.bson.BsonBinaryReader;
 import org.bson.BsonBinaryWriter;
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
@@ -55,6 +57,7 @@ class CoreDocumentSynchronizationConfig {
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
   private long lastResolution;
   private BsonValue lastKnownRemoteVersion;
+  private boolean isStale;
 
   // TODO: How can this be trimmed? The same version could appear after we see it once. That
   // may be a non-issue.
@@ -75,6 +78,7 @@ class CoreDocumentSynchronizationConfig {
     this.lastKnownRemoteVersion = null;
     this.committedVersions = new HashSet<>();
     this.lastUncommittedChangeEvent = null;
+    this.isStale = false;
   }
 
   CoreDocumentSynchronizationConfig(
@@ -89,6 +93,7 @@ class CoreDocumentSynchronizationConfig {
     this.lastKnownRemoteVersion = config.lastKnownRemoteVersion;
     this.committedVersions = config.committedVersions;
     this.lastUncommittedChangeEvent = config.lastUncommittedChangeEvent;
+    this.isStale = config.isStale;
   }
 
   private CoreDocumentSynchronizationConfig(
@@ -97,7 +102,8 @@ class CoreDocumentSynchronizationConfig {
       final ChangeEvent<BsonDocument> lastUncommittedChangeEvent,
       final long lastResolution,
       final BsonValue lastVersion,
-      final Set<BsonValue> committedVersions
+      final Set<BsonValue> committedVersions,
+      final boolean isStale
   ) {
     this.namespace = namespace;
     this.documentId = documentId;
@@ -107,16 +113,35 @@ class CoreDocumentSynchronizationConfig {
     this.lastUncommittedChangeEvent = lastUncommittedChangeEvent;
     this.docLock = new ReentrantReadWriteLock();
     this.docsColl = null;
+    this.isStale = isStale;
   }
 
   static BsonDocument getDocFilter(
-      final MongoNamespace namespace,
-      final BsonValue documentId
+      @NonNull final MongoNamespace namespace,
+      @NonNull final BsonValue documentId
   ) {
     final BsonDocument filter = new BsonDocument();
     filter.put(ConfigCodec.Fields.NAMESPACE_FIELD, new BsonString(namespace.toString()));
     filter.put(ConfigCodec.Fields.DOCUMENT_ID_FIELD, documentId);
     return filter;
+  }
+
+  public boolean isStale() {
+    return isStale;
+  }
+
+  public void setStale(boolean stale) {
+    docLock.writeLock().lock();
+    try {
+      isStale = stale;
+      docsColl.replaceOne(
+          getDocFilter(namespace, documentId),
+          this);
+    } catch (IllegalStateException e) {
+      // eat this
+    }finally {
+      docLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -151,7 +176,7 @@ class CoreDocumentSynchronizationConfig {
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  public void setSomePendingWrites(
+  void setSomePendingWrites(
       final long atTime,
       final BsonValue atVersion,
       final ChangeEvent<BsonDocument> changeEvent
@@ -173,7 +198,7 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public void setPendingWritesComplete(final BsonValue atVersion) {
+  void setPendingWritesComplete(final BsonValue atVersion) {
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent = null;
@@ -365,6 +390,7 @@ class CoreDocumentSynchronizationConfig {
       }
       final BsonArray committedVersions = new BsonArray(new ArrayList<>(this.committedVersions));
       asDoc.put(ConfigCodec.Fields.COMMITTED_VERSIONS, committedVersions);
+      asDoc.put(ConfigCodec.Fields.IS_STALE, new BsonBoolean(isStale));
       return asDoc;
     } finally {
       docLock.readLock().unlock();
@@ -377,6 +403,7 @@ class CoreDocumentSynchronizationConfig {
     keyPresent(ConfigCodec.Fields.SCHEMA_VERSION_FIELD, document);
     keyPresent(ConfigCodec.Fields.LAST_RESOLUTION_FIELD, document);
     keyPresent(ConfigCodec.Fields.COMMITTED_VERSIONS, document);
+    keyPresent(ConfigCodec.Fields.IS_STALE, document);
 
     final int schemaVersion =
         document.getNumber(ConfigCodec.Fields.SCHEMA_VERSION_FIELD).intValue();
@@ -417,7 +444,8 @@ class CoreDocumentSynchronizationConfig {
         lastUncommittedChangeEvent,
         document.getNumber(ConfigCodec.Fields.LAST_RESOLUTION_FIELD).longValue(),
         lastVersion,
-        committedVersions);
+        committedVersions,
+        document.getBoolean(ConfigCodec.Fields.IS_STALE).getValue());
   }
 
   static final ConfigCodec configCodec = new ConfigCodec();
@@ -455,6 +483,7 @@ class CoreDocumentSynchronizationConfig {
       static final String LAST_KNOWN_REMOTE_VERSION_FIELD = "last_known_remote_version";
       static final String LAST_UNCOMMITTED_CHANGE_EVENT = "last_uncommitted_change_event";
       static final String COMMITTED_VERSIONS = "committed_versions";
+      static final String IS_STALE = "is_stale";
     }
   }
 }

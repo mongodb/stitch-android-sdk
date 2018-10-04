@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.internal.net;
 
 import java.io.IOException;
 
+import okio.Buffer;
 import okio.BufferedSource;
 
 public class OkHttpEventStream extends EventStreamReader implements EventStream {
@@ -28,23 +29,17 @@ public class OkHttpEventStream extends EventStreamReader implements EventStream 
   }
 
   @Override
-  public CoreEvent nextEvent() throws ServerSideEventError, IOException {
-    return readEvent();
+  public Event nextEvent() throws IOException {
+    return processEvent();
+  }
+
+  protected boolean isActive() {
+    return !this.source.buffer().exhausted();
   }
 
   @Override
-  protected byte readByte() throws IOException {
-    return this.source.readByte();
-  }
-
-  @Override
-  protected boolean isActive() throws IOException {
-    return !this.source.exhausted();
-  }
-
-  @Override
-  protected void readBytes(final byte[] buffer) throws IOException {
-    this.source.read(buffer);
+  protected String readLine() throws IOException {
+    return this.source.readUtf8Line();
   }
 
   @Override

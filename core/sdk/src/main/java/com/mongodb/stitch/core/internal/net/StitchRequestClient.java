@@ -20,6 +20,8 @@ import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.internal.common.StitchError;
 
+import java.io.InterruptedIOException;
+
 public class StitchRequestClient {
 
   private final String baseUrl;
@@ -69,9 +71,7 @@ public class StitchRequestClient {
 
   public EventStream doStreamRequest(final StitchRequest stitchReq) {
     try {
-      return transport.stream(
-          buildRequest(stitchReq)
-      );
+      return transport.stream(buildRequest(stitchReq));
     } catch (Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
     }

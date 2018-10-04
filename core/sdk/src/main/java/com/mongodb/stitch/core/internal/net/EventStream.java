@@ -23,10 +23,9 @@ public interface EventStream {
    * The next event in this event stream.
    *
    * @return next event in this stream
-   * @throws ServerSideEventError server sent event related errors
    * @throws IOException general i/o related errors
    */
-  CoreEvent nextEvent() throws ServerSideEventError, IOException;
+  Event nextEvent() throws IOException;
 
   /**
    * Whether or not the stream is currently open.

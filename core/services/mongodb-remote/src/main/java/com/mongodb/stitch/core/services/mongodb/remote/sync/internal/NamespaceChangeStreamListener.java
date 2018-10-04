@@ -17,12 +17,12 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.common.OperationResult;
-import com.mongodb.stitch.core.internal.common.Stream;
-import com.mongodb.stitch.core.internal.net.Event;
-import com.mongodb.stitch.core.internal.net.EventType;
+import com.mongodb.stitch.core.internal.net.Stream;
+import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
@@ -81,8 +81,11 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
   public void onNetworkStateChanged() {
     if (!this.networkMonitor.isConnected()) {
       this.stop();
-      this.nsConfig.setStale();
     } else {
+      for (CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
+          this.nsConfig.getSynchronizedDocuments()) {
+        coreDocumentSynchronizationConfig.setStale(true);
+      }
       this.start();
     }
   }
@@ -117,10 +120,8 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
 
       streamThread.interrupt();
       try {
-        if (streamThread.isAlive()) {
-          close();
-          streamThread.join();
-        }
+        close();
+        streamThread.join();
       } catch (final Exception e) {
         return;
       }
@@ -136,14 +137,14 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
     callbackQueue.add(callback);
   }
 
-  void clearWatchers() {
+  private void clearWatchers() {
     for (int i = 0; i < callbackQueue.size(); i++) {
       callbackQueue.remove().onComplete(
           OperationResult.<ChangeEvent<BsonDocument>, Object>failedResultOf(null));
     }
   }
 
-  void close() {
+  private void close() {
     if (currentStream != null) {
       try {
         currentStream.close();
@@ -153,47 +154,75 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
         currentStream = null;
       }
     }
+
+    clearWatchers();
   }
 
   /**
-   * Opens the next next.
+   * Whether or not the current stream is currently open.
+   * @return true if open, false if not
    */
-  void stream() {
+  boolean isOpen() {
+    return currentStream != null && currentStream.isOpen();
+  }
+
+  /**
+   * Open the event stream
+   * @return true if successfully opened, false if not
+   */
+  boolean openStream() {
     logger.info("stream START");
     if (!networkMonitor.isConnected()) {
       logger.info("stream END - Network disconnected");
-      return;
+      return false;
     }
     if (!authMonitor.isLoggedIn()) {
       logger.info("stream END - Logged out");
-      return;
+      return false;
     }
 
-    if (nsConfig.getStaleDocumentIds().isEmpty()) {
+    if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
       logger.info("stream END - No stale documents");
-      return;
+      return false;
     }
 
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());
-    args.put("ids", nsConfig.getStaleDocumentIds());
+    args.put("ids", nsConfig.getSynchronizedDocumentIds());
 
     currentStream =
         service.streamFunction(
             "watch",
             Collections.singletonList(args),
             ChangeEvent.changeEventCoder);
+
+    return currentStream.isOpen();
+  }
+
+  /**
+   * Read and store the next event from an open stream. This is a blocking method.
+   * @return true if stored successfully, false if not
+   */
+  void storeNextEvent() {
     try {
-      while (currentStream.isOpen()) {
-        final Event<ChangeEvent<BsonDocument>> event = currentStream.nextEvent();
-        if (event.getEventType() == EventType.ERROR) {
+      if (currentStream != null && currentStream.isOpen()) {
+        final StitchEvent<ChangeEvent<BsonDocument>> event = currentStream.nextEvent();
+        if (event.getError() != null) {
           throw event.getError();
         }
 
-        if (event.getEventType() == EventType.MESSAGE) {
-          nsLock.writeLock().lock();
+        if (event.getData() == null) {
+          return;
+        }
+
+        logger.info(String.format(Locale.US,
+            "NamespaceChangeStreamListener::stream ns=%s event found: op=%s id=%s",
+            nsConfig.getNamespace(), event.getData().getOperationType(), event.getData().getId()));
+        nsLock.writeLock().lock();
+        try {
           events.put(event.getData().getDocumentKey(), event.getData());
+        } finally {
           nsLock.writeLock().unlock();
         }
 
@@ -202,20 +231,13 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
         }
       }
     } catch (final Exception ex) {
-      ex.printStackTrace();
       logger.error(String.format(
           Locale.US,
-          "NamespaceChangeStreamListener::stream ns=%s exception on listening to change next: %s",
+          "NamespaceChangeStreamListener::stream ns=%s exception on fetching next event: %s",
           nsConfig.getNamespace(),
           ex));
       logger.info("stream END");
-    } finally {
-      try {
-        close();
-        clearWatchers();
-      } finally {
-        logger.info("stream END");
-      }
+      this.close();
     }
   }
 

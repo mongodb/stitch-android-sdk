@@ -16,54 +16,71 @@
 
 package com.mongodb.stitch.core.internal.net;
 
-import com.mongodb.stitch.core.StitchServiceErrorCode;
-import com.mongodb.stitch.core.StitchServiceException;
-import com.mongodb.stitch.core.internal.common.BsonUtils;
+import javax.annotation.Nonnull;
 
-import org.bson.Document;
-import org.bson.codecs.Decoder;
+/**
+ * Any given server-sent event.
+ *
+ * See https://www.w3.org/TR/2009/WD-eventsource-20090421/.
+ */
+public class Event {
+  /**
+   * Default event name for unnamed event streams
+   */
+  static final String MESSAGE_EVENT = "message";
 
-public final class Event<T> {
-  private final T data;
-  private final StitchServiceException error;
-  private final EventType eventType;
+  /**
+   * The name of this event
+   */
+  @Nonnull private final String eventName;
 
-  private Event(final EventType eventType, final String data, final Decoder<T> decoder) {
-    this.eventType = eventType;
+  /**
+   * The data in the event stream. A single event
+   * can contains multiple lines of data.
+   */
+  @Nonnull private final String data;
 
-    switch (eventType) {
-      case MESSAGE:
-        this.data = BsonUtils.parseValue(data, decoder);
-        this.error = null;
-        break;
-      case ERROR:
-        final Document error = BsonUtils.parseValue(data, Document.class);
-        this.error = new StitchServiceException(
-            error.getString("error"),
-            StitchServiceErrorCode.fromCodeName(error.getString("error_code")));
-        this.data = null;
-        break;
-      default:
-        this.data = null;
-        this.error = null;
-        break;
+  private Event(@Nonnull String eventName, @Nonnull String data) {
+    this.eventName = eventName;
+    this.data = data;
+  }
+
+  /**
+   * Builder for building a server-sent event. Events should be processed
+   * line by line and built while processing.
+   *
+   * See https://www.w3.org/TR/2009/WD-eventsource-20090421/#event-stream-interpretation.
+   */
+  public static class Builder {
+    private String eventName;
+    private String data;
+
+    public Builder withData(@Nonnull final String data) {
+      this.data = data;
+      return this;
+    }
+
+    public Builder withEventName(final String eventName) {
+      this.eventName = eventName;
+      return this;
+    }
+
+    public Event build() {
+      if (this.eventName == null) {
+        this.eventName = MESSAGE_EVENT;
+      }
+
+      return new Event(this.eventName, this.data);
     }
   }
 
-  public static <T> Event<T> fromCoreEvent(final CoreEvent coreEvent,
-                                           final Decoder<T> decoder) {
-    return new Event<>(coreEvent.getType(), coreEvent.getData(), decoder);
+  @Nonnull
+  public String getEventName() {
+    return eventName;
   }
 
-  public T getData() {
+  @Nonnull
+  public String getData() {
     return data;
-  }
-
-  public StitchServiceException getError() {
-    return error;
-  }
-
-  public EventType getEventType() {
-    return eventType;
   }
 }

@@ -25,6 +25,10 @@ import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 interface InstanceChangeStreamListener {
+  /**
+   * Starts listening to namespace.
+   */
+  void start(final MongoNamespace namespace);
 
   /**
    * Starts listening.
@@ -39,7 +43,8 @@ interface InstanceChangeStreamListener {
   /**
    * Queue a one-off watcher for the next event pass.
    */
-  void queueDisposableWatcher(Callback<ChangeEvent<BsonDocument>, Object> watcher);
+  void queueDisposableWatcher(final MongoNamespace namespace,
+                              final Callback<ChangeEvent<BsonDocument>, Object> watcher);
 
   /**
    * Requests that the given namespace be started listening to for change events.

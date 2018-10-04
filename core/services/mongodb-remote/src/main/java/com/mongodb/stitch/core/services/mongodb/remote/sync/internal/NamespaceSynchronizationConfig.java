@@ -32,7 +32,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -59,10 +58,8 @@ class NamespaceSynchronizationConfig
   private BsonValue lastRemoteResumeToken;
 
   private NamespaceListenerConfig namespaceListenerConfig;
-  private AtomicReference<ConflictHandler> conflictHandler = new AtomicReference<>();
+  private ConflictHandler conflictHandler;
   private Codec documentCodec;
-  private Set<BsonValue> staleIds;
-  private boolean isStale = true;
 
   NamespaceSynchronizationConfig(
       final MongoCollection<NamespaceSynchronizationConfig> namespacesColl,
@@ -135,7 +132,7 @@ class NamespaceSynchronizationConfig
                      final Codec<T> codec) {
     nsLock.writeLock().lock();
     try {
-      this.conflictHandler.set(conflictHandler);
+      this.conflictHandler = conflictHandler;
       this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
       this.documentCodec = codec;
     } finally {
@@ -195,25 +192,20 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  void setStale() {
-    this.isStale = true;
-  }
-
-  void setFresh() {
-    this.isStale = false;
-  }
-
-  public boolean isStale() {
-    return isStale;
-  }
-
-  void setStaleDocumentIds(final Set<BsonValue> staleIds) {
-    this.staleIds = staleIds;
-    this.setStale();
-  }
-
   Set<BsonValue> getStaleDocumentIds() {
-    return staleIds;
+    nsLock.readLock().lock();
+    try {
+      Set<BsonValue> staleDocumentIds = new HashSet<>();
+      for (CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
+          this.getSynchronizedDocuments()) {
+        if (coreDocumentSynchronizationConfig.isStale()) {
+          staleDocumentIds.add(coreDocumentSynchronizationConfig.getDocumentId());
+        }
+      }
+      return staleDocumentIds;
+    } finally {
+      nsLock.readLock().unlock();
+    }
   }
 
   Codec getDocumentCodec() {
@@ -285,7 +277,7 @@ class NamespaceSynchronizationConfig
   public ConflictHandler getConflictHandler() {
     nsLock.readLock().lock();
     try {
-      return conflictHandler.get();
+      return conflictHandler;
     } finally {
       nsLock.readLock().unlock();
     }

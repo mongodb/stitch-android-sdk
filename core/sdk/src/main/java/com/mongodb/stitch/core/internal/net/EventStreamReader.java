@@ -16,90 +16,96 @@
 
 package com.mongodb.stitch.core.internal.net;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+/**
+ * Interpreter for server-sent events.
+ *
+ * See https://www.w3.org/TR/2009/WD-eventsource-20090421/#event-stream-interpretation for
+ * information on processing.
+ */
 public abstract class EventStreamReader {
-  private static final String DATA = "ata: ";
-  private static final int DATA_LENGTH = DATA.length();
-  private static final String EVENT = "vent: ";
-
   EventStreamReader() {
   }
 
-  protected abstract byte readByte() throws IOException;
+  /**
+   * Whether or not the stream is still active.
+   *
+   * @return true if active, false if not
+   * @throws IOException if a stream is in the wrong state, IO errors can be thrown
+   */
+  protected abstract boolean isOpen() throws IOException;
 
-  protected abstract void readBytes(final byte[] buffer) throws IOException;
+  /**
+   * Read the next line of a stream from a given source.
+   * @return the next utf8 line
+   * @throws IOException if a stream is in the wrong state, IO errors can be thrown
+   */
+  protected abstract String readLine() throws IOException;
 
-  protected abstract boolean isActive() throws IOException;
+  /**
+   * Process the next event in a given stream.
+   * @return the fully processed event
+   * @throws IOException if a stream is in the wrong state, IO errors can be thrown
+   */
+  protected final Event processEvent() throws IOException {
+    final Event.Builder eventBuilder = new Event.Builder();
+    final StringBuilder dataBuffer = new StringBuilder();
 
-  protected final CoreEvent readEvent() throws ServerSideEventError, IOException {
-    final CoreEvent coreEvent = new CoreEvent();
+    while (isOpen()) {
+      final String line = readLine();
 
-    while (!Thread.interrupted() && this.isActive()) {
-      switch (readByte()) {
-        case ':':
-          readByte();
-          readByte();
-          continue;
-        case '\r':
-        case '\n':
-          return coreEvent;
-        case 'd':
-          coreEvent.setData(doReadData());
-          break;
-        case 'e':
-          coreEvent.setType(doReadEventType());
-          break;
-        default:
-          break;
+      if (line == null) {
+        continue;
+      }
+
+      // if the line starts with a U+003A COLON character (':')
+      if (line.startsWith(":")) {
+        // ignore the line
+        continue;
+      }
+
+      // if the line contains a U+003A COLON character (':') character
+      if (line.contains(":")) {
+        // collect the characters on the line before the first U+003A COLON character (':')...
+        final String[] lineSplitOnColon = line.split(":", 2);
+        // ...and let _field_ be that string
+        final String field = lineSplitOnColon[0];
+
+        final StringBuilder valueBuffer = new StringBuilder();
+        // collect the characters on the line after the first U+003A COLON character (':')
+        // and let value be that string. if value starts with a single U+0020 SPACE character,
+        // remove it from value.
+        for (int i = 1; i < lineSplitOnColon.length; i++) {
+          valueBuffer.append(lineSplitOnColon[i].trim());
+        }
+
+        // if the field name is "data"
+        if (field.equals("data")) {
+          final String value = valueBuffer.toString();
+          // if the data buffer is not the empty string,
+          // then append a single U+000A LINE FEED character to the data buffer.
+          // append the field value to the data buffer.
+          if (!value.isEmpty()) {
+            dataBuffer.append(value);
+            dataBuffer.append("\n");
+          }
+        }
+
+        // if the field name is "event"
+        // set the event name buffer to field value.
+        if (field.equals("event")) {
+          eventBuilder.withEventName(valueBuffer.toString().trim());
+        }
+      }
+
+      if ((line.isEmpty() && !dataBuffer.toString().isEmpty())
+          || line.endsWith("\r") || line.endsWith("\n")) {
+        eventBuilder.withData(dataBuffer.toString());
+        break;
       }
     }
 
-    coreEvent.setType(EventType.EOF);
-    return coreEvent;
-  }
-
-  private EventType doReadEventType() throws ServerSideEventError, IOException {
-    final byte[] event = new byte[DATA_LENGTH];
-    readBytes(event);
-
-    final String evStr = new String(event);
-    if (!evStr.equals(EVENT) && !evStr.equals("rror\"")) {
-      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-      while (this.isActive()) {
-        baos.write(readByte());
-      }
-      throw new ServerSideEventError(
-          String.format("malformed event key: %s", new String(baos.toByteArray())));
-    }
-
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-    byte nextByte;
-    while (this.isActive() && (nextByte = readByte()) != '\n') {
-      baos.write(nextByte);
-    }
-
-    return new String(baos.toByteArray()).equals("error") ? EventType.ERROR : EventType.MESSAGE;
-  }
-
-  private String doReadData() throws ServerSideEventError, IOException {
-    final byte[] data = new byte[DATA_LENGTH];
-    readBytes(data);
-
-    if (!new String(data).equals(DATA)) {
-      throw new ServerSideEventError("malformed data key");
-    }
-
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-    byte nextByte;
-    while ((nextByte = readByte()) != '\n') {
-      baos.write(nextByte);
-    }
-
-    return new String(baos.toByteArray());
+    return eventBuilder.build();
   }
 }

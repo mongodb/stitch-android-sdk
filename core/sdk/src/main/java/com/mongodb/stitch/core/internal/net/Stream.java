@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.internal.common;
-
-import com.mongodb.stitch.core.internal.net.Event;
-import com.mongodb.stitch.core.internal.net.EventStream;
+package com.mongodb.stitch.core.internal.net;
 
 import java.io.IOException;
 
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-
+/**
+ * Stitch stream that sits on top of an {@link EventStream}.
+ *
+ * Clean interface to read events from a stream as some type T.
+ * @param <T> type to decode events into
+ */
 public class Stream<T> {
   private final EventStream eventStream;
   private final Decoder<T> decoder;
@@ -42,18 +44,27 @@ public class Stream<T> {
     this.decoder = codecRegistry.get(resultClass);
   }
 
-  public T next() throws Exception {
-    return this.nextEvent().getData();
+  /**
+   * Fetch the next event from a given stream
+   * @return the next event
+   * @throws Exception any exception that could occur
+   */
+  public StitchEvent<T> nextEvent() throws Exception {
+    return StitchEvent.fromEvent(this.eventStream.nextEvent(), this.decoder);
   }
 
-  public Event<T> nextEvent() throws Exception {
-    return Event.fromCoreEvent(this.eventStream.nextEvent(), this.decoder);
-  }
-
+  /**
+   * Whether or not the underlying event straem is still open.
+   * @return true is open, false if not
+   */
   public boolean isOpen() {
     return this.eventStream.isOpen();
   }
 
+  /**
+   * Close the underlying event stream.
+   * @throws IOException i/o exceptions relative to closing
+   */
   public void close() throws IOException {
     this.eventStream.close();
   }

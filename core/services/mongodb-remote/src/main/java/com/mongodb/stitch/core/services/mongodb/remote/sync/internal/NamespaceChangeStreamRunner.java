@@ -25,12 +25,14 @@ import org.bson.diagnostics.Logger;
 /**
  * This runner runs {@link DataSynchronizer#doSyncPass()} on a periodic interval.
  */
-class NamespaceChangeStreamRunner implements Runnable, NetworkMonitor.StateListener {
+class NamespaceChangeStreamRunner implements Runnable {
+  private static final Long RETRY_SLEEP_MILLIS = 5000L;
+
   private final WeakReference<NamespaceChangeStreamListener> listenerRef;
   private final NetworkMonitor networkMonitor;
   private final Logger logger;
 
-  public NamespaceChangeStreamRunner(
+  NamespaceChangeStreamRunner(
       final WeakReference<NamespaceChangeStreamListener> listenerRef,
       final NetworkMonitor networkMonitor,
       final Logger logger
@@ -47,20 +49,27 @@ class NamespaceChangeStreamRunner implements Runnable, NetworkMonitor.StateListe
       return;
     }
 
-    try {
-      listener.stream();
-    } catch (final Throwable t) {
-      logger.error("error happened during streaming:", t);
-    } finally {
-      listener.close();
-      listener.clearWatchers();
-    }
-  }
+    do {
+      boolean isOpen = listener.isOpen();
+      if (!isOpen) {
+        try {
+          isOpen = listener.openStream();
+        } catch (final Throwable t) {
+          logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", t);
+        }
 
-  @Override
-  public synchronized void onNetworkStateChanged() {
-    if (networkMonitor.isConnected()) {
-      notify();
-    }
+        try {
+          if (!isOpen) {
+            wait(RETRY_SLEEP_MILLIS);
+          }
+        } catch (final InterruptedException e) {
+          return;
+        }
+      }
+
+      if (isOpen) {
+        listener.storeNextEvent();
+      }
+    } while (networkMonitor.isConnected());
   }
 }

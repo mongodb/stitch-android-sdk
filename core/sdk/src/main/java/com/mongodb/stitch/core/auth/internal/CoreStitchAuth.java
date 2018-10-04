@@ -28,7 +28,7 @@ import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.IoUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import com.mongodb.stitch.core.internal.common.Storage;
-import com.mongodb.stitch.core.internal.common.Stream;
+import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.internal.net.Headers;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.Response;
@@ -200,25 +200,22 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   @Override
   public <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
                                                final Decoder<T> decoder) {
-    return new Stream<>(
-        requestClient.doStreamRequest(stitchReq.builder().withPath(
-            stitchReq.getPath() + "&stitch_at=" + getAuthInfo().getAccessToken()
-        ).build()),
-        decoder
-    );
+    return openAuthenticatedStream(stitchReq, decoder, true);
   }
 
-  @Override
-  public <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
-                                               final Class<T> resultClass,
-                                               final CodecRegistry codecRegistry) {
-    return new Stream<>(
-        requestClient.doStreamRequest(stitchReq.builder().withPath(
-            stitchReq.getPath() + "&stitch_at=" + getAuthInfo().getAccessToken()
-        ).build()),
-        resultClass,
-        codecRegistry
-    );
+  private <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
+                                                final Decoder<T> decoder,
+                                                boolean tryRefresh) {
+    try {
+      return new Stream<>(
+          requestClient.doStreamRequest(stitchReq.builder().withPath(
+              stitchReq.getPath() + AuthStreamFields.AUTH_TOKEN + getAuthInfo().getAccessToken()
+          ).build()),
+          decoder
+      );
+    } catch (final StitchServiceException ex) {
+      return handleAuthFailure(ex, stitchReq, decoder, tryRefresh);
+    }
   }
 
   protected synchronized StitchUserT loginWithCredentialInternal(
@@ -288,6 +285,24 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     newReq.withHeaders(newHeaders);
     newReq.withTimeout(stitchReq.getTimeout());
     return newReq.build();
+  }
+
+  private <T> Stream<T> handleAuthFailure(final StitchServiceException ex,
+                                          final StitchRequest req,
+                                          final Decoder<T> decoder,
+                                          boolean tryRefresh) {
+    if (ex.getErrorCode() != StitchServiceErrorCode.INVALID_SESSION) {
+      throw ex;
+    }
+
+    if (!tryRefresh) {
+      clearAuth();
+      throw ex;
+    }
+
+    tryRefreshAccessToken(req.getStartedAt());
+
+    return openAuthenticatedStream(req, decoder, false);
   }
 
   private Response handleAuthFailure(final StitchServiceException ex, final StitchAuthRequest req) {
@@ -519,6 +534,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   protected StitchAuthRoutes getAuthRoutes() {
     return authRoutes;
+  }
+
+  private static class AuthStreamFields {
+    static final String AUTH_TOKEN = "&stitch_at=";
   }
 
   private static class AuthLoginFields {
