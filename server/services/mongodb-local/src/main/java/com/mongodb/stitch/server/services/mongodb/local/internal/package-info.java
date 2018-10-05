@@ -14,25 +14,8 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.server.core.internal.net;
-
-import com.mongodb.stitch.core.internal.net.NetworkMonitor;
-
-import javax.annotation.Nonnull;
-
-public class ServerNetworkMonitor implements NetworkMonitor {
-  @Override
-  public boolean isConnected() {
-    return true;
-  }
-
-  @Override
-  public void addNetworkStateListener(@Nonnull final StateListener listener) {
-    
-  }
-
-  @Override
-  public void removeNetworkStateListener(@Nonnull final StateListener listener) {
-
-  }
-}
+/**
+ * This internal package contains the Server SDK's client factory for working with the MongoDB
+ * embedded platform.
+ */
+package com.mongodb.stitch.server.services.mongodb.local.internal;

@@ -150,7 +150,7 @@ public interface Sync<DocumentT> {
    * @param document the document to insert and synchronize.
    * @return the result of the insertion.
    */
-  RemoteInsertOneResult insertOneAndSync(final DocumentT document);
+  Task<RemoteInsertOneResult> insertOneAndSync(final DocumentT document);
 
   /**
    * Deletes a single document by the given id. It is first searched for in the local synchronized

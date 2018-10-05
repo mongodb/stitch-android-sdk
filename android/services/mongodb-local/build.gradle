@@ -25,4 +25,5 @@ android {
 dependencies {
     implementation project(':android:stitch-android-core')
     api project(':core:core-services:stitch-core-services-mongodb-local')
+    api('org.mongodb:mongodb-driver-embedded-android:3.9.0-SNAPSHOT')
 }

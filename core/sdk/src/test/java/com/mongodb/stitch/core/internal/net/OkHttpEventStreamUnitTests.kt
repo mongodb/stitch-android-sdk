@@ -1,5 +1,6 @@
 package com.mongodb.stitch.core.internal.net
 
+import okhttp3.Call
 import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -19,7 +20,7 @@ class OkHttpEventStreamUnitTests {
         buffer.write("$dataOdds\n".toByteArray())
         buffer.write("$dataTreason\n\n".toByteArray())
 
-        val stream = OkHttpEventStream(buffer)
+        val stream = OkHttpEventStream(buffer, Mockito.mock(Call::class.java))
 
         assert(stream.isActive)
 

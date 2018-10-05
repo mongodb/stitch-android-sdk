@@ -32,7 +32,6 @@ class StitchAppClientConfigurationUnitTests {
 
     @Test
     fun testStitchAppClientConfigurationBuilder() {
-        val clientAppId = "foo"
         val localAppVersion = "bar"
         val localAppName = "baz"
         val baseUrl = "qux"

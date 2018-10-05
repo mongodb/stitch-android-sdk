@@ -18,13 +18,16 @@ package com.mongodb.stitch.core.internal.net;
 
 import java.io.IOException;
 
+import okhttp3.Call;
 import okio.BufferedSource;
 
 public class OkHttpEventStream extends EventStreamReader implements EventStream {
   private final BufferedSource source;
+  private final Call call;
 
-  OkHttpEventStream(final BufferedSource source) {
+  OkHttpEventStream(final BufferedSource source, final Call call) {
     this.source = source;
+    this.call = call;
   }
 
   @Override
@@ -38,7 +41,7 @@ public class OkHttpEventStream extends EventStreamReader implements EventStream 
 
   @Override
   protected String readLine() throws IOException {
-    return this.source.readUtf8Line();
+    return this.source.readUtf8LineStrict();
   }
 
   @Override
@@ -49,5 +52,11 @@ public class OkHttpEventStream extends EventStreamReader implements EventStream 
   @Override
   public void close() throws IOException {
     this.source.close();
+    this.call.cancel();
+  }
+
+  @Override
+  public void cancel() {
+    this.call.cancel();
   }
 }

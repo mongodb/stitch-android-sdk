@@ -12,6 +12,7 @@ import com.mongodb.stitch.server.core.StitchAppClient
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import org.junit.After
 import org.junit.Before
+import java.util.concurrent.CopyOnWriteArrayList
 
 open class BaseStitchServerIntTest : BaseStitchIntTest() {
 
@@ -27,7 +28,7 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
             }
             get() = _connectedState
 
-        var listeners = mutableListOf<NetworkMonitor.StateListener>()
+        private var listeners = CopyOnWriteArrayList<NetworkMonitor.StateListener>()
 
         override fun isConnected(): Boolean {
             return connectedState
@@ -35,6 +36,10 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
 
         override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
             listeners.add(listener)
+        }
+
+        override fun removeNetworkStateListener(listener: NetworkMonitor.StateListener) {
+            listeners.remove(listener)
         }
     }
 

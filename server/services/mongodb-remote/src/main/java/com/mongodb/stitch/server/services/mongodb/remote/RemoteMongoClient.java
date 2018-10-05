@@ -18,6 +18,7 @@ package com.mongodb.stitch.server.services.mongodb.remote;
 
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
 import com.mongodb.stitch.server.core.services.internal.NamedServiceClientFactory;
+import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl;
 
 /**
@@ -35,5 +36,8 @@ public interface RemoteMongoClient {
 
   NamedServiceClientFactory<RemoteMongoClient> factory =
       (service, appInfo) -> new RemoteMongoClientImpl(
-        CoreRemoteClientFactory.getClient(service, appInfo));
+        CoreRemoteClientFactory.getClient(
+            service,
+            appInfo,
+            ServerEmbeddedMongoClientFactory.getInstance()));
 }

@@ -26,13 +26,14 @@ import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
-import java.util.ArrayDeque;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -42,7 +43,7 @@ import org.bson.Document;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
-public class NamespaceChangeStreamListener implements NetworkMonitor.StateListener {
+public class NamespaceChangeStreamListener {
   private final MongoNamespace namespace;
   private final NamespaceSynchronizationConfig nsConfig;
   private final CoreStitchServiceClient service;
@@ -50,9 +51,9 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
   private final AuthMonitor authMonitor;
   private final Logger logger;
   private final Map<BsonValue, ChangeEvent<BsonDocument>> events;
-  private Thread streamThread;
+  private Thread runnerThread;
   private ReadWriteLock nsLock;
-  private final Deque<Callback<ChangeEvent<BsonDocument>, Object>> callbackQueue;
+  private final Set<Callback<ChangeEvent<BsonDocument>, Object>> watchers;
   private Stream<ChangeEvent<BsonDocument>> currentStream;
 
   NamespaceChangeStreamListener(
@@ -72,21 +73,7 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
     this.logger =
         Loggers.getLogger(
             String.format("NamespaceChangeStreamListener-%s", namespace.toString()));
-    this.callbackQueue = new ArrayDeque<>();
-    this.networkMonitor.addNetworkStateListener(this);
-  }
-
-  @Override
-  public void onNetworkStateChanged() {
-    if (!this.networkMonitor.isConnected()) {
-      this.stop();
-    } else {
-      for (final CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
-          this.nsConfig.getSynchronizedDocuments()) {
-        coreDocumentSynchronizationConfig.setStale(true);
-      }
-      this.start();
-    }
+    this.watchers = new HashSet<>();
   }
 
   /**
@@ -95,13 +82,13 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
   public void start() {
     nsLock.writeLock().lock();
     try {
-      if (streamThread != null) {
+      if (runnerThread != null) {
         return;
       }
-      streamThread =
+      runnerThread =
           new Thread(new NamespaceChangeStreamRunner(
               new WeakReference<>(this), networkMonitor, logger));
-      streamThread.start();
+      runnerThread.start();
     } finally {
       nsLock.writeLock().unlock();
     }
@@ -113,18 +100,19 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
   public void stop() {
     nsLock.writeLock().lock();
     try {
-      if (streamThread == null) {
+      if (runnerThread == null) {
         return;
       }
 
-      streamThread.interrupt();
+      this.cancel();
+      runnerThread.interrupt();
       try {
-        close();
-        streamThread.join();
+        runnerThread.join();
       } catch (final Exception e) {
+        e.printStackTrace();
         return;
       }
-      streamThread = null;
+      runnerThread = null;
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -132,14 +120,25 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
     }
   }
 
-  void queueWatcher(final Callback<ChangeEvent<BsonDocument>, Object> callback) {
-    callbackQueue.add(callback);
+  void addWatcher(final Callback<ChangeEvent<BsonDocument>, Object> callback) {
+    watchers.add(callback);
+  }
+
+  void removeWatcher(final Callback<ChangeEvent<BsonDocument>, Object> callback) {
+    watchers.remove(callback);
   }
 
   private void clearWatchers() {
-    for (int i = 0; i < callbackQueue.size(); i++) {
-      callbackQueue.remove().onComplete(
-          OperationResult.<ChangeEvent<BsonDocument>, Object>failedResultOf(null));
+    for (final Callback<ChangeEvent<BsonDocument>, Object> watcher : watchers) {
+      watcher.onComplete(
+          OperationResult.failedResultOf(null));
+    }
+    watchers.clear();
+  }
+
+  private void cancel() {
+    if (currentStream != null) {
+      currentStream.cancel();
     }
   }
 
@@ -161,7 +160,7 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
    * Whether or not the current stream is currently open.
    * @return true if open, false if not
    */
-  boolean isOpen() {
+  public synchronized boolean isOpen() {
     return currentStream != null && currentStream.isOpen();
   }
 
@@ -196,6 +195,10 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
             Collections.singletonList(args),
             ChangeEvent.changeEventCoder);
 
+    if (currentStream.isOpen()) {
+      this.nsConfig.setStale(true);
+    }
+
     return currentStream.isOpen();
   }
 
@@ -217,26 +220,39 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
         logger.info(String.format(Locale.US,
             "NamespaceChangeStreamListener::stream ns=%s event found: op=%s id=%s",
             nsConfig.getNamespace(), event.getData().getOperationType(), event.getData().getId()));
-        nsLock.writeLock().lock();
+        nsLock.writeLock().lockInterruptibly();
         try {
           events.put(event.getData().getDocumentKey(), event.getData());
         } finally {
           nsLock.writeLock().unlock();
         }
 
-        for (int i = 0; i < callbackQueue.size(); i++) {
-          callbackQueue.remove().onComplete(OperationResult.successfulResultOf(event.getData()));
+        for (final Callback<ChangeEvent<BsonDocument>, Object> watcher : watchers) {
+          watcher.onComplete(OperationResult.successfulResultOf(event.getData()));
         }
       }
+    } catch (final InterruptedIOException ex) {
+      logger.error(String.format(
+          Locale.US,
+          "NamespaceChangeStreamListener::stream ns=%s exception on fetching next event: %s",
+          nsConfig.getNamespace(),
+          ex), ex);
+      logger.info("stream END");
+      this.close();
+      Thread.currentThread().interrupt();
     } catch (final Exception ex) {
       // TODO: Emit error through DataSynchronizer as an ifc
       logger.error(String.format(
           Locale.US,
           "NamespaceChangeStreamListener::stream ns=%s exception on fetching next event: %s",
           nsConfig.getNamespace(),
-          ex));
+          ex), ex);
       logger.info("stream END");
+      final boolean wasInterrupted = Thread.currentThread().isInterrupted();
       this.close();
+      if (wasInterrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 

@@ -68,4 +68,11 @@ public class Stream<T> {
   public void close() throws IOException {
     this.eventStream.close();
   }
+
+  /**
+   * Close the underlying connection to the event stream.
+   */
+  public void cancel() {
+    this.eventStream.cancel();
+  }
 }

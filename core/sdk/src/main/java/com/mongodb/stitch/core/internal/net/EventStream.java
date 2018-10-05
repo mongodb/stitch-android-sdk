@@ -38,4 +38,9 @@ public interface EventStream {
    * @throws IOException can throw exception if internal buffer not closed properly
    */
   void close() throws IOException;
+
+  /**
+   * Cancels the underlying connection to the current stream.
+   */
+  void cancel();
 }

@@ -23,22 +23,29 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
+import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.mockito.Mockito;
 
-final class TestUtils {
+public final class TestUtils {
 
   static CoreRemoteMongoClient getClient() {
-    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
-    return CoreRemoteClientFactory.getClient(service, Mockito.spy(StitchAppClientInfo.class));
+    final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
+    final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
+    final CoreStitchServiceClient service = Mockito.spy(new CoreStitchServiceClientImpl(
+        requestClient,
+        routes,
+        BsonUtils.DEFAULT_CODEC_REGISTRY));
+    return CoreRemoteClientFactory.getClient(
+        service,
+        getClientInfo(),
+        ServerEmbeddedMongoClientFactory.getInstance());
   }
 
   static CoreRemoteMongoDatabase getDatabase(final String name) {
-    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
-    final CoreRemoteMongoClient client =
-        CoreRemoteClientFactory.getClient(service, Mockito.mock(StitchAppClientInfo.class));
-    return client.getDatabase(name);
+    return getClient().getDatabase(name);
   }
 
   static CoreRemoteMongoDatabase getDatabase() {
@@ -46,15 +53,7 @@ final class TestUtils {
   }
 
   static CoreRemoteMongoCollection<Document> getCollection(final String name) {
-    final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
-    final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
-    final CoreStitchServiceClient service = Mockito.spy(new CoreStitchServiceClientImpl(
-        requestClient,
-        routes,
-        BsonUtils.DEFAULT_CODEC_REGISTRY));
-    final CoreRemoteMongoClient client =
-        CoreRemoteClientFactory.getClient(service, Mockito.mock(StitchAppClientInfo.class));
-    final CoreRemoteMongoDatabase db = client.getDatabase("dbName1");
+    final CoreRemoteMongoDatabase db = getClient().getDatabase("dbName1");
     return db.getCollection(name);
   }
 
@@ -64,5 +63,18 @@ final class TestUtils {
 
   static CoreRemoteMongoCollection<Document> getCollection(final CoreRemoteMongoClient client) {
     return client.getDatabase("dbName1").getCollection("collName1");
+  }
+
+  private static final String CLIENT_KEY = new ObjectId().toHexString();
+
+  static StitchAppClientInfo getClientInfo() {
+    return new StitchAppClientInfo(
+        CLIENT_KEY,
+        String.format("%s/%s", System.getProperty("java.io.tmpdir"), CLIENT_KEY),
+        new ObjectId().toHexString(),
+        new ObjectId().toHexString(),
+        BsonUtils.DEFAULT_CODEC_REGISTRY,
+        null,
+        null);
   }
 }

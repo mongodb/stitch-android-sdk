@@ -20,11 +20,13 @@ import com.mongodb.stitch.core.internal.common.StitchError;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.Call;
 import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -102,16 +104,24 @@ public final class OkHttpTransport implements Transport {
     request.getHeaders().put(
         com.mongodb.stitch.core.internal.net.Headers.ACCEPT,
         ContentTypes.TEXT_EVENT_STREAM);
-    final okhttp3.Response response = client.newBuilder().readTimeout(
-        STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).build().newCall(buildRequest(request)).execute();
 
-    final Response transportResponse = handleResponse(response);
-    if (response.body() == null
-        || transportResponse.getStatusCode() < 200
-        || transportResponse.getStatusCode() >= 300) {
-      StitchError.handleRequestError(transportResponse);
+    try {
+      final okhttp3.Request httpRequest = buildRequest(request);
+      final Call call = client.newBuilder().connectTimeout(
+          STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).build().newCall(httpRequest);
+      final okhttp3.Response response = call.execute();
+
+      final Response transportResponse = handleResponse(response);
+      if (response.body() == null
+          || transportResponse.getStatusCode() < 200
+          || transportResponse.getStatusCode() >= 300) {
+        StitchError.handleRequestError(transportResponse);
+      }
+
+      return new OkHttpEventStream(response.body().source(), call);
+    } catch (final InterruptedIOException ex) {
+      Thread.currentThread().interrupt();
+      throw ex;
     }
-
-    return new OkHttpEventStream(response.body().source());
   }
 }

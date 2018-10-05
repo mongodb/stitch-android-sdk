@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
+import com.mongodb.MongoInterruptedException;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import java.lang.ref.WeakReference;
@@ -54,8 +55,14 @@ class NamespaceChangeStreamRunner implements Runnable {
       if (!isOpen) {
         try {
           isOpen = listener.openStream();
+        } catch (final MongoInterruptedException ex) {
+          logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", ex);
+          return;
         } catch (final Throwable t) {
           logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", t);
+          if (Thread.currentThread().isInterrupted()) {
+            return;
+          }
         }
 
         try {
@@ -70,6 +77,6 @@ class NamespaceChangeStreamRunner implements Runnable {
       if (isOpen) {
         listener.storeNextEvent();
       }
-    } while (networkMonitor.isConnected());
+    } while (networkMonitor.isConnected() && !Thread.currentThread().isInterrupted());
   }
 }

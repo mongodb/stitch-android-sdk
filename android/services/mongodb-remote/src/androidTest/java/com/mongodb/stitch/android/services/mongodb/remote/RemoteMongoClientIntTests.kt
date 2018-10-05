@@ -4,6 +4,7 @@ import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
@@ -19,6 +20,7 @@ import org.bson.Document
 import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -71,6 +73,12 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         val client = getAppClient(app.first)
         Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
         mongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
+    }
+
+    @After
+    override fun teardown() {
+        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+        super.teardown()
     }
 
     private fun getTestColl(): RemoteMongoCollection<Document> {

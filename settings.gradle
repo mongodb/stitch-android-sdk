@@ -9,7 +9,6 @@ include ':core:sdk',
         ':core:services:http',
         ':core:services:mongodb-local',
         ':core:services:mongodb-remote',
-        ':core:services:mongodb-sync',
         ':core:services:twilio',
         ':core:testutils',
 
@@ -24,7 +23,6 @@ include ':core:sdk',
         ':server:services:http',
         ':server:services:mongodb-local',
         ':server:services:mongodb-remote',
-        ':server:services:mongodb-sync',
         ':server:services:twilio',
         ':server:testutils',
 
@@ -39,7 +37,6 @@ include ':core:sdk',
         ':android:services:http',
         ':android:services:mongodb-local',
         ':android:services:mongodb-remote',
-        ':android:services:mongodb-sync',
         ':android:services:twilio',
         ':android:examples:fcm',
         ':android:examples:todo',
@@ -56,7 +53,6 @@ project(':core:services:fcm').name = 'stitch-core-services-fcm'
 project(':core:services:http').name = 'stitch-core-services-http'
 project(':core:services:mongodb-local').name = 'stitch-core-services-mongodb-local'
 project(':core:services:mongodb-remote').name = 'stitch-core-services-mongodb-remote'
-project(':core:services:mongodb-sync').name = 'stitch-core-services-mongodb-sync'
 project(':core:services:twilio').name = 'stitch-core-services-twilio'
 project(':core:testutils').name = 'stitch-core-testutils'
 project(':server:sdk').name = 'stitch-server-sdk'
@@ -70,7 +66,6 @@ project(':server:services:fcm').name = 'stitch-server-services-fcm'
 project(':server:services:http').name = 'stitch-server-services-http'
 project(':server:services:mongodb-local').name = 'stitch-server-services-mongodb-local'
 project(':server:services:mongodb-remote').name = 'stitch-server-services-mongodb-remote'
-project(':server:services:mongodb-sync').name = 'stitch-server-services-mongodb-sync'
 project(':server:services:twilio').name = 'stitch-server-services-twilio'
 project(':server:testutils').name = 'stitch-server-testutils'
 project(':android:sdk').name = 'stitch-android-sdk'
@@ -84,7 +79,6 @@ project(':android:services:fcm').name = 'stitch-android-services-fcm'
 project(':android:services:http').name = 'stitch-android-services-http'
 project(':android:services:mongodb-local').name = 'stitch-android-services-mongodb-local'
 project(':android:services:mongodb-remote').name = 'stitch-android-services-mongodb-remote'
-project(':android:services:mongodb-sync').name = 'stitch-android-services-mongodb-sync'
 project(':android:services:twilio').name = 'stitch-android-services-twilio'
 project(':android:examples:fcm').name = 'stitch-android-examples-fcm'
 project(':android:examples:todo').name = 'stitch-android-examples-todo'

@@ -18,9 +18,11 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.local.internal.EmbeddedMongoClientFactory;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,7 +32,8 @@ public abstract class CoreRemoteClientFactory {
 
   public static synchronized CoreRemoteMongoClient getClient(
       final CoreStitchServiceClient service,
-      final StitchAppClientInfo appInfo
+      final StitchAppClientInfo appInfo,
+      final EmbeddedMongoClientFactory clientFactory
   ) {
     final String instanceKey = String.format("%s-%s", appInfo.getClientAppId(), service.getName());
     if (syncInstances.containsKey(instanceKey)) {
@@ -41,10 +44,21 @@ public abstract class CoreRemoteClientFactory {
         new CoreRemoteMongoClientImpl(
             service,
             instanceKey,
-            LocalClientFactory.getClient(appInfo, service.getName()),
+            SyncMongoClientFactory.getClient(appInfo, service.getName(), clientFactory),
             appInfo.getNetworkMonitor(),
             appInfo.getAuthMonitor());
     syncInstances.put(instanceKey, syncClient);
     return syncClient;
+  }
+
+  public static synchronized void close() {
+    for (final CoreRemoteMongoClient instance : syncInstances.values()) {
+      try {
+        instance.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+    syncInstances.clear();
   }
 }

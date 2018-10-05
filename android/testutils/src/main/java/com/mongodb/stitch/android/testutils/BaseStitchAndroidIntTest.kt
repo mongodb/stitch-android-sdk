@@ -14,21 +14,35 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import org.junit.After
 import org.junit.Before
+import java.util.concurrent.CopyOnWriteArrayList
 
 open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
 
     private var clients: MutableList<StitchAppClient> = mutableListOf()
 
     class TestNetworkMonitor : NetworkMonitor {
-        var connectedState = false
+        private var _connectedState = false
+        var connectedState: Boolean
+            set(value) {
+                _connectedState = value
+                listeners.forEach { it.onNetworkStateChanged() }
+            }
+            get() = _connectedState
+
+        private var listeners = CopyOnWriteArrayList<NetworkMonitor.StateListener>()
+
         override fun isConnected(): Boolean {
             return connectedState
         }
+
         override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
-            return
+            listeners.add(listener)
+        }
+
+        override fun removeNetworkStateListener(listener: NetworkMonitor.StateListener) {
+            listeners.remove(listener)
         }
     }
-
     companion object {
         val testNetworkMonitor = TestNetworkMonitor()
     }

@@ -24,6 +24,9 @@ class StreamUnitTests {
         override fun readLine(): String {
             return testStream.next()
         }
+
+        override fun cancel() {
+        }
     }
 
     @Test

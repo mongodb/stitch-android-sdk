@@ -40,7 +40,7 @@ public final class RemoteMongoClientImpl implements RemoteMongoClient {
     return new RemoteMongoDatabaseImpl(proxy.getDatabase(databaseName));
   }
 
-  DataSynchronizer getDataSynchronizer() {
+  public DataSynchronizer getDataSynchronizer() {
     return ((CoreRemoteMongoClientImpl)this.proxy).getDataSynchronizer();
   }
 }

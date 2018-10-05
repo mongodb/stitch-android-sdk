@@ -36,15 +36,33 @@ interface InstanceChangeStreamListener {
   void start();
 
   /**
+   * Stops listening to namespace.
+   */
+  void stop(final MongoNamespace namespace);
+
+  /**
    * Stops listening.
    */
   void stop();
 
   /**
+   * Returns whether or not stream is open.
+   */
+  boolean isOpen(final MongoNamespace namespace);
+
+  /**
+   * Returns whether or not all streams are open.
+   */
+  boolean areAllStreamsOpen();
+
+  /**
    * Queue a one-off watcher for the next event pass.
    */
-  void queueDisposableWatcher(final MongoNamespace namespace,
+  void addWatcher(final MongoNamespace namespace,
                               final Callback<ChangeEvent<BsonDocument>, Object> watcher);
+
+  void removeWatcher(final MongoNamespace namespace,
+                     final Callback<ChangeEvent<BsonDocument>, Object> watcher);
 
   /**
    * Requests that the given namespace be started listening to for change events.

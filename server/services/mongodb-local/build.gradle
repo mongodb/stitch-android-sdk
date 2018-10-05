@@ -12,6 +12,7 @@ buildscript {
 dependencies {
     implementation project(':server:stitch-server-core')
     api project(':core:core-services:stitch-core-services-mongodb-local')
+    api('org.mongodb:mongodb-driver-embedded:3.9.0-SNAPSHOT')
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8

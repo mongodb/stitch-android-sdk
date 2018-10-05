@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.annotation.Nonnull;
 
 import org.bson.BsonArray;
 import org.bson.BsonBinary;
@@ -47,7 +48,6 @@ import org.bson.codecs.EncoderContext;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 
-import javax.annotation.Nonnull;
 
 class CoreDocumentSynchronizationConfig {
 
@@ -128,16 +128,27 @@ class CoreDocumentSynchronizationConfig {
   }
 
   public boolean isStale() {
-    return isStale;
+    docLock.readLock().lock();
+    try {
+      final BsonDocument filter = getDocFilter(namespace, documentId);
+      filter.append(
+          CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE, BsonBoolean.TRUE);
+      return docsColl.countDocuments(filter) == 1;
+    } finally {
+      docLock.readLock().unlock();
+    }
   }
 
   public void setStale(final boolean stale) {
     docLock.writeLock().lock();
     try {
-      isStale = stale;
-      docsColl.replaceOne(
+      docsColl.updateOne(
           getDocFilter(namespace, documentId),
-          this);
+          new BsonDocument("$set",
+              new BsonDocument(
+                  CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE,
+                  new BsonBoolean(stale))));
+      isStale = stale;
     } catch (IllegalStateException e) {
       // eat this
     } finally {

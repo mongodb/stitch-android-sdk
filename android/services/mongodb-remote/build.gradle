@@ -36,6 +36,7 @@ android {
 dependencies {
     implementation project(':android:stitch-android-core')
     api project(':core:core-services:stitch-core-services-mongodb-remote')
+    api project(':android:android-services:stitch-android-services-mongodb-local')
 
     androidTestImplementation project(':android:stitch-android-testutils')
     androidTestImplementation 'com.android.support.test:runner:1.0.2'

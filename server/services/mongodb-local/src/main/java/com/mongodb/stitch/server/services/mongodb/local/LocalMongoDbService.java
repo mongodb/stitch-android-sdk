@@ -17,15 +17,17 @@
 package com.mongodb.stitch.server.services.mongodb.local;
 
 import com.mongodb.client.MongoClient;
-import com.mongodb.stitch.core.services.mongodb.local.internal.CoreLocalMongoDbService;
+import com.mongodb.stitch.core.services.mongodb.local.internal.LocalMongoClientFactory;
 import com.mongodb.stitch.server.core.services.internal.ServiceClientFactory;
+import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
 /**
  * The LocalMongoDbService is used to access {@link LocalMongoDbService#clientFactory} which
  * provides MongoClients used for local storage using the embedded MongoDB platform.
  */
-public final class LocalMongoDbService extends CoreLocalMongoDbService {
+public final class LocalMongoDbService extends LocalMongoClientFactory {
 
   public static final ServiceClientFactory<MongoClient> clientFactory =
-      (service, appInfo) -> CoreLocalMongoDbService.getClient(appInfo);
+      (service, appInfo) -> LocalMongoClientFactory.getClient(
+          appInfo, ServerEmbeddedMongoClientFactory.getInstance());
 }

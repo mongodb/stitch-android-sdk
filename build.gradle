@@ -14,6 +14,11 @@ buildscript {
                 url 'http://dl.bintray.com/edaniels/gradle-plugins'
             }
         }
+        repositories {
+            maven {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            }
+        }
     }
     dependencies {
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
@@ -62,6 +67,16 @@ subprojects {
         jcenter()
         mavenLocal()
         mavenCentral()
+        repositories {
+            maven {
+                url 'http://dl.bintray.com/edaniels/gradle-plugins'
+            }
+        }
+        repositories {
+            maven {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            }
+        }
     }
 
     dependencies {
@@ -69,7 +84,7 @@ subprojects {
     }
 
     ext {
-        min_api = 21
+        min_api = 24
         target_api = 28
         support_library_version = '28.0.0'
         google_play_services_version = '15.0.1'

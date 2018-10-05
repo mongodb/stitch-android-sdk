@@ -78,6 +78,17 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     }
   }
 
+  public void stop(final MongoNamespace namespace) {
+    instanceLock.writeLock().lock();
+    try {
+      if (nsStreamers.containsKey(namespace)) {
+        nsStreamers.get(namespace).stop();
+      }
+    } finally {
+      instanceLock.writeLock().unlock();
+    }
+  }
+
   /**
    * Stops all streams.
    */
@@ -92,11 +103,45 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     }
   }
 
+  public boolean isOpen(final MongoNamespace namespace) {
+    instanceLock.writeLock().lock();
+    try {
+      if (nsStreamers.containsKey(namespace)) {
+        return nsStreamers.get(namespace).isOpen();
+      }
+    } finally {
+      instanceLock.writeLock().unlock();
+    }
+    return false;
+  }
+
+  public boolean areAllStreamsOpen() {
+    instanceLock.writeLock().lock();
+    try {
+      for (final NamespaceChangeStreamListener streamer : nsStreamers.values()) {
+        if (!streamer.isOpen()) {
+          return false;
+        }
+      }
+    } finally {
+      instanceLock.writeLock().unlock();
+    }
+    return true;
+  }
+
   @Override
-  public void queueDisposableWatcher(final MongoNamespace namespace,
+  public void addWatcher(final MongoNamespace namespace,
                                      final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     if (nsStreamers.containsKey(namespace)) {
-      nsStreamers.get(namespace).queueWatcher(watcher);
+      nsStreamers.get(namespace).addWatcher(watcher);
+    }
+  }
+
+  @Override
+  public void removeWatcher(final MongoNamespace namespace,
+                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+    if (nsStreamers.containsKey(namespace)) {
+      nsStreamers.get(namespace).removeWatcher(watcher);
     }
   }
 

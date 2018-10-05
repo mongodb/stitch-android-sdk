@@ -21,21 +21,24 @@ import android.util.Log;
 import com.mongodb.client.MongoClient;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
+import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory;
 import com.mongodb.stitch.android.services.mongodb.local.internal.MongoDbMobileProvider;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.local.internal.CoreLocalMongoDbService;
+import com.mongodb.stitch.core.services.mongodb.local.internal.LocalMongoClientFactory;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bson.Document;
 
 /**
  * The LocalMongoDbService is used to access {@link LocalMongoDbService#clientFactory} which
  * provides MongoClients used for local storage using the embedded MongoDB platform.
  */
-public final class LocalMongoDbService extends CoreLocalMongoDbService {
+public final class LocalMongoDbService {
 
   private static final String TAG = LocalMongoDbService.class.getSimpleName();
-
+  private static final Map<MongoClient, Boolean> localInstances = new ConcurrentHashMap<>();
   private static final String ADMIN_DATABASE_NAME = "admin";
   public static final ServiceClientFactory<MongoClient> clientFactory =
       new ServiceClientFactory<MongoClient>() {
@@ -46,8 +49,10 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
             final StitchAppClientInfo appInfo,
             final TaskDispatcher dispatcher
         ) {
-
-          return CoreLocalMongoDbService.getClient(appInfo);
+          final MongoClient client = LocalMongoClientFactory.getClient(
+              appInfo, AndroidEmbeddedMongoClientFactory.getInstance());
+          localInstances.put(client, true);
+          return client;
         }
       };
 
@@ -57,7 +62,7 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
           @Override
           public void onLowBatteryLevel() {
             Log.i(TAG, "Notifying embedded MongoDB of low host battery level");
-            for (final MongoClient client : getLocalInstances()) {
+            for (final MongoClient client : localInstances.keySet()) {
               try {
                 client
                     .getDatabase(ADMIN_DATABASE_NAME)
@@ -77,7 +82,7 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
           @Override
           public void onOkayBatteryLevel() {
             Log.i(TAG, "Notifying embedded MongoDB of normal host battery level");
-            for (final MongoClient client : getLocalInstances()) {
+            for (final MongoClient client : localInstances.keySet()) {
               try {
                 client
                     .getDatabase(ADMIN_DATABASE_NAME)
@@ -97,7 +102,7 @@ public final class LocalMongoDbService extends CoreLocalMongoDbService {
           @Override
           public void onTrimMemory(final String memoryTrimMode) {
             Log.i(TAG, "Notifying embedded MongoDB of low memory condition on host");
-            for (final MongoClient client : getLocalInstances()) {
+            for (final MongoClient client : localInstances.keySet()) {
               try {
                 client
                     .getDatabase(ADMIN_DATABASE_NAME)

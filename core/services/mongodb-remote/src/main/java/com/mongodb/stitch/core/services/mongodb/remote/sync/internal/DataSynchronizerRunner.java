@@ -42,34 +42,40 @@ class DataSynchronizerRunner implements Runnable, NetworkMonitor.StateListener {
     this.networkMonitor = networkMonitor;
     this.logger = logger;
 
-    networkMonitor.addNetworkStateListener(this);
+    if (networkMonitor != null) {
+      networkMonitor.addNetworkStateListener(this);
+    }
   }
 
   @Override
   public synchronized void run() {
-    do {
-      final DataSynchronizer dataSync = dataSynchronizerRef.get();
-      if (dataSync == null) {
-        return;
-      }
-
-      boolean successful = false;
-      try {
-        successful = dataSync.doSyncPass();
-      } catch (final Throwable t) {
-        logger.error("error happened during synchronization:", t);
-      }
-
-      try {
-        if (successful) {
-          wait(SHORT_SLEEP_MILLIS);
-        } else {
-          wait(LONG_SLEEP_MILLIS);
+    try {
+      do {
+        final DataSynchronizer dataSync = dataSynchronizerRef.get();
+        if (dataSync == null) {
+          return;
         }
-      } catch (final InterruptedException e) {
-        return;
-      }
-    } while (true);
+
+        boolean successful = false;
+        try {
+          successful = dataSync.doSyncPass();
+        } catch (final Throwable t) {
+          logger.error("error happened during synchronization:", t);
+        }
+
+        try {
+          if (successful) {
+            wait(SHORT_SLEEP_MILLIS);
+          } else {
+            wait(LONG_SLEEP_MILLIS);
+          }
+        } catch (final InterruptedException e) {
+          return;
+        }
+      } while (true);
+    } finally {
+      networkMonitor.removeNetworkStateListener(this);
+    }
   }
 
   @Override

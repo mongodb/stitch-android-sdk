@@ -24,6 +24,7 @@ import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.bson.Document;
@@ -70,7 +71,8 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
 
     final StitchRequest.Builder reqBuilder = new StitchRequest.Builder();
     reqBuilder.withMethod(Method.GET).withPath(serviceRoutes.getFunctionCallRoute()
-        + (FunctionFields.STITCH_REQUEST + Base64.encode(body.toJson().getBytes())));
+        + (FunctionFields.STITCH_REQUEST
+        + Base64.encode(body.toJson().getBytes(StandardCharsets.UTF_8))));
     return reqBuilder.build();
   }
 
@@ -186,7 +188,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         codecRegistry);
   }
 
-  private class FunctionFields {
+  private static class FunctionFields {
     private static final String NAME = "name";
     private static final String SERVICE = "service";
     private static final String ARGUMENTS = "arguments";

@@ -86,7 +86,7 @@ import org.bson.diagnostics.Loggers;
 // TODO: Test delete/delete insert/insert update/update etc...
 // TODO: StitchReachabilityMonitor for when Stitch goes down and we can gracefully fail and give
 // you local only results.
-public class DataSynchronizer {
+public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
 
@@ -102,6 +102,7 @@ public class DataSynchronizer {
   private InstanceChangeStreamListener instanceChangeStreamListener;
 
   private InstanceSynchronizationConfig syncConfig;
+  private boolean syncThreadEnabled = true;
   private Thread syncThread;
   private long logicalT = 0; // The current logical time or sync iteration.
 
@@ -141,7 +142,7 @@ public class DataSynchronizer {
     this.instancesColl = configDb
         .getCollection("instances", InstanceSynchronizationConfig.class);
 
-    if (instancesColl.count() != 0) {
+    if (instancesColl.countDocuments() != 0) {
       this.syncConfig = new InstanceSynchronizationConfig(
           configDb,
           instancesColl);
@@ -163,6 +164,18 @@ public class DataSynchronizer {
 
     this.logger =
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
+    if (this.networkMonitor != null) {
+      this.networkMonitor.addNetworkStateListener(this);
+    }
+  }
+
+  @Override
+  public void onNetworkStateChanged() {
+    if (!this.networkMonitor.isConnected()) {
+      this.stop();
+    } else {
+      this.start();
+    }
   }
 
   /**
@@ -199,6 +212,7 @@ public class DataSynchronizer {
         changeEventListener,
         codec
     );
+    this.triggerListeningToNamespace(namespace);
   }
 
   /**
@@ -215,7 +229,18 @@ public class DataSynchronizer {
           new WeakReference<>(this),
           networkMonitor,
           logger));
-      syncThread.start();
+      if (syncThreadEnabled) {
+        syncThread.start();
+      }
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
+  public void disableSyncThread() {
+    syncLock.lock();
+    try {
+      syncThreadEnabled = false;
     } finally {
       syncLock.unlock();
     }
@@ -249,6 +274,9 @@ public class DataSynchronizer {
   public void close() {
     syncLock.lock();
     try {
+      if (this.networkMonitor != null) {
+        this.networkMonitor.removeNetworkStateListener(this);
+      }
       this.eventDispatcher.close();
       stop();
       this.localClient.close();
@@ -297,14 +325,14 @@ public class DataSynchronizer {
           Locale.US,
           "t='%d': doSyncPass START",
           logicalT));
-      if (!networkMonitor.isConnected()) {
+      if (networkMonitor == null || !networkMonitor.isConnected()) {
         logger.info(String.format(
             Locale.US,
             "t='%d': doSyncPass END - Network disconnected",
             logicalT));
         return false;
       }
-      if (!authMonitor.isLoggedIn()) {
+      if (authMonitor == null || !authMonitor.isLoggedIn()) {
         logger.info(String.format(
             Locale.US,
             "t='%d': doSyncPass END - Logged out",
@@ -935,7 +963,13 @@ public class DataSynchronizer {
           transformedLocalEvent,
           transformedRemoteEvent);
     } catch (final Exception ex) {
-      ex.printStackTrace();
+      logger.error(String.format(
+          Locale.US,
+          "t='%d': resolveConflict ns=%s documentId=%s resolution exception: %s",
+          logicalT,
+          namespace,
+          docConfig.getDocumentId(),
+          ex));
       emitError(docConfig.getDocumentId(),
           String.format(
               Locale.US,
@@ -1075,10 +1109,14 @@ public class DataSynchronizer {
   /**
    * Queues up a callback to be removed and invoked on the next change event.
    */
-  public void queueDisposableWatcher(final MongoNamespace namespace,
+  public void addWatcher(final MongoNamespace namespace,
                                      final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
-    instanceChangeStreamListener.queueDisposableWatcher(namespace, watcher);
-    instanceChangeStreamListener.start(namespace);
+    instanceChangeStreamListener.addWatcher(namespace, watcher);
+  }
+
+  public void removeWatcher(final MongoNamespace namespace,
+                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+    instanceChangeStreamListener.removeWatcher(namespace, watcher);
   }
 
   // ----- CRUD operations -----
@@ -1125,8 +1163,8 @@ public class DataSynchronizer {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    syncConfig.addSynchronizedDocument(namespace, documentId).setStale(true);
-    addAndStartListeningToNamespace(namespace);
+    syncConfig.addSynchronizedDocument(namespace, documentId);
+    triggerListeningToNamespace(namespace);
   }
 
   /**
@@ -1212,8 +1250,7 @@ public class DataSynchronizer {
         BsonUtils.getDocumentId(docToInsert)
     );
     config.setSomePendingWrites(logicalT, event);
-    config.setStale(true);
-    addAndStartListeningToNamespace(namespace);
+    triggerListeningToNamespace(namespace);
     emitEvent(BsonUtils.getDocumentId(docToInsert), event);
   }
 
@@ -1420,14 +1457,31 @@ public class DataSynchronizer {
     emitEvent(documentId, changeEventForLocalDelete(namespace, documentId, false));
   }
 
-  private void addAndStartListeningToNamespace(final MongoNamespace namespace) {
+  private void triggerListeningToNamespace(final MongoNamespace namespace) {
     instanceChangeStreamListener.addNamespace(namespace);
     syncLock.lock();
     try {
-      if (syncThread == null) {
+      if (!this.syncConfig.getNamespaceConfig(namespace).isConfigured()) {
         return;
       }
+      instanceChangeStreamListener.stop(namespace);
       instanceChangeStreamListener.start(namespace);
+    } catch (final Exception ex) {
+      logger.error(String.format(
+          Locale.US,
+          "t='%d': triggerListeningToNamespace ns=%s exception: %s",
+          logicalT,
+          namespace,
+          ex));
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
+  public boolean areAllStreamsOpen() {
+    syncLock.lock();
+    try {
+      return instanceChangeStreamListener.areAllStreamsOpen();
     } finally {
       syncLock.unlock();
     }
@@ -1463,7 +1517,12 @@ public class DataSynchronizer {
                       event, namespaceListener.getDocumentCodec()));
             }
           } catch (final Exception ex) {
-            ex.printStackTrace();
+            logger.error(String.format(
+                Locale.US,
+                "emitEvent ns=%s documentId=%s emit exception: %s",
+                event.getNamespace(),
+                documentId,
+                ex));
             emitError(documentId, String.format(
                 Locale.US,
                 "emitEvent ns=%s documentId=%s emit exception: %s",

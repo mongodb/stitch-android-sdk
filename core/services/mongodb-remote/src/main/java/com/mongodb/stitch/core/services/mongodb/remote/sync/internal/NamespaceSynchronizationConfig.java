@@ -21,6 +21,7 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Core
 
 import com.mongodb.Block;
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
@@ -36,6 +37,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nonnull;
+
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonReader;
@@ -140,6 +143,15 @@ class NamespaceSynchronizationConfig
     }
   }
 
+  boolean isConfigured() {
+    nsLock.readLock().lock();
+    try {
+      return this.conflictHandler != null;
+    } finally {
+      nsLock.readLock().unlock();
+    }
+  }
+
   static BsonDocument getNsFilter(
       final MongoNamespace namespace
   ) {
@@ -195,14 +207,12 @@ class NamespaceSynchronizationConfig
   Set<BsonValue> getStaleDocumentIds() {
     nsLock.readLock().lock();
     try {
-      final Set<BsonValue> staleDocumentIds = new HashSet<>();
-      for (final CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
-          this.getSynchronizedDocuments()) {
-        if (coreDocumentSynchronizationConfig.isStale()) {
-          staleDocumentIds.add(coreDocumentSynchronizationConfig.getDocumentId());
-        }
-      }
-      return staleDocumentIds;
+      final DistinctIterable<BsonValue> staleDocIds = this.docsColl.distinct(
+          CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD,
+          new BsonDocument(
+              CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE, BsonBoolean.TRUE),
+          BsonValue.class);
+      return staleDocIds.into(new HashSet<>());
     } finally {
       nsLock.readLock().unlock();
     }
@@ -280,6 +290,22 @@ class NamespaceSynchronizationConfig
       return conflictHandler;
     } finally {
       nsLock.readLock().unlock();
+    }
+  }
+
+  void setStale(final boolean stale) {
+    nsLock.writeLock().lock();
+    try {
+      docsColl.updateMany(
+          getNsFilter(getNamespace()),
+          new BsonDocument("$set",
+              new BsonDocument(
+                  CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE,
+                  new BsonBoolean(stale))));
+    } catch (IllegalStateException e) {
+      // eat this
+    } finally {
+      nsLock.writeLock().unlock();
     }
   }
 

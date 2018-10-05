@@ -129,8 +129,13 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public RemoteInsertOneResult insertOneAndSync(final DocumentT document) {
-    return this.proxy.insertOneAndSync(document);
+  public Task<RemoteInsertOneResult> insertOneAndSync(final DocumentT document) {
+    return this.dispatcher.dispatchTask(new Callable<RemoteInsertOneResult>() {
+      @Override
+      public RemoteInsertOneResult call() throws Exception {
+        return proxy.insertOneAndSync(document);
+      }
+    });
   }
 
   @Override

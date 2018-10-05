@@ -32,6 +32,7 @@ import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import org.bson.Document;
@@ -133,6 +134,11 @@ public class CoreStitchServiceUnitTests {
       public void close() {
 
       }
+
+      @Override
+      public void cancel() {
+
+      }
     }, new IntegerCodec());
 
     doReturn(stream)
@@ -160,7 +166,7 @@ public class CoreStitchServiceUnitTests {
     assertEquals(docArgument.getValue().getMethod(), Method.GET);
     assertEquals(docArgument.getValue().getPath(),
         routes.getFunctionCallRoute() + "?stitch_request="
-            + Base64.encode(expectedRequestDoc.toJson().getBytes()));
+            + Base64.encode(expectedRequestDoc.toJson().getBytes(StandardCharsets.UTF_8)));
     assertTrue(decArgument.getValue() instanceof IntegerCodec);
   }
 }

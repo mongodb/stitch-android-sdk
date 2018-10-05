@@ -23,6 +23,8 @@ public interface NetworkMonitor {
 
   void addNetworkStateListener(@Nonnull final StateListener listener);
 
+  void removeNetworkStateListener(@Nonnull final StateListener listener);
+
   interface StateListener {
     void onNetworkStateChanged();
   }

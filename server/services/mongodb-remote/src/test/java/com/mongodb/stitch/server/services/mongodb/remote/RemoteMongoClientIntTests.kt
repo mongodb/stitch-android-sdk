@@ -13,10 +13,12 @@ import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
 import com.mongodb.stitch.core.testutils.CustomType
+import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl
 import org.bson.Document
 import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -66,6 +68,12 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
         mongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
+    }
+
+    @After
+    override fun teardown() {
+        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+        super.teardown()
     }
 
     private fun getTestColl(): RemoteMongoCollection<Document> {

@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.internal.common;
 
+import javax.annotation.Nonnull;
+
 public interface Callback<T, U> {
-  void onComplete(OperationResult<T, U> result);
+  void onComplete(@Nonnull  OperationResult<T, U> result);
 }

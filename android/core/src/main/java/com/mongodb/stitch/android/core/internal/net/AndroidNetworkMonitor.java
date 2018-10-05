@@ -23,6 +23,8 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+
 public class AndroidNetworkMonitor implements NetworkMonitor,
     ConnectivityManager.OnNetworkActiveListener {
 
@@ -42,12 +44,17 @@ public class AndroidNetworkMonitor implements NetworkMonitor,
   }
 
   @Override
-  public void addNetworkStateListener(final StateListener listener) {
+  public synchronized void addNetworkStateListener(@Nonnull final StateListener listener) {
     listeners.add(listener);
   }
 
   @Override
-  public void onNetworkActive() {
+  public synchronized void removeNetworkStateListener(@Nonnull final StateListener listener) {
+    listeners.remove(listener);
+  }
+
+  @Override
+  public synchronized void onNetworkActive() {
     if (isConnected()) {
       for (final StateListener listener : listeners) {
         listener.onNetworkStateChanged();
