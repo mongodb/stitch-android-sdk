@@ -19,61 +19,57 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import java.lang.ref.WeakReference;
+
 import org.bson.diagnostics.Logger;
 
 /**
  * This runner runs {@link DataSynchronizer#doSyncPass()} on a periodic interval.
  */
-class NamespaceChangeStreamPollerRunner implements Runnable, NetworkMonitor.StateListener {
+class NamespaceChangeStreamRunner implements Runnable {
+  private static final Long RETRY_SLEEP_MILLIS = 5000L;
 
-  private static final Long SHORT_SLEEP_MILLIS = 500L;
-  private static final Long LONG_SLEEP_MILLIS = 5000L;
-
-  private final WeakReference<NamespaceChangeStreamShortPoller> pollerRef;
+  private final WeakReference<NamespaceChangeStreamListener> listenerRef;
   private final NetworkMonitor networkMonitor;
   private final Logger logger;
 
-  public NamespaceChangeStreamPollerRunner(
-      final WeakReference<NamespaceChangeStreamShortPoller> pollerRef,
+  NamespaceChangeStreamRunner(
+      final WeakReference<NamespaceChangeStreamListener> listenerRef,
       final NetworkMonitor networkMonitor,
       final Logger logger
   ) {
-    this.pollerRef = pollerRef;
+    this.listenerRef = listenerRef;
     this.networkMonitor = networkMonitor;
     this.logger = logger;
   }
 
   @Override
   public synchronized void run() {
-    do {
-      final NamespaceChangeStreamShortPoller poller = pollerRef.get();
-      if (poller == null) {
-        return;
-      }
-
-      boolean successful = false;
-      try {
-        successful = poller.poll();
-      } catch (final Throwable t) {
-        logger.error("error happened during polling:", t);
-      }
-
-      try {
-        if (successful) {
-          wait(SHORT_SLEEP_MILLIS);
-        } else {
-          wait(LONG_SLEEP_MILLIS);
-        }
-      } catch (final InterruptedException e) {
-        return;
-      }
-    } while (true);
-  }
-
-  @Override
-  public synchronized void onNetworkStateChanged() {
-    if (networkMonitor.isConnected()) {
-      notify();
+    final NamespaceChangeStreamListener listener = listenerRef.get();
+    if (listener == null) {
+      return;
     }
+
+    do {
+      boolean isOpen = listener.isOpen();
+      if (!isOpen) {
+        try {
+          isOpen = listener.openStream();
+        } catch (final Throwable t) {
+          logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", t);
+        }
+
+        try {
+          if (!isOpen) {
+            wait(RETRY_SLEEP_MILLIS);
+          }
+        } catch (final InterruptedException e) {
+          return;
+        }
+      }
+
+      if (isOpen) {
+        listener.storeNextEvent();
+      }
+    } while (networkMonitor.isConnected());
   }
 }

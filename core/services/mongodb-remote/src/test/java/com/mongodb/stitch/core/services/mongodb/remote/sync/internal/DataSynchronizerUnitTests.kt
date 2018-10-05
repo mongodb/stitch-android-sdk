@@ -2,25 +2,32 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.core.StitchAppClientInfo
-import com.mongodb.stitch.core.internal .common.AuthMonitor
-import com.mongodb.stitch.core.internal .net.NetworkMonitor
-import com.mongodb.stitch.core.services.internal .CoreStitchServiceClient
+import com.mongodb.stitch.core.internal.common.AuthMonitor
+import com.mongodb.stitch.core.internal.net.NetworkMonitor
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
-import com.mongodb.stitch.core.services.mongodb.remote.internal.*
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-import junit.framework.Assert.*
-import org.bson.*
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoDatabaseImpl
+import org.bson.BsonDocument
+import org.bson.BsonString
+import org.bson.BsonValue
+
 import org.bson.codecs.BsonDocumentCodec
 
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import org.mockito.Mockito.*
+import org.mockito.Mockito.spy
+import org.mockito.Mockito.verify
 
 class DataSynchronizerUnitTests {
     private val testDb = "testDb"
@@ -49,7 +56,6 @@ class DataSynchronizerUnitTests {
         }
 
         override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
-
         }
     }
     private val authMonitor = AuthMonitor { true }
@@ -167,36 +173,15 @@ class DataSynchronizerUnitTests {
         assertEquals(idArg.value, insertedId)
     }
 
-    private fun insertOneAndSync(dataSpy: DataSynchronizer,
-                                 doc: BsonDocument,
-                                 conflictHandler: ConflictHandler<BsonDocument> = ConflictHandler { _, _, _ ->
-                                     doc
-                                 },
-                                 changeEventListener: ChangeEventListener<BsonDocument> = ChangeEventListener { _, _: ChangeEvent<BsonDocument> ->
-                                 }): BsonValue {
+    private fun insertOneAndSync(dataSpy: DataSynchronizer, doc: BsonDocument): BsonValue {
         dataSpy.insertOneAndSync(
                 namespace,
-                doc,
-                conflictHandler,
-                changeEventListener,
-                BsonDocumentCodec()
+                doc
         )
 
         assertTrue(dataSpy.getSynchronizedDocuments(namespace).size > 0)
 
-        val namespaceArg = ArgumentCaptor.forClass(MongoNamespace::class.java)
-        val idArg = ArgumentCaptor.forClass(BsonValue::class.java)
-        val eventListenerArg = ArgumentCaptor.forClass(changeEventListener::class.java)
-        val documentCodecArg = ArgumentCaptor.forClass(BsonDocumentCodec::class.java)
-
-        verify(dataSpy).watchNamespace(
-                namespaceArg.capture(),
-                idArg.capture(),
-                eventListenerArg.capture(),
-                documentCodecArg.capture()
-        )
-
-        insertedId = idArg.value
+        insertedId = dataSpy.getSynchronizedDocumentIds(namespace).first()
         return insertedId!!
     }
 }

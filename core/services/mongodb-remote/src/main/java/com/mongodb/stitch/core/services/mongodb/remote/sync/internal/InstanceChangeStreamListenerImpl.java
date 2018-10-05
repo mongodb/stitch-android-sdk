@@ -18,28 +18,27 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
+import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
-final class InstanceChangeStreamShortPoller implements InstanceChangeStreamListener {
+final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamListener {
 
-  private final Map<MongoNamespace, NamespaceChangeStreamShortPoller> nsPollers;
+  private final Map<MongoNamespace, NamespaceChangeStreamListener> nsStreamers;
   private final ReadWriteLock instanceLock;
   private final InstanceSynchronizationConfig instanceConfig;
   private final CoreStitchServiceClient service;
   private final NetworkMonitor networkMonitor;
   private final AuthMonitor authMonitor;
 
-  InstanceChangeStreamShortPoller(
+  InstanceChangeStreamListenerImpl(
       final InstanceSynchronizationConfig instanceConfig,
       final CoreStitchServiceClient service,
       final NetworkMonitor networkMonitor,
@@ -49,18 +48,30 @@ final class InstanceChangeStreamShortPoller implements InstanceChangeStreamListe
     this.service = service;
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
-    this.nsPollers = new HashMap<>();
+    this.nsStreamers = new HashMap<>();
     this.instanceLock = new ReentrantReadWriteLock();
   }
 
+  public void start(final MongoNamespace namespace) {
+    instanceLock.writeLock().lock();
+    try {
+      if (nsStreamers.containsKey(namespace)) {
+        nsStreamers.get(namespace).start();
+      }
+    } finally {
+      instanceLock.writeLock().unlock();
+    }
+  }
+
   /**
-   * Starts all pollers.
+   * Starts all streams.
    */
   public void start() {
     instanceLock.writeLock().lock();
     try {
-      for (final NamespaceChangeStreamShortPoller poller : nsPollers.values()) {
-        poller.start();
+      for (final Map.Entry<MongoNamespace, NamespaceChangeStreamListener> streamerEntry :
+          nsStreamers.entrySet()) {
+        streamerEntry.getValue().start();
       }
     } finally {
       instanceLock.writeLock().unlock();
@@ -68,30 +79,24 @@ final class InstanceChangeStreamShortPoller implements InstanceChangeStreamListe
   }
 
   /**
-   * Stops all pollers.
+   * Stops all streams.
    */
   public void stop() {
     instanceLock.writeLock().lock();
     try {
-      for (final NamespaceChangeStreamShortPoller poller : nsPollers.values()) {
-        poller.stop();
+      for (final NamespaceChangeStreamListener streamer : nsStreamers.values()) {
+        streamer.stop();
       }
     } finally {
       instanceLock.writeLock().unlock();
     }
   }
 
-  /**
-   * Asks all pollers to poll.
-   */
-  public void sweep() {
-    instanceLock.writeLock().lock();
-    try {
-      for (final NamespaceChangeStreamShortPoller poller : nsPollers.values()) {
-        poller.poll();
-      }
-    } finally {
-      instanceLock.writeLock().unlock();
+  @Override
+  public void queueDisposableWatcher(final MongoNamespace namespace,
+                                     final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+    if (nsStreamers.containsKey(namespace)) {
+      nsStreamers.get(namespace).queueWatcher(watcher);
     }
   }
 
@@ -103,18 +108,17 @@ final class InstanceChangeStreamShortPoller implements InstanceChangeStreamListe
   public void addNamespace(final MongoNamespace namespace) {
     this.instanceLock.writeLock().lock();
     try {
-      if (this.nsPollers.containsKey(namespace)) {
+      if (this.nsStreamers.containsKey(namespace)) {
         return;
       }
-      final NamespaceChangeStreamShortPoller poller =
-          new NamespaceChangeStreamShortPoller(
+      final NamespaceChangeStreamListener streamer =
+          new NamespaceChangeStreamListener(
               namespace,
-              instanceConfig,
               instanceConfig.getNamespaceConfig(namespace),
               service,
               networkMonitor,
               authMonitor);
-      this.nsPollers.put(namespace, poller);
+      this.nsStreamers.put(namespace, streamer);
     } finally {
       this.instanceLock.writeLock().unlock();
     }
@@ -129,12 +133,12 @@ final class InstanceChangeStreamShortPoller implements InstanceChangeStreamListe
   public void removeNamespace(final MongoNamespace namespace) {
     this.instanceLock.writeLock().lock();
     try {
-      if (!this.nsPollers.containsKey(namespace)) {
+      if (!this.nsStreamers.containsKey(namespace)) {
         return;
       }
-      final NamespaceChangeStreamShortPoller poller = this.nsPollers.get(namespace);
-      poller.stop();
-      this.nsPollers.remove(namespace);
+      final NamespaceChangeStreamListener streamer = this.nsStreamers.get(namespace);
+      streamer.stop();
+      this.nsStreamers.remove(namespace);
     } finally {
       this.instanceLock.writeLock().unlock();
     }
@@ -146,20 +150,19 @@ final class InstanceChangeStreamShortPoller implements InstanceChangeStreamListe
    * @param namespace the namespace to get events for.
    * @return the latest change events for a given namespace.
    */
-  public List<Map.Entry<BsonValue, ChangeEvent<BsonDocument>>> getEventsForNamespace(
+  public Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(
       final MongoNamespace namespace
   ) {
     this.instanceLock.readLock().lock();
-    final NamespaceChangeStreamShortPoller poller;
+    final NamespaceChangeStreamListener streamer;
     try {
-      poller = nsPollers.get(namespace);
+      streamer = nsStreamers.get(namespace);
     } finally {
       this.instanceLock.readLock().unlock();
     }
-    if (poller == null) {
-      return Collections.emptyList();
+    if (streamer == null) {
+      return new HashMap<>();
     }
-    return poller.getEvents();
+    return streamer.getEvents();
   }
-
 }

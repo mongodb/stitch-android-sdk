@@ -36,12 +36,16 @@ import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import com.mongodb.stitch.core.internal.net.StitchDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
+import com.mongodb.stitch.core.internal.net.Stream;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.Map;
+
 import javax.annotation.CheckReturnValue;
 import javax.annotation.meta.When;
+
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -175,10 +179,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * If the provided type is not supported by the codec registry to be used, the method will throw
    * a {@link org.bson.codecs.configuration.CodecConfigurationException}.
    *
-   * @param stitchReq the request to perform.
-   * @param resultClass the class that the JSON response should be decoded as.
+   * @param stitchReq     the request to perform.
+   * @param resultClass   the class that the JSON response should be decoded as.
    * @param codecRegistry the codec registry used for de/serialization.
-   * @param <T> the type into which the JSON response will be decoded into.
+   * @param <T>           the type into which the JSON response will be decoded into.
    * @return the decoded value.
    */
   public <T> T doAuthenticatedRequest(
@@ -193,6 +197,27 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
           response.getBody()), resultClass, codecRegistry);
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
+    }
+  }
+
+  @Override
+  public <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
+                                               final Decoder<T> decoder) {
+    return openAuthenticatedStream(stitchReq, decoder, true);
+  }
+
+  private <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
+                                                final Decoder<T> decoder,
+                                                final boolean tryRefresh) {
+    try {
+      return new Stream<>(
+          requestClient.doStreamRequest(stitchReq.builder().withPath(
+              stitchReq.getPath() + AuthStreamFields.AUTH_TOKEN + getAuthInfo().getAccessToken()
+          ).build()),
+          decoder
+      );
+    } catch (final StitchServiceException ex) {
+      return handleAuthFailure(ex, stitchReq, decoder, tryRefresh);
     }
   }
 
@@ -263,6 +288,24 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     newReq.withHeaders(newHeaders);
     newReq.withTimeout(stitchReq.getTimeout());
     return newReq.build();
+  }
+
+  private <T> Stream<T> handleAuthFailure(final StitchServiceException ex,
+                                          final StitchRequest req,
+                                          final Decoder<T> decoder,
+                                          final boolean tryRefresh) {
+    if (ex.getErrorCode() != StitchServiceErrorCode.INVALID_SESSION) {
+      throw ex;
+    }
+
+    if (!tryRefresh) {
+      clearAuth();
+      throw ex;
+    }
+
+    tryRefreshAccessToken(req.getStartedAt());
+
+    return openAuthenticatedStream(req, decoder, false);
   }
 
   private Response handleAuthFailure(final StitchServiceException ex, final StitchAuthRequest req) {
@@ -481,7 +524,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     onAuthEvent();
   }
 
-  /** Closes the component down by stopping the access token refresher. */
+  /**
+   * Closes the component down by stopping the access token refresher.
+   */
   public void close() throws IOException {
     if (refresherThread != null) {
       refresherThread.interrupt();
@@ -494,6 +539,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   protected StitchAuthRoutes getAuthRoutes() {
     return authRoutes;
+  }
+
+  private static class AuthStreamFields {
+    static final String AUTH_TOKEN = "&stitch_at=";
   }
 
   private static class AuthLoginFields {

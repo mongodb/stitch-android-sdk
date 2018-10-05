@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.services.internal;
 
+import com.mongodb.stitch.core.internal.net.Stream;
+
 import java.util.List;
 import javax.annotation.Nullable;
 import org.bson.codecs.Decoder;
@@ -69,6 +71,10 @@ public interface CoreStitchServiceClient {
       final @Nullable Long requestTimeout,
       final Class<T> resultClass,
       final CodecRegistry codecRegistry);
+
+  <T> Stream<T> streamFunction(String name,
+                               List<?> args,
+                               Decoder<T> decoder);
 
   CodecRegistry getCodecRegistry();
 

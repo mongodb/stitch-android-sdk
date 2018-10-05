@@ -5,17 +5,20 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
+import junit.framework.Assert.assertEquals
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
-import org.bson.codecs.configuration.CodecRegistry
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentCaptor
-import org.mockito.Mockito.*
-import junit.framework.Assert.*
 import org.bson.BsonString
-import org.bson.codecs.Codec
 import org.mockito.ArgumentMatchers
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.spy
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.any
+import org.mockito.Mockito.times
+import org.mockito.Mockito.`when`
 
 class CoreSyncUnitTests {
     private val dataSyncMock: DataSynchronizer = mock(DataSynchronizer::class.java)
@@ -39,10 +42,9 @@ class CoreSyncUnitTests {
     @Before
     fun setup() {
         coreSync.configure(
-                namespace,
                 conflictHandler,
                 changeEventListener,
-                mock(Codec::class.java) as Codec<BsonDocument>)
+                null)
     }
 
     @Test

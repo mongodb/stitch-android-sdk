@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.internal.net;
 
+import com.mongodb.stitch.core.internal.common.StitchError;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -30,6 +32,7 @@ import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
 public final class OkHttpTransport implements Transport {
+  private static final int STREAM_TIMEOUT_SECONDS = 60;
 
   private final OkHttpClient client;
 
@@ -89,5 +92,26 @@ public final class OkHttpTransport implements Transport {
             .writeTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
             .build();
     return handleResponse(reqClient.newCall(buildRequest(request)).execute());
+  }
+
+  @Override
+  public EventStream stream(final Request request) throws IOException {
+    request.getHeaders().put(
+        com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE,
+        ContentTypes.TEXT_EVENT_STREAM);
+    request.getHeaders().put(
+        com.mongodb.stitch.core.internal.net.Headers.ACCEPT,
+        ContentTypes.TEXT_EVENT_STREAM);
+    final okhttp3.Response response = client.newBuilder().readTimeout(
+        STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).build().newCall(buildRequest(request)).execute();
+
+    final Response transportResponse = handleResponse(response);
+    if (response.body() == null
+        || transportResponse.getStatusCode() < 200
+        || transportResponse.getStatusCode() >= 300) {
+      StitchError.handleRequestError(transportResponse);
+    }
+
+    return new OkHttpEventStream(response.body().source());
   }
 }

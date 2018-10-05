@@ -17,13 +17,18 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.stitch.core.internal.common.Callback;
 
-import java.util.List;
 import java.util.Map;
+
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 interface InstanceChangeStreamListener {
+  /**
+   * Starts listening to namespace.
+   */
+  void start(final MongoNamespace namespace);
 
   /**
    * Starts listening.
@@ -36,9 +41,10 @@ interface InstanceChangeStreamListener {
   void stop();
 
   /**
-   * Requests a listen sweep.
+   * Queue a one-off watcher for the next event pass.
    */
-  void sweep();
+  void queueDisposableWatcher(final MongoNamespace namespace,
+                              final Callback<ChangeEvent<BsonDocument>, Object> watcher);
 
   /**
    * Requests that the given namespace be started listening to for change events.
@@ -60,6 +66,6 @@ interface InstanceChangeStreamListener {
    * @param namespace the namespace to get events for.
    * @return the latest change events for a given namespace.
    */
-  List<Map.Entry<BsonValue, ChangeEvent<BsonDocument>>> getEventsForNamespace(
+  Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(
       final MongoNamespace namespace);
 }

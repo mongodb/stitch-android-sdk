@@ -16,8 +16,26 @@
 
 package com.mongodb.stitch.core.internal.net;
 
-public interface Transport {
-  Response roundTrip(Request request) throws Exception;
+import java.io.IOException;
 
-  EventStream stream(Request request) throws Exception;
+public interface EventStream {
+  /**
+   * The next event in this event stream.
+   *
+   * @return next event in this stream
+   * @throws IOException general i/o related errors
+   */
+  Event nextEvent() throws IOException;
+
+  /**
+   * Whether or not the stream is currently open.
+   * @return true if open, false if not
+   */
+  boolean isOpen();
+
+  /**
+   * Close the current stream.
+   * @throws IOException can throw exception if internal buffer not closed properly
+   */
+  void close() throws IOException;
 }

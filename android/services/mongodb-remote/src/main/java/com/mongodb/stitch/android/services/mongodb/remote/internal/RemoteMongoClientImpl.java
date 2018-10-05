@@ -20,6 +20,8 @@ import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoDatabase;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
 
 public final class RemoteMongoClientImpl implements RemoteMongoClient {
 
@@ -42,5 +44,9 @@ public final class RemoteMongoClientImpl implements RemoteMongoClient {
    */
   public RemoteMongoDatabase getDatabase(final String databaseName) {
     return new RemoteMongoDatabaseImpl(proxy.getDatabase(databaseName), dispatcher);
+  }
+
+  DataSynchronizer getDataSynchronizer() {
+    return ((CoreRemoteMongoClientImpl)this.proxy).getDataSynchronizer();
   }
 }

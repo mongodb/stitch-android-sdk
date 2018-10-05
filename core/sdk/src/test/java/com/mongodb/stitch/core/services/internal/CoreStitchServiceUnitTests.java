@@ -24,9 +24,13 @@ import static org.mockito.Mockito.verify;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.stitch.core.internal.net.Event;
+import com.mongodb.stitch.core.internal.net.EventStream;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
+import com.mongodb.stitch.core.internal.net.StitchRequest;
+import com.mongodb.stitch.core.internal.net.Stream;
 
 import java.util.Arrays;
 import java.util.List;
@@ -34,6 +38,7 @@ import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.IntegerCodec;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.internal.Base64;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -99,5 +104,63 @@ public class CoreStitchServiceUnitTests {
     assertEquals(docArgument.getValue().getDocument(), expectedRequestDoc);
     assertEquals(docArgument.getValue().getPath(), routes.getFunctionCallRoute());
     assertEquals(clazzArgument.getValue(), Integer.class);
+  }
+
+  @Test
+  public void testStreamFunction() {
+    final String serviceName = "svc1";
+    final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
+    final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
+    final CoreStitchServiceClient coreStitchService =
+        new CoreStitchServiceClientImpl(
+            requestClient,
+            routes,
+            serviceName,
+            BsonUtils.DEFAULT_CODEC_REGISTRY);
+
+    final Stream<Integer> stream = new Stream<>(new EventStream() {
+      @Override
+      public Event nextEvent() {
+        return new Event.Builder().withData("42").build();
+      }
+
+      @Override
+      public boolean isOpen() {
+        return false;
+      }
+
+      @Override
+      public void close() {
+
+      }
+    }, new IntegerCodec());
+
+    doReturn(stream)
+        .when(requestClient)
+        .openAuthenticatedStream(
+            any(StitchRequest.class), ArgumentMatchers.<Decoder<Integer>>any());
+
+    final String funcName = "myFunc1";
+    final List<Integer> args = Arrays.asList(1, 2, 3);
+    final Document expectedRequestDoc = new Document();
+    expectedRequestDoc.put("name", funcName);
+    expectedRequestDoc.put("service", serviceName);
+    expectedRequestDoc.put("arguments", args);
+
+    assertEquals(
+        stream, coreStitchService.streamFunction(
+            funcName, args, new IntegerCodec()));
+
+    final ArgumentCaptor<StitchRequest> docArgument =
+        ArgumentCaptor.forClass(StitchRequest.class);
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<Decoder<Integer>> decArgument = ArgumentCaptor.forClass(Decoder.class);
+
+    verify(requestClient).openAuthenticatedStream(docArgument.capture(), decArgument.capture());
+    assertEquals(docArgument.getValue().getMethod(), Method.GET);
+    assertEquals(docArgument.getValue().getPath(),
+        routes.getFunctionCallRoute() + "?stitch_request="
+            + Base64.encode(expectedRequestDoc.toJson().getBytes()));
+    assertTrue(decArgument.getValue() instanceof IntegerCodec);
   }
 }

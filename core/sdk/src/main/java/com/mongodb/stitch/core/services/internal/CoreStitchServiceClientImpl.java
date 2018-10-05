@@ -21,11 +21,15 @@ import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
+import com.mongodb.stitch.core.internal.net.StitchRequest;
+import com.mongodb.stitch.core.internal.net.Stream;
+
 import java.util.List;
 import javax.annotation.Nullable;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.internal.Base64;
 
 public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   private final StitchAuthRequestClient requestClient;
@@ -54,16 +58,32 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     this.codecRegistry = codecRegistry;
   }
 
+  private StitchRequest getStreamServiceFunctionRequest(
+      final String name,
+      final List<?> args) {
+    final Document body = new Document();
+    body.put(FunctionFields.NAME, name);
+    if (serviceName != null) {
+      body.put(FunctionFields.SERVICE, serviceName);
+    }
+    body.put(FunctionFields.ARGUMENTS, args);
+
+    final StitchRequest.Builder reqBuilder = new StitchRequest.Builder();
+    reqBuilder.withMethod(Method.GET).withPath(serviceRoutes.getFunctionCallRoute()
+        + (FunctionFields.STITCH_REQUEST + Base64.encode(body.toJson().getBytes())));
+    return reqBuilder.build();
+  }
+
   private StitchAuthDocRequest getCallServiceFunctionRequest(
       final String name,
       final List<?> args,
       final @Nullable Long requestTimeout) {
     final Document body = new Document();
-    body.put("name", name);
+    body.put(FunctionFields.NAME, name);
     if (serviceName != null) {
-      body.put("service", serviceName);
+      body.put(FunctionFields.SERVICE, serviceName);
     }
-    body.put("arguments", args);
+    body.put(FunctionFields.ARGUMENTS, args);
 
     final StitchAuthDocRequest.Builder reqBuilder = new StitchAuthDocRequest.Builder();
     reqBuilder.withMethod(Method.POST).withPath(serviceRoutes.getFunctionCallRoute());
@@ -145,6 +165,15 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         getCallServiceFunctionRequest(name, args, requestTimeout), resultClass, codecRegistry);
   }
 
+  @Override
+  public <T> Stream<T> streamFunction(final String name,
+                                      final List<?> args,
+                                      final Decoder<T> decoder) {
+    return requestClient.openAuthenticatedStream(
+        getStreamServiceFunctionRequest(name, args), decoder
+    );
+  }
+
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;
   }
@@ -155,5 +184,13 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         serviceRoutes,
         serviceName,
         codecRegistry);
+  }
+
+  private class FunctionFields {
+    private static final String NAME = "name";
+    private static final String SERVICE = "service";
+    private static final String ARGUMENTS = "arguments";
+
+    private static final String STITCH_REQUEST = "?stitch_request=";
   }
 }

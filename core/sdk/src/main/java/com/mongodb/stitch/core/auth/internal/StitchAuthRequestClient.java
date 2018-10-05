@@ -18,6 +18,8 @@ package com.mongodb.stitch.core.auth.internal;
 
 import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
+import com.mongodb.stitch.core.internal.net.StitchRequest;
+import com.mongodb.stitch.core.internal.net.Stream;
 
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -28,6 +30,9 @@ public interface StitchAuthRequestClient {
   <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq, final Decoder<T> decoder);
 
   <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq,
-                                   final Class<T> resultClass,
-                                   final CodecRegistry codecRegistry);
+                               final Class<T> resultClass,
+                               final CodecRegistry codecRegistry);
+
+  <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
+                                        final Decoder<T> decoder);
 }

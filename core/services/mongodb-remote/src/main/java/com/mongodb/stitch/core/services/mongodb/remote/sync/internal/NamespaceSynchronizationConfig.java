@@ -85,9 +85,7 @@ class NamespaceSynchronizationConfig
       ) {
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
-            docConfig,
-            null,
-            null));
+            docConfig));
       }
     });
   }
@@ -112,9 +110,7 @@ class NamespaceSynchronizationConfig
       ) {
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
-            docConfig,
-            null,
-            null));
+            docConfig));
       }
     });
   }
@@ -134,9 +130,14 @@ class NamespaceSynchronizationConfig
   <T> void configure(final ConflictHandler<T> conflictHandler,
                      final ChangeEventListener<T> changeEventListener,
                      final Codec<T> codec) {
-    this.conflictHandler = conflictHandler;
-    this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
-    this.documentCodec = codec;
+    nsLock.writeLock().lock();
+    try {
+      this.conflictHandler = conflictHandler;
+      this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
+      this.documentCodec = codec;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
   }
 
   static BsonDocument getNsFilter(
@@ -191,7 +192,27 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  public CoreDocumentSynchronizationConfig addSynchronizedDocument(
+  Set<BsonValue> getStaleDocumentIds() {
+    nsLock.readLock().lock();
+    try {
+      final Set<BsonValue> staleDocumentIds = new HashSet<>();
+      for (final CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
+          this.getSynchronizedDocuments()) {
+        if (coreDocumentSynchronizationConfig.isStale()) {
+          staleDocumentIds.add(coreDocumentSynchronizationConfig.getDocumentId());
+        }
+      }
+      return staleDocumentIds;
+    } finally {
+      nsLock.readLock().unlock();
+    }
+  }
+
+  Codec getDocumentCodec() {
+    return documentCodec;
+  }
+
+  CoreDocumentSynchronizationConfig addSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
@@ -203,15 +224,11 @@ class NamespaceSynchronizationConfig
       newConfig = new CoreDocumentSynchronizationConfig(
           docsColl,
           namespace,
-          documentId,
-          conflictHandler,
-          documentCodec);
+          documentId);
     } else {
       newConfig = new CoreDocumentSynchronizationConfig(
           docsColl,
-          existingConfig,
-          conflictHandler,
-          documentCodec);
+          existingConfig);
     }
 
     nsLock.writeLock().lock();
@@ -254,6 +271,15 @@ class NamespaceSynchronizationConfig
           getNsFilter(getNamespace()), this);
     } finally {
       nsLock.writeLock().unlock();
+    }
+  }
+
+  public ConflictHandler getConflictHandler() {
+    nsLock.readLock().lock();
+    try {
+      return conflictHandler;
+    } finally {
+      nsLock.readLock().unlock();
     }
   }
 

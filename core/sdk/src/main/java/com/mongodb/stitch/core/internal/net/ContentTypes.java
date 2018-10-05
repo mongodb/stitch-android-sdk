@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.internal.net;
 /** HTTP Content Types. */
 public final class ContentTypes {
   public static final String APPLICATION_JSON = "application/json";
+  public static final String TEXT_EVENT_STREAM = "text/event-stream";
 
   private ContentTypes() {}
 }

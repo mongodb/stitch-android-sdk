@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
-import javax.annotation.Nullable;
 import org.bson.BsonValue;
 
 /**
@@ -30,14 +29,6 @@ public interface DocumentSynchronizationConfig {
    * @return the _id of the document being synchronized.
    */
   BsonValue getDocumentId();
-
-  /**
-   * Returns the conflict resolver for this document, if any.
-   *
-   * @return the conflict resolver for this document.
-   */
-  @Nullable
-  ConflictHandler getConflictResolver();
 
   /**
    * Returns whether or not this document has pending writes that have not yet been committed

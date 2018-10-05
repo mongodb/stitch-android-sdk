@@ -24,6 +24,8 @@ public final class Headers {
   public static final String CONTENT_TYPE = CONTENT_TYPE_CANON.toLowerCase(Locale.US);
   private static final String AUTHORIZATION_CANON = "Authorization";
   public static final String AUTHORIZATION = AUTHORIZATION_CANON.toLowerCase(Locale.US);
+  private static final String ACCEPT_CANON = "Accept";
+  public static final String ACCEPT = ACCEPT_CANON.toLowerCase(Locale.US);
   private static final String AUTHORIZATION_BEARER = "Bearer";
 
   private Headers() {}
