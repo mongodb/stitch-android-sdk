@@ -165,30 +165,6 @@ public class DataSynchronizer {
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
   }
 
-  private Set<BsonDocument> getLatestDocumentFromRemote(
-      final NamespaceSynchronizationConfig nsConfig) {
-    final BsonArray ids = new BsonArray();
-    for (final BsonValue bsonValue : nsConfig.getStaleDocumentIds()) {
-      ids.add(new BsonDocument("_id", bsonValue));
-    }
-
-    if (ids.size() == 0) {
-      return new HashSet<>();
-    }
-
-    return this.getRemoteCollection(nsConfig.getNamespace()).find(
-        new Document("$or", ids)
-    ).into(new HashSet<BsonDocument>());
-  }
-
-  private Set<BsonValue> getDocumentIds(final Set<BsonDocument> documents) {
-    final Set<BsonValue> ids = new HashSet<>();
-    for (final BsonDocument document: documents) {
-      ids.add(document.get("_id"));
-    }
-    return ids;
-  }
-
   /**
    * Reloads the synchronization config. This wipes all in-memory synchronization settings.
    */
@@ -374,7 +350,7 @@ public class DataSynchronizer {
           instanceChangeStreamListener.getEventsForNamespace(nsConfig.getNamespace());
 
       final Set<BsonValue> unseenIds = nsConfig.getSynchronizedDocumentIds();
-      final Set<BsonDocument> latestDocuments = getLatestDocumentFromRemote(nsConfig);
+      final Set<BsonDocument> latestDocuments = getLatestDocumentsFromRemote(nsConfig);
       final Set<BsonValue> latestDocumentIds = getDocumentIds(latestDocuments);
       final Map<BsonValue, BsonDocument> latestDocumentMap = new HashMap<>();
 
@@ -1566,6 +1542,30 @@ public class DataSynchronizer {
     return getRemoteCollection(namespace, BsonDocument.class);
   }
 
+  private Set<BsonDocument> getLatestDocumentsFromRemote(
+      final NamespaceSynchronizationConfig nsConfig) {
+    final BsonArray ids = new BsonArray();
+    for (final BsonValue bsonValue : nsConfig.getStaleDocumentIds()) {
+      ids.add(new BsonDocument("_id", bsonValue));
+    }
+
+    if (ids.size() == 0) {
+      return new HashSet<>();
+    }
+
+    return this.getRemoteCollection(nsConfig.getNamespace()).find(
+        new Document("$or", ids)
+    ).into(new HashSet<BsonDocument>());
+  }
+
+  private Set<BsonValue> getDocumentIds(final Set<BsonDocument> documents) {
+    final Set<BsonValue> ids = new HashSet<>();
+    for (final BsonDocument document: documents) {
+      ids.add(document.get("_id"));
+    }
+    return ids;
+  }
+  
   /**
    * Returns a query filter searching for the given document _id.
    *

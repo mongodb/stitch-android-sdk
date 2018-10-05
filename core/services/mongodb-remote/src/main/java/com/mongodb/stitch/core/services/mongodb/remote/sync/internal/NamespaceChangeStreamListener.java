@@ -229,6 +229,7 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
         }
       }
     } catch (final Exception ex) {
+      // TODO: Emit error through DataSynchronizer as an ifc
       logger.error(String.format(
           Locale.US,
           "NamespaceChangeStreamListener::stream ns=%s exception on fetching next event: %s",

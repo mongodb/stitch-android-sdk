@@ -20,7 +20,6 @@ import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.lang.NonNull;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -47,6 +46,8 @@ import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
+
+import javax.annotation.Nonnull;
 
 class CoreDocumentSynchronizationConfig {
 
@@ -117,8 +118,8 @@ class CoreDocumentSynchronizationConfig {
   }
 
   static BsonDocument getDocFilter(
-      @NonNull final MongoNamespace namespace,
-      @NonNull final BsonValue documentId
+      @Nonnull final MongoNamespace namespace,
+      @Nonnull final BsonValue documentId
   ) {
     final BsonDocument filter = new BsonDocument();
     filter.put(ConfigCodec.Fields.NAMESPACE_FIELD, new BsonString(namespace.toString()));
