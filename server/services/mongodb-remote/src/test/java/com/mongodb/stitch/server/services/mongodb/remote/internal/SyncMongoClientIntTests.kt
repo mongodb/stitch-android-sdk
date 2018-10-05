@@ -60,15 +60,15 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         addProvider(app.second, ProviderConfigs.Anon)
         addProvider(app2.second, ProviderConfigs.Anon)
         val svc = addService(
-                app.second,
-                "mongodb",
-                "mongodb1",
-                ServiceConfigs.Mongo(getMongoDbUri()))
+            app.second,
+            "mongodb",
+            "mongodb1",
+            ServiceConfigs.Mongo(getMongoDbUri()))
         val svc2 = addService(
-                app2.second,
-                "mongodb",
-                "mongodb1",
-                ServiceConfigs.Mongo(getMongoDbUri()))
+            app2.second,
+            "mongodb",
+            "mongodb1",
+            ServiceConfigs.Mongo(getMongoDbUri()))
 
         val rule = Document()
         rule["read"] = Document()
@@ -126,8 +126,8 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         Assert.assertTrue(iter.iterator().hasNext())
         assertEquals(withoutId(doc1), withoutId(iter.first()!!))
         assertEquals(withoutId(doc2), withoutId(iter
-                .limit(1)
-                .sort(Document("_id", -1)).iterator().next()))
+            .limit(1)
+            .sort(Document("_id", -1)).iterator().next()))
 
         iter = coll.find(doc1)
         Assert.assertTrue(iter.iterator().hasNext())
@@ -138,7 +138,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         assertEquals(withoutId(doc1), withoutId(iter.iterator().next()))
 
         assertEquals(Document("proj", "field"),
-                withoutId(coll.find(doc2).projection(Document("proj", 1)).iterator().next()))
+            withoutId(coll.find(doc2).projection(Document("proj", 1)).iterator().next()))
 
         var count = 0
         coll.find().forEach {
@@ -181,7 +181,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             coll.configure({ id: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 if (id.equals(doc1Id)) {
                     val merged = localEvent.fullDocument.getInteger("foo") +
-                            remoteEvent.fullDocument.getInteger("foo")
+                        remoteEvent.fullDocument.getInteger("foo")
                     val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
                     newDocument["foo"] = merged
                     newDocument
@@ -196,8 +196,8 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             goOffline()
             val doc1Update = Document("\$inc", Document("foo", 1))
             val result = remoteColl.updateOne(
-                    doc1Filter,
-                    doc1Update)
+                doc1Filter,
+                doc1Update)
             assertEquals(1, result.matchedCount)
             syncPass()
             assertEquals(doc, coll.findOneById(doc1Id))
@@ -221,14 +221,14 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             // 3. updating a document locally that has been updated remotely should invoke the conflict
             // resolver.
             val result2 = remoteColl.updateOne(
-                    doc1Filter,
-                    withNewVersionIdSet(doc1Update))
+                doc1Filter,
+                withNewVersionIdSet(doc1Update))
             assertEquals(1, result2.matchedCount)
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(remoteColl.find(doc1Filter).first()!!))
             val result3 = coll.updateOneById(
-                    doc1Id,
-                    doc1Update)
+                doc1Id,
+                doc1Update)
             assertEquals(1, result3.matchedCount)
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(coll.findOneById(doc1Id)!!))
@@ -428,8 +428,8 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
             val doc1Update = Document("\$inc", Document("foo", 1))
             assertEquals(1, remoteColl.updateOne(
-                    doc1Filter,
-                    withNewVersionIdSet(doc1Update)).matchedCount)
+                doc1Filter,
+                withNewVersionIdSet(doc1Update)).matchedCount)
 
             goOffline()
             val result = coll.deleteOneById(doc1Id)
@@ -851,17 +851,18 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     private fun syncPass() {
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.doSyncPass()
-
     }
 
-    private fun  watchFor(operation: ChangeEvent.OperationType,
-                          namespace: MongoNamespace,
-                          watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit = {}): AtomicBoolean {
+    private fun watchFor(
+        operation: ChangeEvent.OperationType,
+        namespace: MongoNamespace,
+        watcher: (OperationResult<ChangeEvent<BsonDocument>, Any>) -> Unit = {}
+    ): AtomicBoolean {
         println("watching for change event of operation ${operation.name} ns=$namespace")
         val isLocked = AtomicBoolean(true)
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.queueDisposableWatcher(namespace) {
             if (it.isSuccessful && it.geResult() != null && it.geResult().operationType == operation) {
-                println("change event found!")
+                println("change event of operation ${operation.name} ns=$namespace found!")
                 watcher(it)
                 isLocked.set(false)
             }
@@ -903,9 +904,9 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
     private fun withNewVersionIdSet(document: Document): Document {
         return appendDocumentToKey(
-                "\$set",
-                document,
-                Document("__stitch_sync_version", UUID.randomUUID().toString()))
+            "\$set",
+            document,
+            Document("__stitch_sync_version", UUID.randomUUID().toString()))
     }
 
     private fun appendDocumentToKey(key: String, on: Document, toAppend: Document): Document {

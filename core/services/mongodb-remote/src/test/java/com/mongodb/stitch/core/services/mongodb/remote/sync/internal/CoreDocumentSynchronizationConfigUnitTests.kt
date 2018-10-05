@@ -20,7 +20,6 @@ class CoreDocumentSynchronizationConfigUnitTests {
         }
 
         override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
-
         }
     }
     private val authMonitor = AuthMonitor { true }

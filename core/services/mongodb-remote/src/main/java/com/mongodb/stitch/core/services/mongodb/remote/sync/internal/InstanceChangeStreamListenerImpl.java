@@ -56,8 +56,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     instanceLock.writeLock().lock();
     try {
       if (nsStreamers.containsKey(namespace)) {
-        NamespaceChangeStreamListener streamer = nsStreamers.get(namespace);
-        streamer.start();
+        nsStreamers.get(namespace).start();
       }
     } finally {
       instanceLock.writeLock().unlock();

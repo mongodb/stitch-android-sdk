@@ -56,7 +56,6 @@ class OkHttpTransportUnitTests {
                             "http://localhost:$port/next"
                     ).withMethod(Method.GET).withTimeout(1000).build())
 
-
             assertEquals(doc, Document.parse(stream.nextEvent().data))
         }
 

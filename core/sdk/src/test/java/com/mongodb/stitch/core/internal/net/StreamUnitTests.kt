@@ -14,7 +14,7 @@ class StreamUnitTests {
         }
 
         override fun close() {
-            testStream.forEachRemaining {  }
+            testStream.forEachRemaining { }
         }
 
         override fun isOpen(): Boolean {

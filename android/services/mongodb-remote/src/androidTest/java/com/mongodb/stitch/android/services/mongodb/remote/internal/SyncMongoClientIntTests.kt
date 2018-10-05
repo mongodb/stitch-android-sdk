@@ -849,12 +849,6 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         testNetworkMonitor.connectedState = true
     }
 
-    private fun withoutIds(documents: Collection<Document>): Collection<Document> {
-        val list = ArrayList<Document>(documents.size)
-        documents.forEach { list.add(withoutId(it)) }
-        return list
-    }
-
     private fun withoutId(document: Document): Document {
         val newDoc = Document(document)
         newDoc.remove("_id")
@@ -899,8 +893,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         return newDocument
     }
 
-    private val failingConflictHandler: ConflictHandler<Document> = ConflictHandler {
-        _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+    private val failingConflictHandler: ConflictHandler<Document> = ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
         fail("did not expect a conflict")
         throw IllegalStateException("unreachable")
     }

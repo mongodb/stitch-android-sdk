@@ -19,10 +19,10 @@ package com.mongodb.stitch.core.services.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
-import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
+import com.mongodb.stitch.core.internal.net.Stream;
 
 import java.util.List;
 import javax.annotation.Nullable;

@@ -195,8 +195,8 @@ class NamespaceSynchronizationConfig
   Set<BsonValue> getStaleDocumentIds() {
     nsLock.readLock().lock();
     try {
-      Set<BsonValue> staleDocumentIds = new HashSet<>();
-      for (CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
+      final Set<BsonValue> staleDocumentIds = new HashSet<>();
+      for (final CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
           this.getSynchronizedDocuments()) {
         if (coreDocumentSynchronizationConfig.isStale()) {
           staleDocumentIds.add(coreDocumentSynchronizationConfig.getDocumentId());

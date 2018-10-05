@@ -17,13 +17,12 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.common.OperationResult;
-import com.mongodb.stitch.core.internal.net.Stream;
-import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
+import com.mongodb.stitch.core.internal.net.StitchEvent;
+import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 import java.io.IOException;
@@ -82,7 +81,7 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
     if (!this.networkMonitor.isConnected()) {
       this.stop();
     } else {
-      for (CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
+      for (final CoreDocumentSynchronizationConfig coreDocumentSynchronizationConfig :
           this.nsConfig.getSynchronizedDocuments()) {
         coreDocumentSynchronizationConfig.setStale(true);
       }
@@ -202,7 +201,6 @@ public class NamespaceChangeStreamListener implements NetworkMonitor.StateListen
 
   /**
    * Read and store the next event from an open stream. This is a blocking method.
-   * @return true if stored successfully, false if not
    */
   void storeNextEvent() {
     try {

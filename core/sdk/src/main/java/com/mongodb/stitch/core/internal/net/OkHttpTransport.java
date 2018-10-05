@@ -32,7 +32,7 @@ import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
 public final class OkHttpTransport implements Transport {
-  private final static int STREAM_TIMEOUT_SECONDS = 60;
+  private static final int STREAM_TIMEOUT_SECONDS = 60;
 
   private final OkHttpClient client;
 

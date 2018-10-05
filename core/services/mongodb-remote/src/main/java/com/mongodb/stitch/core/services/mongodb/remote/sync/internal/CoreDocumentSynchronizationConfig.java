@@ -130,7 +130,7 @@ class CoreDocumentSynchronizationConfig {
     return isStale;
   }
 
-  public void setStale(boolean stale) {
+  public void setStale(final boolean stale) {
     docLock.writeLock().lock();
     try {
       isStale = stale;
@@ -139,7 +139,7 @@ class CoreDocumentSynchronizationConfig {
           this);
     } catch (IllegalStateException e) {
       // eat this
-    }finally {
+    } finally {
       docLock.writeLock().unlock();
     }
   }

@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
  *
  * See https://www.w3.org/TR/2009/WD-eventsource-20090421/.
  */
-public class Event {
+public final class Event {
   /**
    * Default event name for unnamed event streams
    */
@@ -40,7 +40,7 @@ public class Event {
    */
   @Nonnull private final String data;
 
-  private Event(@Nonnull String eventName, @Nonnull String data) {
+  private Event(@Nonnull final String eventName, @Nonnull final String data) {
     this.eventName = eventName;
     this.data = data;
   }

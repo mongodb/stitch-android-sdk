@@ -18,7 +18,6 @@ package com.mongodb.stitch.core.internal.net;
 
 import java.io.IOException;
 
-import okio.Buffer;
 import okio.BufferedSource;
 
 public class OkHttpEventStream extends EventStreamReader implements EventStream {

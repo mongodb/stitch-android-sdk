@@ -20,8 +20,6 @@ import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.internal.common.StitchError;
 
-import java.io.InterruptedIOException;
-
 public class StitchRequestClient {
 
   private final String baseUrl;

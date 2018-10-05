@@ -359,8 +359,8 @@ public class DataSynchronizer {
    * state of said documents. Utilizes change streams to get "recent" updates to documents of
    * interest. Documents that are being synchronized from the first time will be fetched via a
    * full document lookup. Documents that have gone stale will be updated via change events or
-   * latest documents from the remote. Any conflicts that occur will be resolved locally and later relayed
-   * remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
+   * latest documents from the remote. Any conflicts that occur will be resolved locally and
+   * later relayed remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
    */
   private void syncRemoteToLocal() {
     logger.info(String.format(
@@ -1231,7 +1231,7 @@ public class DataSynchronizer {
     getLocalCollection(namespace).insertOne(docToInsert);
     final ChangeEvent<BsonDocument> event =
         changeEventForLocalInsert(namespace, docToInsert, true);
-    CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
+    final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
         namespace,
         BsonUtils.getDocumentId(docToInsert)
     );

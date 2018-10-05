@@ -20,10 +20,11 @@ import com.mongodb.stitch.core.StitchServiceErrorCode;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 
+import javax.annotation.Nullable;
+
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 
-import javax.annotation.Nullable;
 
 /**
  * Stitch abstraction of server-sent events.
@@ -34,7 +35,7 @@ public final class StitchEvent<T> {
   /**
    * Stitch event name for error messages
    */
-  private final static String ERROR_EVENT_NAME = "error";
+  private static final String ERROR_EVENT_NAME = "error";
 
   /**
    * decoded data from the event

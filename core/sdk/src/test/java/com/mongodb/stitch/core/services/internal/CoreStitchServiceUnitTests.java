@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
-import com.mongodb.stitch.core.auth.internal.CoreStitchAuth;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.net.Event;
@@ -33,7 +32,6 @@ import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.bson.Document;
@@ -120,7 +118,7 @@ public class CoreStitchServiceUnitTests {
             serviceName,
             BsonUtils.DEFAULT_CODEC_REGISTRY);
 
-    Stream<Integer> stream = new Stream<>(new EventStream() {
+    final Stream<Integer> stream = new Stream<>(new EventStream() {
       @Override
       public Event nextEvent() {
         return new Event.Builder().withData("42").build();
@@ -161,8 +159,8 @@ public class CoreStitchServiceUnitTests {
     verify(requestClient).openAuthenticatedStream(docArgument.capture(), decArgument.capture());
     assertEquals(docArgument.getValue().getMethod(), Method.GET);
     assertEquals(docArgument.getValue().getPath(),
-        routes.getFunctionCallRoute() + "?stitch_request=" +
-            Base64.encode(expectedRequestDoc.toJson().getBytes()));
+        routes.getFunctionCallRoute() + "?stitch_request="
+            + Base64.encode(expectedRequestDoc.toJson().getBytes()));
     assertTrue(decArgument.getValue() instanceof IntegerCodec);
   }
 }
