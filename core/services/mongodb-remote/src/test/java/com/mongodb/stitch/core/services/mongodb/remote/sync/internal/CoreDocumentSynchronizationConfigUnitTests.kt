@@ -11,7 +11,7 @@ import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Test
 
 class CoreDocumentSynchronizationConfigUnitTests {
@@ -85,8 +85,8 @@ class CoreDocumentSynchronizationConfigUnitTests {
 
         var doc = config.toBsonDocument()
 
-        assert(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
-        assert(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
+        assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
+        assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
 
         config = CoreDocumentSynchronizationConfig(
                 coll, CoreDocumentSynchronizationConfig.fromBsonDocument(doc))
@@ -100,9 +100,9 @@ class CoreDocumentSynchronizationConfigUnitTests {
                 coll.namespace, BsonDocument("_id", BsonObjectId()), true))
 
         doc = config.toBsonDocument()
-        assert(
-            !doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
-        assert(
-            !doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
+        assertFalse(
+            doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
+        assertFalse(
+            doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
     }
 }
