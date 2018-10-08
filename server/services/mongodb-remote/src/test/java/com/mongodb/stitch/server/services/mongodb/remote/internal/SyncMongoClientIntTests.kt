@@ -834,6 +834,8 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             // do a sync pass, synchronizing the doc
             streamAndSync()
 
+            assertNotNull(remoteColl.find(Document("_id", testDoc.get("_id"))).first())
+            
             // update the doc
             val expectedDoc = Document("hello", "computer")
             testSync.updateOneById(result.insertedId, Document(Document("\$set", expectedDoc)))
@@ -878,7 +880,6 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
             // now that we're sync'd and unfrozen, it should be reflected locally
             // TODO: STITCH-1958 Possible race condition here for update listening
-            streamAndSync()
             streamAndSync()
 
             assertEquals(

@@ -841,7 +841,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             // update the doc
             val expectedDoc = Document("hello", "computer")
-            testSync.updateOneById(result.insertedId, Document(Document("\$set", expectedDoc)))
+            Tasks.await(testSync.updateOneById(result.insertedId, Document(Document("\$set", expectedDoc))))
 
             // do a sync pass, and throw an error during the update
             // freezing the document
@@ -852,7 +852,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val nextDoc = Document("hello", "friend")
 
             var sem = watchForEvents(namespace)
-            remoteColl.updateOne(Document("_id", result.insertedId), nextDoc)
+            Tasks.await(remoteColl.updateOne(Document("_id", result.insertedId), nextDoc))
             sem.acquire()
             streamAndSync()
 
@@ -862,7 +862,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
                 withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
 
             // update the local doc. this should unfreeze the config
-            testSync.updateOneById(result.insertedId, Document("\$set", Document("no", "op")))
+            Tasks.await(testSync.updateOneById(result.insertedId, Document("\$set", Document("no", "op"))))
 
             streamAndSync()
 
@@ -875,10 +875,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val lastDoc = Document("good night", "computer")
 
             sem = watchForEvents(namespace)
-            remoteColl.updateOne(
+            Tasks.await(remoteColl.updateOne(
                 Document("_id", result.insertedId),
                 lastDoc
-            )
+            ))
             sem.acquire()
 
             // now that we're sync'd and unfrozen, it should be reflected locally
@@ -892,7 +892,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
                     withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
         }
     }
-    
+
     private fun streamAndSync() {
         val dataSync = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
         if (testNetworkMonitor.connectedState) {

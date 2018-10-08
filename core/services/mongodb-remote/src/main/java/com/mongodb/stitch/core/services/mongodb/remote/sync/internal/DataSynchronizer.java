@@ -1320,7 +1320,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null || config.isFrozen()) {
+    if (config == null) {
       return;
     }
 
@@ -1364,7 +1364,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null || config.isFrozen()) {
+    if (config == null) {
       return;
     }
 
@@ -1431,7 +1431,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null || config.isFrozen()) {
+    if (config == null) {
       return;
     }
 
@@ -1458,7 +1458,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null || config.isFrozen()) {
+    if (config == null) {
       return;
     }
     getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));

@@ -159,17 +159,27 @@ class CoreDocumentSynchronizationConfig {
   }
 
   /**
-   * In the event that an irrecoverable error has occurred,
-   * updates should no longer be processed for a document.
-   * The config should reflect that it is in a frozen state.
-   *
-   * When a new write operation happens to this document locally
-   * we should unfreeze the document and resume trying to sync it.
+   * A document that is frozen no longer has remote updates applied to it.
+   * Any local updates to this document cause it to be thawed. An example of freezing a document
+   * is when a conflict is being resolved for that document and the handler throws an exception.
    *
    * @param isFrozen whether or not this config is frozen
    */
   void setFrozen(final boolean isFrozen) {
-    this.isFrozen = isFrozen;
+    docLock.writeLock().lock();
+    try {
+      docsColl.updateOne(
+          getDocFilter(namespace, documentId),
+          new BsonDocument("$set",
+              new BsonDocument(
+                  ConfigCodec.Fields.IS_FROZEN,
+                  new BsonBoolean(isFrozen))));
+      this.isFrozen = isFrozen;
+    } catch (IllegalStateException e) {
+      // eat this
+    } finally {
+      docLock.writeLock().unlock();
+    }
   }
 
   boolean isFrozen() {
