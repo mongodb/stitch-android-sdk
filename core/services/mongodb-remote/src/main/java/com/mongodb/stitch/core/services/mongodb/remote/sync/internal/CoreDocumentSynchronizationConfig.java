@@ -168,7 +168,7 @@ class CoreDocumentSynchronizationConfig {
    *
    * @param isFrozen whether or not this config is frozen
    */
-  void setFrozen(boolean isFrozen) {
+  void setFrozen(final boolean isFrozen) {
     this.isFrozen = isFrozen;
   }
 
