@@ -8,10 +8,8 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection
@@ -26,7 +24,6 @@ import org.junit.Assert.*
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import java.lang.Exception
 import java.util.UUID
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
@@ -815,17 +812,18 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             val remoteColl = getTestCollRemote()
             var errorEmitted = false
 
-            testSync.configure(DefaultSyncConflictResolvers.remoteWins(),
-                ChangeEventListener { _: BsonValue, event: ChangeEvent<Document> ->
-                    if (!errorEmitted
-                        && event.operationType == ChangeEvent.OperationType.UPDATE) {
-                        errorEmitted = true
-                        throw Exception()
-                    }
-                }, ErrorListener { _, _ ->
-                    errorEmitted = true
-                }
-            )
+            var conflictCounter = 0
+
+            testSync.configure(
+                    { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                        if (conflictCounter == 0) {
+                            errorEmitted = true
+                        }
+                        remoteEvent.fullDocument
+                    },
+                    { _: BsonValue, _: ChangeEvent<Document> ->
+                    }, { _, _ ->
+                    })
 
             // insert an initial doc
             val testDoc = Document("hello", "world")
@@ -838,9 +836,14 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             
             // update the doc
             val expectedDoc = Document("hello", "computer")
-            testSync.updateOneById(result.insertedId, Document(Document("\$set", expectedDoc)))
+            testSync.updateOneById(result.insertedId, Document("\$set", expectedDoc))
 
-            // do a sync pass, and throw an error during the update
+            // create a conflict
+            var sem = watchForEvents(namespace)
+            remoteColl.updateOne(Document("_id", result.insertedId), withNewVersionIdSet(Document("\$inc", Document("foo", 2))))
+            sem.acquire()
+
+            // do a sync pass, and throw an error during the conflict resolver
             // freezing the document
             streamAndSync()
             assertTrue(errorEmitted)
@@ -848,7 +851,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             // update the doc remotely
             val nextDoc = Document("hello", "friend")
 
-            var sem = watchForEvents(namespace)
+            sem = watchForEvents(namespace)
             remoteColl.updateOne(Document("_id", result.insertedId), nextDoc)
             sem.acquire()
             streamAndSync()
@@ -874,7 +877,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             sem = watchForEvents(namespace)
             remoteColl.updateOne(
                 Document("_id", result.insertedId),
-                lastDoc
+                withNewVersionId(lastDoc)
             )
             sem.acquire()
 

@@ -609,7 +609,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           getRemoteCollection(nsConfig.getNamespace());
 
       for (final CoreDocumentSynchronizationConfig docConfig : nsConfig) {
-        if (!docConfig.hasUncommittedWrites()) {
+        if (!docConfig.hasUncommittedWrites() || docConfig.isFrozen()) {
           continue;
         }
         if (docConfig.getLastResolution() == logicalT) {

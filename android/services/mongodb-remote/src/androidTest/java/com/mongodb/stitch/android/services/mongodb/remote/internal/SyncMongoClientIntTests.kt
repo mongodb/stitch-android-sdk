@@ -13,11 +13,9 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonValue
@@ -31,7 +29,6 @@ import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import java.lang.Exception
 import java.util.UUID
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
@@ -820,17 +817,18 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val remoteColl = getTestCollRemote()
             var errorEmitted = false
 
-            testSync.configure(DefaultSyncConflictResolvers.remoteWins(),
-                ChangeEventListener { _: BsonValue, event: ChangeEvent<Document> ->
-                    if (!errorEmitted
-                        && event.operationType == ChangeEvent.OperationType.UPDATE) {
-                        errorEmitted = true
-                        throw Exception()
-                    }
-                }, ErrorListener { _, _ ->
-                errorEmitted = true
-            }
-            )
+            var conflictCounter = 0
+
+            testSync.configure(
+                    { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                        if (conflictCounter == 0) {
+                            errorEmitted = true
+                        }
+                        remoteEvent.fullDocument
+                    },
+                    { _: BsonValue, _: ChangeEvent<Document> ->
+                    }, { _, _ ->
+            })
 
             // insert an initial doc
             val testDoc = Document("hello", "world")
@@ -839,11 +837,18 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             // do a sync pass, synchronizing the doc
             streamAndSync()
 
+            Assert.assertNotNull(Tasks.await(remoteColl.find(Document("_id", testDoc.get("_id"))).first()))
+
             // update the doc
             val expectedDoc = Document("hello", "computer")
-            Tasks.await(testSync.updateOneById(result.insertedId, Document(Document("\$set", expectedDoc))))
+            Tasks.await(testSync.updateOneById(result.insertedId, Document("\$set", expectedDoc)))
 
-            // do a sync pass, and throw an error during the update
+            // create a conflict
+            var sem = watchForEvents(namespace)
+            Tasks.await(remoteColl.updateOne(Document("_id", result.insertedId), withNewVersionIdSet(Document("\$inc", Document("foo", 2)))))
+            sem.acquire()
+
+            // do a sync pass, and throw an error during the conflict resolver
             // freezing the document
             streamAndSync()
             Assert.assertTrue(errorEmitted)
@@ -851,15 +856,15 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             // update the doc remotely
             val nextDoc = Document("hello", "friend")
 
-            var sem = watchForEvents(namespace)
+            sem = watchForEvents(namespace)
             Tasks.await(remoteColl.updateOne(Document("_id", result.insertedId), nextDoc))
             sem.acquire()
             streamAndSync()
 
             // it should not have updated the local doc, as the local doc should be frozen
             assertEquals(
-                withoutId(expectedDoc),
-                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                    withoutId(expectedDoc),
+                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
 
             // update the local doc. this should unfreeze the config
             Tasks.await(testSync.updateOneById(result.insertedId, Document("\$set", Document("no", "op"))))
@@ -868,28 +873,27 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             // this should still be the remote doc since remote wins
             assertEquals(
-                withoutId(nextDoc),
-                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                    withoutId(nextDoc),
+                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
 
             // update the doc remotely
             val lastDoc = Document("good night", "computer")
 
             sem = watchForEvents(namespace)
             Tasks.await(remoteColl.updateOne(
-                Document("_id", result.insertedId),
-                lastDoc
+                    Document("_id", result.insertedId),
+                    withNewVersionId(lastDoc)
             ))
             sem.acquire()
 
             // now that we're sync'd and unfrozen, it should be reflected locally
             // TODO: STITCH-1958 Possible race condition here for update listening
             streamAndSync()
-            streamAndSync()
 
             assertEquals(
-                withoutId(lastDoc),
-                withoutVersionId(
-                    withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                    withoutId(lastDoc),
+                    withoutVersionId(
+                            withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
         }
     }
 
