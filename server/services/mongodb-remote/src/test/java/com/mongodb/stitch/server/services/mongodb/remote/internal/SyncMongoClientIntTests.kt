@@ -880,6 +880,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             sem.acquire()
 
             // now that we're sync'd and unfrozen, it should be reflected locally
+            // TODO: STITCH-1958 Possible race condition here for update listening
             streamAndSync()
             streamAndSync()
 

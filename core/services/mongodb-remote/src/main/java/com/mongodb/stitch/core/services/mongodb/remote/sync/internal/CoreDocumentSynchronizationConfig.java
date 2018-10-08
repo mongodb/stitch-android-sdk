@@ -187,6 +187,15 @@ class CoreDocumentSynchronizationConfig {
       final long atTime,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
+    // if we were frozen
+    if (isFrozen) {
+      // unfreeze the document due to the local write
+      setFrozen(false);
+      // and now the unfrozen document is now stale
+      // TODO: STITCH-1958 make sure the stream has started before this is set
+      setStale(true);
+    }
+
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent =
@@ -231,12 +240,6 @@ class CoreDocumentSynchronizationConfig {
   }
 
   void setPendingWritesComplete(final BsonValue atVersion) {
-    // Pending writes are only completed during sync passes.
-    // If this document is frozen, we should not process this update.
-//    if (isFrozen) {
-//      return;
-//    }
-
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent = null;
@@ -443,6 +446,7 @@ class CoreDocumentSynchronizationConfig {
     keyPresent(ConfigCodec.Fields.LAST_RESOLUTION_FIELD, document);
     keyPresent(ConfigCodec.Fields.COMMITTED_VERSIONS, document);
     keyPresent(ConfigCodec.Fields.IS_STALE, document);
+    keyPresent(ConfigCodec.Fields.IS_FROZEN, document);
 
     final int schemaVersion =
         document.getNumber(ConfigCodec.Fields.SCHEMA_VERSION_FIELD).intValue();

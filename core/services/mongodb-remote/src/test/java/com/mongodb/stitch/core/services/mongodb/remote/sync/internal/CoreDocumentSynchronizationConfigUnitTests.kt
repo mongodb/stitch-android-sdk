@@ -81,7 +81,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         assert(!config.isStale)
 
         config.isStale = true
-        config.setFrozen(true)
+        config.isFrozen = true
 
         var doc = config.toBsonDocument()
 
