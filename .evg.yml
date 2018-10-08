@@ -170,7 +170,10 @@ functions:
         script: |
           set -e
           source ./creds
-          export ANDROID_HOME=$(pwd)/android_sdk
+          if [ -z "$ANDROID_HOME" ]
+          then
+            export ANDROID_HOME=$(pwd)/android_sdk
+          fi
           cd stitch-java-sdk
           export CI_NAME="evergreen"
           export CI_BUILD_NUMBER="${version_id}"
