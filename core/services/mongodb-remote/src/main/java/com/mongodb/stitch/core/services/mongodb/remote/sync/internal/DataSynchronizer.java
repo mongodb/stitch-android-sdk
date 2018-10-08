@@ -949,11 +949,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         remoteEvent.getOperationType()));
 
     final Object resolvedDocument;
+    final ChangeEvent transformedRemoteEvent;
     try {
       final ChangeEvent transformedLocalEvent = ChangeEvent.transformChangeEventForUser(
           docConfig.getLastUncommittedChangeEvent(),
           syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
-      final ChangeEvent transformedRemoteEvent =
+      transformedRemoteEvent =
           ChangeEvent.transformChangeEventForUser(
               remoteEvent,
               syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
@@ -997,7 +998,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final boolean acceptRemote =
         (remoteEvent.getFullDocument() == null && resolvedDocument == null)
             || (remoteEvent.getFullDocument() != null
-            && remoteEvent.getFullDocument().equals(resolvedDocument));
+            && transformedRemoteEvent.getFullDocument().equals(resolvedDocument));
 
     if (resolvedDocument == null) {
       logger.info(String.format(
