@@ -13,9 +13,11 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonValue
@@ -29,6 +31,7 @@ import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
+import java.lang.Exception
 import java.util.UUID
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
@@ -810,6 +813,86 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         }
     }
 
+    @Test
+    fun testFrozenDocumentConfig() {
+        testSyncInBothDirections {
+            val testSync = getTestSync()
+            val remoteColl = getTestCollRemote()
+            var errorEmitted = false
+
+            testSync.configure(DefaultSyncConflictResolvers.remoteWins(),
+                ChangeEventListener { _: BsonValue, event: ChangeEvent<Document> ->
+                    if (!errorEmitted
+                        && event.operationType == ChangeEvent.OperationType.UPDATE) {
+                        errorEmitted = true
+                        throw Exception()
+                    }
+                }, ErrorListener { _, _ ->
+                errorEmitted = true
+            }
+            )
+
+            // insert an initial doc
+            val testDoc = Document("hello", "world")
+            val result = Tasks.await(testSync.insertOneAndSync(testDoc))
+
+            // do a sync pass, synchronizing the doc
+            streamAndSync()
+
+            // update the doc
+            val expectedDoc = Document("hello", "computer")
+            testSync.updateOneById(result.insertedId, Document(Document("\$set", expectedDoc)))
+
+            // do a sync pass, and throw an error during the update
+            // freezing the document
+            streamAndSync()
+            Assert.assertTrue(errorEmitted)
+
+            // update the doc remotely
+            val nextDoc = Document("hello", "friend")
+
+            var sem = watchForEvents(namespace)
+            remoteColl.updateOne(Document("_id", result.insertedId), nextDoc)
+            sem.acquire()
+            streamAndSync()
+
+            // it should not have updated the local doc, as the local doc should be frozen
+            assertEquals(
+                withoutId(expectedDoc),
+                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+
+            // update the local doc. this should unfreeze the config
+            testSync.updateOneById(result.insertedId, Document("\$set", Document("no", "op")))
+
+            streamAndSync()
+
+            // this should still be the remote doc since remote wins
+            assertEquals(
+                withoutId(nextDoc),
+                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+
+            // update the doc remotely
+            val lastDoc = Document("good night", "computer")
+
+            sem = watchForEvents(namespace)
+            remoteColl.updateOne(
+                Document("_id", result.insertedId),
+                lastDoc
+            )
+            sem.acquire()
+
+            // now that we're sync'd and unfrozen, it should be reflected locally
+            // TODO: STITCH-1958 Possible race condition here for update listening
+            streamAndSync()
+            streamAndSync()
+
+            assertEquals(
+                withoutId(lastDoc),
+                withoutVersionId(
+                    withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+        }
+    }
+    
     private fun streamAndSync() {
         val dataSync = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
         if (testNetworkMonitor.connectedState) {
