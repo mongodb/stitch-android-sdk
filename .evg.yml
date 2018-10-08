@@ -170,6 +170,7 @@ functions:
         script: |
           set -e
           source ./creds
+          export ANDROID_HOME=$(pwd)/android_sdk
           cd stitch-java-sdk
           export CI_NAME="evergreen"
           export CI_BUILD_NUMBER="${version_id}"
@@ -250,10 +251,24 @@ tasks:
       - command: shell.exec
         params:
           shell: "bash"
+          background: true
+          script: |
+            set -e
+            LOGCAT_PID=''
+            cleanup() {
+                kill -9 $LOGCAT_PID
+            }
+            trap cleanup EXIT
+
+            adb logcat &
+            LOGCAT_PID=$!
+            sleep infinity
+      - command: shell.exec
+        params:
+          shell: "bash"
           script: |
             set -e
             cd stitch-java-sdk
-
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
             ./gradlew connectedAndroidTest jacocoTestReport --info --continue --warning-mode=all --stacktrace  < /dev/null

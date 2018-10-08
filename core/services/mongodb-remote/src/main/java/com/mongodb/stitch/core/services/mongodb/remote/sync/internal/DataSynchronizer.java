@@ -1179,6 +1179,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId
   ) {
     syncConfig.removeSynchronizedDocument(namespace, documentId);
+    triggerListeningToNamespace(namespace);
   }
 
   public <T> Collection<T> find(
@@ -1458,12 +1459,17 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   private void triggerListeningToNamespace(final MongoNamespace namespace) {
-    instanceChangeStreamListener.addNamespace(namespace);
     syncLock.lock();
     try {
+      final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
+      if (nsConfig.getSynchronizedDocuments().isEmpty()) {
+        instanceChangeStreamListener.removeNamespace(namespace);
+        return;
+      }
       if (!this.syncConfig.getNamespaceConfig(namespace).isConfigured()) {
         return;
       }
+      instanceChangeStreamListener.addNamespace(namespace);
       instanceChangeStreamListener.stop(namespace);
       instanceChangeStreamListener.start(namespace);
     } catch (final Exception ex) {

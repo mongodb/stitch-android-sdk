@@ -180,7 +180,7 @@ public class NamespaceChangeStreamListener {
     }
 
     if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
-      logger.info("stream END - No stale documents");
+      logger.info("stream END - No synchronized documents");
       return false;
     }
 
@@ -231,10 +231,11 @@ public class NamespaceChangeStreamListener {
           watcher.onComplete(OperationResult.successfulResultOf(event.getData()));
         }
       }
-    } catch (final InterruptedIOException ex) {
+    } catch (final InterruptedIOException | InterruptedException ex) {
       logger.error(String.format(
           Locale.US,
-          "NamespaceChangeStreamListener::stream ns=%s exception on fetching next event: %s",
+          "NamespaceChangeStreamListener::stream ns=%s interrupted exception on "
+              + "fetching next event: %s",
           nsConfig.getNamespace(),
           ex), ex);
       logger.info("stream END");
