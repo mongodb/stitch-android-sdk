@@ -24,6 +24,7 @@ import org.junit.Assert.*
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
+import java.lang.Exception
 import java.util.UUID
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
@@ -817,7 +818,9 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             testSync.configure(
                     { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                         if (conflictCounter == 0) {
+                            conflictCounter++
                             errorEmitted = true
+                            throw Exception("ouch")
                         }
                         remoteEvent.fullDocument
                     },
