@@ -6,6 +6,7 @@ import com.mongodb.stitch.core.internal.common.AuthMonitor
 import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
+import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.codecs.configuration.CodecRegistries
@@ -14,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CoreDocumentSynchronizationConfigUnitTests {
-
     @After
     fun teardown() {
         ServerEmbeddedMongoClientFactory.getInstance().close()
@@ -81,9 +81,12 @@ class CoreDocumentSynchronizationConfigUnitTests {
         assert(!config.isStale)
 
         config.isStale = true
+        config.setFrozen(true)
 
         var doc = config.toBsonDocument()
+
         assert(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
+        assert(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
 
         config = CoreDocumentSynchronizationConfig(
                 coll, CoreDocumentSynchronizationConfig.fromBsonDocument(doc))
@@ -91,7 +94,15 @@ class CoreDocumentSynchronizationConfigUnitTests {
         assert(config.isStale)
 
         config.isStale = false
+        config.setSomePendingWrites(
+            1,
+            ChangeEvent.changeEventForLocalInsert(
+                coll.namespace, BsonDocument("_id", BsonObjectId()), true))
+
         doc = config.toBsonDocument()
-        assert(!doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
+        assert(
+            !doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
+        assert(
+            !doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
     }
 }

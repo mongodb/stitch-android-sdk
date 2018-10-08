@@ -397,7 +397,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
 
-        if (docConfig == null) {
+        if (docConfig == null || docConfig.isFrozen()) {
           // Not interested in this event.
           continue;
         }
@@ -410,7 +410,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       for (final BsonValue docId : unseenIds) {
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(docId);
-        if (docConfig == null) {
+        if (docConfig == null || docConfig.isFrozen()) {
           // means we aren't actually synchronizing on this remote doc
           continue;
         }
@@ -435,7 +435,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         for (final BsonValue unseenId : unseenIds) {
           final CoreDocumentSynchronizationConfig docConfig =
               nsConfig.getSynchronizedDocument(unseenId);
-          if (docConfig == null || docConfig.getLastKnownRemoteVersion() == null) {
+          if (docConfig == null
+              || docConfig.getLastKnownRemoteVersion() == null
+              || docConfig.isFrozen()) {
             // means we aren't actually synchronizing on this remote doc
             continue;
           }
@@ -546,7 +548,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               docConfig.getDocumentId());
           return;
         default:
-          emitError(docConfig.getDocumentId(),
+          emitError(docConfig,
               String.format(
                   Locale.US,
                   "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s unknown operation type "
@@ -650,7 +652,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             } catch (final StitchServiceException ex) {
               if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
                   || !ex.getMessage().contains("E11000")) {
-                this.emitError(localChangeEvent.getId(), String.format(
+                this.emitError(docConfig, String.format(
                     Locale.US,
                     "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
                     logicalT,
@@ -677,7 +679,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   "expected document to exist for local replace change event: %s");
 
               emitError(
-                  docConfig.getDocumentId(),
+                  docConfig,
                   illegalStateException.getMessage(),
                   illegalStateException
               );
@@ -693,7 +695,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   localDoc);
             } catch (final StitchServiceException ex) {
               this.emitError(
-                  localChangeEvent.getId(),
+                  docConfig,
                   String.format(
                       Locale.US,
                       "t='%d': syncLocalToRemote ns=%s documentId=%s exception replacing: %s",
@@ -723,7 +725,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               final IllegalStateException illegalStateException = new IllegalStateException(
                   "expected document to exist for local update change event");
               emitError(
-                  docConfig.getDocumentId(),
+                  docConfig,
                   illegalStateException.getMessage(),
                   illegalStateException
               );
@@ -760,7 +762,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       ? localDoc : translatedUpdate);
             } catch (final StitchServiceException ex) {
               emitError(
-                  docConfig.getDocumentId(),
+                  docConfig,
                   String.format(
                       Locale.US,
                       "t='%d': syncLocalToRemote ns=%s documentId=%s exception updating: %s",
@@ -793,7 +795,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   docConfig.getLastKnownRemoteVersion()));
             } catch (final StitchServiceException ex) {
               emitError(
-                  docConfig.getDocumentId(),
+                  docConfig,
                   String.format(
                       Locale.US,
                       "t='%d': syncLocalToRemote ns=%s documentId=%s exception deleting: %s",
@@ -828,7 +830,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
           default:
             emitError(
-                docConfig.getDocumentId(),
+                docConfig,
                 String.format(
                     Locale.US,
                     "t='%d': syncLocalToRemote ns=%s documentId=%s unknown operation type occurred "
@@ -887,11 +889,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         logicalT));
   }
 
-  private void emitError(final BsonValue docId, final String msg) {
-    this.emitError(docId, msg, null);
+  private void emitError(final CoreDocumentSynchronizationConfig docConfig,
+                         final String msg) {
+    this.emitError(docConfig, msg, null);
   }
 
-  private void emitError(final BsonValue docId, final String msg, final Exception ex) {
+  private void emitError(final CoreDocumentSynchronizationConfig docConfig,
+                         final String msg,
+                         final Exception ex) {
     if (this.errorListener != null) {
       final Exception dispatchException;
       if (ex == null) {
@@ -902,13 +907,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       this.eventDispatcher.dispatch(new Callable<Object>() {
         @Override
         public Object call() {
-          errorListener.onError(docId, dispatchException);
+          errorListener.onError(docConfig.getDocumentId(), dispatchException);
           return null;
         }
       });
     }
 
+    docConfig.setFrozen(true);
+
     this.logger.error(msg);
+    this.logger.error(String.format("Setting document %s to frozen", docConfig.getDocumentId()));
   }
 
 
@@ -970,7 +978,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           namespace,
           docConfig.getDocumentId(),
           ex));
-      emitError(docConfig.getDocumentId(),
+      emitError(docConfig,
           String.format(
               Locale.US,
               "t='%d': resolveConflict ns=%s documentId=%s resolution exception: %s",
@@ -1312,7 +1320,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
+    if (config == null || config.isFrozen()) {
       return;
     }
 
@@ -1356,7 +1364,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
+    if (config == null || config.isFrozen()) {
       return;
     }
 
@@ -1423,7 +1431,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
+    if (config == null || config.isFrozen()) {
       return;
     }
 
@@ -1450,7 +1458,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
+    if (config == null || config.isFrozen()) {
       return;
     }
     getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
@@ -1529,7 +1537,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 event.getNamespace(),
                 documentId,
                 ex));
-            emitError(documentId, String.format(
+            emitError(
+                namespaceSynchronizationConfig.getSynchronizedDocument(documentId),
+                String.format(
                 Locale.US,
                 "emitEvent ns=%s documentId=%s emit exception: %s",
                 event.getNamespace(),
