@@ -173,7 +173,6 @@ class CoreDocumentSynchronizationConfig {
   }
 
   boolean isFrozen() {
-    System.out.println(String.format("FROZEN %b", isFrozen));
     return isFrozen;
   }
 
