@@ -22,10 +22,7 @@ import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.fail
+import org.junit.Assert.*
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
@@ -844,7 +841,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             // do a sync pass, and throw an error during the update
             // freezing the document
             streamAndSync()
-            assert(errorEmitted)
+            assertTrue(errorEmitted)
 
             // update the doc remotely
             val nextDoc = Document("hello", "friend")

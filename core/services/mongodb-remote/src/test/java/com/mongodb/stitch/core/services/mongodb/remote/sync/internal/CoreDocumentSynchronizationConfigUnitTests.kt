@@ -78,7 +78,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         var config = CoreDocumentSynchronizationConfig(coll, namespace, id)
         coll.insertOne(config)
 
-        assert(!config.isStale)
+        assertFalse(config.isStale)
 
         config.isStale = true
         config.isFrozen = true
@@ -91,7 +91,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         config = CoreDocumentSynchronizationConfig(
                 coll, CoreDocumentSynchronizationConfig.fromBsonDocument(doc))
 
-        assert(config.isStale)
+        assertTrue(config.isStale)
 
         config.isStale = false
         config.setSomePendingWrites(
