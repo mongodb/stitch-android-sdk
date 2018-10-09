@@ -84,7 +84,7 @@ subprojects {
     }
 
     ext {
-        min_api = 24
+        min_api = 21
         target_api = 28
         support_library_version = '28.0.0'
         google_play_services_version = '15.0.1'
