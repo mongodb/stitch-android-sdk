@@ -167,39 +167,39 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             goOffline()
             val doc3 = Document("so", "syncy")
             val insResult = Tasks.await(coll.insertOneAndSync(doc3))
-            assertEquals(doc3, withoutVersionId(Tasks.await(coll.findOneById(insResult.insertedId))!!))
+            assertEquals(doc3, withoutSyncVersion(Tasks.await(coll.findOneById(insResult.insertedId))!!))
             streamAndSync()
             assertNull(Tasks.await(remoteColl.find(Document("_id", doc3["_id"])).first()))
             goOnline()
             streamAndSync()
-            assertEquals(doc3, withoutVersionId(Tasks.await(remoteColl.find(Document("_id", doc3["_id"])).first())!!))
+            assertEquals(doc3, withoutSyncVersion(Tasks.await(remoteColl.find(Document("_id", doc3["_id"])).first())!!))
 
             // 3. updating a document locally that has been updated remotely should invoke the conflict
             // resolver.
             val sem = watchForEvents(this.namespace)
             val result2 = Tasks.await(remoteColl.updateOne(
                     doc1Filter,
-                    withNewVersionIdSet(doc1Update)))
+                    withNewSyncVersionSet(doc1Update)))
             sem.acquire()
             assertEquals(1, result2.matchedCount)
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             val result3 = Tasks.await(coll.updateOneById(
                     doc1Id,
                     doc1Update))
             assertEquals(1, result3.matchedCount)
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             // first pass will invoke the conflict handler and update locally but not remotely yet
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             expectedDocument["foo"] = 4
             expectedDocument.remove("fooOps")
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             // second pass will update with the ack'd version id
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
         }
     }
 
@@ -231,14 +231,14 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync()
 
             // Update remote
-            val remoteUpdate = withNewVersionIdSet(Document("\$set", Document("remote", "update")))
+            val remoteUpdate = withNewSyncVersionSet(Document("\$set", Document("remote", "update")))
             val sem = watchForEvents(this.namespace)
             var result = Tasks.await(remoteColl.updateOne(doc1Filter, remoteUpdate))
             sem.acquire()
             assertEquals(1, result.matchedCount)
             val expectedRemoteDocument = Document(doc)
             expectedRemoteDocument["remote"] = "update"
-            assertEquals(expectedRemoteDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedRemoteDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
 
             // Update local
             val localUpdate = Document("\$set", Document("local", "updateWow"))
@@ -246,18 +246,18 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertEquals(1, result.matchedCount)
             val expectedLocalDocument = Document(doc)
             expectedLocalDocument["local"] = "updateWow"
-            assertEquals(expectedLocalDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedLocalDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             // first pass will invoke the conflict handler and update locally but not remotely yet
             streamAndSync()
-            assertEquals(expectedRemoteDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedRemoteDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             expectedLocalDocument["remote"] = "update"
-            assertEquals(expectedLocalDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedLocalDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             // second pass will update with the ack'd version id
             streamAndSync()
-            assertEquals(expectedLocalDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
-            assertEquals(expectedLocalDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedLocalDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedLocalDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
         }
     }
 
@@ -282,20 +282,20 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             val expectedDocument = Document(doc)
             val sem = watchForEvents(this.namespace)
-            var result = Tasks.await(remoteColl.updateOne(doc1Filter, withNewVersionIdSet(Document("\$inc", Document("foo", 2)))))
+            var result = Tasks.await(remoteColl.updateOne(doc1Filter, withNewSyncVersionSet(Document("\$inc", Document("foo", 2)))))
             sem.acquire()
             assertEquals(1, result.matchedCount)
             expectedDocument["foo"] = 3
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             result = Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1))))
             assertEquals(1, result.matchedCount)
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             streamAndSync()
             expectedDocument["foo"] = 3
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
         }
     }
 
@@ -320,20 +320,20 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             val expectedDocument = Document(doc)
             val sem = watchForEvents(this.namespace)
-            var result = Tasks.await(remoteColl.updateOne(doc1Filter, withNewVersionIdSet(Document("\$inc", Document("foo", 2)))))
+            var result = Tasks.await(remoteColl.updateOne(doc1Filter, withNewSyncVersionSet(Document("\$inc", Document("foo", 2)))))
             sem.acquire()
             assertEquals(1, result.matchedCount)
             expectedDocument["foo"] = 3
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             result = Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1))))
             assertEquals(1, result.matchedCount)
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             streamAndSync()
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
         }
     }
 
@@ -359,8 +359,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val result = Tasks.await(coll.deleteOneById(doc1Id))
             assertEquals(1, result.deletedCount)
 
-            val expectedDocument = withoutVersionId(Document(doc))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            val expectedDocument = withoutSyncVersion(Document(doc))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             assertNull(Tasks.await(coll.findOneById(doc1Id)))
 
             goOnline()
@@ -393,7 +393,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val doc1Update = Document("\$inc", Document("foo", 1))
             assertEquals(1, Tasks.await(remoteColl.updateOne(
                     doc1Filter,
-                    withNewVersionIdSet(doc1Update))).matchedCount)
+                    withNewSyncVersionSet(doc1Update))).matchedCount)
 
             goOffline()
             val result = Tasks.await(coll.deleteOneById(doc1Id))
@@ -401,16 +401,16 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             val expectedDocument = Document(doc)
             expectedDocument["foo"] = 1
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             assertNull(Tasks.await(coll.findOneById(doc1Id)))
 
             goOnline()
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             expectedDocument.remove("hello")
             expectedDocument.remove("foo")
             expectedDocument["well"] = "shoot"
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
         }
     }
 
@@ -433,16 +433,16 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val doc1Update = Document("\$inc", Document("foo", 1))
             assertEquals(1, Tasks.await(coll.updateOneById(doc1Id, doc1Update)).matchedCount)
 
-            val expectedDocument = withoutVersionId(Document(doc))
+            val expectedDocument = withoutSyncVersion(Document(doc))
             expectedDocument["foo"] = 1
             assertNull(Tasks.await(remoteColl.find(doc1Filter).first()))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             goOnline()
             streamAndSync()
 
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
         }
     }
 
@@ -464,20 +464,20 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             goOnline()
             streamAndSync()
-            val expectedDocument = withoutVersionId(Document(doc))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            val expectedDocument = withoutSyncVersion(Document(doc))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             val doc1Update = Document("\$inc", Document("foo", 1))
             assertEquals(1, Tasks.await(coll.updateOneById(doc1Id, doc1Update)).matchedCount)
 
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             expectedDocument["foo"] = 1
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
         }
     }
 
@@ -496,25 +496,25 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val doc = Tasks.await(coll.findOneById(insertResult.insertedId))!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
-            val expectedDocument = withoutVersionId(Document(doc))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            val expectedDocument = withoutSyncVersion(Document(doc))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             assertEquals(1, Tasks.await(coll.deleteOneById(doc1Id)).deletedCount)
             Tasks.await(coll.insertOneAndSync(doc))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             val doc1Update = Document("\$inc", Document("foo", 1))
             assertEquals(1, Tasks.await(coll.updateOneById(doc1Id, doc1Update)).matchedCount)
 
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             expectedDocument["foo"] = 1
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
         }
     }
 
@@ -621,21 +621,25 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             val wait = watchForEvents(this.namespace, 2)
             Tasks.await(remoteColl.deleteOne(doc1Filter))
-            Tasks.await(remoteColl.insertOne(withNewVersionId(doc)))
+            Tasks.await(remoteColl.insertOne(withNewSyncVersion(doc)))
             wait.acquire()
 
+            // TODO(QUESTION FOR REVIEWER): this test seems funky to me. We do the udpate, but
+            // the change is not reflected in any of the following finds. Why is that? Is the remote
+            // update with the new version ID supposed to make it so that this update is lost?
+            // it would be nice if we could have some comments in these tests.
             assertEquals(1, Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1)))).matchedCount)
 
             streamAndSync()
 
-            assertEquals(doc, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(doc, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             val expectedDocument = Document("_id", doc1Id.value)
             expectedDocument["hello"] = "again"
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
         }
     }
 
@@ -647,7 +651,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val remoteColl = getTestCollRemote()
 
             val docToInsert = Document("hello", "world")
-            Tasks.await(remoteColl.insertOne(withNewVersionId(docToInsert)))
+            Tasks.await(remoteColl.insertOne(withNewSyncVersion(docToInsert)))
 
             val doc = Tasks.await(remoteColl.find(docToInsert).first())!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
@@ -661,10 +665,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertEquals(1, Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1)))).matchedCount)
 
             streamAndSync()
-            val expectedDocument = Document(withoutVersionId(doc))
+            val expectedDocument = Document(withoutSyncVersion(doc))
             expectedDocument["foo"] = 1
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
         }
     }
 
@@ -676,7 +680,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             val remoteColl = getTestCollRemote()
 
             val docToInsert = Document("hello", "world")
-            Tasks.await(remoteColl.insertOne(withNewVersionId(docToInsert)))
+            Tasks.await(remoteColl.insertOne(withNewSyncVersion(docToInsert)))
 
             val doc = Tasks.await(remoteColl.find(docToInsert).first())!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
@@ -691,15 +695,15 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             Assert.assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
 
             val sem = watchForEvents(this.namespace)
-            assertEquals(1, Tasks.await(remoteColl.updateOne(doc1Filter, withNewVersionIdSet(Document("\$inc", Document("foo", 1))))).matchedCount)
+            assertEquals(1, Tasks.await(remoteColl.updateOne(doc1Filter, withNewSyncVersionSet(Document("\$inc", Document("foo", 1))))).matchedCount)
             sem.acquire()
 
             assertEquals(1, Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1)))).matchedCount)
 
             streamAndSync()
-            val expectedDocument = Document(withoutVersionId(doc))
+            val expectedDocument = Document(withoutSyncVersion(doc))
             expectedDocument["foo"] = 1
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
 
             goOffline()
             assertNull(Tasks.await(coll.findOneById(doc1Id)))
@@ -736,17 +740,17 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync()
 
             val expectedDocument = Document(doc)
-            var result = Tasks.await(remoteColl.updateOne(doc1Filter, withNewVersionIdSet(Document("\$inc", Document("foo", 2)))))
+            var result = Tasks.await(remoteColl.updateOne(doc1Filter, withNewSyncVersionSet(Document("\$inc", Document("foo", 2)))))
             assertEquals(1, result.matchedCount)
             expectedDocument["foo"] = 3
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             powerCycleDevice()
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
 
             result = Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1))))
             assertEquals(1, result.matchedCount)
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             powerCycleDevice()
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
@@ -758,12 +762,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync() // resolves the conflict
 
             expectedDocument["foo"] = 2
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             powerCycleDevice()
             coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
 
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
         }
     }
 
@@ -776,7 +780,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             coll.configure(failingConflictHandler, null, null)
             val doc1Id = Tasks.await(coll.insertOneAndSync(docToInsert)).insertedId
 
-            assertEquals(docToInsert, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(docToInsert, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
             coll.desyncOne(doc1Id)
             streamAndSync()
             assertNull(Tasks.await(coll.findOneById(doc1Id)))
@@ -802,12 +806,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync()
             val expectedDocument = Document(docToInsert)
             expectedDocument["friend"] = "welcome"
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
-            assertEquals(docToInsert, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(docToInsert, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
 
             streamAndSync()
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
-            assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(remoteColl.find(doc1Filter).first())!!))
         }
     }
 
@@ -985,23 +989,28 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         return newDoc
     }
 
-    private fun withoutVersionId(document: Document): Document {
+    private fun withoutSyncVersion(document: Document): Document {
         val newDoc = Document(document)
         newDoc.remove("__stitch_sync_version")
         return newDoc
     }
 
-    private fun withNewVersionId(document: Document): Document {
-        val newDocument = Document(HashMap(document))
-        newDocument["__stitch_sync_version"] = UUID.randomUUID().toString()
-        return newDocument
-    }
-
-    private fun withNewVersionIdSet(document: Document): Document {
+    private fun withNewSyncVersionSet(document: Document): Document {
         return appendDocumentToKey(
                 "\$set",
                 document,
-                Document("__stitch_sync_version", UUID.randomUUID().toString()))
+                Document("__stitch_sync_version", freshSyncVersionDoc()))
+    }
+
+    private fun withNewSyncVersion(document: Document): Document {
+        val newDocument = Document(java.util.HashMap(document))
+        newDocument["__stitch_sync_version"] = freshSyncVersionDoc()
+
+        return newDocument
+    }
+
+    private fun freshSyncVersionDoc(): Document {
+        return Document("spv", 1).append("id", UUID.randomUUID().toString()).append("v", 0L)
     }
 
     private fun appendDocumentToKey(key: String, on: Document, toAppend: Document): Document {

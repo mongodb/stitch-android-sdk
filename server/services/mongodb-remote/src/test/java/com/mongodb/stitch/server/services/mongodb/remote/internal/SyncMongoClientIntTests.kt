@@ -991,16 +991,21 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
     }
 
     private fun withNewVersionId(document: Document): Document {
-        val newDocument = Document(HashMap(document))
-        newDocument["__stitch_sync_version"] = UUID.randomUUID().toString()
+        val newDocument = Document(java.util.HashMap(document))
+        newDocument["__stitch_sync_version"] = freshSyncVersionDoc()
+
         return newDocument
     }
 
     private fun withNewVersionIdSet(document: Document): Document {
         return appendDocumentToKey(
-            "\$set",
-            document,
-            Document("__stitch_sync_version", UUID.randomUUID().toString()))
+                "\$set",
+                document,
+                Document("__stitch_sync_version", freshSyncVersionDoc()))
+    }
+
+    private fun freshSyncVersionDoc(): Document {
+        return Document("spv", 1).append("id", UUID.randomUUID().toString()).append("v", 0L)
     }
 
     private fun appendDocumentToKey(key: String, on: Document, toAppend: Document): Document {

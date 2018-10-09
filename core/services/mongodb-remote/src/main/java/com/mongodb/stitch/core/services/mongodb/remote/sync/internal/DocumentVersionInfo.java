@@ -22,20 +22,104 @@ import com.mongodb.stitch.core.internal.common.BsonUtils;
 import javax.annotation.Nullable;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonInt64;
+import org.bson.BsonString;
 import org.bson.BsonValue;
 
-final class DocumentVersionInfo {
-  private final BsonValue version;
+import java.util.UUID;
+
+public final class DocumentVersionInfo {
+  private final int syncProtocolVersion;
+  private final String instanceId;
+  private final long versionCounter;
+
+
+  static final String SYNC_PROTOCOL_VERSION_FIELD = "spv";
+  static final String INSTANCE_ID_FIELD = "id";
+  static final String VERSION_COUNTER_FIELD = "v";
+
   private final BsonDocument filter;
+  private final BsonDocument versionDoc;
 
-  private DocumentVersionInfo(final BsonValue version, final BsonDocument filter) {
-    this.version = version;
-    this.filter = filter;
+  private DocumentVersionInfo(
+          final BsonDocument version,
+          final BsonValue documentId,
+          final BsonDocument versionForFilter
+  ) {
+    if (version != null) {
+      this.versionDoc = version;
+      this.syncProtocolVersion = versionDoc.getInt32(SYNC_PROTOCOL_VERSION_FIELD).getValue();
+      this.instanceId = versionDoc.getString(INSTANCE_ID_FIELD).getValue();
+      this.versionCounter = versionDoc.getInt64(VERSION_COUNTER_FIELD).getValue();
+    } else {
+      this.versionDoc = null;
+
+      this.syncProtocolVersion = -1;
+      this.instanceId = null;
+      this.versionCounter = -1;
+    }
+
+    this.filter = getVersionedFilter(documentId, versionForFilter);
   }
 
-  public BsonValue getCurrentVersion() {
-    return version;
+//  private DocumentVersionInfo(
+//          final BsonValue documentId,
+//          final int syncProtocolVersion,
+//          final String instanceId,
+//          final long versionCounter
+//  ) {
+//    this.syncProtocolVersion = syncProtocolVersion;
+//    this.instanceId = instanceId;
+//    this.versionCounter = versionCounter;
+//
+//    this.versionDoc = constructVersionDoc();
+//    this.filter = getVersionedFilter(documentId, versionDoc);
+//  }
+
+  public BsonDocument getVersionDoc() {
+    return versionDoc;
   }
+
+//  private BsonDocument constructVersionDoc() {
+//    BsonDocument versionDoc = new BsonDocument();
+//
+//    versionDoc.append(SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(syncProtocolVersion));
+//    versionDoc.append(INSTANCE_ID_FIELD, new BsonString(instanceId));
+//    versionDoc.append(VERSION_COUNTER_FIELD, new BsonInt64(versionCounter));
+//
+//    return versionDoc;
+//  }
+
+  public int getSyncProtocolVersion() {
+    return syncProtocolVersion;
+  }
+
+  public String getInstanceId() {
+    return instanceId;
+  }
+
+  public long getVersionCounter() {
+    return versionCounter;
+  }
+
+//  public DocumentVersionInfo withIncrementedVersionCounter() {
+//    return new DocumentVersionInfo(
+//            this.documentId,
+//            this.syncProtocolVersion,
+//            this.instanceId,
+//            this.versionCounter + 1
+//    );
+//  }
+//
+//  public DocumentVersionInfo withNewInstanceId() {
+//    return new DocumentVersionInfo(
+//            this.documentId,
+//            this.syncProtocolVersion,
+//            UUID.randomUUID().toString(),
+//            0
+//    );
+//  }
 
   public BsonDocument getFilter() {
     return filter;
@@ -45,19 +129,47 @@ final class DocumentVersionInfo {
       final CoreDocumentSynchronizationConfig docConfig,
       final BsonDocument localDocument
   ) {
-    final BsonValue version = getDocumentVersion(localDocument);
+    final BsonDocument version = getDocumentVersion(localDocument);
     return new DocumentVersionInfo(
-        version,
-        getVersionedFilter(
-            docConfig.getDocumentId(), docConfig.getLastKnownRemoteVersion()));
+        version, docConfig.getDocumentId(), docConfig.getLastKnownRemoteVersion()
+    );
   }
 
   static DocumentVersionInfo getRemoteVersionInfo(final BsonDocument remoteDocument) {
-    final BsonValue version = getDocumentVersion(remoteDocument);
-    return new DocumentVersionInfo(
-        version,
-        getVersionedFilter(
-            BsonUtils.getDocumentId(remoteDocument), version));
+    final BsonDocument version = getDocumentVersion(remoteDocument);
+    return new DocumentVersionInfo(version, BsonUtils.getDocumentId(remoteDocument), version);
+  }
+
+//  public static DocumentVersionInfo createFreshDocumentVersion(BsonDocument document) {
+//    return new DocumentVersionInfo(
+//            BsonUtils.getDocumentId(document),
+//            1,
+//            UUID.randomUUID().toString(),
+//            0
+//    );
+//  }
+
+  public static BsonDocument getFreshVersionDocument() {
+    BsonDocument versionDoc = new BsonDocument();
+
+    versionDoc.append(SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(1));
+    versionDoc.append(INSTANCE_ID_FIELD, new BsonString(UUID.randomUUID().toString()));
+    versionDoc.append(VERSION_COUNTER_FIELD, new BsonInt64(0));
+
+    return versionDoc;
+  }
+
+  public static BsonDocument withIncrementedVersionCounter(BsonDocument versionDoc) {
+    BsonDocument newVersionDoc = new BsonDocument();
+
+    newVersionDoc.put(SYNC_PROTOCOL_VERSION_FIELD, versionDoc.get(SYNC_PROTOCOL_VERSION_FIELD));
+    newVersionDoc.put(INSTANCE_ID_FIELD, versionDoc.get(INSTANCE_ID_FIELD));
+    newVersionDoc.put(
+            VERSION_COUNTER_FIELD,
+            new BsonInt64(versionDoc.getInt64(VERSION_COUNTER_FIELD).getValue() + 1L)
+    );
+
+    return newVersionDoc;
   }
 
   /**
@@ -65,11 +177,11 @@ final class DocumentVersionInfo {
    * @param document the document to get the version from.
    * @return the version of the given document, if any; returns null otherwise.
    */
-  static BsonValue getDocumentVersion(final BsonDocument document) {
+  static BsonDocument getDocumentVersion(final BsonDocument document) {
     if (document == null || !document.containsKey(DOCUMENT_VERSION_FIELD)) {
       return null;
     }
-    return document.get(DOCUMENT_VERSION_FIELD);
+    return document.getDocument(DOCUMENT_VERSION_FIELD, null);
   }
 
   /**
