@@ -11,7 +11,9 @@ import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoreDocumentSynchronizationConfigUnitTests {
@@ -74,7 +76,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
     }
 
     @Test
-    fun testStale() {
+    fun testStaleAndFrozen() {
         var config = CoreDocumentSynchronizationConfig(coll, namespace, id)
         coll.insertOne(config)
 

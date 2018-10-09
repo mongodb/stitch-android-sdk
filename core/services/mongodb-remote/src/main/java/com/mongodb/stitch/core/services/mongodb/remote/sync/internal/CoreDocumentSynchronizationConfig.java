@@ -95,6 +95,7 @@ class CoreDocumentSynchronizationConfig {
     this.committedVersions = config.committedVersions;
     this.lastUncommittedChangeEvent = config.lastUncommittedChangeEvent;
     this.isStale = config.isStale;
+    this.isFrozen = config.isFrozen;
   }
 
   private CoreDocumentSynchronizationConfig(
@@ -177,6 +178,7 @@ class CoreDocumentSynchronizationConfig {
       this.isFrozen = isFrozen;
     } catch (IllegalStateException e) {
       // eat this
+      e.printStackTrace();
     } finally {
       docLock.writeLock().unlock();
     }
