@@ -178,7 +178,6 @@ class CoreDocumentSynchronizationConfig {
       this.isFrozen = isFrozen;
     } catch (IllegalStateException e) {
       // eat this
-      e.printStackTrace();
     } finally {
       docLock.writeLock().unlock();
     }
