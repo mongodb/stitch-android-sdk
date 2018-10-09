@@ -62,7 +62,7 @@ class DataSynchronizerUnitTests {
 
         val routes = StitchServiceRoutes("foo")
         val requestClient = Mockito.mock(StitchAuthRequestClient::class.java)
-        val remoteClient = CoreRemoteMongoClientImpl(
+        val remoteClient = spy(CoreRemoteMongoClientImpl(
             spy(CoreStitchServiceClientImpl(
                 requestClient,
                 routes,
@@ -72,57 +72,53 @@ class DataSynchronizerUnitTests {
             localClient,
             networkMonitor,
             authMonitor
-        )
+        ))
         remoteClient.dataSynchronizer.stop()
-        val rmSpy = spy(remoteClient)
 
         val id1 = BsonObjectId()
 
-        var ds = DataSynchronizer(
+        val dataSynchronizer = spy(DataSynchronizer(
             instanceKey,
             mock(CoreStitchServiceClient::class.java),
             localClient,
-            rmSpy,
+            remoteClient,
             networkMonitor,
             authMonitor
-        )
-
-        ds.stop()
-        ds = spy(ds)
+        ))
 
         // insert a new doc. the details of the doc do not matter
         val doc1 = BsonDocument("_id", id1)
-        ds.insertOneAndSync(namespace, doc1)
+        dataSynchronizer.insertOneAndSync(namespace, doc1)
 
         // set the doc to frozen and reload the configs
-        ds.getSynchronizedDocuments(namespace).forEach {
+        dataSynchronizer.getSynchronizedDocuments(namespace).forEach {
             it.isFrozen = true
         }
-        ds.reloadConfig()
+        dataSynchronizer.reloadConfig()
 
         // spy on the remote client
-        val dbSpy = mock(CoreRemoteMongoDatabaseImpl::class.java)
-        `when`(rmSpy.getDatabase(namespace.databaseName)).thenReturn(dbSpy)
+        val remoteMongoDatabase = mock(CoreRemoteMongoDatabaseImpl::class.java)
+        `when`(remoteClient.getDatabase(namespace.databaseName)).thenReturn(remoteMongoDatabase)
 
-        val collSpy = mock(CoreRemoteMongoCollectionImpl::class.java)
+        val remoteMongoCollection = mock(CoreRemoteMongoCollectionImpl::class.java)
             as CoreRemoteMongoCollectionImpl<BsonDocument>
-        `when`(dbSpy.getCollection(namespace.collectionName, BsonDocument::class.java))
-            .thenReturn(collSpy)
+        `when`(remoteMongoDatabase.getCollection(namespace.collectionName, BsonDocument::class.java))
+            .thenReturn(remoteMongoCollection)
 
         // ensure that no remote inserts are made during this sync pass
-        ds.doSyncPass()
+        dataSynchronizer.doSyncPass()
 
-        verify(collSpy, times(0)).insertOne(any())
+        verify(remoteMongoCollection, times(0)).insertOne(any())
 
         // unfreeze the configs and reload
-        ds.getSynchronizedDocuments(namespace).forEach {
+        dataSynchronizer.getSynchronizedDocuments(namespace).forEach {
             it.isFrozen = false
         }
-        ds.reloadConfig()
+        dataSynchronizer.reloadConfig()
 
         // this time ensure that the remote insert has been called
-        ds.doSyncPass()
+        dataSynchronizer.doSyncPass()
 
-        verify(collSpy, times(1)).insertOne(any())
+        verify(remoteMongoCollection, times(1)).insertOne(any())
     }
 }
