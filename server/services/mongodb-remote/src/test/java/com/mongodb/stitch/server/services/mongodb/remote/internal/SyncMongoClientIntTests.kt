@@ -20,7 +20,11 @@ import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
@@ -836,7 +840,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             streamAndSync()
 
             assertNotNull(remoteColl.find(Document("_id", testDoc.get("_id"))).first())
-            
+
             // update the doc
             val expectedDoc = Document("hello", "computer")
             testSync.updateOneById(result.insertedId, Document("\$set", expectedDoc))
