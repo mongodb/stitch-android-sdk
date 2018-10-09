@@ -102,7 +102,8 @@ class CoreDocumentSynchronizationConfigUnitTests {
                 coll.namespace, BsonDocument("_id", BsonObjectId()), true))
 
         doc = config.toBsonDocument()
-        assertFalse(
+        // should be stale from set some pending writes
+        assertTrue(
             doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
         assertFalse(
             doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
