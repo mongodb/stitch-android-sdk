@@ -25,6 +25,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
@@ -43,7 +45,7 @@ public interface Sync<DocumentT> {
    * @param errorListener the error listener to invoke when an irrecoverable error happens
    *                      during data synchronization
    */
-  void configure(final ConflictHandler<DocumentT> conflictResolver,
+  void configure(@Nonnull final ConflictHandler<DocumentT> conflictResolver,
                  final ChangeEventListener<DocumentT> changeEventListener,
                  final ErrorListener errorListener);
 

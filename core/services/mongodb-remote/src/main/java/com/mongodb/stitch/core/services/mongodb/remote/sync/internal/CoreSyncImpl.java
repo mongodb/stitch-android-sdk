@@ -28,6 +28,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import java.util.Set;
+
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
@@ -54,12 +56,12 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   }
 
   @Override
-  public void configure(final ConflictHandler<DocumentT> conflictResolver,
+  public void configure(@Nonnull final ConflictHandler<DocumentT> conflictHandler,
                         final ChangeEventListener<DocumentT> changeEventListener,
                         final ErrorListener errorListener) {
     this.dataSynchronizer.configure(
         namespace,
-        conflictResolver,
+        conflictHandler,
         changeEventListener,
         errorListener,
         this.service.getCodecRegistry().get(documentClass)
@@ -187,9 +189,9 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
       final Bson filter,
       final Class<ResultT> resultClass) {
     return new CoreSyncFindIterableImpl<>(
-            filter,
-            resultClass,
-            service,
-            syncOperations);
+        filter,
+        resultClass,
+        service,
+        syncOperations);
   }
 }

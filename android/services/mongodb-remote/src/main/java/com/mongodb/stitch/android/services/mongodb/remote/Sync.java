@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.android.services.mongodb.remote;
 
+import android.support.annotation.NonNull;
+
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
@@ -43,7 +45,7 @@ public interface Sync<DocumentT> {
    *                         document.
    * @param errorListener the error listener to invoke when an irrecoverable error occurs
    */
-  void configure(final ConflictHandler<DocumentT> conflictHandler,
+  void configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
                  final ChangeEventListener<DocumentT> changeEventListener,
                  final ErrorListener errorListener);
 

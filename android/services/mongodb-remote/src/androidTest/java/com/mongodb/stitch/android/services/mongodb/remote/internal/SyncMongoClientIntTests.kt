@@ -13,9 +13,11 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonValue
@@ -63,15 +65,15 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         addProvider(app.second, ProviderConfigs.Anon)
         addProvider(app2.second, ProviderConfigs.Anon)
         val svc = addService(
-                app.second,
-                "mongodb",
-                "mongodb1",
-                ServiceConfigs.Mongo(getMongoDbUri()))
+            app.second,
+            "mongodb",
+            "mongodb1",
+            ServiceConfigs.Mongo(getMongoDbUri()))
         val svc2 = addService(
-                app2.second,
-                "mongodb",
-                "mongodb1",
-                ServiceConfigs.Mongo(getMongoDbUri()))
+            app2.second,
+            "mongodb",
+            "mongodb1",
+            ServiceConfigs.Mongo(getMongoDbUri()))
 
         val rule = Document()
         rule["read"] = Document()
@@ -137,7 +139,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             coll.configure({ id: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 if (id.equals(doc1Id)) {
                     val merged = localEvent.fullDocument.getInteger("foo") +
-                            remoteEvent.fullDocument.getInteger("foo")
+                        remoteEvent.fullDocument.getInteger("foo")
                     val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
                     newDocument["foo"] = merged
                     newDocument
@@ -152,8 +154,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             goOffline()
             val doc1Update = Document("\$inc", Document("foo", 1))
             val result = Tasks.await(remoteColl.updateOne(
-                    doc1Filter,
-                    doc1Update))
+                doc1Filter,
+                doc1Update))
             assertEquals(1, result.matchedCount)
             streamAndSync()
             assertEquals(doc, Tasks.await(coll.findOneById(doc1Id)))
@@ -178,15 +180,15 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             // resolver.
             val sem = watchForEvents(this.namespace)
             val result2 = Tasks.await(remoteColl.updateOne(
-                    doc1Filter,
-                    withNewVersionIdSet(doc1Update)))
+                doc1Filter,
+                withNewVersionIdSet(doc1Update)))
             sem.acquire()
             assertEquals(1, result2.matchedCount)
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             val result3 = Tasks.await(coll.updateOneById(
-                    doc1Id,
-                    doc1Update))
+                doc1Id,
+                doc1Update))
             assertEquals(1, result3.matchedCount)
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
@@ -392,8 +394,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             val doc1Update = Document("\$inc", Document("foo", 1))
             assertEquals(1, Tasks.await(remoteColl.updateOne(
-                    doc1Filter,
-                    withNewVersionIdSet(doc1Update))).matchedCount)
+                doc1Filter,
+                withNewVersionIdSet(doc1Update))).matchedCount)
 
             goOffline()
             val result = Tasks.await(coll.deleteOneById(doc1Id))
@@ -821,16 +823,16 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             var conflictCounter = 0
 
             testSync.configure(
-                    { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
-                        if (conflictCounter == 0) {
-                            conflictCounter++
-                            errorEmitted = true
-                            throw Exception("ouch")
-                        }
-                        remoteEvent.fullDocument
-                    },
-                    { _: BsonValue, _: ChangeEvent<Document> ->
-                    }, { _, _ ->
+                { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                    if (conflictCounter == 0) {
+                        conflictCounter++
+                        errorEmitted = true
+                        throw Exception("ouch")
+                    }
+                    remoteEvent.fullDocument
+                },
+                { _: BsonValue, _: ChangeEvent<Document> ->
+                }, { _, _ ->
             })
 
             // insert an initial doc
@@ -866,8 +868,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             // it should not have updated the local doc, as the local doc should be frozen
             assertEquals(
-                    withoutId(expectedDoc),
-                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                withoutId(expectedDoc),
+                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
 
             // update the local doc. this should unfreeze the config
             Tasks.await(testSync.updateOneById(result.insertedId, Document("\$set", Document("no", "op"))))
@@ -876,16 +878,16 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             // this should still be the remote doc since remote wins
             assertEquals(
-                    withoutId(nextDoc),
-                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                withoutId(nextDoc),
+                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
 
             // update the doc remotely
             val lastDoc = Document("good night", "computer")
 
             sem = watchForEvents(namespace)
             Tasks.await(remoteColl.updateOne(
-                    Document("_id", result.insertedId),
-                    withNewVersionId(lastDoc)
+                Document("_id", result.insertedId),
+                withNewVersionId(lastDoc)
             ))
             sem.acquire()
 
@@ -894,10 +896,31 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync()
 
             assertEquals(
-                    withoutId(lastDoc),
-                    withoutVersionId(
-                            withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                withoutId(lastDoc),
+                withoutVersionId(
+                    withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
         }
+    }
+
+    @Test
+    fun testConfigure() {
+        val testSync = getTestSync()
+
+        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.enableSyncThread()
+        Assert.assertFalse((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
+
+        val docToInsert = Document("hello", "world")
+        Tasks.await(testSync.insertOneAndSync(docToInsert))
+
+        Assert.assertFalse((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
+
+        testSync.configure(
+            DefaultSyncConflictResolvers.remoteWins(),
+            ChangeEventListener { _, _ -> },
+            ErrorListener { _, _ -> }
+        )
+
+        Assert.assertTrue((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
     }
 
     private fun streamAndSync() {
@@ -966,9 +989,9 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
     private fun withNewVersionIdSet(document: Document): Document {
         return appendDocumentToKey(
-                "\$set",
-                document,
-                Document("__stitch_sync_version", UUID.randomUUID().toString()))
+            "\$set",
+            document,
+            Document("__stitch_sync_version", UUID.randomUUID().toString()))
     }
 
     private fun appendDocumentToKey(key: String, on: Document, toAppend: Document): Document {
