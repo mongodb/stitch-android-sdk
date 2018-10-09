@@ -29,6 +29,7 @@ import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
+import java.lang.Exception
 import java.util.UUID
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
@@ -807,6 +808,95 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync()
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
+        }
+    }
+
+    @Test
+    fun testFrozenDocumentConfig() {
+        testSyncInBothDirections {
+            val testSync = getTestSync()
+            val remoteColl = getTestCollRemote()
+            var errorEmitted = false
+
+            var conflictCounter = 0
+
+            testSync.configure(
+                    { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                        if (conflictCounter == 0) {
+                            conflictCounter++
+                            errorEmitted = true
+                            throw Exception("ouch")
+                        }
+                        remoteEvent.fullDocument
+                    },
+                    { _: BsonValue, _: ChangeEvent<Document> ->
+                    }, { _, _ ->
+            })
+
+            // insert an initial doc
+            val testDoc = Document("hello", "world")
+            val result = Tasks.await(testSync.insertOneAndSync(testDoc))
+
+            // do a sync pass, synchronizing the doc
+            streamAndSync()
+
+            Assert.assertNotNull(Tasks.await(remoteColl.find(Document("_id", testDoc.get("_id"))).first()))
+
+            // update the doc
+            val expectedDoc = Document("hello", "computer")
+            Tasks.await(testSync.updateOneById(result.insertedId, Document("\$set", expectedDoc)))
+
+            // create a conflict
+            var sem = watchForEvents(namespace)
+            Tasks.await(remoteColl.updateOne(Document("_id", result.insertedId), withNewVersionIdSet(Document("\$inc", Document("foo", 2)))))
+            sem.acquire()
+
+            // do a sync pass, and throw an error during the conflict resolver
+            // freezing the document
+            streamAndSync()
+            Assert.assertTrue(errorEmitted)
+
+            // update the doc remotely
+            val nextDoc = Document("hello", "friend")
+
+            sem = watchForEvents(namespace)
+            Tasks.await(remoteColl.updateOne(Document("_id", result.insertedId), nextDoc))
+            sem.acquire()
+            streamAndSync()
+
+            // it should not have updated the local doc, as the local doc should be frozen
+            assertEquals(
+                    withoutId(expectedDoc),
+                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+
+            // update the local doc. this should unfreeze the config
+            Tasks.await(testSync.updateOneById(result.insertedId, Document("\$set", Document("no", "op"))))
+
+            streamAndSync()
+
+            // this should still be the remote doc since remote wins
+            assertEquals(
+                    withoutId(nextDoc),
+                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+
+            // update the doc remotely
+            val lastDoc = Document("good night", "computer")
+
+            sem = watchForEvents(namespace)
+            Tasks.await(remoteColl.updateOne(
+                    Document("_id", result.insertedId),
+                    withNewVersionId(lastDoc)
+            ))
+            sem.acquire()
+
+            // now that we're sync'd and unfrozen, it should be reflected locally
+            // TODO: STITCH-1958 Possible race condition here for update listening
+            streamAndSync()
+
+            assertEquals(
+                    withoutId(lastDoc),
+                    withoutVersionId(
+                            withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
         }
     }
 

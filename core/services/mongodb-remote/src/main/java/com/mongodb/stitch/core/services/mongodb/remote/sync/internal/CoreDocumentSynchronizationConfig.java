@@ -50,7 +50,6 @@ import org.bson.io.OutputBuffer;
 
 
 class CoreDocumentSynchronizationConfig {
-
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
   private final BsonValue documentId;
@@ -59,6 +58,7 @@ class CoreDocumentSynchronizationConfig {
   private long lastResolution;
   private BsonValue lastKnownRemoteVersion;
   private boolean isStale;
+  private boolean isFrozen;
 
   // TODO: How can this be trimmed? The same version could appear after we see it once. That
   // may be a non-issue.
@@ -95,6 +95,7 @@ class CoreDocumentSynchronizationConfig {
     this.committedVersions = config.committedVersions;
     this.lastUncommittedChangeEvent = config.lastUncommittedChangeEvent;
     this.isStale = config.isStale;
+    this.isFrozen = config.isFrozen;
   }
 
   private CoreDocumentSynchronizationConfig(
@@ -104,7 +105,8 @@ class CoreDocumentSynchronizationConfig {
       final long lastResolution,
       final BsonValue lastVersion,
       final Set<BsonValue> committedVersions,
-      final boolean isStale
+      final boolean isStale,
+      final boolean isFrozen
   ) {
     this.namespace = namespace;
     this.documentId = documentId;
@@ -115,6 +117,7 @@ class CoreDocumentSynchronizationConfig {
     this.docLock = new ReentrantReadWriteLock();
     this.docsColl = null;
     this.isStale = isStale;
+    this.isFrozen = isFrozen;
   }
 
   static BsonDocument getDocFilter(
@@ -157,16 +160,53 @@ class CoreDocumentSynchronizationConfig {
   }
 
   /**
+   * A document that is frozen no longer has remote updates applied to it.
+   * Any local updates to this document cause it to be thawed. An example of freezing a document
+   * is when a conflict is being resolved for that document and the handler throws an exception.
+   *
+   * @param isFrozen whether or not this config is frozen
+   */
+  void setFrozen(final boolean isFrozen) {
+    docLock.writeLock().lock();
+    try {
+      docsColl.updateOne(
+          getDocFilter(namespace, documentId),
+          new BsonDocument("$set",
+              new BsonDocument(
+                  ConfigCodec.Fields.IS_FROZEN,
+                  new BsonBoolean(isFrozen))));
+      this.isFrozen = isFrozen;
+    } catch (IllegalStateException e) {
+      // eat this
+    } finally {
+      docLock.writeLock().unlock();
+    }
+  }
+
+  boolean isFrozen() {
+    return isFrozen;
+  }
+
+  /**
    * Sets that there are some pending writes that occurred at a time for an associated
    * locally emitted change event. This variant maintains the last version set.
    *
    * @param atTime      the time at which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  public void setSomePendingWrites(
+  void setSomePendingWrites(
       final long atTime,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
+    // if we were frozen
+    if (isFrozen) {
+      // unfreeze the document due to the local write
+      setFrozen(false);
+      // and now the unfrozen document is now stale
+      // TODO: STITCH-1958 make sure the stream has started before this is set
+      setStale(true);
+    }
+
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent =
@@ -403,6 +443,7 @@ class CoreDocumentSynchronizationConfig {
       final BsonArray committedVersions = new BsonArray(new ArrayList<>(this.committedVersions));
       asDoc.put(ConfigCodec.Fields.COMMITTED_VERSIONS, committedVersions);
       asDoc.put(ConfigCodec.Fields.IS_STALE, new BsonBoolean(isStale));
+      asDoc.put(ConfigCodec.Fields.IS_FROZEN, new BsonBoolean(isFrozen));
       return asDoc;
     } finally {
       docLock.readLock().unlock();
@@ -416,6 +457,7 @@ class CoreDocumentSynchronizationConfig {
     keyPresent(ConfigCodec.Fields.LAST_RESOLUTION_FIELD, document);
     keyPresent(ConfigCodec.Fields.COMMITTED_VERSIONS, document);
     keyPresent(ConfigCodec.Fields.IS_STALE, document);
+    keyPresent(ConfigCodec.Fields.IS_FROZEN, document);
 
     final int schemaVersion =
         document.getNumber(ConfigCodec.Fields.SCHEMA_VERSION_FIELD).intValue();
@@ -457,7 +499,8 @@ class CoreDocumentSynchronizationConfig {
         document.getNumber(ConfigCodec.Fields.LAST_RESOLUTION_FIELD).longValue(),
         lastVersion,
         committedVersions,
-        document.getBoolean(ConfigCodec.Fields.IS_STALE).getValue());
+        document.getBoolean(ConfigCodec.Fields.IS_STALE).getValue(),
+        document.getBoolean(ConfigCodec.Fields.IS_FROZEN, new BsonBoolean(false)).getValue());
   }
 
   static final ConfigCodec configCodec = new ConfigCodec();
@@ -496,6 +539,7 @@ class CoreDocumentSynchronizationConfig {
       static final String LAST_UNCOMMITTED_CHANGE_EVENT = "last_uncommitted_change_event";
       static final String COMMITTED_VERSIONS = "committed_versions";
       static final String IS_STALE = "is_stale";
+      static final String IS_FROZEN = "is_frozen";
     }
   }
 }

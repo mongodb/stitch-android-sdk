@@ -131,7 +131,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
 
   @Override
   public void addWatcher(final MongoNamespace namespace,
-                                     final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     if (nsStreamers.containsKey(namespace)) {
       nsStreamers.get(namespace).addWatcher(watcher);
     }
@@ -139,7 +139,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
 
   @Override
   public void removeWatcher(final MongoNamespace namespace,
-                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                            final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     if (nsStreamers.containsKey(namespace)) {
       nsStreamers.get(namespace).removeWatcher(watcher);
     }
