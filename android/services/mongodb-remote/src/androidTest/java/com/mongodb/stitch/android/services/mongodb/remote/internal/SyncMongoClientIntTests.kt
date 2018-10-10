@@ -187,8 +187,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(remoteColl.find(doc1Filter).first())!!))
             val result3 = Tasks.await(coll.updateOneById(
-                doc1Id,
-                doc1Update))
+                    doc1Id,
+                    doc1Update))
             assertEquals(1, result3.matchedCount)
             expectedDocument["foo"] = 2
             assertEquals(expectedDocument, withoutVersionId(Tasks.await(coll.findOneById(doc1Id))!!))
@@ -868,8 +868,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             // it should not have updated the local doc, as the local doc should be frozen
             assertEquals(
-                withoutId(expectedDoc),
-                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                    withoutId(expectedDoc),
+                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
 
             // update the local doc. this should unfreeze the config
             Tasks.await(testSync.updateOneById(result.insertedId, Document("\$set", Document("no", "op"))))
@@ -989,9 +989,9 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
     private fun withNewVersionIdSet(document: Document): Document {
         return appendDocumentToKey(
-            "\$set",
-            document,
-            Document("__stitch_sync_version", UUID.randomUUID().toString()))
+                "\$set",
+                document,
+                Document("__stitch_sync_version", UUID.randomUUID().toString()))
     }
 
     private fun appendDocumentToKey(key: String, on: Document, toAppend: Document): Document {

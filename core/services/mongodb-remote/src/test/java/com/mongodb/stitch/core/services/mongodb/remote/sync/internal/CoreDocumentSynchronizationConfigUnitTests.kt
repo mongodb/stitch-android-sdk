@@ -51,7 +51,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
             ServerEmbeddedMongoClientFactory.getInstance()
     )
     private val coll by lazy {
-            localClient.getDatabase(namespace.databaseName)
+        localClient.getDatabase(namespace.databaseName)
                 .withCodecRegistry(CodecRegistries.fromRegistries(
                         CodecRegistries.fromCodecs(
                                 InstanceSynchronizationConfig.configCodec,
@@ -59,8 +59,8 @@ class CoreDocumentSynchronizationConfigUnitTests {
                                 CoreDocumentSynchronizationConfig.configCodec),
                         BsonUtils.DEFAULT_CODEC_REGISTRY))
                 .getCollection(
-                        namespace.collectionName,
-                        CoreDocumentSynchronizationConfig::class.java)
+                    namespace.collectionName,
+                    CoreDocumentSynchronizationConfig::class.java)
     }
 
     @Test

@@ -1607,11 +1607,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             emitError(
                 namespaceSynchronizationConfig.getSynchronizedDocument(documentId),
                 String.format(
-                    Locale.US,
-                    "emitEvent ns=%s documentId=%s emit exception: %s",
-                    event.getNamespace(),
-                    documentId,
-                    ex),
+                Locale.US,
+                "emitEvent ns=%s documentId=%s emit exception: %s",
+                event.getNamespace(),
+                documentId,
+                ex),
                 ex);
           }
           return null;
