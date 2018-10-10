@@ -21,11 +21,8 @@ import org.bson.BsonObjectId
 import org.bson.Document
 
 import org.bson.codecs.BsonDocumentCodec
-import org.bson.codecs.Decoder
 import org.junit.After
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
