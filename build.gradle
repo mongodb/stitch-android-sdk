@@ -26,6 +26,11 @@ buildscript {
     }
 }
 
+Properties properties = new Properties()
+if (project.rootProject.file('local.properties').exists()) {
+    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+}
+
 subprojects {
     def projectName = project.displayName.substring(
             project.displayName.indexOf(":")+1, project.displayName.length()-1).replace(":", "_")
@@ -97,7 +102,7 @@ subprojects {
         licenses {
             license {
                 name "The Apache Software License, Version 2.0"
-                url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                url "https://www.apache.org/licenses/LICENSE-2.0.txt"
                 distribution "repo"
             }
         }
@@ -144,11 +149,6 @@ subprojects {
             test {
                 outputs.upToDateWhen { false }
 
-                Properties properties = new Properties()
-                File file = project.rootProject.file('local.properties')
-                if (file.exists()) {
-                    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-                }
                 systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
             }
 
@@ -187,6 +187,18 @@ subprojects {
                             root.appendNode('name', "MongoDB Stitch Android/Java SDK - $displayName")
                             root.appendNode('description', "MongoDB Stitch Android/Java SDK - $displayName")
                             root.children().last() + pomConfig
+                        }
+                    }
+                }
+
+                repositories {
+                    def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+                    def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                    maven {
+                        url = project.version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                        credentials {
+                            username properties.getProperty("nexusUsername", "")
+                            password properties.getProperty("nexusPassword", "")
                         }
                     }
                 }
@@ -240,6 +252,18 @@ subprojects {
                         }
                     }
                 }
+
+                repositories {
+                    def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+                    def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                    maven {
+                        url = project.version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                        credentials {
+                            username properties.getProperty("nexusUsername", "")
+                            password properties.getProperty("nexusPassword", "")
+                        }
+                    }
+                }
             }
 
             coveralls {
@@ -258,12 +282,6 @@ subprojects {
         }
 
         if (project.plugins.hasPlugin("com.jfrog.bintray")) {
-            Properties properties = new Properties()
-            File file = project.rootProject.file('local.properties')
-            if (file.exists()) {
-                properties.load(project.rootProject.file('local.properties').newDataInputStream())
-            }
-
             def user = properties.getProperty("publish.bintray.user", "")
             def apiKey = properties.getProperty("publish.bintray.apiKey", "")
             def gpgPassphrase = properties.getProperty("publish.bintray.gpgPassphrase", "")
@@ -296,7 +314,7 @@ subprojects {
                         }
                         if (!mavenSyncUser.isEmpty()) {
                             mavenCentralSync {
-                                sync = false
+                                sync = true
                                 owner.user = mavenSyncUser
                                 password = mavenSyncPassword
                                 close = '1'
@@ -305,6 +323,14 @@ subprojects {
                     }
                 }
                 publications = ['maven']
+            }
+
+            task publishSnapshots {
+                group = 'publishing'
+                description = 'Publishes snapshots to Sonatype'
+                if (version.endsWith('-SNAPSHOT')) {
+                    dependsOn tasks.withType(PublishToMavenRepository)
+                }
             }
         }
     }
