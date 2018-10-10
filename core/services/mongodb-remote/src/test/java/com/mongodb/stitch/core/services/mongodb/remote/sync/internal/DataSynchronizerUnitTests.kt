@@ -12,10 +12,18 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoC
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoDatabaseImpl
 import com.mongodb.stitch.core.services.mongodb.remote.internal.TestUtils
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
+
+import org.bson.codecs.BsonDocumentCodec
 import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
@@ -55,26 +63,31 @@ class DataSynchronizerUnitTests {
         )
     }
 
-    @Test
-    fun testCoreDocumentSynchronizationConfigIsFrozenCheck() {
-        // create a datasynchronizer with an injected remote client
-        val instanceKey = "${Random().nextInt()}"
+    private val instanceKey = "${Random().nextInt()}"
+    private val service = spy(
+        CoreStitchServiceClientImpl(
+            Mockito.mock(StitchAuthRequestClient::class.java),
+            StitchServiceRoutes("foo"),
+            BsonUtils.DEFAULT_CODEC_REGISTRY)
+    )
 
-        val routes = StitchServiceRoutes("foo")
-        val requestClient = Mockito.mock(StitchAuthRequestClient::class.java)
-        val remoteClient = spy(CoreRemoteMongoClientImpl(
-            spy(CoreStitchServiceClientImpl(
-                requestClient,
-                routes,
-                BsonUtils.DEFAULT_CODEC_REGISTRY)
-            ),
-            instanceKey,
-            localClient,
-            networkMonitor,
-            authMonitor
-        ))
+    private val remoteClient = spy(CoreRemoteMongoClientImpl(
+        service,
+        instanceKey,
+        localClient,
+        networkMonitor,
+        authMonitor
+    ))
+
+    @Before
+    fun setup() {
         remoteClient.dataSynchronizer.stop()
+    }
 
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun testCoreDocumentSynchronizationConfigIsFrozenCheck() {
+        // create a dataSynchronizer with an injected remote client
         val id1 = BsonObjectId()
 
         val dataSynchronizer = spy(DataSynchronizer(
@@ -120,5 +133,58 @@ class DataSynchronizerUnitTests {
         dataSynchronizer.doSyncPass()
 
         verify(remoteMongoCollection, times(1)).insertOne(any())
+    }
+
+    @Test
+    @Suppress("UNCHECKED_CAST")
+    fun testConfigure() {
+        // spy a new DataSynchronizer
+        val dataSynchronizer = spy(DataSynchronizer(
+            instanceKey,
+            service,
+            localClient,
+            remoteClient,
+            networkMonitor,
+            authMonitor
+        ))
+
+        // without a configuration it should not be
+        // configured or running
+        assertFalse(dataSynchronizer.isRunning)
+
+        // mock the necessary config args
+        val conflictHandler = mock(ConflictHandler::class.java) as ConflictHandler<BsonDocument>
+        val changeEventListener = mock(ChangeEventListener::class.java) as ChangeEventListener<BsonDocument>
+        val errorListener = mock(ErrorListener::class.java)
+        val bsonCodec = BsonDocumentCodec()
+
+        // insert a pseudo doc
+        dataSynchronizer.insertOneAndSync(namespace, BsonDocument())
+        // verify that, though triggerListeningToNamespace was called,
+        // it was short circuited and never attempted to open the stream
+        verify(dataSynchronizer, times(1)).triggerListeningToNamespace(any())
+
+        // configure the dataSynchronizer,
+        // which should pass down the configuration to the namespace config
+        // this should also trigger listening to the namespace And attempt to open the stream
+        dataSynchronizer.configure(namespace, conflictHandler, changeEventListener, errorListener, bsonCodec)
+
+        // verify that the data synchronizer has triggered the namespace,
+        // has started itself, and has attempted to open the stream for the namespace
+        verify(dataSynchronizer, times(2)).triggerListeningToNamespace(any())
+        verify(dataSynchronizer, times(1)).start()
+
+        // assert that the dataSynchronizer is concretely running
+        assertTrue(dataSynchronizer.isRunning)
+
+        // configuring again, verifying that the data synchronizer does NOT
+        // trigger the namespace or start up a second time
+        dataSynchronizer.configure(namespace, conflictHandler, changeEventListener, errorListener, bsonCodec)
+
+        verify(dataSynchronizer, times(2)).triggerListeningToNamespace(any())
+        verify(dataSynchronizer, times(1)).start()
+
+        // assert that nothing has changed about our state
+        assertTrue(dataSynchronizer.isRunning)
     }
 }

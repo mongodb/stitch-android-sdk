@@ -28,6 +28,9 @@ import com.mongodb.stitch.server.services.mongodb.remote.SyncFindIterable;
 
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
@@ -42,9 +45,9 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(final ConflictHandler<DocumentT> conflictResolver,
-                        final ChangeEventListener<DocumentT> changeEventListener,
-                        final ErrorListener errorListener) {
+  public void configure(@Nonnull final ConflictHandler<DocumentT> conflictResolver,
+                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                        @Nullable final ErrorListener errorListener) {
     this.proxy.configure(conflictResolver, changeEventListener, errorListener);
   }
 

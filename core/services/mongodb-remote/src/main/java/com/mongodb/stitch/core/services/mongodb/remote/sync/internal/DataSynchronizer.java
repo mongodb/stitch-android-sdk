@@ -61,6 +61,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -103,6 +106,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   private InstanceSynchronizationConfig syncConfig;
   private boolean syncThreadEnabled = true;
+  private boolean isConfigured = false;
+  private boolean isRunning = false;
   private Thread syncThread;
   private long logicalT = 0; // The current logical time or sync iteration.
 
@@ -195,24 +200,46 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           networkMonitor,
           authMonitor
       );
+      this.isConfigured = false;
+      this.stop();
     } finally {
       syncLock.unlock();
     }
   }
 
+  public <T> void configure(@Nonnull final MongoNamespace namespace,
+                            @Nonnull final ConflictHandler<T> conflictHandler,
+                            @Nullable final ChangeEventListener<T> changeEventListener,
+                            @Nullable final ErrorListener errorListener,
+                            @Nonnull final Codec<T> codec) {
+    if (conflictHandler == null) {
+      logger.warn(
+          "Invalid configuration: conflictHandler should not be null. "
+              + "The DataSynchronizer will not begin syncing until a ConflictHandler has been "
+              + "provided.");
+      return;
+    }
 
-  public <T> void configure(final MongoNamespace namespace,
-                            final ConflictHandler<T> conflictHandler,
-                            final ChangeEventListener<T> changeEventListener,
-                            final ErrorListener errorListener,
-                            final Codec<T> codec) {
     this.errorListener = errorListener;
+
     this.syncConfig.getNamespaceConfig(namespace).configure(
         conflictHandler,
         changeEventListener,
         codec
     );
-    this.triggerListeningToNamespace(namespace);
+
+    syncLock.lock();
+    if (!this.isConfigured) {
+      this.isConfigured = true;
+      syncLock.unlock();
+      this.triggerListeningToNamespace(namespace);
+    } else {
+      syncLock.unlock();
+    }
+
+    if (!isRunning) {
+      this.start();
+    }
   }
 
   /**
@@ -221,7 +248,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public void start() {
     syncLock.lock();
     try {
-      if (syncThread != null) {
+      if (syncThread != null || !this.isConfigured) {
         return;
       }
       instanceChangeStreamListener.start();
@@ -231,6 +258,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           logger));
       if (syncThreadEnabled) {
         syncThread.start();
+        isRunning = true;
       }
     } finally {
       syncLock.unlock();
@@ -263,6 +291,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return;
       }
       syncThread = null;
+      isRunning = false;
     } finally {
       syncLock.unlock();
     }
@@ -1025,6 +1054,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } else {
       // Update the document locally which will keep the pending writes but with
       // a new version next time around.
+      @SuppressWarnings("unchecked")
       final BsonDocument docForStorage =
           BsonUtils.documentToBsonDocument(
               resolvedDocument,
@@ -1467,7 +1497,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     emitEvent(documentId, changeEventForLocalDelete(namespace, documentId, false));
   }
 
-  private void triggerListeningToNamespace(final MongoNamespace namespace) {
+  void triggerListeningToNamespace(final MongoNamespace namespace) {
     syncLock.lock();
     try {
       final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
@@ -1491,6 +1521,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } finally {
       syncLock.unlock();
     }
+  }
+
+  /**
+   * Whether or not the DataSynchronizer is running in the background.
+   *
+   * @return true if running, false if not
+   */
+  public boolean isRunning() {
+    return isRunning;
   }
 
   public boolean areAllStreamsOpen() {

@@ -899,6 +899,39 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         }
     }
 
+    @Test
+    fun testConfigure() {
+        val testSync = getTestSync()
+        val remoteColl = getTestCollRemote()
+
+        val docToInsert = Document("hello", "world")
+        val insertedId = testSync.insertOneAndSync(docToInsert).insertedId
+
+        var hasConflictHandlerBeenInvoked = false
+        var hasChangeEventListenerBeenInvoked = false
+
+        testSync.configure(
+            { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                hasConflictHandlerBeenInvoked = true
+                assertEquals(remoteEvent.fullDocument["fly"], "away")
+                remoteEvent.fullDocument
+            },
+            { _: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+            },
+            { _, _ -> }
+        )
+
+        val sem = watchForEvents(namespace)
+        remoteColl.insertOne(Document("_id", insertedId).append("fly", "away"))
+        sem.acquire()
+
+        streamAndSync()
+
+        assertTrue(hasConflictHandlerBeenInvoked)
+        assertTrue(hasChangeEventListenerBeenInvoked)
+    }
+
     private fun streamAndSync() {
         val dataSync = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
         if (testNetworkMonitor.connectedState) {

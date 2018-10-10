@@ -47,7 +47,6 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient {
         networkMonitor,
         authMonitor
     );
-    this.dataSynchronizer.start();
   }
 
   /**

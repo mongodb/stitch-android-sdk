@@ -22,6 +22,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
@@ -33,15 +36,15 @@ import org.bson.conversions.Bson;
 public interface CoreSync<DocumentT> {
   /**
    * Set the conflict resolver and and change event listener on this collection.
-   * @param conflictResolver the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
+   * @param conflictHandler the conflict resolver to invoke when a conflict happens between local
+   *                        and remote events.
    * @param changeEventListener the event listener to invoke when a change event happens for the
    *                         document.
    * @param errorListener the error listener to invoke when an irrecoverable error occurs
    */
-  void configure(final ConflictHandler<DocumentT> conflictResolver,
-                 final ChangeEventListener<DocumentT> changeEventListener,
-                 final ErrorListener errorListener);
+  void configure(@Nonnull final ConflictHandler<DocumentT> conflictHandler,
+                 @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                 @Nullable final ErrorListener errorListener);
 
   /**
    * Requests that the given document _id be synchronized.
