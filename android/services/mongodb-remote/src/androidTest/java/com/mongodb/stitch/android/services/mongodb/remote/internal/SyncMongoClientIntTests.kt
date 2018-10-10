@@ -907,12 +907,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         val testSync = getTestSync()
         val remoteColl = getTestCollRemote()
 
-        Assert.assertFalse((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
-
         val docToInsert = Document("hello", "world")
         val insertedId = Tasks.await(testSync.insertOneAndSync(docToInsert)).insertedId
-
-        Assert.assertFalse((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
 
         var hasConflictHandlerBeenInvoked = false
         var hasChangeEventListenerBeenInvoked = false

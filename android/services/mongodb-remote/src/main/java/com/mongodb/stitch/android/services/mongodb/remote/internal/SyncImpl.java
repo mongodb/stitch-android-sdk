@@ -17,6 +17,7 @@
 package com.mongodb.stitch.android.services.mongodb.remote.internal;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
@@ -48,8 +49,8 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
 
   @Override
   public void configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
-                        final ChangeEventListener<DocumentT> changeEventListener,
-                        final ErrorListener errorListener) {
+                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                        @Nullable final ErrorListener errorListener) {
     this.proxy.configure(conflictHandler, changeEventListener, errorListener);
   }
 

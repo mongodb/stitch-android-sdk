@@ -57,8 +57,8 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
 
   @Override
   public void configure(@Nonnull final ConflictHandler<DocumentT> conflictHandler,
-                        final ChangeEventListener<DocumentT> changeEventListener,
-                        final ErrorListener errorListener) {
+                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                        @Nullable final ErrorListener errorListener) {
     this.dataSynchronizer.configure(
         namespace,
         conflictHandler,

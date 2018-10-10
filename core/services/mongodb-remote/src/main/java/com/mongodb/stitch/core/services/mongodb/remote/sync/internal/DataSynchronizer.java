@@ -62,6 +62,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -208,9 +209,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   public <T> void configure(@Nonnull final MongoNamespace namespace,
                             @Nonnull final ConflictHandler<T> conflictHandler,
-                            final ChangeEventListener<T> changeEventListener,
-                            final ErrorListener errorListener,
-                            final Codec<T> codec) {
+                            @Nullable final ChangeEventListener<T> changeEventListener,
+                            @Nullable final ErrorListener errorListener,
+                            @Nonnull final Codec<T> codec) {
     if (conflictHandler == null) {
       logger.warn(
           "Invalid configuration: conflictHandler should not be null. "
