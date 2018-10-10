@@ -90,7 +90,7 @@ class DataSynchronizerUnitTests {
     @Test
     @Suppress("UNCHECKED_CAST")
     fun testCoreDocumentSynchronizationConfigIsFrozenCheck() {
-        // create a datasynchronizer with an injected remote client
+        // create a dataSynchronizer with an injected remote client
         val id1 = BsonObjectId()
 
         val dataSynchronizer = spy(DataSynchronizer(

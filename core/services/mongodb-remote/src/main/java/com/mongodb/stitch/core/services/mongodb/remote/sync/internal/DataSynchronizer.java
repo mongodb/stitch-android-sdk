@@ -229,15 +229,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     );
 
     syncLock.lock();
-    if (!this.isConfigured) {
-      try {
+    try {
+      if (!this.isConfigured) {
         this.isConfigured = true;
-      } finally {
-        syncLock.unlock();
+        this.triggerListeningToNamespace(namespace);
       }
-      this.triggerListeningToNamespace(namespace);
+    } finally {
+      syncLock.unlock();
     }
-
     if (!isRunning) {
       this.start();
     }
@@ -1055,6 +1054,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } else {
       // Update the document locally which will keep the pending writes but with
       // a new version next time around.
+      @SuppressWarnings("unchecked")
       final BsonDocument docForStorage =
           BsonUtils.documentToBsonDocument(
               resolvedDocument,
