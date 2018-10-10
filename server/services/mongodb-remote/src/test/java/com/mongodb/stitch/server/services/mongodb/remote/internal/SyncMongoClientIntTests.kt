@@ -823,17 +823,17 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             var conflictCounter = 0
 
             testSync.configure(
-                { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
-                    if (conflictCounter == 0) {
-                        conflictCounter++
-                        errorEmitted = true
-                        throw Exception("ouch")
-                    }
-                    remoteEvent.fullDocument
-                },
-                { _: BsonValue, _: ChangeEvent<Document> ->
-                }, { _, _ ->
-            })
+                    { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                        if (conflictCounter == 0) {
+                            conflictCounter++
+                            errorEmitted = true
+                            throw Exception("ouch")
+                        }
+                        remoteEvent.fullDocument
+                    },
+                    { _: BsonValue, _: ChangeEvent<Document> ->
+                    }, { _, _ ->
+                    })
 
             // insert an initial doc
             val testDoc = Document("hello", "world")
