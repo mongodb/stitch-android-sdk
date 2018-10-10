@@ -18,7 +18,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
-import org.bson.Document
 
 import org.bson.codecs.BsonDocumentCodec
 import org.junit.After
@@ -27,8 +26,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyList
-import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
@@ -166,7 +163,6 @@ class DataSynchronizerUnitTests {
         // verify that, though triggerListeningToNamespace was called,
         // it was short circuited and never attempted to open the stream
         verify(dataSynchronizer, times(1)).triggerListeningToNamespace(any())
-        verify(service, times(0)).streamFunction<ChangeEvent<BsonDocument>>(anyString(), anyList<Document>(), any())
 
         // configure the dataSynchronizer,
         // which should pass down the configuration to the namespace config
@@ -176,7 +172,6 @@ class DataSynchronizerUnitTests {
         // verify that the data synchronizer has triggered the namespace,
         // has started itself, and has attempted to open the stream for the namespace
         verify(dataSynchronizer, times(2)).triggerListeningToNamespace(any())
-        verify(service, times(1)).streamFunction<ChangeEvent<BsonDocument>>(anyString(), anyList<Document>(), any())
         verify(dataSynchronizer, times(1)).start()
 
         // assert that the dataSynchronizer is concretely running
