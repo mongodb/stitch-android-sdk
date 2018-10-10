@@ -229,14 +229,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     );
 
     syncLock.lock();
-    try {
-      if (!this.isConfigured) {
-        this.isConfigured = true;
-        this.triggerListeningToNamespace(namespace);
-      }
-    } finally {
+    if (!this.isConfigured) {
+      this.isConfigured = true;
+      syncLock.unlock();
+      this.triggerListeningToNamespace(namespace);
+    } else {
       syncLock.unlock();
     }
+
     if (!isRunning) {
       this.start();
     }
@@ -1530,15 +1530,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   public boolean isRunning() {
     return isRunning;
-  }
-
-  /**
-   * Whether or not the DataSynchronizer has been configured
-   *
-   * @return true if configured, false if not
-   */
-  synchronized boolean isConfigured() {
-    return isConfigured;
   }
 
   public boolean areAllStreamsOpen() {

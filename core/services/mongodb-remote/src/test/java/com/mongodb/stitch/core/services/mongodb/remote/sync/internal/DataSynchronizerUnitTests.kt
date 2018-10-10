@@ -153,7 +153,6 @@ class DataSynchronizerUnitTests {
 
         // without a configuration it should not be
         // configured or running
-        assertFalse(dataSynchronizer.isConfigured)
         assertFalse(dataSynchronizer.isRunning)
 
         // mock the necessary config args
@@ -180,9 +179,8 @@ class DataSynchronizerUnitTests {
         verify(service, times(1)).streamFunction<ChangeEvent<BsonDocument>>(anyString(), anyList<Document>(), any())
         verify(dataSynchronizer, times(1)).start()
 
-        // assert that the dataSynchronizer is concretely running and configured
+        // assert that the dataSynchronizer is concretely running
         assertTrue(dataSynchronizer.isRunning)
-        assertTrue(dataSynchronizer.isConfigured)
 
         // configuring again, verifying that the data synchronizer does NOT
         // trigger the namespace or start up a second time
@@ -193,6 +191,5 @@ class DataSynchronizerUnitTests {
 
         // assert that nothing has changed about our state
         assertTrue(dataSynchronizer.isRunning)
-        assertTrue(dataSynchronizer.isConfigured)
     }
 }
