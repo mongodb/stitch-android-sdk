@@ -199,6 +199,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           networkMonitor,
           authMonitor
       );
+      this.isConfigured = false;
+      this.stop();
     } finally {
       syncLock.unlock();
     }
