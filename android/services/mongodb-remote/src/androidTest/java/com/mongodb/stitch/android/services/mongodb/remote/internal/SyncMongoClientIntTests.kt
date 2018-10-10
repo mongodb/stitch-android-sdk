@@ -65,15 +65,15 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         addProvider(app.second, ProviderConfigs.Anon)
         addProvider(app2.second, ProviderConfigs.Anon)
         val svc = addService(
-            app.second,
-            "mongodb",
-            "mongodb1",
-            ServiceConfigs.Mongo(getMongoDbUri()))
+                app.second,
+                "mongodb",
+                "mongodb1",
+                ServiceConfigs.Mongo(getMongoDbUri()))
         val svc2 = addService(
-            app2.second,
-            "mongodb",
-            "mongodb1",
-            ServiceConfigs.Mongo(getMongoDbUri()))
+                app2.second,
+                "mongodb",
+                "mongodb1",
+                ServiceConfigs.Mongo(getMongoDbUri()))
 
         val rule = Document()
         rule["read"] = Document()
@@ -139,7 +139,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             coll.configure({ id: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 if (id.equals(doc1Id)) {
                     val merged = localEvent.fullDocument.getInteger("foo") +
-                        remoteEvent.fullDocument.getInteger("foo")
+                            remoteEvent.fullDocument.getInteger("foo")
                     val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
                     newDocument["foo"] = merged
                     newDocument
@@ -154,8 +154,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             goOffline()
             val doc1Update = Document("\$inc", Document("foo", 1))
             val result = Tasks.await(remoteColl.updateOne(
-                doc1Filter,
-                doc1Update))
+                    doc1Filter,
+                    doc1Update))
             assertEquals(1, result.matchedCount)
             streamAndSync()
             assertEquals(doc, Tasks.await(coll.findOneById(doc1Id)))
@@ -180,8 +180,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             // resolver.
             val sem = watchForEvents(this.namespace)
             val result2 = Tasks.await(remoteColl.updateOne(
-                doc1Filter,
-                withNewVersionIdSet(doc1Update)))
+                    doc1Filter,
+                    withNewVersionIdSet(doc1Update)))
             sem.acquire()
             assertEquals(1, result2.matchedCount)
             expectedDocument["foo"] = 2
@@ -394,8 +394,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             val doc1Update = Document("\$inc", Document("foo", 1))
             assertEquals(1, Tasks.await(remoteColl.updateOne(
-                doc1Filter,
-                withNewVersionIdSet(doc1Update))).matchedCount)
+                    doc1Filter,
+                    withNewVersionIdSet(doc1Update))).matchedCount)
 
             goOffline()
             val result = Tasks.await(coll.deleteOneById(doc1Id))
@@ -823,16 +823,16 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             var conflictCounter = 0
 
             testSync.configure(
-                { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
-                    if (conflictCounter == 0) {
-                        conflictCounter++
-                        errorEmitted = true
-                        throw Exception("ouch")
-                    }
-                    remoteEvent.fullDocument
-                },
-                { _: BsonValue, _: ChangeEvent<Document> ->
-                }, { _, _ ->
+                    { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                        if (conflictCounter == 0) {
+                            conflictCounter++
+                            errorEmitted = true
+                            throw Exception("ouch")
+                        }
+                        remoteEvent.fullDocument
+                    },
+                    { _: BsonValue, _: ChangeEvent<Document> ->
+                    }, { _, _ ->
             })
 
             // insert an initial doc
@@ -878,16 +878,16 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             // this should still be the remote doc since remote wins
             assertEquals(
-                withoutId(nextDoc),
-                withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                    withoutId(nextDoc),
+                    withoutVersionId(withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
 
             // update the doc remotely
             val lastDoc = Document("good night", "computer")
 
             sem = watchForEvents(namespace)
             Tasks.await(remoteColl.updateOne(
-                Document("_id", result.insertedId),
-                withNewVersionId(lastDoc)
+                    Document("_id", result.insertedId),
+                    withNewVersionId(lastDoc)
             ))
             sem.acquire()
 
@@ -896,9 +896,9 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync()
 
             assertEquals(
-                withoutId(lastDoc),
-                withoutVersionId(
-                    withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
+                    withoutId(lastDoc),
+                    withoutVersionId(
+                            withoutId(Tasks.await(testSync.find(Document("_id", result.insertedId)).first())!!)))
         }
     }
 

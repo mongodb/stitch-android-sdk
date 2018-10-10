@@ -995,11 +995,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         remoteEvent.getOperationType()));
 
     final Object resolvedDocument;
+    final ChangeEvent transformedRemoteEvent;
     try {
       final ChangeEvent transformedLocalEvent = ChangeEvent.transformChangeEventForUser(
           docConfig.getLastUncommittedChangeEvent(),
           syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
-      final ChangeEvent transformedRemoteEvent =
+      transformedRemoteEvent =
           ChangeEvent.transformChangeEventForUser(
               remoteEvent,
               syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
@@ -1043,7 +1044,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final boolean acceptRemote =
         (remoteEvent.getFullDocument() == null && resolvedDocument == null)
             || (remoteEvent.getFullDocument() != null
-            && remoteEvent.getFullDocument().equals(resolvedDocument));
+            && transformedRemoteEvent.getFullDocument().equals(resolvedDocument));
 
     if (resolvedDocument == null) {
       logger.info(String.format(
@@ -1156,12 +1157,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * Queues up a callback to be removed and invoked on the next change event.
    */
   public void addWatcher(final MongoNamespace namespace,
-                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                                     final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     instanceChangeStreamListener.addWatcher(namespace, watcher);
   }
 
   public void removeWatcher(final MongoNamespace namespace,
-                            final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     instanceChangeStreamListener.removeWatcher(namespace, watcher);
   }
 

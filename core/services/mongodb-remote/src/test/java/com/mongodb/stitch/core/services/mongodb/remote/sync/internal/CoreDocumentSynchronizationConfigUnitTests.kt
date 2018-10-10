@@ -38,29 +38,29 @@ class CoreDocumentSynchronizationConfigUnitTests {
 
     private val authMonitor = AuthMonitor { true }
     private val localClient = SyncMongoClientFactory.getClient(
-        StitchAppClientInfo(
-            "<client-app-id>",
-            System.getProperty("java.io.tmpdir"),
-            "<local-app-name>",
-            "<local-app-version>",
-            BsonUtils.DEFAULT_CODEC_REGISTRY,
-            networkMonitor,
-            authMonitor
-        ),
-        "mongodblocal",
-        ServerEmbeddedMongoClientFactory.getInstance()
+            StitchAppClientInfo(
+                    "<client-app-id>",
+                    System.getProperty("java.io.tmpdir"),
+                    "<local-app-name>",
+                    "<local-app-version>",
+                    BsonUtils.DEFAULT_CODEC_REGISTRY,
+                    networkMonitor,
+                    authMonitor
+            ),
+            "mongodblocal",
+            ServerEmbeddedMongoClientFactory.getInstance()
     )
     private val coll by lazy {
-        localClient.getDatabase(namespace.databaseName)
-            .withCodecRegistry(CodecRegistries.fromRegistries(
-                CodecRegistries.fromCodecs(
-                    InstanceSynchronizationConfig.configCodec,
-                    NamespaceSynchronizationConfig.configCodec,
-                    CoreDocumentSynchronizationConfig.configCodec),
-                BsonUtils.DEFAULT_CODEC_REGISTRY))
-            .getCollection(
-                namespace.collectionName,
-                CoreDocumentSynchronizationConfig::class.java)
+            localClient.getDatabase(namespace.databaseName)
+                .withCodecRegistry(CodecRegistries.fromRegistries(
+                        CodecRegistries.fromCodecs(
+                                InstanceSynchronizationConfig.configCodec,
+                                NamespaceSynchronizationConfig.configCodec,
+                                CoreDocumentSynchronizationConfig.configCodec),
+                        BsonUtils.DEFAULT_CODEC_REGISTRY))
+                .getCollection(
+                        namespace.collectionName,
+                        CoreDocumentSynchronizationConfig::class.java)
     }
 
     @Test
@@ -68,11 +68,11 @@ class CoreDocumentSynchronizationConfigUnitTests {
         val docFilter = CoreDocumentSynchronizationConfig.getDocFilter(namespace, id)
 
         assertEquals(
-            docFilter[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD],
-            BsonString(namespace.toString()))
+                docFilter[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD],
+                BsonString(namespace.toString()))
         assertEquals(
-            docFilter[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD],
-            id)
+                docFilter[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD],
+                id)
     }
 
     @Test
@@ -91,7 +91,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
 
         config = CoreDocumentSynchronizationConfig(
-            coll, CoreDocumentSynchronizationConfig.fromBsonDocument(doc))
+                coll, CoreDocumentSynchronizationConfig.fromBsonDocument(doc))
 
         assertTrue(config.isStale)
 
