@@ -227,8 +227,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         codec
     );
 
+    syncLock.lock();
     if (!this.isConfigured) {
-      syncLock.lock();
       try {
         this.isConfigured = true;
       } finally {
@@ -260,15 +260,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         syncThread.start();
         isRunning = true;
       }
-    } finally {
-      syncLock.unlock();
-    }
-  }
-
-  public void enableSyncThread() {
-    syncLock.lock();
-    try {
-      syncThreadEnabled = true;
     } finally {
       syncLock.unlock();
     }
@@ -1178,16 +1169,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   /**
-   * Returns the namespace config for a given namespace
-   *
-   * @param namespace the namespace to get the config for.
-   * @return the namespace config for the namespace
-   */
-  NamespaceSynchronizationConfig getNamespaceConfig(final MongoNamespace namespace) {
-    return this.syncConfig.getNamespaceConfig(namespace);
-  }
-
-  /**
    * Returns the set of synchronized documents in a namespace.
    *
    * @param namespace the namespace to get synchronized documents for.
@@ -1555,7 +1536,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *
    * @return true if configured, false if not
    */
-  boolean isConfigured() {
+  synchronized boolean isConfigured() {
     return isConfigured;
   }
 

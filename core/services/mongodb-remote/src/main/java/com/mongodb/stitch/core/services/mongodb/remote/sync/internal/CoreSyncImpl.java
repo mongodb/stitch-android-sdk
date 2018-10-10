@@ -189,9 +189,9 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
       final Bson filter,
       final Class<ResultT> resultClass) {
     return new CoreSyncFindIterableImpl<>(
-          filter,
-          resultClass,
-          service,
-          syncOperations);
+            filter,
+            resultClass,
+            service,
+            syncOperations);
   }
 }

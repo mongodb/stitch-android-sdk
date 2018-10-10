@@ -18,8 +18,10 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
+import org.bson.Document
 
 import org.bson.codecs.BsonDocumentCodec
+import org.bson.codecs.Decoder
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,6 +30,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.anyList
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
@@ -159,29 +163,22 @@ class DataSynchronizerUnitTests {
         val errorListener = mock(ErrorListener::class.java)
         val bsonCodec = BsonDocumentCodec()
 
-        // fetch a new namespace, creating a new config
-        val nsConfig: NamespaceSynchronizationConfig = dataSynchronizer.getNamespaceConfig(namespace)
-        // add a synchronized document to establish the namespace
-        nsConfig.addSynchronizedDocument(namespace, BsonObjectId())
-        assertNull(nsConfig.namespaceListenerConfig)
+        // insert a pseudo doc
+        dataSynchronizer.insertOneAndSync(namespace, BsonDocument())
+        // verify that, though triggerListeningToNamespace was called,
+        // it was short circuited and never attempted to open the stream
+        verify(dataSynchronizer, times(1)).triggerListeningToNamespace(any())
+        verify(service, times(0)).streamFunction<ChangeEvent<BsonDocument>>(anyString(), anyList<Document>(), any())
 
         // configure the dataSynchronizer,
         // which should pass down the configuration to the namespace config
+        // this should also trigger listening to the namespace And attempt to open the stream
         dataSynchronizer.configure(namespace, conflictHandler, changeEventListener, errorListener, bsonCodec)
 
-        // make dummy calls on the conflict handler and event listener, asserting these are the
-        // same as our original handlers and listeners
-        nsConfig.conflictHandler.resolveConflict(null, null, null)
-        nsConfig.namespaceListenerConfig.eventListener.onEvent(null, null)
-
-        // verify the appropriate methods have been called on our config
-        verify(conflictHandler, times(1)).resolveConflict(any(), any(), any())
-        verify(changeEventListener, times(1)).onEvent(any(), any())
-        assertEquals(nsConfig.namespaceListenerConfig.documentCodec, bsonCodec)
-
-        // verify that the data synchronizer has triggered the namespace
-        // and has started itself
-        verify(dataSynchronizer, times(1)).triggerListeningToNamespace(any())
+        // verify that the data synchronizer has triggered the namespace,
+        // has started itself, and has attempted to open the stream for the namespace
+        verify(dataSynchronizer, times(2)).triggerListeningToNamespace(any())
+        verify(service, times(1)).streamFunction<ChangeEvent<BsonDocument>>(anyString(), anyList<Document>(), any())
         verify(dataSynchronizer, times(1)).start()
 
         // assert that the dataSynchronizer is concretely running and configured
@@ -192,7 +189,7 @@ class DataSynchronizerUnitTests {
         // trigger the namespace or start up a second time
         dataSynchronizer.configure(namespace, conflictHandler, changeEventListener, errorListener, bsonCodec)
 
-        verify(dataSynchronizer, times(1)).triggerListeningToNamespace(any())
+        verify(dataSynchronizer, times(2)).triggerListeningToNamespace(any())
         verify(dataSynchronizer, times(1)).start()
 
         // assert that nothing has changed about our state

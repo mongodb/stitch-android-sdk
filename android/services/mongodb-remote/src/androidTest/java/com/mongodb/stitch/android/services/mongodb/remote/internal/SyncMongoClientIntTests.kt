@@ -905,22 +905,38 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
     @Test
     fun testConfigure() {
         val testSync = getTestSync()
+        val remoteColl = getTestCollRemote()
 
-        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.enableSyncThread()
         Assert.assertFalse((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
 
         val docToInsert = Document("hello", "world")
-        Tasks.await(testSync.insertOneAndSync(docToInsert))
+        val insertedId = Tasks.await(testSync.insertOneAndSync(docToInsert)).insertedId
 
         Assert.assertFalse((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
 
+        var hasConflictHandlerBeenInvoked = false
+        var hasChangeEventListenerBeenInvoked = false
+
         testSync.configure(
-            DefaultSyncConflictResolvers.remoteWins(),
-            ChangeEventListener { _, _ -> },
-            ErrorListener { _, _ -> }
+            { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                hasConflictHandlerBeenInvoked = true
+                assertEquals(remoteEvent.fullDocument["fly"], "away")
+                remoteEvent.fullDocument
+            },
+            { _: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+            },
+            { _, _ -> }
         )
 
-        Assert.assertTrue((mongoClient as RemoteMongoClientImpl).dataSynchronizer.isRunning)
+        val sem = watchForEvents(namespace)
+        Tasks.await(remoteColl.insertOne(Document("_id", insertedId).append("fly", "away")))
+        sem.acquire()
+
+        streamAndSync()
+
+        Assert.assertTrue(hasConflictHandlerBeenInvoked)
+        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
     }
 
     private fun streamAndSync() {
