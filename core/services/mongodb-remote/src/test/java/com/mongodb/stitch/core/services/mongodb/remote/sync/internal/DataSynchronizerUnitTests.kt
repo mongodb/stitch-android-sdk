@@ -138,6 +138,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testConfigure() {
+        // spy a new DataSynchronizer
         val dataSynchronizer = spy(DataSynchronizer(
             instanceKey,
             service,
@@ -147,40 +148,54 @@ class DataSynchronizerUnitTests {
             authMonitor
         ))
 
+        // without a configuration it should not be
+        // configured or running
         assertFalse(dataSynchronizer.isConfigured)
         assertFalse(dataSynchronizer.isRunning)
 
+        // mock the necessary config args
         val conflictHandler = mock(ConflictHandler::class.java) as ConflictHandler<BsonDocument>
         val changeEventListener = mock(ChangeEventListener::class.java) as ChangeEventListener<BsonDocument>
         val errorListener = mock(ErrorListener::class.java)
         val bsonCodec = BsonDocumentCodec()
 
+        // fetch a new namespace, creating a new config
         val nsConfig: NamespaceSynchronizationConfig = dataSynchronizer.getNamespaceConfig(namespace)
-
+        // add a synchronized document to establish the namespace
         nsConfig.addSynchronizedDocument(namespace, BsonObjectId())
         assertNull(nsConfig.namespaceListenerConfig)
+
+        // configure the dataSynchronizer,
+        // which should pass down the configuration to the namespace config
         dataSynchronizer.configure(namespace, conflictHandler, changeEventListener, errorListener, bsonCodec)
 
-        verify(service, times(1)).streamFunction<ChangeEvent<BsonDocument>>(any(), any(), any())
-
+        // make dummy calls on the conflict handler and event listener, asserting these are the
+        // same as our original handlers and listeners
         nsConfig.conflictHandler.resolveConflict(null, null, null)
         nsConfig.namespaceListenerConfig.eventListener.onEvent(null, null)
 
+        // verify the appropriate methods have been called on our config
         verify(conflictHandler, times(1)).resolveConflict(any(), any(), any())
         verify(changeEventListener, times(1)).onEvent(any(), any())
         assertEquals(nsConfig.namespaceListenerConfig.documentCodec, bsonCodec)
 
+        // verify that the data synchronizer has triggered the namespace
+        // and has started itself
         verify(dataSynchronizer, times(1)).triggerListeningToNamespace(any())
         verify(dataSynchronizer, times(1)).start()
 
+        // assert that the dataSynchronizer is concretely running and configured
         assertTrue(dataSynchronizer.isRunning)
         assertTrue(dataSynchronizer.isConfigured)
 
+        // configuring again, verifying that the data synchronizer does NOT
+        // trigger the namespace or start up a second time
         dataSynchronizer.configure(namespace, conflictHandler, changeEventListener, errorListener, bsonCodec)
 
         verify(dataSynchronizer, times(1)).triggerListeningToNamespace(any())
         verify(dataSynchronizer, times(1)).start()
 
+        // assert that nothing has changed about our state
         assertTrue(dataSynchronizer.isRunning)
         assertTrue(dataSynchronizer.isConfigured)
     }
