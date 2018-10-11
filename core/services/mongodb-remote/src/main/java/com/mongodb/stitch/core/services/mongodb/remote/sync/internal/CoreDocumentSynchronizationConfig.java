@@ -350,13 +350,13 @@ class CoreDocumentSynchronizationConfig {
   public boolean hasCommittedVersion(final DocumentVersionInfo version) {
     docLock.readLock().lock();
     try {
-      DocumentVersionInfo remoteVersionInfo =
+      final DocumentVersionInfo remoteVersionInfo =
               DocumentVersionInfo.fromVersionDoc(lastKnownRemoteVersion);
 
-      return ((version.isNonEmptyVersion() && remoteVersionInfo.isNonEmptyVersion() &&
-              (version.getSyncProtocolVersion() == remoteVersionInfo.getSyncProtocolVersion()) &&
-              (version.getInstanceId().equals(remoteVersionInfo.getInstanceId())) &&
-              (version.getVersionCounter() >= remoteVersionInfo.getVersionCounter())));
+      return ((version.isNonEmptyVersion() && remoteVersionInfo.isNonEmptyVersion()
+              && (version.getSyncProtocolVersion() == remoteVersionInfo.getSyncProtocolVersion())
+              && (version.getInstanceId().equals(remoteVersionInfo.getInstanceId()))
+              && (version.getVersionCounter() >= remoteVersionInfo.getVersionCounter())));
     } finally {
       docLock.readLock().unlock();
     }
