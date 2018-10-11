@@ -20,6 +20,7 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Chan
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalInsert;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalReplace;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalUpdate;
+import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DocumentVersionInfo.getDocumentVersion;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
@@ -56,7 +57,6 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -68,13 +68,11 @@ import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
-import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.conversions.Bson;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
@@ -535,7 +533,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               .getRemoteVersionInfo(remoteDoc);
       lastKnownRemoteVersion = remoteVersionInfo.getVersionDoc();
 
-      DocumentVersionInfo localVersion = DocumentVersionInfo.getLocalVersionInfo(docConfig, localDocument);
+      DocumentVersionInfo localVersion = DocumentVersionInfo.getLocalVersionInfo(docConfig);
 
       // TODO(QUESTION FOR REVIEW): The spec seems to indicate that we should make this check in
       // place of the committed versions check, but I have two questions:
@@ -574,7 +572,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               nsConfig.getNamespace(),
               docConfig.getDocumentId(),
               remoteChangeEvent.getFullDocument(),
-              DocumentVersionInfo.getDocumentVersion(remoteChangeEvent.getFullDocument()));
+              getDocumentVersion(remoteChangeEvent.getFullDocument()));
           return;
         case DELETE:
           logger.info(String.format(
@@ -609,7 +607,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         lastKnownLocalVersion = docConfig.getLastKnownRemoteVersion();
       } else {
         lastKnownLocalVersion = DocumentVersionInfo
-            .getLocalVersionInfo(docConfig, localDocument).getVersionDoc();
+            .getLocalVersionInfo(docConfig).getVersionDoc();
       }
 
       // There is a pending write that must skip R2L if both versions are null. The absence of a
@@ -684,12 +682,17 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         BsonDocument remoteDocument = null;
         boolean remoteDocumentFetched = false;
 
+        final DocumentVersionInfo localVersionInfo =
+            DocumentVersionInfo.getLocalVersionInfo(docConfig);
+        final BsonDocument nextVersion;
+
         switch (localChangeEvent.getOperationType()) {
           case INSERT: {
+            nextVersion = DocumentVersionInfo.getFreshVersionDocument();
             // It's possible that we may insert after a delete happened and we didn't get a
             // notification for it. There's nothing we can do about this.
             try {
-              remoteColl.insertOne(localChangeEvent.getFullDocument());
+              remoteColl.insertOne(withNewVersion(localChangeEvent.getFullDocument(), nextVersion));
             } catch (final StitchServiceException ex) {
               if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
                   || !ex.getMessage().contains("E11000")) {
@@ -724,19 +727,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   illegalStateException.getMessage(),
                   illegalStateException
               );
+              continue;
             }
-            final DocumentVersionInfo localVersionInfo =
-                DocumentVersionInfo.getLocalVersionInfo(docConfig, localDoc);
-            localDoc.put(
-                    DOCUMENT_VERSION_FIELD,
-                    localVersionInfo.getVersionDoc()
-            );
+            final BsonDocument nextDoc = withNextVersionCounter(localDoc, localVersionInfo);
+            nextVersion = getDocumentVersion(nextDoc);
 
             final RemoteUpdateResult result;
             try {
               result = remoteColl.updateOne(
                   localVersionInfo.getFilter(),
-                  localDoc);
+                  nextDoc);
             } catch (final StitchServiceException ex) {
               this.emitError(
                   docConfig,
@@ -773,13 +773,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   illegalStateException.getMessage(),
                   illegalStateException
               );
+              continue;
             }
-            final DocumentVersionInfo localVersionInfo =
-                DocumentVersionInfo.getLocalVersionInfo(docConfig, localDoc);
-            localDoc.put(
-                    DOCUMENT_VERSION_FIELD,
-                    localVersionInfo.getVersionDoc()
-            );
+            final BsonDocument nextDoc = withNextVersionCounter(localDoc, localVersionInfo);
+            nextVersion = DocumentVersionInfo.getDocumentVersion(nextDoc);
 
             final BsonDocument translatedUpdate = new BsonDocument();
             if (!localChangeEvent.getUpdateDescription().getUpdatedFields().isEmpty()) {
@@ -788,7 +785,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   localChangeEvent.getUpdateDescription().getUpdatedFields().entrySet()) {
                 sets.put(fieldValue.getKey(), fieldValue.getValue());
               }
-              sets.put(DOCUMENT_VERSION_FIELD, localVersionInfo.getVersionDoc());
+              sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
               translatedUpdate.put("$set", sets);
             }
             if (!localChangeEvent.getUpdateDescription().getRemovedFields().isEmpty()) {
@@ -806,7 +803,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   localVersionInfo.getFilter(),
                   translatedUpdate.isEmpty()
                       // See: changeEventForLocalUpdate for why we do this
-                      ? localDoc : translatedUpdate);
+                      ? nextDoc : translatedUpdate);
             } catch (final StitchServiceException ex) {
               emitError(
                   docConfig,
@@ -835,6 +832,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           }
 
           case DELETE: {
+            nextVersion = null;
             final RemoteDeleteResult result;
             try {
               result = remoteColl.deleteOne(DocumentVersionInfo.getVersionedFilter(
@@ -887,6 +885,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     docConfig.getDocumentId(),
                     localChangeEvent.getOperationType().toString())
             );
+            continue;
         }
 
         logger.info(String.format(
@@ -915,6 +914,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               docConfig,
               remoteChangeEvent);
         } else {
+          // TODO(ERIC->ADAM): This event may contain old version info. We should be filtering out the version
+          // anyway from local and remote events.
           final ChangeEvent<BsonDocument> committedEvent =
               docConfig.getLastUncommittedChangeEvent();
           emitEvent(docConfig.getDocumentId(), new ChangeEvent<>(
@@ -925,7 +926,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               committedEvent.getDocumentKey(),
               committedEvent.getUpdateDescription(),
               false));
-          docConfig.setPendingWritesComplete(DocumentVersionInfo.getDocumentVersion(localDoc));
+          docConfig.setPendingWritesComplete(nextVersion);
         }
       }
     }
@@ -1299,21 +1300,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonDocument document
   ) {
-    // apply a fresh synchronization version to the document
-    final BsonDocument docToInsert = withNewVersion(
-            document,
-            DocumentVersionInfo.getFreshVersionDocument()
-    );
-    getLocalCollection(namespace).insertOne(docToInsert);
+    getLocalCollection(namespace).insertOne(document);
     final ChangeEvent<BsonDocument> event =
-        changeEventForLocalInsert(namespace, docToInsert, true);
+        changeEventForLocalInsert(namespace, document, true);
     final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
         namespace,
-        BsonUtils.getDocumentId(docToInsert)
+        BsonUtils.getDocumentId(document)
     );
     config.setSomePendingWrites(logicalT, event);
     triggerListeningToNamespace(namespace);
-    emitEvent(BsonUtils.getDocumentId(docToInsert), event);
+    emitEvent(BsonUtils.getDocumentId(document), event);
   }
 
   /**
@@ -1337,36 +1333,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
-    // apply a version if none exists on the document (this will ensure that remote documents
-    // with no version will get a version when they are updated for the first time)
-    final BsonDocument applyVersionFilter = getDocumentIdFilter(documentId);
-    applyVersionFilter.put(DOCUMENT_VERSION_FIELD, new BsonDocument("$exists", BsonBoolean.FALSE));
-
-    getLocalCollection(namespace)
-            .updateOne(
-                    applyVersionFilter,
-                    new BsonDocument("$set",
-                            new BsonDocument(
-                                    DOCUMENT_VERSION_FIELD,
-                                    DocumentVersionInfo.getFreshVersionDocument()
-                            )
-                    )
-            );
-
-    // if a version was just applied, we still want to increment it because the document with the
-    // newly applied version is technically its own version
-    final BsonDocument updateWithVersion = withVersionCounterIncField(update);
-
     final BsonDocument result = getLocalCollection(namespace)
         .findOneAndUpdate(
             getDocumentIdFilter(documentId),
-            updateWithVersion,
+            update,
             new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
     if (result == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
     final ChangeEvent<BsonDocument> event =
-        changeEventForLocalUpdate(namespace, documentId, updateWithVersion, result, true);
+        changeEventForLocalUpdate(namespace, documentId, update, result, true);
     config.setSomePendingWrites(
         logicalT,
         event);
@@ -1781,24 +1757,23 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return newDocument;
   }
 
-  /**
-   * Adds and returns a document with a new version id set modifier to the given document.
-   *
-   * @param document the document to attach a new version set modifier to.
-   * @return a document with a new version id set modifier to the given document.
-   */
-  private static BsonDocument withVersionCounterIncField(final BsonDocument document) {
-    return BsonUtils.mergeSubdocumentAtKey(
-        "$inc",
-        document,
-        new BsonDocument(
-                String.format(
-                        "%s.%s",
-                        DOCUMENT_VERSION_FIELD,
-                        DocumentVersionInfo.VERSION_COUNTER_FIELD
-                ),
-                new BsonInt64(1)
-        )
-    );
+  private static BsonDocument getNextVersion(
+      final DocumentVersionInfo versionInfo
+  ) {
+    if (versionInfo.getVersionDoc() == null) {
+      return DocumentVersionInfo.getFreshVersionDocument();
+    }
+    final BsonDocument nextVersion = BsonUtils.copyOfDocument(versionInfo.getVersionDoc());
+    nextVersion.put(
+        DocumentVersionInfo.VERSION_COUNTER_FIELD,
+        new BsonInt64(versionInfo.getVersionCounter() + 1));
+    return nextVersion;
+  }
+
+  private static BsonDocument withNextVersionCounter(
+      final BsonDocument document,
+      final DocumentVersionInfo versionInfo
+  ) {
+    return withNewVersion(document, getNextVersion(versionInfo));
   }
 }

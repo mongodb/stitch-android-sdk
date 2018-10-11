@@ -53,8 +53,8 @@ public final class DocumentVersionInfo {
       this.instanceId = versionDoc.getString(INSTANCE_ID_FIELD).getValue();
       this.versionCounter = versionDoc.getInt64(VERSION_COUNTER_FIELD).getValue();
     } else {
+      // TODO(ERIC->ADAM): These seem like odd values as opposed to just indicating there's no version info
       this.versionDoc = null;
-
       this.syncProtocolVersion = -1;
       this.instanceId = null;
       this.versionCounter = -1;
@@ -126,12 +126,10 @@ public final class DocumentVersionInfo {
   }
 
   static DocumentVersionInfo getLocalVersionInfo(
-      final CoreDocumentSynchronizationConfig docConfig,
-      final BsonDocument localDocument
+      final CoreDocumentSynchronizationConfig docConfig
   ) {
-    final BsonDocument version = getDocumentVersion(localDocument);
     return new DocumentVersionInfo(
-        version, docConfig.getDocumentId(), docConfig.getLastKnownRemoteVersion()
+        docConfig.getLastKnownRemoteVersion(), docConfig.getDocumentId(), docConfig.getLastKnownRemoteVersion()
     );
   }
 
