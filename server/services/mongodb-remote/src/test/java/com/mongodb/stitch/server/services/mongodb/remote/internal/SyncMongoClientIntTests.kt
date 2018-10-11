@@ -20,7 +20,13 @@ import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
@@ -1000,7 +1006,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(expectedDocument, withoutSyncVersion(thirdRemoteDocBeforeSyncPass))
 
             expectedDocument.remove("foo")
-            assertEquals(expectedDocument, withoutSyncVersion(coll.findOneById(doc1Id))!!)
+            assertEquals(expectedDocument, withoutSyncVersion(coll.findOneById(doc1Id)))
 
             // the remote document after a local delete and local insert, and after a sync pass,
             // should have the same instance ID as before and a version count, since the change
@@ -1040,12 +1046,10 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         val docToInsert = withNewUnsupportedSyncVersion(Document("hello", "world"))
 
         coll.configure(failingConflictHandler, null, null)
-        val insertResult = remoteColl.insertOne(docToInsert)
+        remoteColl.insertOne(docToInsert)
 
         val doc = remoteColl.find(docToInsert).first()!!
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
-        val doc1Filter = Document("_id", doc1Id)
-
         coll.syncOne(doc1Id)
 
         assertTrue(coll.syncedIds.contains(doc1Id))

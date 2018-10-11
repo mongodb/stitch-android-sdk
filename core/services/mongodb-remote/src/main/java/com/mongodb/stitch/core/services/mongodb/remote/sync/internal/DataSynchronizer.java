@@ -20,7 +20,6 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Chan
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalInsert;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalReplace;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalUpdate;
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DocumentVersionInfo.getDocumentVersionDoc;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
@@ -534,8 +533,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       final DocumentVersionInfo localVersion = DocumentVersionInfo.getLocalVersionInfo(docConfig);
 
-      if (remoteVersionInfo.isNonEmptyVersion() &&
-          remoteVersionInfo.getSyncProtocolVersion() != 1) {
+      if (remoteVersionInfo.isNonEmptyVersion()
+          && remoteVersionInfo.getSyncProtocolVersion() != 1) {
         desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
 
         emitError(docConfig,
@@ -591,7 +590,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               nsConfig.getNamespace(),
               docConfig.getDocumentId(),
               remoteChangeEvent.getFullDocument(),
-              getDocumentVersionDoc(remoteChangeEvent.getFullDocument()));
+              DocumentVersionInfo.getDocumentVersionDoc(remoteChangeEvent.getFullDocument()));
           return;
         case DELETE:
           logger.info(String.format(
@@ -748,8 +747,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               );
               continue;
             }
-            final BsonDocument nextDoc = withNextVersionCounter(localDoc, localVersionInfo);
-            nextVersion = getDocumentVersionDoc(nextDoc);
+            final BsonDocument nextDoc = withNextVersion(localDoc, localVersionInfo);
+            nextVersion = DocumentVersionInfo.getDocumentVersionDoc(nextDoc);
 
             final RemoteUpdateResult result;
             try {
@@ -794,7 +793,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               );
               continue;
             }
-            final BsonDocument nextDoc = withNextVersionCounter(localDoc, localVersionInfo);
+            final BsonDocument nextDoc = withNextVersion(localDoc, localVersionInfo);
             nextVersion = DocumentVersionInfo.getDocumentVersionDoc(nextDoc);
 
             final BsonDocument translatedUpdate = new BsonDocument();
@@ -1391,7 +1390,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    final BsonDocument docToReplace = withNextVersionCounter(
+    final BsonDocument docToReplace = withNextVersion(
             document,
             DocumentVersionInfo.getLocalVersionInfo(config)
     );
@@ -1403,8 +1402,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
     final ChangeEvent<BsonDocument> event;
 
-    // TODO(QUESTION FOR REVIEW): it seems like we were previously setting pending writes at the
-    // old version, rather than the new version. Was this intentional? It seems like we should be
+    // TODO(QUESTION FOR REVIEW): it seems like we are setting pending writes at the
+    // old version, rather than the new version. Is this intentional? It seems like we should be
     // setting the pending writes at the newly generated version. I'm confused though because if I
     // use the new version here instead, tests fail because updates don't end up happening on a
     // sync pass.
@@ -1445,18 +1444,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    // TODO(QUESTION FOR REVIEW): Unlike replaceOrUpsertOneFromResolution, the original code
-    // here did not replace the version of the document being used to replace the document at
-    // documentId. Was this intentional? I assume that because we're updating something locally
-    // with a remote version, we want to keep the remote version, but then why are we
-    // setting a pending write here?
-
     getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
             document,
             new FindOneAndReplaceOptions().upsert(true));
-
     config.setPendingWritesComplete(atVersion);
     emitEvent(documentId, changeEventForLocalReplace(namespace, documentId, document, false));
   }
@@ -1745,10 +1737,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   /**
-   * Adds and returns a document with a new version id to the given document.
+   * Adds and returns a document with a new version to the given document.
    *
    * @param document the document to attach a new version to.
-   * @return a document with a new version id to the given document.
+   * @param newVersion the version to attach to the document
+   * @return a document with a new version to the given document.
    */
   private static BsonDocument withNewVersion(
           final BsonDocument document,
@@ -1759,7 +1752,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return newDocument;
   }
 
-  private static BsonDocument withNextVersionCounter(
+  /**
+   * Returns a document with a new version added to the given document. The added version is
+   * the provided version with a version counter incremented by one, or a fresh version if the
+   * provided version is empty.
+   * @param document the document to attach the next version to.
+   * @param versionInfo the version from which the next version will be derived
+   * @return a document with the newly updated version added to the given document.
+   */
+  private static BsonDocument withNextVersion(
           final BsonDocument document,
           final DocumentVersionInfo versionInfo
   ) {

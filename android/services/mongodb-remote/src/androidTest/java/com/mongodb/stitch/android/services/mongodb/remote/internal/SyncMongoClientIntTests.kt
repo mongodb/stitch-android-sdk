@@ -16,15 +16,19 @@ import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.After
-import org.junit.Assert
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
@@ -577,7 +581,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             coll.syncOne(doc1Id)
             streamAndSync()
             assertEquals(doc, Tasks.await(coll.findOneById(doc1Id)))
-            Assert.assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
 
             goOffline()
             Tasks.await(remoteColl.deleteOne(doc1Filter))
@@ -586,11 +590,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             goOnline()
             streamAndSync()
             assertNull(Tasks.await(remoteColl.find(doc1Filter).first()))
-            Assert.assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
 
             streamAndSync()
-            Assert.assertNotNull(Tasks.await(remoteColl.find(doc1Filter).first()))
-            Assert.assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+            assertNotNull(Tasks.await(remoteColl.find(doc1Filter).first()))
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
         }
     }
 
@@ -616,17 +620,13 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             streamAndSync()
 
             assertEquals(doc, Tasks.await(coll.findOneById(doc1Id)))
-            Assert.assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
 
             val wait = watchForEvents(this.namespace, 2)
             Tasks.await(remoteColl.deleteOne(doc1Filter))
             Tasks.await(remoteColl.insertOne(withNewSyncVersion(doc)))
             wait.acquire()
 
-            // TODO(QUESTION FOR REVIEWER): this test seems funky to me. We do the udpate, but
-            // the change is not reflected in any of the following finds. Why is that? Is the remote
-            // update with the new version ID supposed to make it so that this update is lost?
-            // it would be nice if we could have some comments in these tests.
             assertEquals(1, Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("foo", 1)))).matchedCount)
 
             streamAndSync()
@@ -691,7 +691,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             coll.syncOne(doc1Id)
             streamAndSync()
             assertEquals(doc, Tasks.await(coll.findOneById(doc1Id)))
-            Assert.assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
 
             val sem = watchForEvents(this.namespace)
             assertEquals(1, Tasks.await(remoteColl.updateOne(doc1Filter, withNewSyncVersionSet(Document("\$inc", Document("foo", 1))))).matchedCount)
@@ -843,7 +843,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             // do a sync pass, synchronizing the doc
             streamAndSync()
 
-            Assert.assertNotNull(Tasks.await(remoteColl.find(Document("_id", testDoc.get("_id"))).first()))
+            assertNotNull(Tasks.await(remoteColl.find(Document("_id", testDoc.get("_id"))).first()))
 
             // update the doc
             val expectedDoc = Document("hello", "computer")
@@ -857,7 +857,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             // do a sync pass, and throw an error during the conflict resolver
             // freezing the document
             streamAndSync()
-            Assert.assertTrue(errorEmitted)
+            assertTrue(errorEmitted)
 
             // update the doc remotely
             val nextDoc = Document("hello", "friend")
@@ -932,8 +932,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
         streamAndSync()
 
-        Assert.assertTrue(hasConflictHandlerBeenInvoked)
-        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
+        assertTrue(hasConflictHandlerBeenInvoked)
+        assertTrue(hasChangeEventListenerBeenInvoked)
     }
 
     @Test
@@ -1037,11 +1037,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         val docToInsert = withNewUnsupportedSyncVersion(Document("hello", "world"))
 
         coll.configure(failingConflictHandler, null, null)
-        val insertResult = Tasks.await(remoteColl.insertOne(docToInsert))
+        Tasks.await(remoteColl.insertOne(docToInsert))
 
         val doc = Tasks.await(remoteColl.find(docToInsert).first())!!
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
-        val doc1Filter = Document("_id", doc1Id)
 
         coll.syncOne(doc1Id)
 
