@@ -16,6 +16,7 @@ import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonValue
@@ -996,7 +997,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertEquals(expectedDocument, withoutSyncVersion(thirdRemoteDocBeforeSyncPass))
 
             expectedDocument.remove("foo")
-            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id)))!!)
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))))
 
             // the remote document after a local delete and local insert, and after a sync pass,
             // should have the same instance ID as before and a version count, since the change
@@ -1025,6 +1026,32 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertNotEquals(instanceIdOf(secondRemoteDoc), instanceIdOf(fourthRemoteDoc))
             assertEquals(0, versionCounterOf(fourthRemoteDoc))
         }
+    }
+
+    @Test
+    fun testUnsupportedSpvFails() {
+        val coll = getTestSync()
+
+        val remoteColl = getTestCollRemote()
+
+        val docToInsert = withNewUnsupportedSyncVersion(Document("hello", "world"))
+
+        coll.configure(failingConflictHandler, null, null)
+        val insertResult = Tasks.await(remoteColl.insertOne(docToInsert))
+
+        val doc = Tasks.await(remoteColl.find(docToInsert).first())!!
+        val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+        val doc1Filter = Document("_id", doc1Id)
+
+        coll.syncOne(doc1Id)
+
+        assertTrue(coll.syncedIds.contains(doc1Id))
+
+        // syncing on this document with an unsupported spv should cause the document to desync
+        goOnline()
+        streamAndSync()
+
+        assertFalse(coll.syncedIds.contains(doc1Id))
     }
 
     private fun streamAndSync() {
@@ -1095,6 +1122,17 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
     private fun withNewSyncVersion(document: Document): Document {
         val newDocument = Document(java.util.HashMap(document))
         newDocument["__stitch_sync_version"] = freshSyncVersionDoc()
+
+        return newDocument
+    }
+
+    private fun withNewUnsupportedSyncVersion(document: Document): Document {
+        val newDocument = Document(java.util.HashMap(document))
+        val badVersion = freshSyncVersionDoc()
+        badVersion.remove("spv")
+        badVersion.append("spv", 2)
+
+        newDocument["__stitch_sync_version"] = badVersion
 
         return newDocument
     }

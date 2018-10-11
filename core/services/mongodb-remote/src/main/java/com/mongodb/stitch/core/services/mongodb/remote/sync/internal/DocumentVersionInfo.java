@@ -19,6 +19,8 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
 
 import com.mongodb.stitch.core.internal.common.BsonUtils;
+
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -29,99 +31,83 @@ import org.bson.BsonValue;
 
 import java.util.UUID;
 
-public final class DocumentVersionInfo {
-  private final int syncProtocolVersion;
-  private final String instanceId;
-  private final long versionCounter;
+final class DocumentVersionInfo {
+  @Nullable private final VersionValues versionValues;
+  @Nullable private final BsonDocument versionDoc;
+  @Nullable  private final BsonDocument filter;
 
+  private class VersionValues {
+    final int syncProtocolVersion;
+    final String instanceId;
+    final long versionCounter;
 
-  static final String SYNC_PROTOCOL_VERSION_FIELD = "spv";
-  static final String INSTANCE_ID_FIELD = "id";
-  static final String VERSION_COUNTER_FIELD = "v";
+    VersionValues(
+            final int syncProtocolVersion,
+            final String instanceId,
+            final long versionCounter) {
+      this.syncProtocolVersion = syncProtocolVersion;
+      this.instanceId = instanceId;
+      this.versionCounter = versionCounter;
+    }
 
-  private final BsonDocument filter;
-  private final BsonDocument versionDoc;
+  }
+
+  private static final String SYNC_PROTOCOL_VERSION_FIELD = "spv";
+  private static final String INSTANCE_ID_FIELD = "id";
+  private static final String VERSION_COUNTER_FIELD = "v";
 
   private DocumentVersionInfo(
-          final BsonDocument version,
-          final BsonValue documentId,
-          final BsonDocument versionForFilter
+          @Nullable final BsonDocument version,
+          @Nullable final BsonValue documentId
   ) {
     if (version != null) {
       this.versionDoc = version;
-      this.syncProtocolVersion = versionDoc.getInt32(SYNC_PROTOCOL_VERSION_FIELD).getValue();
-      this.instanceId = versionDoc.getString(INSTANCE_ID_FIELD).getValue();
-      this.versionCounter = versionDoc.getInt64(VERSION_COUNTER_FIELD).getValue();
+      this.versionValues = new VersionValues(
+        versionDoc.getInt32(SYNC_PROTOCOL_VERSION_FIELD).getValue(),
+        versionDoc.getString(INSTANCE_ID_FIELD).getValue(),
+        versionDoc.getInt64(VERSION_COUNTER_FIELD).getValue()
+      );
     } else {
-      // TODO(ERIC->ADAM): These seem like odd values as opposed to just indicating there's no version info
       this.versionDoc = null;
-      this.syncProtocolVersion = -1;
-      this.instanceId = null;
-      this.versionCounter = -1;
+      this.versionValues = null;
     }
 
-    this.filter = getVersionedFilter(documentId, versionForFilter);
+    if (documentId != null) {
+      this.filter = getVersionedFilter(documentId, version);
+    } else {
+      this.filter = null;
+    }
   }
 
-//  private DocumentVersionInfo(
-//          final BsonValue documentId,
-//          final int syncProtocolVersion,
-//          final String instanceId,
-//          final long versionCounter
-//  ) {
-//    this.syncProtocolVersion = syncProtocolVersion;
-//    this.instanceId = instanceId;
-//    this.versionCounter = versionCounter;
-//
-//    this.versionDoc = constructVersionDoc();
-//    this.filter = getVersionedFilter(documentId, versionDoc);
-//  }
-
-  public BsonDocument getVersionDoc() {
+  @Nullable BsonDocument getVersionDoc() {
     return versionDoc;
   }
 
-//  private BsonDocument constructVersionDoc() {
-//    BsonDocument versionDoc = new BsonDocument();
-//
-//    versionDoc.append(SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(syncProtocolVersion));
-//    versionDoc.append(INSTANCE_ID_FIELD, new BsonString(instanceId));
-//    versionDoc.append(VERSION_COUNTER_FIELD, new BsonInt64(versionCounter));
-//
-//    return versionDoc;
-//  }
+  boolean isNonEmptyVersion() { return versionValues != null; }
 
-  public int getSyncProtocolVersion() {
-    return syncProtocolVersion;
+  private @Nonnull VersionValues getVersionValuesThrowIfNull() {
+    if (this.versionValues == null) {
+      throw new IllegalStateException(
+              "Attempting to access sync version information on a document with no version."
+      );
+    }
+
+    return this.versionValues;
   }
 
-  public String getInstanceId() {
-    return instanceId;
+  int getSyncProtocolVersion() {
+    return getVersionValuesThrowIfNull().syncProtocolVersion;
   }
 
-  public long getVersionCounter() {
-    return versionCounter;
+  String getInstanceId() {
+    return getVersionValuesThrowIfNull().instanceId;
   }
 
-//  public DocumentVersionInfo withIncrementedVersionCounter() {
-//    return new DocumentVersionInfo(
-//            this.documentId,
-//            this.syncProtocolVersion,
-//            this.instanceId,
-//            this.versionCounter + 1
-//    );
-//  }
-//
-//  public DocumentVersionInfo withNewInstanceId() {
-//    return new DocumentVersionInfo(
-//            this.documentId,
-//            this.syncProtocolVersion,
-//            UUID.randomUUID().toString(),
-//            0
-//    );
-//  }
+  long getVersionCounter() {
+    return getVersionValuesThrowIfNull().versionCounter;
+  }
 
-  public BsonDocument getFilter() {
+  @Nullable BsonDocument getFilter() {
     return filter;
   }
 
@@ -129,53 +115,36 @@ public final class DocumentVersionInfo {
       final CoreDocumentSynchronizationConfig docConfig
   ) {
     return new DocumentVersionInfo(
-        docConfig.getLastKnownRemoteVersion(), docConfig.getDocumentId(), docConfig.getLastKnownRemoteVersion()
+        docConfig.getLastKnownRemoteVersion(),
+        docConfig.getDocumentId()
     );
   }
 
   static DocumentVersionInfo getRemoteVersionInfo(final BsonDocument remoteDocument) {
-    final BsonDocument version = getDocumentVersion(remoteDocument);
-    return new DocumentVersionInfo(version, BsonUtils.getDocumentId(remoteDocument), version);
+    final BsonDocument version = getDocumentVersionDoc(remoteDocument);
+    return new DocumentVersionInfo(version, BsonUtils.getDocumentId(remoteDocument));
   }
 
-//  public static DocumentVersionInfo createFreshDocumentVersion(BsonDocument document) {
-//    return new DocumentVersionInfo(
-//            BsonUtils.getDocumentId(document),
-//            1,
-//            UUID.randomUUID().toString(),
-//            0
-//    );
-//  }
+  static DocumentVersionInfo fromVersionDoc(final BsonDocument versionDoc) {
+    return new DocumentVersionInfo(versionDoc, null);
+  }
 
-  public static BsonDocument getFreshVersionDocument() {
+  static BsonDocument getFreshVersionDocument() {
     BsonDocument versionDoc = new BsonDocument();
 
     versionDoc.append(SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(1));
     versionDoc.append(INSTANCE_ID_FIELD, new BsonString(UUID.randomUUID().toString()));
-    versionDoc.append(VERSION_COUNTER_FIELD, new BsonInt64(0));
+    versionDoc.append(VERSION_COUNTER_FIELD, new BsonInt64(0L));
 
     return versionDoc;
   }
 
-  public static BsonDocument withIncrementedVersionCounter(BsonDocument versionDoc) {
-    BsonDocument newVersionDoc = new BsonDocument();
-
-    newVersionDoc.put(SYNC_PROTOCOL_VERSION_FIELD, versionDoc.get(SYNC_PROTOCOL_VERSION_FIELD));
-    newVersionDoc.put(INSTANCE_ID_FIELD, versionDoc.get(INSTANCE_ID_FIELD));
-    newVersionDoc.put(
-            VERSION_COUNTER_FIELD,
-            new BsonInt64(versionDoc.getInt64(VERSION_COUNTER_FIELD).getValue() + 1L)
-    );
-
-    return newVersionDoc;
-  }
-
   /**
-   * Returns the version of the given document, if any; returns null otherwise.
+   * Returns the version document of the given document, if any; returns null otherwise.
    * @param document the document to get the version from.
    * @return the version of the given document, if any; returns null otherwise.
    */
-  static BsonDocument getDocumentVersion(final BsonDocument document) {
+  static BsonDocument getDocumentVersionDoc(final BsonDocument document) {
     if (document == null || !document.containsKey(DOCUMENT_VERSION_FIELD)) {
       return null;
     }
@@ -193,7 +162,7 @@ public final class DocumentVersionInfo {
    * @return a query filter for the given document _id and version for a remote operation.
    */
   static BsonDocument getVersionedFilter(
-      final BsonValue documentId,
+      @Nonnull final BsonValue documentId,
       @Nullable final BsonValue version
   ) {
     final BsonDocument filter = new BsonDocument("_id", documentId);
@@ -203,5 +172,18 @@ public final class DocumentVersionInfo {
       filter.put(DOCUMENT_VERSION_FIELD, version);
     }
     return filter;
+  }
+
+  static BsonDocument getNextVersion(
+          final DocumentVersionInfo versionInfo
+  ) {
+    if (versionInfo.getVersionDoc() == null) {
+      return getFreshVersionDocument();
+    }
+    final BsonDocument nextVersion = BsonUtils.copyOfDocument(versionInfo.getVersionDoc());
+    nextVersion.put(
+            VERSION_COUNTER_FIELD,
+            new BsonInt64(versionInfo.getVersionCounter() + 1));
+    return nextVersion;
   }
 }

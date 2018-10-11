@@ -22,14 +22,10 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nonnull;
 
-import org.bson.BsonArray;
 import org.bson.BsonBinary;
 import org.bson.BsonBinaryReader;
 import org.bson.BsonBinaryWriter;
@@ -254,6 +250,19 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
+  void setLastKnownRemoteVersion(final BsonDocument lastKnownRemoteVersion) {
+    docLock.writeLock().lock();
+    try {
+      this.lastKnownRemoteVersion = lastKnownRemoteVersion;
+
+      docsColl.replaceOne(
+              getDocFilter(namespace, documentId),
+              this);
+    } finally {
+      docLock.writeLock().unlock();
+    }
+  }
+
   // Equality on documentId
   @Override
   public boolean equals(final Object object) {
@@ -333,6 +342,21 @@ class CoreDocumentSynchronizationConfig {
     docLock.readLock().lock();
     try {
       return lastKnownRemoteVersion;
+    } finally {
+      docLock.readLock().unlock();
+    }
+  }
+
+  public boolean hasCommittedVersion(final DocumentVersionInfo version) {
+    docLock.readLock().lock();
+    try {
+      DocumentVersionInfo remoteVersionInfo =
+              DocumentVersionInfo.fromVersionDoc(lastKnownRemoteVersion);
+
+      return ((version.isNonEmptyVersion() && remoteVersionInfo.isNonEmptyVersion() &&
+              (version.getSyncProtocolVersion() == remoteVersionInfo.getSyncProtocolVersion()) &&
+              (version.getInstanceId().equals(remoteVersionInfo.getInstanceId())) &&
+              (version.getVersionCounter() >= remoteVersionInfo.getVersionCounter())));
     } finally {
       docLock.readLock().unlock();
     }

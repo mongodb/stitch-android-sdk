@@ -1031,6 +1031,32 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         }
     }
 
+    @Test
+    fun testUnsupportedSpvFails() {
+        val coll = getTestSync()
+
+        val remoteColl = getTestCollRemote()
+
+        val docToInsert = withNewUnsupportedSyncVersion(Document("hello", "world"))
+
+        coll.configure(failingConflictHandler, null, null)
+        val insertResult = remoteColl.insertOne(docToInsert)
+
+        val doc = remoteColl.find(docToInsert).first()!!
+        val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+        val doc1Filter = Document("_id", doc1Id)
+
+        coll.syncOne(doc1Id)
+
+        assertTrue(coll.syncedIds.contains(doc1Id))
+
+        // syncing on this document with an unsupported spv should cause the document to desync
+        goOnline()
+        streamAndSync()
+
+        assertFalse(coll.syncedIds.contains(doc1Id))
+    }
+
     private fun watchForEvents(
         namespace: MongoNamespace,
         n: Int = 1
@@ -1090,6 +1116,17 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
                 "\$set",
                 document,
                 Document("__stitch_sync_version", freshSyncVersionDoc()))
+    }
+
+    private fun withNewUnsupportedSyncVersion(document: Document): Document {
+        val newDocument = Document(java.util.HashMap(document))
+        val badVersion = freshSyncVersionDoc()
+        badVersion.remove("spv")
+        badVersion.append("spv", 2)
+
+        newDocument["__stitch_sync_version"] = badVersion
+
+        return newDocument
     }
 
     private fun freshSyncVersionDoc(): Document {

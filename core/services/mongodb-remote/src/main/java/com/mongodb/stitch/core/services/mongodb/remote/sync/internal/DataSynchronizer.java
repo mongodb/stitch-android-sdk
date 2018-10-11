@@ -20,7 +20,7 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Chan
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalInsert;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalReplace;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalUpdate;
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DocumentVersionInfo.getDocumentVersion;
+import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DocumentVersionInfo.getDocumentVersionDoc;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
@@ -67,7 +67,6 @@ import javax.annotation.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
-import org.bson.BsonInt64;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.Codec;
@@ -525,7 +524,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final BsonDocument docFilter = getDocumentIdFilter(docConfig.getDocumentId());
     final BsonDocument localDocument = localColl.find(docFilter).first();
 
-    final BsonValue lastKnownRemoteVersion;
+    final BsonDocument lastKnownRemoteVersion;
     if (remoteDoc == null || remoteDoc.size() == 0) {
       lastKnownRemoteVersion = null;
     } else {
@@ -535,14 +534,33 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       DocumentVersionInfo localVersion = DocumentVersionInfo.getLocalVersionInfo(docConfig);
 
-      // TODO(QUESTION FOR REVIEW): The spec seems to indicate that we should make this check in
-      // place of the committed versions check, but I have two questions:
-      // 1. this alone does not make all the tests pass. is this because this check doesn't
-      //    adequately cover all cases where we need to drop the handling of the event? or is it
-      //    becase
-      if ((localVersion.getVersionDoc() != null && lastKnownRemoteVersion != null) &&
-          (localVersion.getInstanceId().equals(remoteVersionInfo.getInstanceId())) &&
-          (localVersion.getVersionCounter() >= remoteVersionInfo.getVersionCounter())) {
+      if (remoteVersionInfo.isNonEmptyVersion() && remoteVersionInfo.getSyncProtocolVersion() != 1) {
+        desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+
+        emitError(docConfig,
+                String.format(
+                        Locale.US,
+                        "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote"
+                                + "document with an unsupported synchronization protocol version %d; "
+                                + "dropping the event, and desyncing the document",
+                        logicalT,
+                        nsConfig.getNamespace(),
+                        docConfig.getDocumentId(),
+                        remoteVersionInfo.getSyncProtocolVersion(),
+                        remoteChangeEvent.getOperationType().toString()));
+
+        return;
+      }
+
+      // TODO(QUESTION FOR REVIEW): The testFrozenDocumentConfig test fails if I call this, but
+      // other tests pass. Shouldn't the receipt of this document indicate that this is the last
+      // known remote version of this document,?
+//      docConfig.setLastKnownRemoteVersion(lastKnownRemoteVersion);
+
+      // TODO(QFR): I ask because when we are looking at hasCommittedVersion, we are using the
+      // lastKnownRemoteVersion of the doc config rather than the last known remote version based
+      // on the incoming change event we got here, which would make this not conform to spec.
+      if (docConfig.hasCommittedVersion(localVersion)) {
           // Skip this event since we generated it.
           logger.info(String.format(
               Locale.US,
@@ -572,7 +590,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               nsConfig.getNamespace(),
               docConfig.getDocumentId(),
               remoteChangeEvent.getFullDocument(),
-              getDocumentVersion(remoteChangeEvent.getFullDocument()));
+              getDocumentVersionDoc(remoteChangeEvent.getFullDocument()));
           return;
         case DELETE:
           logger.info(String.format(
@@ -730,7 +748,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               continue;
             }
             final BsonDocument nextDoc = withNextVersionCounter(localDoc, localVersionInfo);
-            nextVersion = getDocumentVersion(nextDoc);
+            nextVersion = getDocumentVersionDoc(nextDoc);
 
             final RemoteUpdateResult result;
             try {
@@ -776,7 +794,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               continue;
             }
             final BsonDocument nextDoc = withNextVersionCounter(localDoc, localVersionInfo);
-            nextVersion = DocumentVersionInfo.getDocumentVersion(nextDoc);
+            nextVersion = DocumentVersionInfo.getDocumentVersionDoc(nextDoc);
 
             final BsonDocument translatedUpdate = new BsonDocument();
             if (!localChangeEvent.getUpdateDescription().getUpdatedFields().isEmpty()) {
@@ -1372,28 +1390,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    // TODO(QUESTION FOR REVIEW): in the spec, we specify that replaces should result in an
-    // increment rather than a new instance ID. if atVersion is not null, we can do this, but if
-    // it doesn't, meaning we are replacing a document with no version, we simply use a fresh
-    // version with a new instance ID. My question is, would it be better if we just always
-    // use a fresh version with a new instance ID? We don't have a huge amount of information
-    // here about the original document, and it seems like a replace is semantically similar to a
-    // delete followed by insert, which would result in a new instance ID rather than an increment
-    final BsonDocument docToReplace;
-    final BsonDocument newVersion;
-    if (atVersion == null) {
-      newVersion = DocumentVersionInfo.getFreshVersionDocument();
-      docToReplace = withNewVersion(
-              document,
-              newVersion
-      );
-    } else {
-      newVersion = DocumentVersionInfo.withIncrementedVersionCounter(atVersion);
-      docToReplace = withNewVersion(
-              document,
-              newVersion
-      );
-    }
+    final BsonDocument docToReplace = withNextVersionCounter(
+            document,
+            DocumentVersionInfo.getLocalVersionInfo(config)
+    );
+
     final BsonDocument result = getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
@@ -1757,23 +1758,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return newDocument;
   }
 
-  private static BsonDocument getNextVersion(
-      final DocumentVersionInfo versionInfo
-  ) {
-    if (versionInfo.getVersionDoc() == null) {
-      return DocumentVersionInfo.getFreshVersionDocument();
-    }
-    final BsonDocument nextVersion = BsonUtils.copyOfDocument(versionInfo.getVersionDoc());
-    nextVersion.put(
-        DocumentVersionInfo.VERSION_COUNTER_FIELD,
-        new BsonInt64(versionInfo.getVersionCounter() + 1));
-    return nextVersion;
-  }
-
   private static BsonDocument withNextVersionCounter(
-      final BsonDocument document,
-      final DocumentVersionInfo versionInfo
+          final BsonDocument document,
+          final DocumentVersionInfo versionInfo
   ) {
-    return withNewVersion(document, getNextVersion(versionInfo));
+    return withNewVersion(document, DocumentVersionInfo.getNextVersion(versionInfo));
   }
 }
