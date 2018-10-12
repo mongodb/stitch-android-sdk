@@ -523,18 +523,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final BsonDocument docFilter = getDocumentIdFilter(docConfig.getDocumentId());
     final BsonDocument localDocument = localColl.find(docFilter).first();
 
-    final BsonDocument lastKnownRemoteVersion;
+    final BsonDocument currentRemoteVersion;
     if (remoteDoc == null || remoteDoc.size() == 0) {
-      lastKnownRemoteVersion = null;
+      currentRemoteVersion = null;
     } else {
-      final DocumentVersionInfo remoteVersionInfo = DocumentVersionInfo
+      final DocumentVersionInfo currentRemoteVersionInfo = DocumentVersionInfo
               .getRemoteVersionInfo(remoteDoc);
-      lastKnownRemoteVersion = remoteVersionInfo.getVersionDoc();
+      currentRemoteVersion = currentRemoteVersionInfo.getVersionDoc();
 
-      final DocumentVersionInfo localVersion = DocumentVersionInfo.getLocalVersionInfo(docConfig);
-
-      if (remoteVersionInfo.isNonEmptyVersion()
-          && remoteVersionInfo.getSyncProtocolVersion() != 1) {
+      if (currentRemoteVersionInfo.hasVersion()
+          && currentRemoteVersionInfo.getVersion().getSyncProtocolVersion() != 1) {
         desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
 
         emitError(docConfig,
@@ -546,20 +544,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         logicalT,
                         nsConfig.getNamespace(),
                         docConfig.getDocumentId(),
-                        remoteVersionInfo.getSyncProtocolVersion()));
+                        currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
 
         return;
       }
 
-      // TODO(QUESTION FOR REVIEW): The testFrozenDocumentConfig test fails if I call this, but
-      // other tests pass. Shouldn't the receipt of this document indicate that this is the last
-      // known remote version of this document?
-      // docConfig.setLastKnownRemoteVersion(lastKnownRemoteVersion);
-
-      // TODO(QFR): I ask because when we are looking at hasCommittedVersion, we are using the
-      // lastKnownRemoteVersion of the doc config rather than the last known remote version based
-      // on the incoming change event we got here, which would make this not conform to spec.
-      if (docConfig.hasCommittedVersion(localVersion)) {
+      if (docConfig.hasCommittedVersion(currentRemoteVersionInfo)) {
         // Skip this event since we generated it.
         logger.info(String.format(
             Locale.US,
@@ -630,7 +620,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       // There is a pending write that must skip R2L if both versions are null. The absence of a
       // version is effectively a version. The pending write, if it's not a delete, should be
       // setting a new version anyway.
-      if (lastKnownLocalVersion == null && lastKnownRemoteVersion == null) {
+      if (lastKnownLocalVersion == null && currentRemoteVersion == null) {
         logger.info(String.format(
             Locale.US,
             "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
@@ -931,7 +921,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               docConfig,
               remoteChangeEvent);
         } else {
-          // TODO(ERIC->ADAM): This event may contain old version info. We should be filtering out
+          // TODO(STITCH-1972): This event may contain old version info. We should be filtering out
           // the version anyway from local and remote events.
           final ChangeEvent<BsonDocument> committedEvent =
               docConfig.getLastUncommittedChangeEvent();
@@ -1401,22 +1391,17 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
     final ChangeEvent<BsonDocument> event;
 
-    // TODO(QUESTION FOR REVIEW): it seems like we are setting pending writes at the
-    // old version, rather than the new version. Is this intentional? It seems like we should be
-    // setting the pending writes at the newly generated version. I'm confused though because if I
-    // use the new version here instead, tests fail because updates don't end up happening on a
-    // sync pass.
     if (fromDelete) {
       event = changeEventForLocalInsert(namespace, result, true);
       config.setSomePendingWrites(
           logicalT,
-          atVersion, //TODO: why don't we want newVersion?,
+          atVersion,
           event);
     } else {
       event = changeEventForLocalReplace(namespace, documentId, result, true);
       config.setSomePendingWrites(
           logicalT,
-          atVersion, //TODO: why don't we want newVersion?
+          atVersion,
           event);
     }
     emitEvent(documentId, event);

@@ -10,6 +10,7 @@ import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection
@@ -33,6 +34,7 @@ import org.junit.Test
 import java.lang.Exception
 import java.util.UUID
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class SyncMongoClientIntTests : BaseStitchServerIntTest() {
@@ -1045,7 +1047,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
 
         val docToInsert = withNewUnsupportedSyncVersion(Document("hello", "world"))
 
-        coll.configure(failingConflictHandler, null, null)
+        val errorEmittedSem = Semaphore(0)
+        coll.configure(
+                failingConflictHandler,
+                null,
+                ErrorListener { documentId, error -> errorEmittedSem.release() })
+
         remoteColl.insertOne(docToInsert)
 
         val doc = remoteColl.find(docToInsert).first()!!
@@ -1059,6 +1066,9 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         streamAndSync()
 
         assertFalse(coll.syncedIds.contains(doc1Id))
+
+        // an error should also have been emitted
+        assertTrue(errorEmittedSem.tryAcquire(10, TimeUnit.SECONDS))
     }
 
     private fun watchForEvents(

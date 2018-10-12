@@ -212,9 +212,6 @@ class CoreDocumentSynchronizationConfig {
    *
    * @param atTime      the time at which the write occurred.
    * @param atVersion   the version for which the write occurred.
-   *                    // TODO(QUESTION FOR REVIEW): so per my other comments, this means the
-   *                    // version before the write occured, right?
-   *
    * @param changeEvent the description of the write/change.
    */
   void setSomePendingWrites(
@@ -347,16 +344,19 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public boolean hasCommittedVersion(final DocumentVersionInfo version) {
+  public boolean hasCommittedVersion(final DocumentVersionInfo versionInfo) {
     docLock.readLock().lock();
     try {
-      final DocumentVersionInfo remoteVersionInfo =
+      final DocumentVersionInfo localVersionInfo =
               DocumentVersionInfo.fromVersionDoc(lastKnownRemoteVersion);
 
-      return ((version.isNonEmptyVersion() && remoteVersionInfo.isNonEmptyVersion()
-              && (version.getSyncProtocolVersion() == remoteVersionInfo.getSyncProtocolVersion())
-              && (version.getInstanceId().equals(remoteVersionInfo.getInstanceId()))
-              && (version.getVersionCounter() >= remoteVersionInfo.getVersionCounter())));
+      return ((versionInfo.hasVersion() && localVersionInfo.hasVersion()
+              && (versionInfo.getVersion().getSyncProtocolVersion()
+                  == localVersionInfo.getVersion().getSyncProtocolVersion())
+              && (versionInfo.getVersion().getInstanceId()
+                  .equals(localVersionInfo.getVersion().getInstanceId()))
+              && (versionInfo.getVersion().getVersionCounter()
+                  <= localVersionInfo.getVersion().getVersionCounter())));
     } finally {
       docLock.readLock().unlock();
     }

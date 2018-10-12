@@ -16,6 +16,7 @@ import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonValue
@@ -35,6 +36,7 @@ import org.junit.Test
 import java.lang.Exception
 import java.util.UUID
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
@@ -986,7 +988,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertEquals(instanceIdOf(firstRemoteDoc), instanceIdOf(secondRemoteDoc))
             assertEquals(1, versionCounterOf(secondRemoteDoc))
 
-            assertEquals(expectedDocument, Tasks.await(coll.findOneById(doc1Id))!!)
+            assertEquals(expectedDocument, withoutSyncVersion(Tasks.await(coll.findOneById(doc1Id))!!))
 
             // the remote document after a local delete and local insert, but before a sync pass,
             // should have the same version as the previous document
@@ -1036,12 +1038,16 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
 
         val docToInsert = withNewUnsupportedSyncVersion(Document("hello", "world"))
 
-        coll.configure(failingConflictHandler, null, null)
+        val errorEmittedSem = Semaphore(0)
+        coll.configure(
+                failingConflictHandler,
+                null,
+                ErrorListener { documentId, error -> errorEmittedSem.release() })
+
         Tasks.await(remoteColl.insertOne(docToInsert))
 
         val doc = Tasks.await(remoteColl.find(docToInsert).first())!!
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
-
         coll.syncOne(doc1Id)
 
         assertTrue(coll.syncedIds.contains(doc1Id))
@@ -1051,6 +1057,9 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         streamAndSync()
 
         assertFalse(coll.syncedIds.contains(doc1Id))
+
+        // an error should also have been emitted
+        assertTrue(errorEmittedSem.tryAcquire(10, TimeUnit.SECONDS))
     }
 
     private fun streamAndSync() {
