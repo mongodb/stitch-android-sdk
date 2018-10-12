@@ -163,7 +163,11 @@ final class DocumentVersionInfo {
    */
   static DocumentVersionInfo getRemoteVersionInfo(final BsonDocument remoteDocument) {
     final BsonDocument version = getDocumentVersionDoc(remoteDocument);
-    return new DocumentVersionInfo(version, BsonUtils.getDocumentId(remoteDocument));
+    return new DocumentVersionInfo(
+            version,
+            remoteDocument != null
+                    ? BsonUtils.getDocumentId(remoteDocument, null) : null
+    );
   }
 
   /**

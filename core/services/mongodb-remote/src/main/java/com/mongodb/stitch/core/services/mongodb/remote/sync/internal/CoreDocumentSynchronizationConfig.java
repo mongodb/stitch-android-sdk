@@ -247,19 +247,6 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  void setLastKnownRemoteVersion(final BsonDocument lastKnownRemoteVersion) {
-    docLock.writeLock().lock();
-    try {
-      this.lastKnownRemoteVersion = lastKnownRemoteVersion;
-
-      docsColl.replaceOne(
-              getDocFilter(namespace, documentId),
-              this);
-    } finally {
-      docLock.writeLock().unlock();
-    }
-  }
-
   // Equality on documentId
   @Override
   public boolean equals(final Object object) {
@@ -443,7 +430,6 @@ class CoreDocumentSynchronizationConfig {
         // TODO: This may put the doc above the 16MiB but ignore for now.
         asDoc.put(ConfigCodec.Fields.LAST_UNCOMMITTED_CHANGE_EVENT, encoded);
       }
-
       asDoc.put(ConfigCodec.Fields.IS_STALE, new BsonBoolean(isStale));
       asDoc.put(ConfigCodec.Fields.IS_FROZEN, new BsonBoolean(isFrozen));
       return asDoc;

@@ -400,7 +400,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         logicalT));
 
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
-      final MongoCollection<BsonDocument> localColl = getLocalCollection(nsConfig.getNamespace());
       final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
           instanceChangeStreamListener.getEventsForNamespace(nsConfig.getNamespace());
 
@@ -431,7 +430,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
         unseenIds.remove(docConfig.getDocumentId());
         latestDocumentIds.remove(docConfig.getDocumentId());
-        syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue(), localColl);
+        syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue());
       }
 
       for (final BsonValue docId : unseenIds) {
@@ -451,8 +450,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   docId,
                   latestDocumentMap.get(docId),
                   false
-              ),
-              localColl);
+              ));
 
           docConfig.setStale(false);
         }
@@ -476,7 +474,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   nsConfig.getNamespace(),
                   unseenId,
                   docConfig.hasUncommittedWrites()
-              ), localColl);
+              ));
         }
       }
     }
@@ -493,13 +491,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param nsConfig          the namespace configuration.
    * @param docConfig         the document configuration related to the event.
    * @param remoteChangeEvent the remote change event to synchronize into the local database.
-   * @param localColl         the local collection where the document lives.
    */
   private void syncRemoteChangeEventToLocal(
       final NamespaceSynchronizationConfig nsConfig,
       final CoreDocumentSynchronizationConfig docConfig,
-      final ChangeEvent<BsonDocument> remoteChangeEvent,
-      final MongoCollection<BsonDocument> localColl
+      final ChangeEvent<BsonDocument> remoteChangeEvent
   ) {
     if (docConfig.hasUncommittedWrites() && docConfig.getLastResolution() == logicalT) {
       logger.info(String.format(
@@ -520,47 +516,39 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         remoteChangeEvent.getOperationType().toString()));
 
     final BsonDocument remoteDoc = remoteChangeEvent.getFullDocument();
-    final BsonDocument docFilter = getDocumentIdFilter(docConfig.getDocumentId());
-    final BsonDocument localDocument = localColl.find(docFilter).first();
+    final DocumentVersionInfo currentRemoteVersionInfo = DocumentVersionInfo
+            .getRemoteVersionInfo(remoteDoc);
 
-    final BsonDocument currentRemoteVersion;
-    if (remoteDoc == null || remoteDoc.size() == 0) {
-      currentRemoteVersion = null;
-    } else {
-      final DocumentVersionInfo currentRemoteVersionInfo = DocumentVersionInfo
-              .getRemoteVersionInfo(remoteDoc);
-      currentRemoteVersion = currentRemoteVersionInfo.getVersionDoc();
+    if (currentRemoteVersionInfo.hasVersion()
+        && currentRemoteVersionInfo.getVersion().getSyncProtocolVersion() != 1) {
+      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
 
-      if (currentRemoteVersionInfo.hasVersion()
-          && currentRemoteVersionInfo.getVersion().getSyncProtocolVersion() != 1) {
-        desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+      emitError(docConfig,
+              String.format(
+                      Locale.US,
+                      "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
+                              + "document with an unsupported synchronization protocol version "
+                              + "%d; dropping the event, and desyncing the document",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId(),
+                      currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
 
-        emitError(docConfig,
-                String.format(
-                        Locale.US,
-                        "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
-                                + "document with an unsupported synchronization protocol version "
-                                + "%d; dropping the event, and desyncing the document",
-                        logicalT,
-                        nsConfig.getNamespace(),
-                        docConfig.getDocumentId(),
-                        currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
-
-        return;
-      }
-
-      if (docConfig.hasCommittedVersion(currentRemoteVersionInfo)) {
-        // Skip this event since we generated it.
-        logger.info(String.format(
-            Locale.US,
-            "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote change event was "
-                + "generated by us; dropping the event",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId()));
-        return;
-      }
+      return;
     }
+
+    if (docConfig.hasCommittedVersion(currentRemoteVersionInfo)) {
+      // Skip this event since we generated it.
+      logger.info(String.format(
+          Locale.US,
+          "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote change event was "
+              + "generated by us; dropping the event",
+          logicalT,
+          nsConfig.getNamespace(),
+          docConfig.getDocumentId()));
+      return;
+    }
+
 
     if (docConfig.getLastUncommittedChangeEvent() == null) {
       switch (remoteChangeEvent.getOperationType()) {
@@ -609,18 +597,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     // Check for pending writes on this version
     {
-      final BsonValue lastKnownLocalVersion;
-      if (localDocument == null) {
-        lastKnownLocalVersion = docConfig.getLastKnownRemoteVersion();
-      } else {
-        lastKnownLocalVersion = DocumentVersionInfo
-            .getLocalVersionInfo(docConfig).getVersionDoc();
-      }
+      final DocumentVersionInfo lastKnownLocalVersionInfo = DocumentVersionInfo
+            .getLocalVersionInfo(docConfig);
 
-      // There is a pending write that must skip R2L if both versions are null. The absence of a
+      // There is a pending write that must skip R2L if both versions are empty. The absence of a
       // version is effectively a version. The pending write, if it's not a delete, should be
       // setting a new version anyway.
-      if (lastKnownLocalVersion == null && currentRemoteVersion == null) {
+      if (!lastKnownLocalVersionInfo.hasVersion() && !currentRemoteVersionInfo.hasVersion()) {
         logger.info(String.format(
             Locale.US,
             "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
@@ -736,8 +719,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               );
               continue;
             }
-            final BsonDocument nextDoc = withNextVersion(localDoc, localVersionInfo);
-            nextVersion = DocumentVersionInfo.getDocumentVersionDoc(nextDoc);
+            nextVersion = localVersionInfo.getNextVersion();
+            final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
 
             final RemoteUpdateResult result;
             try {
@@ -782,8 +765,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               );
               continue;
             }
-            final BsonDocument nextDoc = withNextVersion(localDoc, localVersionInfo);
-            nextVersion = DocumentVersionInfo.getDocumentVersionDoc(nextDoc);
+            nextVersion = localVersionInfo.getNextVersion();
+            final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
 
             final BsonDocument translatedUpdate = new BsonDocument();
             if (!localChangeEvent.getUpdateDescription().getUpdatedFields().isEmpty()) {
@@ -1379,18 +1362,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    final BsonDocument docToReplace = withNextVersion(
-            document,
-            DocumentVersionInfo.getLocalVersionInfo(config)
-    );
-
     final BsonDocument result = getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
-            docToReplace,
+            document,
             new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
     final ChangeEvent<BsonDocument> event;
-
     if (fromDelete) {
       event = changeEventForLocalInsert(namespace, result, true);
       config.setSomePendingWrites(
@@ -1734,20 +1711,5 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final BsonDocument newDocument = BsonUtils.copyOfDocument(document);
     newDocument.put(DOCUMENT_VERSION_FIELD, newVersion);
     return newDocument;
-  }
-
-  /**
-   * Returns a document with a new version added to the given document. The added version is
-   * the provided version with a version counter incremented by one, or a fresh version if the
-   * provided version is empty.
-   * @param document the document to attach the next version to.
-   * @param versionInfo the version from which the next version will be derived
-   * @return a document with the newly updated version added to the given document.
-   */
-  private static BsonDocument withNextVersion(
-          final BsonDocument document,
-          final DocumentVersionInfo versionInfo
-  ) {
-    return withNewVersion(document, versionInfo.getNextVersion());
   }
 }
