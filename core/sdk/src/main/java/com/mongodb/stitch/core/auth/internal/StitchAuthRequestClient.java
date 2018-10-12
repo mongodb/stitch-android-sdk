@@ -33,7 +33,6 @@ public interface StitchAuthRequestClient {
                                final Class<T> resultClass,
                                final CodecRegistry codecRegistry);
 
-  // TODO: Should this be a StitchAuthRequest instead?
-  <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
+  <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
                                         final Decoder<T> decoder);
 }
