@@ -291,7 +291,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       throw ex;
     }
 
-    if (!req.getShouldRefreshOnFailure()) {
+    // using a refresh token implies we cannot refresh anything, so clear auth and
+    // notify
+    if (req.getUseRefreshToken() || !req.getShouldRefreshOnFailure()) {
       clearAuth();
       throw ex;
     }
