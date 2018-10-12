@@ -203,6 +203,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   @Override
   public <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
                                                final Decoder<T> decoder) {
+    if (!isLoggedIn()) {
+      throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
+    }
     try {
       return new Stream<>(
           requestClient.doStreamRequest(stitchReq.builder().withPath(
