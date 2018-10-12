@@ -36,7 +36,7 @@ final class DocumentVersionInfo {
   @Nullable private final BsonDocument versionDoc;
   @Nullable private final BsonDocument filter;
 
-  private class VersionValues {
+  private static class VersionValues {
     final int syncProtocolVersion;
     final String instanceId;
     final long versionCounter;

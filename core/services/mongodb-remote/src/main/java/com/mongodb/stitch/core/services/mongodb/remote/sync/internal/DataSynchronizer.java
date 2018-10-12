@@ -540,14 +540,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         emitError(docConfig,
                 String.format(
                         Locale.US,
-                        "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote"
+                        "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
                                 + "document with an unsupported synchronization protocol version "
                                 + "%d; dropping the event, and desyncing the document",
                         logicalT,
                         nsConfig.getNamespace(),
                         docConfig.getDocumentId(),
-                        remoteVersionInfo.getSyncProtocolVersion(),
-                        remoteChangeEvent.getOperationType().toString()));
+                        remoteVersionInfo.getSyncProtocolVersion()));
 
         return;
       }
