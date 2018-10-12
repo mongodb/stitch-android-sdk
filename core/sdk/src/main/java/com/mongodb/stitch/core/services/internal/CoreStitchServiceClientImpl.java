@@ -22,7 +22,6 @@ import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
-import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
 import java.nio.charset.StandardCharsets;

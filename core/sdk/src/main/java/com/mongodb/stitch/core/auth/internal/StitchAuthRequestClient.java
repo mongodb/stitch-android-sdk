@@ -18,7 +18,6 @@ package com.mongodb.stitch.core.auth.internal;
 
 import com.mongodb.stitch.core.internal.net.Response;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
-import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
 import org.bson.codecs.Decoder;
