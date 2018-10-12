@@ -59,6 +59,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     this.codecRegistry = codecRegistry;
   }
 
+  // TODO: Should this return a StitchAuthRequest?
   private StitchRequest getStreamServiceFunctionRequest(
       final String name,
       final List<?> args) {
