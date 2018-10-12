@@ -8,7 +8,6 @@ import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.core.internal.net.EventStream
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.internal.net.Stream
-import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
@@ -172,6 +171,13 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testDisableSyncThread() {
+        dataSynchronizer.configure(
+            namespace,
+            conflictHandler(null, null),
+            null,
+            null,
+            BsonDocumentCodec())
+
         dataSynchronizer.start()
 
         assertTrue(dataSynchronizer.isRunning)
@@ -187,6 +193,13 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testStop() {
+        dataSynchronizer.configure(
+            namespace,
+            conflictHandler(null, null),
+            null,
+            null,
+            BsonDocumentCodec())
+
         dataSynchronizer.start()
 
         assertTrue(dataSynchronizer.isRunning)
@@ -337,6 +350,8 @@ class DataSynchronizerUnitTests {
                         document2["_id"],
                         BsonDocument::class.java,
                         CodecRegistries.fromCodecs(BsonDocumentCodec()))))
+
+            assertTrue(dataSynchronizer.getSynchronizedDocuments(namespace).all { it.isFrozen })
         }
 
     }
@@ -441,7 +456,7 @@ class DataSynchronizerUnitTests {
 
             dataSynchronizer.doSyncPass()
 
-            emitEventSemaphore.acquire()
+            emitEventSemaphore.acquire(1)
 
             verify(changeEventListener, times(2)).onEvent(eq(document1["_id"]), any())
 
@@ -453,7 +468,7 @@ class DataSynchronizerUnitTests {
 
             dataSynchronizer.doSyncPass()
 
-            emitEventSemaphore.acquire()
+            emitEventSemaphore.acquire(1)
 
             verify(changeEventListener, times(4)).onEvent(eq(document1["_id"]), any())
             verify(conflictHandler, times(1)).resolveConflict(eq(document1["_id"]), any(), any())
@@ -465,6 +480,76 @@ class DataSynchronizerUnitTests {
                     BsonDocument::class.java,
                     CodecRegistries.fromCodecs(BsonDocumentCodec()))
             )
+        }
+    }
+
+    @Test
+    fun testFailedUpdate() {
+        withNewDataSynchronizer { dataSynchronizer, coreRemoteMongoCollectionMock ->
+            val document1 = newDoc("count", BsonInt32(1))
+            val update1 = BsonDocument("\$inc", BsonDocument("count", BsonInt32(1)))
+            val docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", document1["_id"])
+
+            val emitEventSemaphore = Semaphore(2)
+            val emitErrorSemaphore = Semaphore(0)
+
+            val expectedEvent = ChangeEvent.changeEventForLocalUpdate(
+                namespace,
+                document1["_id"],
+                update1,
+                docAfterUpdate,
+                false
+            )
+
+            val changeEventListener = changeEventListener(emitEventSemaphore, expectedEvent)
+            val conflictHandler = conflictHandler(expectedEvent, expectedEvent)
+            val errorListener = errorListener(emitErrorSemaphore, document1["_id"]!!)
+
+            dataSynchronizer.configure(namespace,
+                conflictHandler,
+                changeEventListener,
+                errorListener,
+                BsonDocumentCodec())
+
+            dataSynchronizer.insertOneAndSync(namespace, document1)
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire()
+
+            verify(changeEventListener, times(2)).onEvent(eq(document1["_id"]), any())
+
+            dataSynchronizer.updateOneById(namespace, document1["_id"], update1)
+
+            `when`(coreRemoteMongoCollectionMock.updateOne(any(), any())).thenAnswer {
+                throw StitchServiceException("bad", StitchServiceErrorCode.UNKNOWN)
+            }
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire()
+
+            // verify we are inserting!
+            val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
+            verify(coreRemoteMongoCollectionMock, times(1)).updateOne(any(), docCaptor.capture())
+            assertEquals(expectedEvent.fullDocument, withoutVersionId(docCaptor.value))
+
+            // the four calls should be:
+            // insertOne, syncLocalToRemote, updateOne, syncLocalToRemote
+            verify(changeEventListener, times(3)).onEvent(eq(document1["_id"]), any())
+            verify(conflictHandler, times(0)).resolveConflict(eq(document1["_id"]), any(), any())
+            verify(errorListener, times(1)).onError(eq(document1["_id"]), any())
+
+            assertEquals(
+                docAfterUpdate,
+                withoutVersionId(
+                    dataSynchronizer.findOneById(
+                        namespace,
+                        document1["_id"],
+                        BsonDocument::class.java,
+                        CodecRegistries.fromCodecs(BsonDocumentCodec()))))
+
+            assertTrue(dataSynchronizer.getSynchronizedDocuments(namespace).all { it.isFrozen })
         }
     }
 
@@ -632,52 +717,38 @@ class DataSynchronizerUnitTests {
     @Test
     @Suppress("UNCHECKED_CAST")
     fun testCoreDocumentSynchronizationConfigIsFrozenCheck() {
-        // create a dataSynchronizer with an injected remote client
-        val id1 = BsonObjectId()
+        withNewDataSynchronizer { dataSynchronizer, coreRemoteMongoCollectionMock ->
+            dataSynchronizer.configure(namespace, conflictHandler(null, null), null, null, BsonDocumentCodec())
+            // create a dataSynchronizer with an injected remote client
+            val id1 = BsonObjectId()
+            // insert a new doc. the details of the doc do not matter
+            val doc1 = BsonDocument("_id", id1)
+            dataSynchronizer.insertOneAndSync(namespace, doc1)
 
-        val dataSynchronizer = spy(DataSynchronizer(
-            instanceKey,
-            mock(CoreStitchServiceClient::class.java),
-            localClient,
-            remoteClient,
-            networkMonitor,
-            authMonitor
-        ))
+            // set the doc to frozen and reload the configs
+            dataSynchronizer.getSynchronizedDocuments(namespace).forEach {
+                it.isFrozen = true
+            }
+            dataSynchronizer.reloadConfig()
+            dataSynchronizer.configure(namespace, conflictHandler(null, null), null, null, BsonDocumentCodec())
 
-        // insert a new doc. the details of the doc do not matter
-        val doc1 = BsonDocument("_id", id1)
-        dataSynchronizer.insertOneAndSync(namespace, doc1)
+            // ensure that no remote inserts are made during this sync pass
+            dataSynchronizer.doSyncPass()
 
-        // set the doc to frozen and reload the configs
-        dataSynchronizer.getSynchronizedDocuments(namespace).forEach {
-            it.isFrozen = true
+            verify(coreRemoteMongoCollectionMock, times(0)).insertOne(any())
+
+            // unfreeze the configs and reload
+            dataSynchronizer.getSynchronizedDocuments(namespace).forEach {
+                it.isFrozen = false
+            }
+            dataSynchronizer.reloadConfig()
+            dataSynchronizer.configure(namespace, conflictHandler(null, null), null, null, BsonDocumentCodec())
+
+            // this time ensure that the remote insert has been called
+            dataSynchronizer.doSyncPass()
+
+            verify(coreRemoteMongoCollectionMock, times(1)).insertOne(any())
         }
-        dataSynchronizer.reloadConfig()
-
-        // spy on the remote client
-        val remoteMongoDatabase = mock(CoreRemoteMongoDatabaseImpl::class.java)
-        `when`(remoteClient.getDatabase(namespace.databaseName)).thenReturn(remoteMongoDatabase)
-
-        val remoteMongoCollection = mock(CoreRemoteMongoCollectionImpl::class.java)
-            as CoreRemoteMongoCollectionImpl<BsonDocument>
-        `when`(remoteMongoDatabase.getCollection(namespace.collectionName, BsonDocument::class.java))
-            .thenReturn(remoteMongoCollection)
-
-        // ensure that no remote inserts are made during this sync pass
-        dataSynchronizer.doSyncPass()
-
-        verify(remoteMongoCollection, times(0)).insertOne(any())
-
-        // unfreeze the configs and reload
-        dataSynchronizer.getSynchronizedDocuments(namespace).forEach {
-            it.isFrozen = false
-        }
-        dataSynchronizer.reloadConfig()
-
-        // this time ensure that the remote insert has been called
-        dataSynchronizer.doSyncPass()
-
-        verify(remoteMongoCollection, times(1)).insertOne(any())
     }
 
     @Test
@@ -820,14 +891,20 @@ class DataSynchronizerUnitTests {
             return spy(TestErrorListener())
         }
 
-        private fun conflictHandler(expectedLocalEvent: ChangeEvent<BsonDocument>,
-                                    expectedRemoteEvent: ChangeEvent<BsonDocument>): ConflictHandler<BsonDocument> {
+        private fun conflictHandler(expectedLocalEvent: ChangeEvent<BsonDocument>?,
+                                    expectedRemoteEvent: ChangeEvent<BsonDocument>?): ConflictHandler<BsonDocument> {
             open class TestConflictHandler: ConflictHandler<BsonDocument> {
                 override fun resolveConflict(documentId: BsonValue?, localEvent: ChangeEvent<BsonDocument>?, remoteEvent: ChangeEvent<BsonDocument>?): BsonDocument? {
                     // assert that our actualEvent is correct
-                    compareEvents(expectedLocalEvent, localEvent!!)
-                    compareEvents(expectedRemoteEvent, remoteEvent!!)
-                    return remoteEvent.fullDocument
+                    if (expectedLocalEvent != null) {
+                        compareEvents(expectedLocalEvent, localEvent!!)
+                    }
+
+                    if (expectedRemoteEvent != null) {
+                        compareEvents(expectedRemoteEvent, remoteEvent!!)
+                    }
+
+                    return remoteEvent?.fullDocument
                 }
             }
             return spy(TestConflictHandler())
@@ -843,7 +920,7 @@ class DataSynchronizerUnitTests {
                         assertEquals(expectedEvent.id, documentId)
                         // if we've reached here, all was successful
                     } finally {
-                        emitEventSemaphore.release()
+                        emitEventSemaphore.release(1)
                     }
                 }
             }
