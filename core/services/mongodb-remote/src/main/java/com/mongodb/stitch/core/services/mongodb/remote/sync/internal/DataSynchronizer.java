@@ -340,7 +340,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return whether or not the synchronization pass was successful.
    */
   public boolean doSyncPass() {
-    if (!syncLock.tryLock()) {
+    if (!this.isConfigured || !syncLock.tryLock()) {
       return false;
     }
     try {
@@ -712,6 +712,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   illegalStateException.getMessage(),
                   illegalStateException
               );
+              continue;
             }
             final DocumentVersionInfo versionInfo =
                 DocumentVersionInfo.getLocalVersionInfo(docConfig, localDoc);
@@ -758,6 +759,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   illegalStateException.getMessage(),
                   illegalStateException
               );
+
+              continue;
             }
             final DocumentVersionInfo versionInfo =
                 DocumentVersionInfo.getLocalVersionInfo(docConfig, localDoc);
