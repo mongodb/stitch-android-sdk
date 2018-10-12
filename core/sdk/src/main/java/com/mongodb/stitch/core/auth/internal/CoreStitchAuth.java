@@ -201,15 +201,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   @Override
-  public <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
+  public synchronized <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
                                                final Decoder<T> decoder) {
     if (!isLoggedIn()) {
       throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
     }
+    final String authToken = stitchReq.getUseRefreshToken()
+        ? getAuthInfo().getRefreshToken() : getAuthInfo().getAccessToken();
     try {
       return new Stream<>(
           requestClient.doStreamRequest(stitchReq.builder().withPath(
-              stitchReq.getPath() + AuthStreamFields.AUTH_TOKEN + getAuthInfo().getAccessToken()
+              stitchReq.getPath() + AuthStreamFields.AUTH_TOKEN + authToken
           ).build()),
           decoder
       );
