@@ -9,6 +9,7 @@ import com.mongodb.stitch.core.internal.net.EventStream
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.internal.net.Stream
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
@@ -35,7 +36,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.mockito.ArgumentCaptor
@@ -211,7 +211,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testClose() {
-        fail()
+        throw NotImplementedError()
     }
 
     @Test
@@ -550,6 +550,196 @@ class DataSynchronizerUnitTests {
                         CodecRegistries.fromCodecs(BsonDocumentCodec()))))
 
             assertTrue(dataSynchronizer.getSynchronizedDocuments(namespace).all { it.isFrozen })
+        }
+    }
+
+    @Test
+    fun testSuccessfulDelete() {
+        withNewDataSynchronizer { dataSynchronizer, coreRemoteMongoCollectionMock ->
+            val document1 = newDoc("count", BsonInt32(1))
+
+            val emitEventSemaphore = Semaphore(2)
+            val emitErrorSemaphore = Semaphore(0)
+
+            val expectedEvent = ChangeEvent.changeEventForLocalDelete(
+                namespace,
+                document1["_id"],
+                false
+            )
+
+            val changeEventListener = changeEventListener(emitEventSemaphore, expectedEvent)
+            val conflictHandler = conflictHandler(expectedEvent, expectedEvent)
+            val errorListener = errorListener(emitErrorSemaphore, document1["_id"]!!)
+
+            dataSynchronizer.configure(namespace,
+                conflictHandler,
+                changeEventListener,
+                errorListener,
+                BsonDocumentCodec())
+
+            dataSynchronizer.insertOneAndSync(namespace, document1)
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire()
+
+            verify(changeEventListener, times(2)).onEvent(eq(document1["_id"]), any())
+
+            dataSynchronizer.deleteOneById(namespace, document1["_id"])
+
+            val remoteUpdateResult = RemoteDeleteResult(1)
+            `when`(coreRemoteMongoCollectionMock.deleteOne(any())).thenReturn(remoteUpdateResult)
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire()
+
+            // verify we are inserting!
+            val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
+            verify(coreRemoteMongoCollectionMock, times(1)).deleteOne(docCaptor.capture())
+            assertEquals(document1["_id"], docCaptor.value["_id"])
+
+            // the four calls should be:
+            // insertOne, syncLocalToRemote, updateOne, syncLocalToRemote
+            verify(changeEventListener, times(4)).onEvent(eq(document1["_id"]), any())
+            verify(conflictHandler, times(0)).resolveConflict(eq(document1["_id"]), any(), any())
+            verify(errorListener, times(0)).onError(eq(document1["_id"]), any())
+
+            assertNull(
+                dataSynchronizer.findOneById(
+                    namespace,
+                    document1["_id"],
+                    BsonDocument::class.java,
+                    CodecRegistries.fromCodecs(BsonDocumentCodec())))
+        }
+    }
+
+    @Test
+    fun testConflictedDelete() {
+        withNewDataSynchronizer { dataSynchronizer, coreRemoteMongoCollectionMock ->
+            val document1 = newDoc("count", BsonInt32(1))
+            val conflictDocument = newDoc("count", BsonInt32(2)).append("_id", document1["_id"])
+
+            val emitEventSemaphore = Semaphore(2)
+            val emitErrorSemaphore = Semaphore(0)
+
+            val expectedLocalEvent = ChangeEvent.changeEventForLocalDelete(
+                namespace,
+                document1["_id"],
+                true
+            )
+            val expectedRemoteEvent = ChangeEvent.changeEventForLocalInsert(namespace, conflictDocument, false)
+
+            val changeEventListener = changeEventListener(emitEventSemaphore, expectedLocalEvent)
+            val conflictHandler = conflictHandler(expectedLocalEvent, expectedRemoteEvent)
+            val errorListener = errorListener(emitErrorSemaphore, document1["_id"]!!)
+
+            dataSynchronizer.configure(namespace,
+                conflictHandler,
+                changeEventListener,
+                errorListener,
+                BsonDocumentCodec())
+
+            dataSynchronizer.insertOneAndSync(namespace, document1)
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire(1)
+
+            verify(changeEventListener, times(2)).onEvent(eq(document1["_id"]), any())
+
+            @Suppress("UNCHECKED_CAST")
+            val remoteFindIterable = mock(CoreRemoteFindIterable::class.java) as CoreRemoteFindIterable<BsonDocument>
+            `when`(remoteFindIterable.first()).thenReturn(conflictDocument)
+            `when`(coreRemoteMongoCollectionMock.find(any())).thenReturn(remoteFindIterable)
+
+            dataSynchronizer.deleteOneById(namespace, document1["_id"])
+
+            // create conflict here
+            val remoteDeleteResult = RemoteDeleteResult(0)
+            `when`(coreRemoteMongoCollectionMock.deleteOne(any())).thenReturn(remoteDeleteResult)
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire(1)
+
+            verify(changeEventListener, times(4)).onEvent(eq(document1["_id"]), any())
+            verify(conflictHandler, times(1)).resolveConflict(eq(document1["_id"]), any(), any())
+            verify(errorListener, times(0)).onError(eq(document1["_id"]), any())
+
+            // verify we are inserting!
+            assertEquals(
+                conflictDocument,
+                withoutVersionId(
+                    dataSynchronizer.findOneById(
+                        namespace,
+                        document1["_id"],
+                        BsonDocument::class.java,
+                        CodecRegistries.fromCodecs(BsonDocumentCodec()))))
+        }
+    }
+
+    @Test
+    fun testFailedDelete() {
+        withNewDataSynchronizer { dataSynchronizer, coreRemoteMongoCollectionMock ->
+            val document1 = newDoc("count", BsonInt32(1))
+
+            val emitEventSemaphore = Semaphore(2)
+            val emitErrorSemaphore = Semaphore(0)
+
+            val expectedEvent = ChangeEvent.changeEventForLocalDelete(
+                namespace,
+                document1["_id"],
+                false
+            )
+
+            val changeEventListener = changeEventListener(emitEventSemaphore, expectedEvent)
+            val conflictHandler = conflictHandler(expectedEvent, expectedEvent)
+            val errorListener = errorListener(emitErrorSemaphore, document1["_id"]!!)
+
+            dataSynchronizer.configure(namespace,
+                conflictHandler,
+                changeEventListener,
+                errorListener,
+                BsonDocumentCodec())
+
+            dataSynchronizer.insertOneAndSync(namespace, document1)
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire()
+
+            verify(changeEventListener, times(2)).onEvent(eq(document1["_id"]), any())
+
+            dataSynchronizer.deleteOneById(namespace, document1["_id"])
+
+            `when`(coreRemoteMongoCollectionMock.deleteOne(any())).thenAnswer {
+                throw StitchServiceException("bad", StitchServiceErrorCode.UNKNOWN)
+            }
+
+            dataSynchronizer.doSyncPass()
+
+            emitEventSemaphore.acquire()
+
+            // verify we are inserting!
+            val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
+            verify(coreRemoteMongoCollectionMock, times(1)).deleteOne(docCaptor.capture())
+            assertEquals(
+                BsonDocument("_id", document1["_id"]!!.asObjectId()),
+                withoutVersionId(docCaptor.value))
+
+            // the four calls should be:
+            // insertOne, syncLocalToRemote, updateOne, syncLocalToRemote
+            verify(changeEventListener, times(3)).onEvent(eq(document1["_id"]), any())
+            verify(conflictHandler, times(0)).resolveConflict(eq(document1["_id"]), any(), any())
+            verify(errorListener, times(1)).onError(eq(document1["_id"]), any())
+
+            assertNull(
+                    dataSynchronizer.findOneById(
+                        namespace,
+                        document1["_id"],
+                        BsonDocument::class.java,
+                        CodecRegistries.fromCodecs(BsonDocumentCodec())))
         }
     }
 
