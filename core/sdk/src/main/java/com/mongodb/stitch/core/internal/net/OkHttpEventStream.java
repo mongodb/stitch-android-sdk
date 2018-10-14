@@ -41,7 +41,6 @@ public class OkHttpEventStream extends EventStreamReader implements EventStream 
 
   @Override
   protected String readLine() throws IOException {
-    this.source.read()
     return this.source.readUtf8LineStrict();
   }
 
