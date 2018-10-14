@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.internal.net;
 
+import java.io.EOFException;
 import java.io.IOException;
 
 /**
@@ -25,6 +26,10 @@ import java.io.IOException;
  * information on processing.
  */
 public abstract class EventStreamReader {
+  private StringBuilder dataBuffer = new StringBuilder();
+  private String eventName = "";
+  private boolean doneOnce;
+
   EventStreamReader() {
   }
 
@@ -43,69 +48,98 @@ public abstract class EventStreamReader {
    */
   protected abstract String readLine() throws IOException;
 
+  private void processField(final String field, final String value) {
+    // If the field name is "event"
+    switch (field) {
+      case "event":
+        eventName = value;
+        break;
+      // If the field name is "data"
+      case "data":
+        // If the data buffer is not the empty string, then append a single U+000A LINE FEED
+        // character to the data buffer.
+        if (dataBuffer.length() != 0) {
+          dataBuffer.append('\n');
+        }
+        dataBuffer.append(value);
+        break;
+      // If the field name is "id"
+      case "id":
+        // NOT IMPLEMENTED
+        break;
+      // If the field name is "retry"
+      case "retry":
+        // NOT IMPLEMENTED
+        break;
+      // Otherwise
+      default:
+        // The field is ignored.
+        break;
+    }
+  }
+
   /**
    * Process the next event in a given stream.
    * @return the fully processed event
    * @throws IOException if a stream is in the wrong state, IO errors can be thrown
    */
   protected final Event processEvent() throws IOException {
-    final Event.Builder eventBuilder = new Event.Builder();
-    final StringBuilder dataBuffer = new StringBuilder();
-
-    while (isOpen()) {
-      final String line = readLine();
-
-      if (line == null) {
-        continue;
+    while (true) {
+      String line;
+      try {
+        line = readLine();
+      } catch (final EOFException ex) {
+        if (doneOnce) {
+          throw ex;
+        }
+        doneOnce = true;
+        line = "";
       }
 
-      // if the line starts with a U+003A COLON character (':')
-      if (line.startsWith(":")) {
-        // ignore the line
-        continue;
-      }
-
-      // if the line contains a U+003A COLON character (':') character
-      if (line.contains(":")) {
-        // collect the characters on the line before the first U+003A COLON character (':')...
-        final String[] lineSplitOnColon = line.split(":", 2);
-        // ...and let _field_ be that string
-        final String field = lineSplitOnColon[0];
-
-        final StringBuilder valueBuffer = new StringBuilder();
-        // collect the characters on the line after the first U+003A COLON character (':')
-        // and let value be that string. if value starts with a single U+0020 SPACE character,
-        // remove it from value.
-        for (int i = 1; i < lineSplitOnColon.length; i++) {
-          valueBuffer.append(lineSplitOnColon[i].trim());
+      // If the line is empty (a blank line), Dispatch the event, as defined below.
+      if (line.isEmpty()) {
+        // If the data buffer is an empty string, set the data buffer and the event name buffer to
+        // the empty string and abort these steps.
+        if (dataBuffer.length() == 0) {
+          eventName = "";
+          continue;
         }
 
-        // if the field name is "data"
-        if (field.equals("data")) {
-          final String value = valueBuffer.toString();
-          // if the data buffer is not the empty string,
-          // then append a single U+000A LINE FEED character to the data buffer.
-          // append the field value to the data buffer.
-          if (!value.isEmpty()) {
-            dataBuffer.append(value);
-            dataBuffer.append("\n");
-          }
-        }
+        // If the event name buffer is not the empty string but is also not a valid NCName,
+        // set the data buffer and the event name buffer to the empty string and abort these steps.
+        // NOT IMPLEMENTED
 
-        // if the field name is "event"
-        // set the event name buffer to field value.
-        if (field.equals("event")) {
-          eventBuilder.withEventName(valueBuffer.toString().trim());
-        }
-      }
-
-      if ((line.isEmpty() && !dataBuffer.toString().isEmpty())
-          || line.endsWith("\r") || line.endsWith("\n")) {
+        final Event.Builder eventBuilder = new Event.Builder();
+        eventBuilder.withEventName(eventName.isEmpty() ? Event.MESSAGE_EVENT : eventName);
         eventBuilder.withData(dataBuffer.toString());
-        break;
+
+        // Set the data buffer and the event name buffer to the empty string.
+        dataBuffer = new StringBuilder();
+        eventName = "";
+
+        return eventBuilder.build();
+        // If the line starts with a U+003A COLON character (':')
+      } else if (line.startsWith(":")) {
+        // ignore the line
+        // If the line contains a U+003A COLON character (':') character
+      } else if (line.contains(":")) {
+        // Collect the characters on the line before the first U+003A COLON character (':'),
+        // and let field be that string.
+        final int colonIdx = line.indexOf(":");
+        final String field = line.substring(0, colonIdx);
+
+        // Collect the characters on the line after the first U+003A COLON character (':'),
+        // and let value be that string.
+        // If value starts with a single U+0020 SPACE character, remove it from value.
+        String value = line.substring(colonIdx + 1);
+        value = value.startsWith(" ") ? value.substring(1) : value;
+
+        processField(field, value);
+      // Otherwise, the string is not empty but does not contain a U+003A COLON character (':')
+      // character
+      } else {
+        processField(line, "");
       }
     }
-
-    return eventBuilder.build();
   }
 }
