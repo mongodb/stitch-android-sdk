@@ -1051,7 +1051,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         coll.configure(
                 failingConflictHandler,
                 null,
-                ErrorListener { documentId, error -> errorEmittedSem.release() })
+                ErrorListener { _, _ -> errorEmittedSem.release() })
 
         remoteColl.insertOne(docToInsert)
 

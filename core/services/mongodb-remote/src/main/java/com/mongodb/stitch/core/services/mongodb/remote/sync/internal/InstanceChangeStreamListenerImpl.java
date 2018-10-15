@@ -26,8 +26,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import javax.annotation.Nullable;
+
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
+
 
 final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamListener {
 
@@ -209,5 +213,31 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
       return new HashMap<>();
     }
     return streamer.getEvents();
+  }
+
+  /**
+   * If there is an unprocessed change event for a particular document ID, fetch it from the
+   * appropriate namespace change stream listener without removing it.
+   *
+   * @return the latest unprocessed change event for the given document ID and namespace, or null
+   *         if none exists.
+   */
+  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+          final MongoNamespace namespace,
+          final BsonValue documentId
+  ) {
+    this.instanceLock.readLock().lock();
+    final NamespaceChangeStreamListener streamer;
+    try {
+      streamer = nsStreamers.get(namespace);
+    } finally {
+      this.instanceLock.readLock().unlock();
+    }
+
+    if (streamer == null) {
+      return null;
+    }
+
+    return streamer.getUnprocessedEventForDocumentId(documentId);
   }
 }

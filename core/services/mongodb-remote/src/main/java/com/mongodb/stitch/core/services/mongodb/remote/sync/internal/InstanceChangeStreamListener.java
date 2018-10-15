@@ -21,6 +21,8 @@ import com.mongodb.stitch.core.internal.common.Callback;
 
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
@@ -86,4 +88,15 @@ interface InstanceChangeStreamListener {
    */
   Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(
       final MongoNamespace namespace);
+
+  /**
+   * If there is an unprocessed change event for a particular document ID, fetch it from the
+   * appropriate namespace change stream listener without removing it.
+   *
+   * @return the latest unprocessed change event for the given document ID and namespace, or null
+   *         if none exists.
+   */
+  @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+          final MongoNamespace namespace,
+          final BsonValue documentId);
 }
