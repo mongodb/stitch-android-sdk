@@ -75,7 +75,7 @@ public class SyncOperations<DocumentT> {
       final RemoteFindOptions options
   ) {
     final BsonDocument filterDoc = filter.toBsonDocument(documentClass, codecRegistry);
-    final BsonDocument projDoc = BsonUtils.toBsonDocumentOrNull(
+    final BsonDocument projectionDoc = BsonUtils.toBsonDocumentOrNull(
         options.getProjection(),
         documentClass,
         codecRegistry);
@@ -89,7 +89,7 @@ public class SyncOperations<DocumentT> {
         dataSynchronizer)
         .filter(filterDoc)
         .limit(options.getLimit())
-        .projection(projDoc)
+        .projection(projectionDoc)
         .sort(sortDoc);
   }
 

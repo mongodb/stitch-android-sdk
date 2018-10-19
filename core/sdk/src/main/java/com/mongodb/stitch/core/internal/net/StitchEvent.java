@@ -78,7 +78,11 @@ public final class StitchEvent<T> {
         this.data = null;
         break;
       case Event.MESSAGE_EVENT:
-        this.data = BsonUtils.parseValue(data, decoder);
+        if (data != null) {
+          this.data = BsonUtils.parseValue(data, decoder);
+        } else {
+          this.data = null;
+        }
         this.error = null;
         break;
       default:

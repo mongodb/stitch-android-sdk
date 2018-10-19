@@ -404,7 +404,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
       final MongoCollection<BsonDocument> localColl = getLocalCollection(nsConfig.getNamespace());
       final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
-          instanceChangeStreamListener.getEventsForNamespace(nsConfig.getNamespace());
+          getEventsForNamespace(nsConfig.getNamespace());
 
       final Set<BsonValue> unseenIds = nsConfig.getSynchronizedDocumentIds();
       final Set<BsonDocument> latestDocuments = getLatestDocumentsFromRemote(nsConfig);
@@ -586,7 +586,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   nsConfig.getNamespace(),
                   docConfig.getDocumentId(),
                   remoteChangeEvent.getOperationType().toString()));
-          break;
+          return;
       }
     }
 
@@ -1161,6 +1161,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     instanceChangeStreamListener.removeWatcher(namespace, watcher);
   }
 
+  Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(MongoNamespace namespace) {
+    return instanceChangeStreamListener.getEventsForNamespace(namespace);
+  }
+
   // ----- CRUD operations -----
 
   /**
@@ -1500,7 +1504,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     emitEvent(documentId, changeEventForLocalDelete(namespace, documentId, false));
   }
 
-  void triggerListeningToNamespace(final MongoNamespace namespace) {
+  private void triggerListeningToNamespace(final MongoNamespace namespace) {
     syncLock.lock();
     try {
       final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
