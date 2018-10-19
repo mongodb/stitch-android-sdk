@@ -1062,6 +1062,110 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest() {
         assertTrue(errorEmittedSem.tryAcquire(10, TimeUnit.SECONDS))
     }
 
+    @Test
+    fun testStaleFetchSingle() {
+        testSyncInBothDirections {
+            val coll = getTestSync()
+
+            val remoteColl = getTestCollRemote()
+
+            val doc1 = Document("hello", "world")
+            Tasks.await(remoteColl.insertOne(doc1))
+
+            // get the document
+            val doc = Tasks.await(remoteColl.find(doc1).first())!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+            coll.syncOne(doc1Id)
+
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+
+            Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("i", 1))))
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+        }
+    }
+
+    @Test
+    fun testStaleFetchSingleDeleted() {
+        testSyncInBothDirections {
+            val coll = getTestSync()
+
+            val remoteColl = getTestCollRemote()
+
+            val doc1 = Document("hello", "world")
+            Tasks.await(remoteColl.insertOne(doc1))
+
+            // get the document
+            val doc = Tasks.await(remoteColl.find(doc1).first())!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+            val doc1Filter = Document("_id", doc1Id)
+
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+            coll.syncOne(doc1Id)
+
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+
+            Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("i", 1))))
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+
+            assertEquals(1, Tasks.await(remoteColl.deleteOne(doc1Filter)).deletedCount)
+            powerCycleDevice()
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+
+            streamAndSync()
+            assertNull(Tasks.await(coll.findOneById(doc1Id)))
+        }
+    }
+
+    @Test
+    fun testStaleFetchMultiple() {
+        testSyncInBothDirections {
+            val coll = getTestSync()
+
+            val remoteColl = getTestCollRemote()
+
+            val insertResult =
+                    Tasks.await(remoteColl.insertMany(listOf(
+                            Document("hello", "world"),
+                            Document("hello", "friend"))))
+
+            // get the document
+            val doc1Id = insertResult.insertedIds[0]
+            val doc2Id = insertResult.insertedIds[1]
+
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+            coll.syncOne(doc1Id)
+
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+
+            Tasks.await(coll.updateOneById(doc1Id, Document("\$inc", Document("i", 1))))
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+
+            coll.syncOne(doc2Id)
+            streamAndSync()
+            assertNotNull(Tasks.await(coll.findOneById(doc1Id)))
+            assertNotNull(Tasks.await(coll.findOneById(doc2Id)))
+        }
+    }
+
     private fun streamAndSync() {
         val dataSync = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
         if (testNetworkMonitor.connectedState) {

@@ -26,11 +26,13 @@ class TodoItem {
   public static final String TODO_LIST_COLLECTION = "items";
 
   public static final String ID_KEY = "_id";
+  public static final String OWNER_ID = "owner_id";
   public static final String TASK_KEY = "task";
   public static final String CHECKED_KEY = "checked";
   public static final String DONE_DATE_KEY = "done_date";
 
   private final ObjectId id;
+  private final String ownerId;
   private final String task;
   private final Boolean checked;
   private Date doneDate;
@@ -38,6 +40,7 @@ class TodoItem {
   /** Constructs a todo item from a MongoDB document. */
   TodoItem(final Document todoItemDoc) {
     this.id = todoItemDoc.getObjectId(ID_KEY);
+    this.ownerId = todoItemDoc.getString(OWNER_ID);
     this.task = todoItemDoc.getString(TASK_KEY);
     this.checked = todoItemDoc.getBoolean(CHECKED_KEY);
     if (todoItemDoc.containsKey(DONE_DATE_KEY)) {
@@ -48,6 +51,7 @@ class TodoItem {
   /** Returns if a MongoDB document is a todo item. */
   public static boolean isTodoItem(final Document todoItemDoc) {
     return todoItemDoc.containsKey(ID_KEY)
+        && todoItemDoc.containsKey(OWNER_ID)
         && todoItemDoc.containsKey(TASK_KEY)
         && todoItemDoc.containsKey(CHECKED_KEY);
   }

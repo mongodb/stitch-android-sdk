@@ -403,12 +403,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
           instanceChangeStreamListener.getEventsForNamespace(nsConfig.getNamespace());
 
-      final Set<BsonValue> unseenIds = nsConfig.getSynchronizedDocumentIds();
-      final Set<BsonDocument> latestDocuments = getLatestDocumentsFromRemote(nsConfig);
-      final Set<BsonValue> latestDocumentIds = getDocumentIds(latestDocuments);
+      final Set<BsonValue> unseenIds = nsConfig.getStaleDocumentIds();
+      final Set<BsonDocument> latestDocumentsFromStale =
+          getLatestDocumentsForStaleFromRemote(nsConfig, unseenIds);
       final Map<BsonValue, BsonDocument> latestDocumentMap = new HashMap<>();
 
-      for (final BsonDocument latestDocument : latestDocuments) {
+      for (final BsonDocument latestDocument : latestDocumentsFromStale) {
         latestDocumentMap.put(latestDocument.get("_id"), latestDocument);
       }
 
@@ -429,7 +429,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         }
 
         unseenIds.remove(docConfig.getDocumentId());
-        latestDocumentIds.remove(docConfig.getDocumentId());
+        latestDocumentMap.remove(docConfig.getDocumentId());
         syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue());
       }
 
@@ -441,7 +441,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           continue;
         }
 
-        if (latestDocumentIds.contains(docId)) {
+        if (latestDocumentMap.containsKey(docId)) {
           syncRemoteChangeEventToLocal(
               nsConfig,
               docConfig,
@@ -456,28 +456,30 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         }
       }
 
-      if (unseenIds.removeAll(latestDocumentIds)) {
-        for (final BsonValue unseenId : unseenIds) {
-          final CoreDocumentSynchronizationConfig docConfig =
-              nsConfig.getSynchronizedDocument(unseenId);
-          if (docConfig == null
-              || docConfig.getLastKnownRemoteVersion() == null
-              || docConfig.isFrozen()) {
-            // means we aren't actually synchronizing on this remote doc
-            continue;
-          }
-
-          syncRemoteChangeEventToLocal(
-              nsConfig,
-              docConfig,
-              changeEventForLocalDelete(
-                  nsConfig.getNamespace(),
-                  unseenId,
-                  docConfig.hasUncommittedWrites()
-              ));
+      unseenIds.removeAll(latestDocumentMap.keySet());
+      for (final BsonValue unseenId : unseenIds) {
+        final CoreDocumentSynchronizationConfig docConfig =
+            nsConfig.getSynchronizedDocument(unseenId);
+        if (docConfig == null
+            || docConfig.getLastKnownRemoteVersion() == null
+            || docConfig.isFrozen()) {
+          // means we aren't actually synchronizing on this remote doc
+          continue;
         }
+
+        syncRemoteChangeEventToLocal(
+            nsConfig,
+            docConfig,
+            changeEventForLocalDelete(
+                nsConfig.getNamespace(),
+                unseenId,
+                docConfig.hasUncommittedWrites()
+            ));
+
+        docConfig.setStale(false);
       }
     }
+
 
     logger.info(String.format(
         Locale.US,
@@ -1663,10 +1665,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return getRemoteCollection(namespace, BsonDocument.class);
   }
 
-  private Set<BsonDocument> getLatestDocumentsFromRemote(
-      final NamespaceSynchronizationConfig nsConfig) {
+  private Set<BsonDocument> getLatestDocumentsForStaleFromRemote(
+      final NamespaceSynchronizationConfig nsConfig,
+      final Set<BsonValue> staleIds) {
     final BsonArray ids = new BsonArray();
-    for (final BsonValue bsonValue : nsConfig.getStaleDocumentIds()) {
+    for (final BsonValue bsonValue : staleIds) {
       ids.add(new BsonDocument("_id", bsonValue));
     }
 

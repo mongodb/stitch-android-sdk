@@ -64,6 +64,6 @@ public final class StitchServiceException extends StitchException {
   @Override
   public String toString() {
     return String.format(
-        "%s(%s): %s", super.toString(), errorCode.name(), errorCode.getCodeName());
+        "(%s): %s: %s", errorCode.name(), errorCode.getCodeName(), super.toString());
   }
 }

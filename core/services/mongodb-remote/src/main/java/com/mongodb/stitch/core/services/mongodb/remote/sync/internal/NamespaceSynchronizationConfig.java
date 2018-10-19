@@ -106,7 +106,11 @@ class NamespaceSynchronizationConfig
     this.nsLock = config.nsLock;
 
     // Fill from db
-    docsColl.find().forEach(new Block<CoreDocumentSynchronizationConfig>() {
+    final BsonDocument docsFilter = new BsonDocument();
+    docsFilter.put(
+        CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD,
+        new BsonString(namespace.toString()));
+    docsColl.find(docsFilter).forEach(new Block<CoreDocumentSynchronizationConfig>() {
       @Override
       public void apply(
           @Nonnull final CoreDocumentSynchronizationConfig docConfig

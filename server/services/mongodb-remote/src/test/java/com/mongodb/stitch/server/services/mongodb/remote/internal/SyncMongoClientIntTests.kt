@@ -1071,6 +1071,110 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest() {
         assertTrue(errorEmittedSem.tryAcquire(10, TimeUnit.SECONDS))
     }
 
+    @Test
+    fun testStaleFetchSingle() {
+        testSyncInBothDirections {
+            val coll = getTestSync()
+
+            val remoteColl = getTestCollRemote()
+
+            val doc1 = Document("hello", "world")
+            remoteColl.insertOne(doc1)
+
+            // get the document
+            val doc = remoteColl.find(doc1).first()!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+            coll.syncOne(doc1Id)
+
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+
+            coll.updateOneById(doc1Id, Document("\$inc", Document("i", 1)))
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+        }
+    }
+
+    @Test
+    fun testStaleFetchSingleDeleted() {
+        testSyncInBothDirections {
+            val coll = getTestSync()
+
+            val remoteColl = getTestCollRemote()
+
+            val doc1 = Document("hello", "world")
+            remoteColl.insertOne(doc1)
+
+            // get the document
+            val doc = remoteColl.find(doc1).first()!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+            val doc1Filter = Document("_id", doc1Id)
+
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+            coll.syncOne(doc1Id)
+
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+
+            coll.updateOneById(doc1Id, Document("\$inc", Document("i", 1)))
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+
+            assertEquals(1, remoteColl.deleteOne(doc1Filter).deletedCount)
+            powerCycleDevice()
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+
+            streamAndSync()
+            assertNull(coll.findOneById(doc1Id))
+        }
+    }
+
+    @Test
+    fun testStaleFetchMultiple() {
+        testSyncInBothDirections {
+            val coll = getTestSync()
+
+            val remoteColl = getTestCollRemote()
+
+            val insertResult =
+                    remoteColl.insertMany(listOf(
+                            Document("hello", "world"),
+                            Document("hello", "friend")))
+
+            // get the document
+            val doc1Id = insertResult.insertedIds[0]
+            val doc2Id = insertResult.insertedIds[1]
+
+            coll.configure({ _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+                throw IllegalStateException("failure")
+            }, null, null)
+            coll.syncOne(doc1Id)
+
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+
+            coll.updateOneById(doc1Id, Document("\$inc", Document("i", 1)))
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+
+            coll.syncOne(doc2Id)
+            streamAndSync()
+            assertNotNull(coll.findOneById(doc1Id))
+            assertNotNull(coll.findOneById(doc2Id))
+        }
+    }
+
     private fun watchForEvents(
         namespace: MongoNamespace,
         n: Int = 1
