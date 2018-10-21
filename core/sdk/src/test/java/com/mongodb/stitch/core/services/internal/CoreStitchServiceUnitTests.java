@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core.services.internal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -29,7 +30,6 @@ import com.mongodb.stitch.core.internal.net.EventStream;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
-import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
 import java.nio.charset.StandardCharsets;
@@ -83,27 +83,27 @@ public class CoreStitchServiceUnitTests {
     assertEquals(42, (int) coreStitchService.callFunction(
             funcName, args, null, Integer.class));
 
-    final ArgumentCaptor<StitchAuthDocRequest> docArgument =
+    final ArgumentCaptor<StitchAuthDocRequest> reqArgument =
         ArgumentCaptor.forClass(StitchAuthDocRequest.class);
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<Decoder<Integer>> decArgument = ArgumentCaptor.forClass(Decoder.class);
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<Class<Integer>> clazzArgument = ArgumentCaptor.forClass(Class.class);
 
-    verify(requestClient).doAuthenticatedRequest(docArgument.capture(), decArgument.capture());
-    assertEquals(docArgument.getValue().getMethod(), Method.POST);
-    assertEquals(docArgument.getValue().getPath(), routes.getFunctionCallRoute());
-    assertEquals(docArgument.getValue().getDocument(), expectedRequestDoc);
+    verify(requestClient).doAuthenticatedRequest(reqArgument.capture(), decArgument.capture());
+    assertEquals(reqArgument.getValue().getMethod(), Method.POST);
+    assertEquals(reqArgument.getValue().getPath(), routes.getFunctionCallRoute());
+    assertEquals(reqArgument.getValue().getDocument(), expectedRequestDoc);
     assertTrue(decArgument.getValue() instanceof IntegerCodec);
 
     verify(requestClient)
         .doAuthenticatedRequest(
-            docArgument.capture(),
+            reqArgument.capture(),
             clazzArgument.capture(),
             any(CodecRegistry.class));
-    assertEquals(docArgument.getValue().getMethod(), Method.POST);
-    assertEquals(docArgument.getValue().getDocument(), expectedRequestDoc);
-    assertEquals(docArgument.getValue().getPath(), routes.getFunctionCallRoute());
+    assertEquals(reqArgument.getValue().getMethod(), Method.POST);
+    assertEquals(reqArgument.getValue().getDocument(), expectedRequestDoc);
+    assertEquals(reqArgument.getValue().getPath(), routes.getFunctionCallRoute());
     assertEquals(clazzArgument.getValue(), Integer.class);
   }
 
@@ -144,7 +144,7 @@ public class CoreStitchServiceUnitTests {
     doReturn(stream)
         .when(requestClient)
         .openAuthenticatedStream(
-            any(StitchRequest.class), ArgumentMatchers.<Decoder<Integer>>any());
+            any(StitchAuthRequest.class), ArgumentMatchers.<Decoder<Integer>>any());
 
     final String funcName = "myFunc1";
     final List<Integer> args = Arrays.asList(1, 2, 3);
@@ -157,16 +157,17 @@ public class CoreStitchServiceUnitTests {
         stream, coreStitchService.streamFunction(
             funcName, args, new IntegerCodec()));
 
-    final ArgumentCaptor<StitchRequest> docArgument =
-        ArgumentCaptor.forClass(StitchRequest.class);
+    final ArgumentCaptor<StitchAuthRequest> reqArgument =
+        ArgumentCaptor.forClass(StitchAuthRequest.class);
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<Decoder<Integer>> decArgument = ArgumentCaptor.forClass(Decoder.class);
 
-    verify(requestClient).openAuthenticatedStream(docArgument.capture(), decArgument.capture());
-    assertEquals(docArgument.getValue().getMethod(), Method.GET);
-    assertEquals(docArgument.getValue().getPath(),
+    verify(requestClient).openAuthenticatedStream(reqArgument.capture(), decArgument.capture());
+    assertEquals(reqArgument.getValue().getMethod(), Method.GET);
+    assertEquals(reqArgument.getValue().getPath(),
         routes.getFunctionCallRoute() + "?stitch_request="
             + Base64.encode(expectedRequestDoc.toJson().getBytes(StandardCharsets.UTF_8)));
     assertTrue(decArgument.getValue() instanceof IntegerCodec);
+    assertFalse(reqArgument.getValue().getUseRefreshToken());
   }
 }

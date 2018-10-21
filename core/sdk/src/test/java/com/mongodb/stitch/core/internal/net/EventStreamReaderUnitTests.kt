@@ -37,20 +37,14 @@ class EventStreamReaderUnitTests {
         testEventStreamReader.testStream = dataEvent
 
         var event = testEventStreamReader.processEvent()
-        var data = event.data.split("\n")
 
         assertEquals(event.eventName, Event.MESSAGE_EVENT)
-        assertEquals(data[0], "MDB")
-        assertEquals(data[1], "+2")
-        assertEquals(data[2], "10")
+        assertEquals(event.data, "MDB\n+2\n10")
 
         testEventStreamReader.testStream = errorEvent
         event = testEventStreamReader.processEvent()
-        data = event.data.split("\n")
 
         assertEquals(event.eventName, "error")
-        assertEquals(data[0], "you")
-        assertEquals(data[1], "messed")
-        assertEquals(data[2], "up")
+        assertEquals(event.data, "you\nmessed\nup")
     }
 }

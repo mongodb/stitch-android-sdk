@@ -16,9 +16,8 @@
 
 package com.mongodb.stitch.android.examples.todosync;
 
-import android.content.DialogInterface;
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -30,27 +29,21 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
-import com.google.android.gms.tasks.Continuation;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
-import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential;
+import com.mongodb.stitch.core.auth.providers.serverapikey.ServerApiKeyCredential;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
@@ -81,46 +74,38 @@ public class TodoListActivity extends AppCompatActivity {
     // Set up Stitch and local MongoDB mobile client
     final StitchAppClient client = Stitch.getDefaultAppClient();
 
-    client.getAuth().loginWithCredential(
-        new UserPasswordCredential("unique_user@domain.com", "password"))
-        .addOnFailureListener(new OnFailureListener() {
-          @Override
-          public void onFailure(@NonNull final Exception e) {
-            Log.e(TAG, "failed to log into Stitch", e);
-          }
-        });
-
     final RemoteMongoClient mongoClient = client.getServiceClient(
-        RemoteMongoClient.factory, "Like");
-
+        RemoteMongoClient.factory, "mongodb-atlas");
     items = mongoClient
-      .getDatabase(TodoItem.TODO_LIST_DATABASE)
-      .getCollection(TodoItem.TODO_LIST_COLLECTION);
-
-    items.sync().configure(
-        DefaultSyncConflictResolvers.<Document>remoteWins(),
-        itemUpdateListener,
-        new ErrorListener() {
-        @Override
-        public void onError(final BsonValue documentId, final Exception error) {
-          Log.e(TAG, error.getLocalizedMessage());
-        }
-      });
-
+        .getDatabase(TodoItem.TODO_LIST_DATABASE)
+        .getCollection(TodoItem.TODO_LIST_COLLECTION);
     lists =
         mongoClient
             .getDatabase(TODO_LISTS_DATABASE)
             .getCollection(TODO_LISTS_COLLECTION, BsonDocument.class);
 
+    client.getAuth().loginWithCredential(
+        new ServerApiKeyCredential(
+            "xEfxAP4jFWaWEs5WWpff7XyQMh1T56CCMmDEV9oxXtItPHBveA6bc6IEjOhQLes6"))
+        .addOnSuccessListener(user -> {
+          todoAdapter.updateItems(getItemsFromServer());
+
+          if (lists.sync().getSyncedIds().isEmpty()) {
+            lists.sync().insertOneAndSync(
+                new BsonDocument("_id", new BsonString(user.getId())));
+          }
+        })
+        .addOnFailureListener(e -> Log.e(TAG, "failed to log into Stitch", e));
+
+    items.sync().configure(
+        DefaultSyncConflictResolvers.remoteWins(),
+        itemUpdateListener,
+        (documentId, error) -> Log.e(TAG, error.getLocalizedMessage()));
+
     lists.sync().configure(
-        DefaultSyncConflictResolvers.<BsonDocument>remoteWins(),
+        DefaultSyncConflictResolvers.remoteWins(),
         listUpdateListener,
-        new ErrorListener() {
-        @Override
-        public void onError(final BsonValue documentId, final Exception error) {
-          Log.e(TAG, error.getLocalizedMessage());
-        }
-      });
+        (documentId, error) -> Log.e(TAG, error.getLocalizedMessage()));
 
     // Set up recycler view for to-do items
     final RecyclerView todoRecyclerView = findViewById(R.id.rv_todo_items);
@@ -129,7 +114,7 @@ public class TodoListActivity extends AppCompatActivity {
 
     // Set up adapter
     todoAdapter = new TodoAdapter(
-        Collections.<TodoItem>emptyList(),
+        Collections.emptyList(),
         new TodoAdapter.ItemUpdater() {
           @Override
           public void updateChecked(final ObjectId itemId, final boolean isChecked) {
@@ -151,22 +136,14 @@ public class TodoListActivity extends AppCompatActivity {
           }
         });
     todoRecyclerView.setAdapter(todoAdapter);
-    todoAdapter.updateItems(getItems());
-
-    final Set<BsonValue> syncedIds = items.sync().getSyncedIds();
-    items.sync().syncMany(syncedIds.toArray(new BsonValue[syncedIds.size()]));
-
-    if (lists.sync().getSyncedIds().isEmpty()) {
-      lists.sync().insertOneAndSync(new BsonDocument("_id", new BsonString("mylist")));
-    } else {
-      lists.sync().syncOne(new BsonString("mylist"));
-    }
   }
 
   private class ListUpdateListener implements ChangeEventListener<BsonDocument> {
     @Override
     public void onEvent(final BsonValue documentId, final ChangeEvent<BsonDocument> event) {
-      todoAdapter.updateItems(getItems());
+      if (!event.hasUncommittedWrites()) {
+        todoAdapter.updateItems(getItemsFromServer());
+      }
     }
   }
 
@@ -174,10 +151,7 @@ public class TodoListActivity extends AppCompatActivity {
     @Override
     public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
       if (!event.hasUncommittedWrites()) {
-        lists.sync().updateOneById(
-            new BsonString("mylist"),
-            new BsonDocument("$inc", new BsonDocument("i", new BsonInt64(1))));
-        touchList();
+        todoAdapter.updateItems(getItems());
       }
     }
   }
@@ -204,12 +178,9 @@ public class TodoListActivity extends AppCompatActivity {
         });
 
     searchView.setOnCloseListener(
-        new SearchView.OnCloseListener() {
-          @Override
-          public boolean onClose() {
-            todoAdapter.updateItems(getItems());
-            return false;
-          }
+        () -> {
+          todoAdapter.updateItems(getItems());
+          return false;
         });
 
     return super.onCreateOptionsMenu(menu);
@@ -232,50 +203,60 @@ public class TodoListActivity extends AppCompatActivity {
     }
   }
 
-  private Task<List<TodoItem>> getItems() {
-    return items.find().into(new ArrayList<Document>())
-        .continueWith(new Continuation<ArrayList<Document>, List<TodoItem>>() {
-          @Override
-          public List<TodoItem> then(@NonNull final Task<ArrayList<Document>> task) {
-            if (!task.isSuccessful()) {
-              return Collections.emptyList();
-            }
-            final List<TodoItem> todoItems = new ArrayList<>();
-            for (final Document doc : task.getResult()) {
-              if (TodoItem.isTodoItem(doc)) {
-                final TodoItem item = new TodoItem(doc);
-                items.sync().syncOne(new BsonObjectId(item.getId()));
-                todoItems.add(item);
-              }
-            }
-            return todoItems;
+  private Task<List<TodoItem>> getItemsFromServer() {
+    return items.find().into(new ArrayList<>())
+        .continueWith(task -> {
+          if (!task.isSuccessful()) {
+            return Collections.emptyList();
           }
+          final List<TodoItem> todoItems = new ArrayList<>();
+          for (final Document doc : task.getResult()) {
+            if (TodoItem.isTodoItem(doc)) {
+              final TodoItem item = new TodoItem(doc);
+              items.sync().syncOne(new BsonObjectId(item.getId()));
+              todoItems.add(item);
+            }
+          }
+          return todoItems;
+        });
+  }
+
+  private Task<List<TodoItem>> getItems() {
+    return items.sync().find().into(new ArrayList<>())
+        .continueWith(task -> {
+          if (!task.isSuccessful()) {
+            return Collections.emptyList();
+          }
+          final List<TodoItem> todoItems = new ArrayList<>();
+          for (final Document doc : task.getResult()) {
+            if (TodoItem.isTodoItem(doc)) {
+              final TodoItem item = new TodoItem(doc);
+              todoItems.add(item);
+            }
+          }
+          return todoItems;
         });
   }
 
   private Task<List<TodoItem>> getItemsWithRegexFilter(final String regex) {
-    return items.find(
+    return items.sync().find(
         new Document(
             TodoItem.TASK_KEY,
             new Document().append("$regex",
                 new BsonRegularExpression(regex)).append("$options", "i")))
-        .into(new ArrayList<Document>())
-        .continueWith(new Continuation<ArrayList<Document>, List<TodoItem>>() {
-          @Override
-          public List<TodoItem> then(@NonNull final Task<ArrayList<Document>> task) {
-            if (!task.isSuccessful()) {
-              return Collections.emptyList();
-            }
-            final List<TodoItem> todoItems = new ArrayList<>();
-            for (final Document doc : task.getResult()) {
-              if (TodoItem.isTodoItem(doc)) {
-                final TodoItem item = new TodoItem(doc);
-                items.sync().syncOne(new BsonObjectId(item.getId()));
-                todoItems.add(item);
-              }
-            }
-            return todoItems;
+        .into(new ArrayList<>())
+        .continueWith(task -> {
+          if (!task.isSuccessful()) {
+            return Collections.emptyList();
           }
+          final List<TodoItem> todoItems = new ArrayList<>();
+          for (final Document doc : task.getResult()) {
+            if (TodoItem.isTodoItem(doc)) {
+              final TodoItem item = new TodoItem(doc);
+              todoItems.add(item);
+            }
+          }
+          return todoItems;
         });
   }
 
@@ -283,6 +264,7 @@ public class TodoListActivity extends AppCompatActivity {
     final AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Add Item");
 
+    @SuppressLint("InflateParams")
     final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, null);
     final EditText input = view.findViewById(R.id.et_todo_item_task);
 
@@ -291,20 +273,10 @@ public class TodoListActivity extends AppCompatActivity {
     // Set up the buttons
     builder.setPositiveButton(
         "Add",
-        new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(final DialogInterface dialog, final int which) {
-            addTodoItem(input.getText().toString());
-          }
-        });
+        (dialog, which) -> addTodoItem(input.getText().toString()));
     builder.setNegativeButton(
         "Cancel",
-        new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(final DialogInterface dialog, final int which) {
-            dialog.cancel();
-          }
-        });
+        (dialog, which) -> dialog.cancel());
 
     builder.show();
   }
@@ -313,6 +285,7 @@ public class TodoListActivity extends AppCompatActivity {
     final AlertDialog.Builder builder = new AlertDialog.Builder(this);
     builder.setTitle("Edit Item");
 
+    @SuppressLint("InflateParams")
     final View view = getLayoutInflater().inflate(R.layout.edit_item_dialog, null);
     final EditText input = view.findViewById(R.id.et_todo_item_task);
 
@@ -324,20 +297,10 @@ public class TodoListActivity extends AppCompatActivity {
     // Set up the buttons
     builder.setPositiveButton(
         "Update",
-        new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(final DialogInterface dialog, final int which) {
-            updateTodoItemTask(itemId, input.getText().toString());
-          }
-        });
+        (dialog, which) -> updateTodoItemTask(itemId, input.getText().toString()));
     builder.setNegativeButton(
         "Cancel",
-        new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(final DialogInterface dialog, final int which) {
-            dialog.cancel();
-          }
-        });
+        (dialog, which) -> dialog.cancel());
 
     builder.show();
   }
@@ -345,58 +308,52 @@ public class TodoListActivity extends AppCompatActivity {
   private void updateTodoItemTask(final ObjectId itemId, final String newTask) {
     items.sync().updateOneById(
         new BsonObjectId(itemId),
-        new Document("$set", new Document(TodoItem.TASK_KEY, newTask)));
-    todoAdapter.updateItems(getItems());
+        new Document("$set", new Document(TodoItem.TASK_KEY, newTask)))
+        .addOnSuccessListener(result -> todoAdapter.updateItems(getItems()))
+        .addOnFailureListener(e -> Log.e(TAG, "failed to insert log item", e));
   }
 
   private void addTodoItem(final String task) {
     final Document newItem =
-        new Document().append(TodoItem.TASK_KEY, task).append(TodoItem.CHECKED_KEY, false);
-    items.sync().insertOneAndSync(newItem);
-    todoAdapter.updateItems(getItems());
+        new Document()
+            .append(TodoItem.OWNER_ID, Stitch.getDefaultAppClient().getAuth().getUser().getId())
+            .append(TodoItem.TASK_KEY, task)
+            .append(TodoItem.CHECKED_KEY, false);
+    items.sync().insertOneAndSync(newItem)
+        .addOnSuccessListener(result -> {
+          todoAdapter.updateItems(getItems());
+          touchList();
+        })
+        .addOnFailureListener(e -> Log.e(TAG, "failed to insert log item", e));
   }
 
   private void touchList() {
     lists.sync().updateOneById(
-        new BsonString("mylist"),
+        new BsonString(Stitch.getDefaultAppClient().getAuth().getUser().getId()),
         new BsonDocument("$inc", new BsonDocument("i", new BsonInt64(1))));
   }
 
   private void clearCheckedItems() {
     final List<Task<RemoteDeleteResult>> tasks = new ArrayList<>();
-    getItems().addOnSuccessListener(new OnSuccessListener<List<TodoItem>>() {
-      @Override
-      public void onSuccess(final List<TodoItem> todoItems) {
-        for (final TodoItem item : todoItems) {
-          if (item.getChecked()) {
-            tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
-          }
+    getItems().addOnSuccessListener(todoItems -> {
+      for (final TodoItem item : todoItems) {
+        if (item.getChecked()) {
+          tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
         }
-        Tasks.whenAllComplete(tasks).addOnCompleteListener(new OnCompleteListener<List<Task<?>>>() {
-          @Override
-          public void onComplete(@NonNull final Task<List<Task<?>>> task) {
-            todoAdapter.updateItems(getItems());
-          }
-        });
       }
+      Tasks.whenAllComplete(tasks)
+          .addOnCompleteListener(task -> todoAdapter.updateItems(getItems()));
     });
   }
 
   private void clearAllItems() {
     final List<Task<RemoteDeleteResult>> tasks = new ArrayList<>();
-    getItems().addOnSuccessListener(new OnSuccessListener<List<TodoItem>>() {
-      @Override
-      public void onSuccess(final List<TodoItem> todoItems) {
-        for (final TodoItem item : todoItems) {
-          tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
-        }
-        Tasks.whenAllComplete(tasks).addOnCompleteListener(new OnCompleteListener<List<Task<?>>>() {
-          @Override
-          public void onComplete(@NonNull final Task<List<Task<?>>> task) {
-            todoAdapter.updateItems(getItems());
-          }
-        });
+    getItems().addOnSuccessListener(todoItems -> {
+      for (final TodoItem item : todoItems) {
+        tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
       }
+      Tasks.whenAllComplete(tasks)
+          .addOnCompleteListener(task -> todoAdapter.updateItems(getItems()));
     });
   }
 }

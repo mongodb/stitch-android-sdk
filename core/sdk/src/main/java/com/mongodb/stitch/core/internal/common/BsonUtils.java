@@ -142,6 +142,13 @@ public final class BsonUtils extends RuntimeException {
     return document.get("_id");
   }
 
+  public static BsonValue getDocumentId(
+          final BsonDocument document,
+          final BsonValue defaultValue
+  ) {
+    return document.get("_id", null);
+  }
+
   /**
    * Returns a copy of the given document.
    * @param document the document to copy.

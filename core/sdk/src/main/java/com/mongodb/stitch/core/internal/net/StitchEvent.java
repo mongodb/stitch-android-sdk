@@ -57,6 +57,44 @@ public final class StitchEvent<T> {
                       final Decoder<T> decoder) {
     this.eventName = eventName;
 
+    final StringBuilder decodedStringBuilder = new StringBuilder(data.length());
+    for (int chIdx = 0; chIdx < data.length(); chIdx++) {
+      final char c = data.charAt(chIdx);
+      switch (c) {
+        case '%':
+          if (chIdx + 2 >= data.length()) {
+            break;
+          }
+          final String code = data.substring(chIdx + 1, chIdx + 3);
+          final boolean found;
+          switch (code) {
+            case "25":
+              found = true;
+              decodedStringBuilder.append("%");
+              break;
+            case "0A":
+              found = true;
+              decodedStringBuilder.append("\n");
+              break;
+            case "0D":
+              found = true;
+              decodedStringBuilder.append("\r");
+              break;
+            default:
+              found = false;
+          }
+          if (found) {
+            chIdx += 2;
+            continue;
+          }
+          break;
+        default:
+          break;
+      }
+      decodedStringBuilder.append(c);
+    }
+    final String decodedData = decodedStringBuilder.toString();
+
     switch (this.eventName) {
       case ERROR_EVENT_NAME:
         String errorMsg;
@@ -66,12 +104,13 @@ public final class StitchEvent<T> {
           // parse the error as json
           // if it is not valid json, parse the body as seen in
           // StitchError#handleRequestError
-          final Document errorDoc = BsonUtils.parseValue(data, Document.class);
+          final Document errorDoc =
+              BsonUtils.parseValue(decodedData, Document.class);
           errorMsg = errorDoc.getString(ErrorFields.ERROR);
           errorCode = StitchServiceErrorCode.fromCodeName(
               errorDoc.getString(ErrorFields.ERROR_CODE));
         } catch (Exception e) {
-          errorMsg = data;
+          errorMsg = decodedData;
           errorCode = StitchServiceErrorCode.UNKNOWN;
         }
         this.error = new StitchServiceException(errorMsg, errorCode);

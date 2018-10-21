@@ -201,23 +201,22 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   @Override
-  public <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
+  public synchronized <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
                                                final Decoder<T> decoder) {
-    return openAuthenticatedStream(stitchReq, decoder, true);
-  }
-
-  private <T> Stream<T> openAuthenticatedStream(final StitchRequest stitchReq,
-                                                final Decoder<T> decoder,
-                                                final boolean tryRefresh) {
+    if (!isLoggedIn()) {
+      throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
+    }
+    final String authToken = stitchReq.getUseRefreshToken()
+        ? getAuthInfo().getRefreshToken() : getAuthInfo().getAccessToken();
     try {
       return new Stream<>(
           requestClient.doStreamRequest(stitchReq.builder().withPath(
-              stitchReq.getPath() + AuthStreamFields.AUTH_TOKEN + getAuthInfo().getAccessToken()
+              stitchReq.getPath() + AuthStreamFields.AUTH_TOKEN + authToken
           ).build()),
           decoder
       );
     } catch (final StitchServiceException ex) {
-      return handleAuthFailure(ex, stitchReq, decoder, tryRefresh);
+      return handleAuthFailureForStream(ex, stitchReq, decoder);
     }
   }
 
@@ -290,22 +289,24 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return newReq.build();
   }
 
-  private <T> Stream<T> handleAuthFailure(final StitchServiceException ex,
-                                          final StitchRequest req,
-                                          final Decoder<T> decoder,
-                                          final boolean tryRefresh) {
+  private <T> Stream<T> handleAuthFailureForStream(final StitchServiceException ex,
+                                          final StitchAuthRequest req,
+                                          final Decoder<T> decoder) {
     if (ex.getErrorCode() != StitchServiceErrorCode.INVALID_SESSION) {
       throw ex;
     }
 
-    if (!tryRefresh) {
+    // using a refresh token implies we cannot refresh anything, so clear auth and
+    // notify
+    if (req.getUseRefreshToken() || !req.getShouldRefreshOnFailure()) {
       clearAuth();
       throw ex;
     }
 
     tryRefreshAccessToken(req.getStartedAt());
 
-    return openAuthenticatedStream(req, decoder, false);
+    return openAuthenticatedStream(
+        req.builder().withShouldRefreshOnFailure(false).build(), decoder);
   }
 
   private Response handleAuthFailure(final StitchServiceException ex, final StitchAuthRequest req) {

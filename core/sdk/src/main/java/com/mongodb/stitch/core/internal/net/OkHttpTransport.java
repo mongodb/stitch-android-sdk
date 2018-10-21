@@ -107,8 +107,11 @@ public final class OkHttpTransport implements Transport {
 
     try {
       final okhttp3.Request httpRequest = buildRequest(request);
-      final Call call = client.newBuilder().connectTimeout(
-          STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).build().newCall(httpRequest);
+      final Call call = client.newBuilder()
+          .connectTimeout(STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+          .readTimeout(0, TimeUnit.MILLISECONDS)
+          .writeTimeout(0, TimeUnit.MILLISECONDS)
+          .build().newCall(httpRequest);
       final okhttp3.Response response = call.execute();
 
       final Response transportResponse = handleResponse(response);

@@ -26,7 +26,6 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 import java.util.Collections;
@@ -71,16 +70,13 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoItemViewHo
   }
 
   public void updateItems(final Task<List<TodoItem>> todoItems) {
-    todoItems.addOnCompleteListener(new OnCompleteListener<List<TodoItem>>() {
-      @Override
-      public void onComplete(@NonNull final Task<List<TodoItem>> task) {
-        if (!task.isSuccessful()) {
-          Log.e(TAG, "failed to get items", task.getException());
-        }
-        resetItems(task.isSuccessful()
-            ? task.getResult() : Collections.<TodoItem>emptyList());
-        TodoAdapter.this.notifyDataSetChanged();
+    todoItems.addOnCompleteListener(task -> {
+      if (!task.isSuccessful()) {
+        Log.e(TAG, "failed to get items", task.getException());
       }
+      resetItems(task.isSuccessful()
+          ? task.getResult() : Collections.emptyList());
+      TodoAdapter.this.notifyDataSetChanged();
     });
   }
 
