@@ -547,8 +547,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    // TODO(QUESTION FOR REVIEW): This code is not in the spec, but if I don't include it, then
-    // testInsertThenSyncUpdateThenUpdate will fail. Should I add it to the spec?
+    // ii. If the version info for the unprocessed change event has the same GUID as the local
+    //     document version GUID, and has a version counter less than or equal to the local
+    //     document version version counter, drop the event, as it implies the event has already
+    //     been applied to the local collection.
     if (docConfig.hasCommittedVersion(currentRemoteVersionInfo)) {
       // Skip this event since we generated it.
       logger.info(String.format(
@@ -562,8 +564,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
 
 
-    // ii. If the document does not have local writes pending, apply the change event to the local
-    //     document and emit a change event for it.
+    // iii. If the document does not have local writes pending, apply the change event to the local
+    //      document and emit a change event for it.
     if (docConfig.getLastUncommittedChangeEvent() == null) {
       switch (remoteChangeEvent.getOperationType()) {
         case REPLACE:
@@ -613,8 +615,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // the event if we know it is already applied or we know the event is stale, or we will raise a
     // conflict.
 
-    // iii. Otherwise, check if the version info of the incoming remote change event is different
-    //      from the version of the local document.
+    // iv. Otherwise, check if the version info of the incoming remote change event is different
+    //     from the version of the local document.
     final DocumentVersionInfo lastKnownLocalVersionInfo = DocumentVersionInfo
           .getLocalVersionInfo(docConfig);
 
