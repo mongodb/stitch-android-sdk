@@ -5,43 +5,17 @@ import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
-import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import com.mongodb.stitch.server.core.Stitch
 import com.mongodb.stitch.server.core.StitchAppClient
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import org.junit.After
 import org.junit.Before
-import java.util.concurrent.CopyOnWriteArrayList
 
 open class BaseStitchServerIntTest : BaseStitchIntTest() {
 
     private var clients: MutableList<StitchAppClient> = mutableListOf()
     private val dataDir = System.getProperty("java.io.tmpdir")
-
-    class TestNetworkMonitor : NetworkMonitor {
-        private var _connectedState = false
-        var connectedState: Boolean
-            set(value) {
-                _connectedState = value
-                listeners.forEach { it.onNetworkStateChanged() }
-            }
-            get() = _connectedState
-
-        private var listeners = CopyOnWriteArrayList<NetworkMonitor.StateListener>()
-
-        override fun isConnected(): Boolean {
-            return connectedState
-        }
-
-        override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
-            listeners.add(listener)
-        }
-
-        override fun removeNetworkStateListener(listener: NetworkMonitor.StateListener) {
-            listeners.remove(listener)
-        }
-    }
 
     companion object {
         val testNetworkMonitor = TestNetworkMonitor()
