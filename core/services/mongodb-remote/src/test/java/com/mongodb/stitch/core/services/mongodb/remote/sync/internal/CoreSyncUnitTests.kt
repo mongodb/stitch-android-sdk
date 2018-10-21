@@ -16,174 +16,182 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
 class CoreSyncUnitTests {
+    private val harness = SyncHarness()
+
     @Test
     fun testSyncOne() {
-        withSyncHarness { harness ->
-            // assert that calling syncOne on coreSync proxies the appropriate call
-            // to the data synchronizer. assert that the appropriate document is being synchronized
-            harness.coreSync.syncOne(harness.activeDoc["_id"])
-            verify(harness.dataSynchronizer, times(1)).syncDocumentFromRemote(
-                eq(harness.namespace),
-                eq(harness.activeDoc["_id"]))
-            assertEquals(1, harness.dataSynchronizer.getSynchronizedDocuments(harness.namespace).size)
-            assertEquals(
-                harness.activeDoc["_id"],
-                harness.dataSynchronizer.getSynchronizedDocuments(harness.namespace).first().documentId)
-        }
+        val ctx = harness.newTestContext()
+        val (coreSync, _) = harness.createCoreSyncWithContext(ctx)
+        // assert that calling syncOne on coreSync proxies the appropriate call
+        // to the data synchronizer. assert that the appropriate document is being synchronized
+        coreSync.syncOne(ctx.testDocumentId)
+        verify(ctx.dataSynchronizer, times(1)).syncDocumentFromRemote(
+            eq(ctx.namespace),
+            eq(ctx.testDocumentId))
+        assertEquals(1, ctx.dataSynchronizer.getSynchronizedDocuments(ctx.namespace).size)
+        assertEquals(
+            ctx.testDocumentId,
+            ctx.dataSynchronizer.getSynchronizedDocuments(ctx.namespace).first().documentId)
     }
 
     @Test
     fun testSyncMany() {
-        withSyncHarness { harness ->
-            // assert that calling syncMany on coreSync proxies the appropriate call to the data
-            // synchronizer for each document being sync'd
-            harness.coreSync.syncMany(harness.activeDoc["_id"], harness.activeDoc["_id"])
-            verify(harness.dataSynchronizer, times(2)).syncDocumentFromRemote(
-                eq(harness.namespace),
-                eq(harness.activeDoc["_id"]))
-        }
+        val ctx = harness.newTestContext()
+        val (coreSync, _) = harness.createCoreSyncWithContext(ctx)
+
+        // assert that calling syncMany on coreSync proxies the appropriate call to the data
+        // synchronizer for each document being sync'd
+        coreSync.syncMany(ctx.testDocumentId, ctx.testDocumentId)
+        verify(ctx.dataSynchronizer, times(2)).syncDocumentFromRemote(
+            eq(ctx.namespace),
+            eq(ctx.testDocumentId))
     }
 
     @Test
     fun testFind() {
-        withSyncHarness { harness ->
-            var findIterable = harness.coreSync.find()
+        val ctx = harness.newTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
-            val filterDoc = BsonDocument("_id", harness.activeDoc["_id"])
-            val sortDoc = BsonDocument("count", BsonInt32(-1))
-            val projectionDoc = BsonDocument("count", BsonInt32(1))
+        var findIterable = coreSync.find()
 
-            assertNull(findIterable.filter(filterDoc).first())
-            assertNull(findIterable.sort(sortDoc).first())
-            assertNull(findIterable.projection(projectionDoc).first())
-            assertNull(findIterable.limit(10).first())
+        val filterDoc = BsonDocument("_id", ctx.testDocumentId)
+        val sortDoc = BsonDocument("count", BsonInt32(-1))
+        val projectionDoc = BsonDocument("count", BsonInt32(1))
 
-            harness.insertOne()
+        assertNull(findIterable.filter(filterDoc).first())
+        assertNull(findIterable.sort(sortDoc).first())
+        assertNull(findIterable.projection(projectionDoc).first())
+        assertNull(findIterable.limit(10).first())
 
-            findIterable = harness.coreSync.find()
+        ctx.insertTestDocument()
 
-            val expectedRemoteFindOptions =  RemoteFindOptions()
-            val remoteFindCaptor = ArgumentCaptor.forClass(RemoteFindOptions::class.java)
-            fun compareRemoteFindOptions(expectedRemoteFindOptions: RemoteFindOptions,
-                                         actualRemoteFindOptions: RemoteFindOptions) {
-                assertEquals(expectedRemoteFindOptions.limit, actualRemoteFindOptions.limit)
-                assertEquals(expectedRemoteFindOptions.sort, actualRemoteFindOptions.sort)
-                assertEquals(expectedRemoteFindOptions.projection, actualRemoteFindOptions.projection)
-            }
+        findIterable = coreSync.find()
 
-            assertEquals(
-                harness.activeDoc,
-                SyncHarness.withoutVersionId(findIterable.filter(filterDoc).first()))
-            verify(harness.syncOperations, times(5)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
-            compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
-
-            expectedRemoteFindOptions.sort(sortDoc)
-            assertEquals(
-                harness.activeDoc,
-                SyncHarness.withoutVersionId(findIterable.sort(sortDoc).first()))
-            verify(harness.syncOperations, times(6)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
-            compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
-
-            expectedRemoteFindOptions.projection(projectionDoc)
-            assertEquals(
-                harness.activeDoc,
-                SyncHarness.withoutVersionId(findIterable.projection(projectionDoc).first()))
-            verify(harness.syncOperations, times(7)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
-            compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
-
-            expectedRemoteFindOptions.limit(10)
-            assertEquals(
-                harness.activeDoc,
-                SyncHarness.withoutVersionId(findIterable.limit(10).first()))
-            verify(harness.syncOperations, times(8)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
-            compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
+        val expectedRemoteFindOptions =  RemoteFindOptions()
+        val remoteFindCaptor = ArgumentCaptor.forClass(RemoteFindOptions::class.java)
+        fun compareRemoteFindOptions(expectedRemoteFindOptions: RemoteFindOptions,
+                                     actualRemoteFindOptions: RemoteFindOptions) {
+            assertEquals(expectedRemoteFindOptions.limit, actualRemoteFindOptions.limit)
+            assertEquals(expectedRemoteFindOptions.sort, actualRemoteFindOptions.sort)
+            assertEquals(expectedRemoteFindOptions.projection, actualRemoteFindOptions.projection)
         }
+
+        assertEquals(
+            ctx.testDocument,
+            SyncHarness.withoutVersionId(findIterable.filter(filterDoc).first()))
+        verify(syncOperations, times(5)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
+        compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
+
+        expectedRemoteFindOptions.sort(sortDoc)
+        assertEquals(
+            ctx.testDocument,
+            SyncHarness.withoutVersionId(findIterable.sort(sortDoc).first()))
+        verify(syncOperations, times(6)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
+        compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
+
+        expectedRemoteFindOptions.projection(projectionDoc)
+        assertEquals(
+            ctx.testDocument,
+            SyncHarness.withoutVersionId(findIterable.projection(projectionDoc).first()))
+        verify(syncOperations, times(7)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
+        compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
+
+        expectedRemoteFindOptions.limit(10)
+        assertEquals(
+            ctx.testDocument,
+            SyncHarness.withoutVersionId(findIterable.limit(10).first()))
+        verify(syncOperations, times(8)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
+        compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
     }
 
     @Test
     fun testFindOneById() {
-        withSyncHarness { harness ->
-            assertNull(harness.coreSync.findOneById(harness.activeDoc["_id"]))
+        val ctx = harness.newTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
-            harness.insertOne()
+        assertNull(coreSync.findOneById(ctx.testDocumentId))
 
-            assertEquals(
-                harness.activeDoc,
-                SyncHarness.withoutVersionId(harness.coreSync.findOneById(harness.activeDoc["_id"])))
+        ctx.insertTestDocument()
 
-            verify(harness.syncOperations, times(2)).findOneById(
-                eq(harness.activeDoc["_id"]), eq(BsonDocument::class.java))
+        assertEquals(
+            ctx.testDocument,
+            SyncHarness.withoutVersionId(coreSync.findOneById(ctx.testDocumentId)))
 
-            verify(harness.dataSynchronizer, times(2)).findOneById(
-                eq(harness.namespace), eq(harness.activeDoc["_id"]), eq(BsonDocument::class.java), any()
-            )
-        }
+        verify(syncOperations, times(2)).findOneById(
+            eq(ctx.testDocumentId), eq(BsonDocument::class.java))
+
+        verify(ctx.dataSynchronizer, times(2)).findOneById(
+            eq(ctx.namespace), eq(ctx.testDocumentId), eq(BsonDocument::class.java), any()
+        )
     }
 
     @Test
     fun testUpdateOneById() {
-        withSyncHarness { harness ->
-            var result = harness.coreSync.updateOneById(harness.activeDoc["_id"], harness.updateDoc)
-            assertEquals(0, result.matchedCount)
-            assertEquals(0, result.modifiedCount)
-            assertNull(result.upsertedId)
+        val ctx = harness.newTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
-            harness.insertOne()
+        var result = coreSync.updateOneById(ctx.testDocumentId, ctx.updateDocument)
+        assertEquals(0, result.matchedCount)
+        assertEquals(0, result.modifiedCount)
+        assertNull(result.upsertedId)
 
-            result = harness.coreSync.updateOneById(harness.activeDoc["_id"], harness.updateDoc)
+        ctx.insertTestDocument()
 
-            assertEquals(1, result.matchedCount)
-            assertEquals(1, result.modifiedCount)
-            assertNull(result.upsertedId)
+        result = coreSync.updateOneById(ctx.testDocumentId, ctx.updateDocument)
 
-            verify(harness.syncOperations, times(2)).updateOneById(
-                eq(harness.activeDoc["_id"]), eq(harness.updateDoc))
+        assertEquals(1, result.matchedCount)
+        assertEquals(1, result.modifiedCount)
+        assertNull(result.upsertedId)
 
-            verify(harness.dataSynchronizer, times(2)).updateOneById(
-                eq(harness.namespace), eq(harness.activeDoc["_id"]), eq(harness.updateDoc))
-        }
+        verify(syncOperations, times(2)).updateOneById(
+            eq(ctx.testDocumentId), eq(ctx.updateDocument))
+
+        verify(ctx.dataSynchronizer, times(2)).updateOneById(
+            eq(ctx.namespace), eq(ctx.testDocumentId), eq(ctx.updateDocument))
     }
 
     @Test
     fun testInsertOneAndSync() {
-        withSyncHarness { harness ->
-            assertEquals(
-                harness.activeDoc["_id"],
-                harness.coreSync.insertOneAndSync(harness.activeDoc).insertedId)
+        val ctx = harness.newTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
-            try {
-                harness.coreSync.insertOneAndSync(harness.activeDoc)
-                fail("should have received duplicate key error index")
-            } catch (e: MongoWriteException) {
-                assertNotNull(e)
-            }
+        assertEquals(
+            ctx.testDocumentId,
+            coreSync.insertOneAndSync(ctx.testDocument).insertedId)
 
-            verify(harness.syncOperations, times(2)).insertOneAndSync(
-                eq(harness.activeDoc))
-
-            verify(harness.dataSynchronizer, times(2)).insertOneAndSync(
-                eq(harness.namespace), eq(harness.activeDoc))
+        try {
+            coreSync.insertOneAndSync(ctx.testDocument)
+            fail("should have received duplicate key error index")
+        } catch (e: MongoWriteException) {
+            assertNotNull(e)
         }
+
+        verify(syncOperations, times(2)).insertOneAndSync(
+            eq(ctx.testDocument))
+
+        verify(ctx.dataSynchronizer, times(2)).insertOneAndSync(
+            eq(ctx.namespace), eq(ctx.testDocument))
     }
 
     @Test
     fun testDeleteOneById() {
-        withSyncHarness { harness ->
-            var deleteResult = harness.coreSync.deleteOneById(harness.activeDoc["_id"])
+        val ctx = harness.newTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
-            assertEquals(0, deleteResult.deletedCount)
+        var deleteResult = coreSync.deleteOneById(ctx.testDocumentId)
 
-            harness.insertOne()
+        assertEquals(0, deleteResult.deletedCount)
 
-            deleteResult = harness.coreSync.deleteOneById(harness.activeDoc["_id"])
+        ctx.insertTestDocument()
 
-            assertEquals(1, deleteResult.deletedCount)
+        deleteResult = coreSync.deleteOneById(ctx.testDocumentId)
 
-            verify(harness.syncOperations, times(2)).deleteOneById(
-                eq(harness.activeDoc["_id"]))
+        assertEquals(1, deleteResult.deletedCount)
 
-            verify(harness.dataSynchronizer, times(2)).deleteOneById(
-                eq(harness.namespace), eq(harness.activeDoc["_id"]))
-        }
+        verify(syncOperations, times(2)).deleteOneById(
+            eq(ctx.testDocumentId))
+
+        verify(ctx.dataSynchronizer, times(2)).deleteOneById(
+            eq(ctx.namespace), eq(ctx.testDocumentId))
     }
 }

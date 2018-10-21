@@ -392,7 +392,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
             Tasks.await(coll.insertOne(expected))
         } catch (ex: ExecutionException) {
             // Conversion to a BsonDocument happens before it gets into the core Stitch libraries
-            // which means this exception isn't wrapped in anyway which closely resembles the
+            // which means this exceptionToThrow isn't wrapped in anyway which closely resembles the
             // Java driver.
             assertTrue(ex.cause is CodecConfigurationException)
         }

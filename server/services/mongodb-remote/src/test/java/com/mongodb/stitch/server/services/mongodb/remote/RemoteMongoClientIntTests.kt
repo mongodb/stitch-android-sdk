@@ -366,7 +366,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
             coll.insertOne(expected)
         } catch (ex: CodecConfigurationException) {
             // Conversion to a BsonDocument happens before it gets into the core Stitch libraries
-            // which means this exception isn't wrapped in anyway which closely resembles the
+            // which means this exceptionToThrow isn't wrapped in anyway which closely resembles the
             // Java driver.
         }
 
