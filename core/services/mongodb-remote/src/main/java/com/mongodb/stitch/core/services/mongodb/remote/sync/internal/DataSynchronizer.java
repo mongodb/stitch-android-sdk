@@ -422,7 +422,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             logicalT,
             eventEntry.getValue().getOperationType()));
 
-        // i. Find the corresponding local document.
+        // i. Find the corresponding local document config.
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
 
@@ -789,8 +789,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           continue;
         }
 
-        // i. Retrieve the synthetic change event for this local document in the local config
-        //    metadata
+        // i. Retrieve the change event for this local document in the local config metadata
         final ChangeEvent<BsonDocument> localChangeEvent =
             docConfig.getLastUncommittedChangeEvent();
         logger.info(String.format(
@@ -841,11 +840,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     nsConfig.getNamespace(),
                     docConfig.getDocumentId()));
           }
+
+          // 2. Otherwise, the unprocessed event can be safely dropped and ignored in future R2L
+          //    passes. Continue on to checking the operation type.
         }
 
-        // iii. Check the operation type
         if (!isConflicted) {
-          // 2. Otherwise continue on to checking the operation type.
+          // iii. Check the operation type
           switch (localChangeEvent.getOperationType()) {
             // 1. INSERT
             case INSERT: {

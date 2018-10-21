@@ -217,7 +217,8 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
 
   /**
    * If there is an unprocessed change event for a particular document ID, fetch it from the
-   * appropriate namespace change stream listener without removing it.
+   * appropriate namespace change stream listener, and remove it. By reading the event here, we are
+   * assuming it will be processed by the consumer.
    *
    * @return the latest unprocessed change event for the given document ID and namespace, or null
    *         if none exists.

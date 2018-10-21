@@ -284,19 +284,32 @@ public class NamespaceChangeStreamListener {
   }
 
   /**
-   * If there is an unprocessed change event for a particular document ID, fetch it from the change
-   * stream listener without removing it.
+   * If there is an unprocessed change event for a particular document ID, fetch it from the
+   * change stream listener, and remove it. By reading the event here, we are assuming it will be
+   * processed by the consumer.
    *
    * @return the latest unprocessed change event for the given document ID, or null if none exists.
    */
   public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
           final BsonValue documentId
   ) {
+    final ChangeEvent<BsonDocument> event;
+
     nsLock.readLock().lock();
     try {
-      return this.events.get(documentId);
+      event = this.events.get(documentId);
     } finally {
       nsLock.readLock().unlock();
     }
+
+    nsLock.writeLock().lock();
+    try {
+      this.events.remove(documentId);
+      return event;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
+
+
   }
 }
