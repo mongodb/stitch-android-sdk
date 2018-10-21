@@ -294,7 +294,6 @@ public class NamespaceChangeStreamListener {
           final BsonValue documentId
   ) {
     final ChangeEvent<BsonDocument> event;
-
     nsLock.readLock().lock();
     try {
       event = this.events.get(documentId);
@@ -309,7 +308,5 @@ public class NamespaceChangeStreamListener {
     } finally {
       nsLock.writeLock().unlock();
     }
-
-
   }
 }
