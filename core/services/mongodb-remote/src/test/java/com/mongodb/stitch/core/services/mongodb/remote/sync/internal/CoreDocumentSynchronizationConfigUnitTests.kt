@@ -5,6 +5,7 @@ import com.mongodb.stitch.core.StitchAppClientInfo
 import com.mongodb.stitch.core.internal.common.AuthMonitor
 import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncTestHarness.Companion.compareEvents
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
@@ -12,7 +13,7 @@ import org.bson.BsonString
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -76,36 +77,36 @@ class CoreDocumentSynchronizationConfigUnitTests {
     }
 
     @Test
-    fun testStaleAndFrozen() {
+    fun testToBsonDocumentRoundTrip() {
         var config = CoreDocumentSynchronizationConfig(coll, namespace, id)
-        coll.insertOne(config)
-
-        assertFalse(config.isStale)
-
-        config.isStale = true
+        val expectedTestVersion = BsonDocument("dummy", BsonString("version"))
+        val expectedEvent = ChangeEvent.changeEventForLocalDelete(namespace, id, false)
+        config.setSomePendingWrites(
+            1,
+            expectedTestVersion,
+            expectedEvent)
         config.isFrozen = true
+        config.isStale = true
 
-        var doc = config.toBsonDocument()
+        val doc = config.toBsonDocument()
+
+        assertEquals(id, doc[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD])
 
         assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
         assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
+        assertEquals(expectedTestVersion,
+            doc[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.LAST_KNOWN_REMOTE_VERSION_FIELD])
+        assertEquals(
+            BsonString("${namespace.databaseName}.${namespace.collectionName}"),
+                doc[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD])
+        assertNotNull(doc[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.LAST_UNCOMMITTED_CHANGE_EVENT])
 
-        config = CoreDocumentSynchronizationConfig(
-                coll, CoreDocumentSynchronizationConfig.fromBsonDocument(doc))
+        config = CoreDocumentSynchronizationConfig.fromBsonDocument(doc)
 
-        assertTrue(config.isStale)
-
-        config.isStale = false
-        config.setSomePendingWrites(
-            1,
-            ChangeEvent.changeEventForLocalInsert(
-                coll.namespace, BsonDocument("_id", BsonObjectId()), true))
-
-        doc = config.toBsonDocument()
-        // should be stale from set some pending writes
-        assertTrue(
-            doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
-        assertFalse(
-            doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
+        assertTrue(config.isFrozen)
+        assertEquals(namespace, config.namespace)
+        assertEquals(expectedTestVersion, config.lastKnownRemoteVersion)
+        compareEvents(expectedEvent, config.lastUncommittedChangeEvent)
+        assertEquals(id, config.documentId)
     }
 }
