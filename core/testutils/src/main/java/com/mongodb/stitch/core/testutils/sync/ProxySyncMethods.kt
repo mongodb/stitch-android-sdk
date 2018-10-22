@@ -14,7 +14,7 @@ import org.bson.conversions.Bson
  * A set of platform independent methods related to
  * [com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync].
  */
-interface CoreSyncMethods {
+interface ProxySyncMethods {
     /**
      * Set the conflict handler and and change event listener on this collection.
      * @param conflictResolver the conflict resolver to invoke when a conflict happens between local

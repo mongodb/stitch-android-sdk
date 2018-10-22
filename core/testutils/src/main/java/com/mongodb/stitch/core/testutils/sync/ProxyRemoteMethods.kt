@@ -11,7 +11,7 @@ import org.bson.conversions.Bson
  * A set of platform independent methods related to
  * [com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection].
  */
-interface CoreRemoteMethods {
+interface ProxyRemoteMethods {
     /**
      * Inserts the provided document. If the document is missing an identifier, the client should
      * generate one.

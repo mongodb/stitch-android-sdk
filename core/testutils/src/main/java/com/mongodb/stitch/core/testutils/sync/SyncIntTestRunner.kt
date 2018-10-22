@@ -38,17 +38,17 @@ interface SyncIntTestRunner {
      * A series of remote methods, independent of platform,
      * that have been normalized for testing.
      *
-     * @return [CoreRemoteMethods]
+     * @return [ProxyRemoteMethods]
      */
-    fun remoteMethods(): CoreRemoteMethods
+    fun remoteMethods(): ProxyRemoteMethods
 
     /**
      * A series of sync methods, independent of platform,
      * that have been normalized for testing.
      *
-     * @return [CoreSyncMethods]
+     * @return [ProxySyncMethods]
      */
-    fun syncMethods(): CoreSyncMethods
+    fun syncMethods(): ProxySyncMethods
 
     /* TEST METHODS */
     @Before

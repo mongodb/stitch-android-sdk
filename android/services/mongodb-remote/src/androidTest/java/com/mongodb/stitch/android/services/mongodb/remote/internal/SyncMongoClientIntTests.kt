@@ -20,8 +20,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
-import com.mongodb.stitch.core.testutils.sync.CoreRemoteMethods
-import com.mongodb.stitch.core.testutils.sync.CoreSyncMethods
+import com.mongodb.stitch.core.testutils.sync.ProxyRemoteMethods
+import com.mongodb.stitch.core.testutils.sync.ProxySyncMethods
 import com.mongodb.stitch.core.testutils.sync.SyncIntTestProxy
 import com.mongodb.stitch.core.testutils.sync.SyncIntTestRunner
 import org.bson.BsonValue
@@ -35,7 +35,7 @@ import org.junit.Before
 import org.junit.Test
 
 class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
-    private class RemoteMethods(private val remoteMongoCollection: RemoteMongoCollection<Document>) : CoreRemoteMethods {
+    private class RemoteMethods(private val remoteMongoCollection: RemoteMongoCollection<Document>) : ProxyRemoteMethods {
         override fun insertOne(document: Document): RemoteInsertOneResult {
             return Tasks.await(remoteMongoCollection.insertOne(document))
         }
@@ -56,7 +56,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         }
     }
 
-    private class SyncMethods(private val sync: Sync<Document>) : CoreSyncMethods {
+    private class SyncMethods(private val sync: Sync<Document>) : ProxySyncMethods {
         override fun configure(
             conflictResolver: ConflictHandler<Document?>,
             changeEventListener: ChangeEventListener<Document>?,
@@ -160,7 +160,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         super.teardown()
     }
 
-    override fun remoteMethods(): CoreRemoteMethods {
+    override fun remoteMethods(): ProxyRemoteMethods {
         val db = remoteMongoClient.getDatabase(dbName)
         Assert.assertEquals(dbName, db.name)
         val coll = db.getCollection(collName)
@@ -168,7 +168,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         return RemoteMethods(coll)
     }
 
-    override fun syncMethods(): CoreSyncMethods {
+    override fun syncMethods(): ProxySyncMethods {
         val db = mongoClient.getDatabase(dbName)
         Assert.assertEquals(dbName, db.name)
         val coll = db.getCollection(collName)
