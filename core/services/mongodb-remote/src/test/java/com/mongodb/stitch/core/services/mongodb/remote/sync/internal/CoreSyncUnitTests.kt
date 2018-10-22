@@ -18,6 +18,13 @@ import org.mockito.Mockito.verify
 class CoreSyncUnitTests {
     private val harness = SyncTestHarness()
 
+    @After
+    fun teardown() {
+        harness.teardown()
+        CoreRemoteClientFactory.close()
+        ServerEmbeddedMongoClientFactory.getInstance().close()
+    }
+    
     @Test
     fun testSyncOne() {
         val ctx = harness.freshTestContext()
