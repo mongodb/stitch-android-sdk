@@ -109,7 +109,9 @@ final class DocumentVersionInfo {
   }
 
   /**
-   * Returns whether this version is non-empty (i.e. a version from a document with no version)
+   * Returns whether this version is non-empty (i.e. a version from a document with no version).
+   * The absence of a version is effectively a version, and should be treated as such by consumers
+   * of this method.
    * @return true if the version is non-empty, false if the version is empty.
    */
   boolean hasVersion() {
