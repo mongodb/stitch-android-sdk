@@ -403,7 +403,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             funcArgsArg.capture(),
             resultClassArg.capture());
 
-    assertEquals("deleteTestDocument", funcNameArg.getValue());
+    assertEquals("deleteOne", funcNameArg.getValue());
     assertEquals(1, funcArgsArg.getValue().size());
     final Document expectedArgs = new Document();
     expectedArgs.put("database", "dbName1");
@@ -499,7 +499,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             funcArgsArg.capture(),
             resultClassArg.capture());
 
-    assertEquals("updateTestDocument", funcNameArg.getValue());
+    assertEquals("updateOne", funcNameArg.getValue());
     assertEquals(1, funcArgsArg.getValue().size());
     final Document expectedArgs = new Document();
     expectedArgs.put("database", "dbName1");
@@ -522,7 +522,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             funcArgsArg.capture(),
             resultClassArg.capture());
 
-    assertEquals("updateTestDocument", funcNameArg.getValue());
+    assertEquals("updateOne", funcNameArg.getValue());
     assertEquals(1, funcArgsArg.getValue().size());
     expectedArgs.put("upsert", true);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
