@@ -16,11 +16,11 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
 class CoreSyncUnitTests {
-    private val harness = SyncTestContext()
+    private val harness = SyncTestHarness()
 
     @Test
     fun testSyncOne() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (coreSync, _) = harness.createCoreSyncWithContext(ctx)
         // assert that calling syncOne on coreSync proxies the appropriate call
         // to the data synchronizer. assert that the appropriate document is being synchronized
@@ -36,7 +36,7 @@ class CoreSyncUnitTests {
 
     @Test
     fun testSyncMany() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (coreSync, _) = harness.createCoreSyncWithContext(ctx)
 
         // assert that calling syncMany on coreSync proxies the appropriate call to the data
@@ -49,7 +49,7 @@ class CoreSyncUnitTests {
 
     @Test
     fun testFind() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
         var findIterable = coreSync.find()
@@ -67,10 +67,12 @@ class CoreSyncUnitTests {
 
         findIterable = coreSync.find()
 
-        val expectedRemoteFindOptions =  RemoteFindOptions()
+        val expectedRemoteFindOptions = RemoteFindOptions()
         val remoteFindCaptor = ArgumentCaptor.forClass(RemoteFindOptions::class.java)
-        fun compareRemoteFindOptions(expectedRemoteFindOptions: RemoteFindOptions,
-                                     actualRemoteFindOptions: RemoteFindOptions) {
+        fun compareRemoteFindOptions(
+            expectedRemoteFindOptions: RemoteFindOptions,
+            actualRemoteFindOptions: RemoteFindOptions
+        ) {
             assertEquals(expectedRemoteFindOptions.limit, actualRemoteFindOptions.limit)
             assertEquals(expectedRemoteFindOptions.sort, actualRemoteFindOptions.sort)
             assertEquals(expectedRemoteFindOptions.projection, actualRemoteFindOptions.projection)
@@ -78,35 +80,35 @@ class CoreSyncUnitTests {
 
         assertEquals(
             ctx.testDocument,
-            SyncTestContext.withoutVersionId(findIterable.filter(filterDoc).first()))
+            SyncTestHarness.withoutVersionId(findIterable.filter(filterDoc).first()))
         verify(syncOperations, times(5)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
 
         expectedRemoteFindOptions.sort(sortDoc)
         assertEquals(
             ctx.testDocument,
-            SyncTestContext.withoutVersionId(findIterable.sort(sortDoc).first()))
+            SyncTestHarness.withoutVersionId(findIterable.sort(sortDoc).first()))
         verify(syncOperations, times(6)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
 
         expectedRemoteFindOptions.projection(projectionDoc)
         assertEquals(
             ctx.testDocument,
-            SyncTestContext.withoutVersionId(findIterable.projection(projectionDoc).first()))
+            SyncTestHarness.withoutVersionId(findIterable.projection(projectionDoc).first()))
         verify(syncOperations, times(7)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
 
         expectedRemoteFindOptions.limit(10)
         assertEquals(
             ctx.testDocument,
-            SyncTestContext.withoutVersionId(findIterable.limit(10).first()))
+            SyncTestHarness.withoutVersionId(findIterable.limit(10).first()))
         verify(syncOperations, times(8)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
     }
 
     @Test
     fun testFindOneById() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
         assertNull(coreSync.findOneById(ctx.testDocumentId))
@@ -115,7 +117,7 @@ class CoreSyncUnitTests {
 
         assertEquals(
             ctx.testDocument,
-            SyncTestContext.withoutVersionId(coreSync.findOneById(ctx.testDocumentId)))
+            SyncTestHarness.withoutVersionId(coreSync.findOneById(ctx.testDocumentId)))
 
         verify(syncOperations, times(2)).findOneById(
             eq(ctx.testDocumentId), eq(BsonDocument::class.java))
@@ -127,7 +129,7 @@ class CoreSyncUnitTests {
 
     @Test
     fun testUpdateOneById() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
         var result = coreSync.updateOneById(ctx.testDocumentId, ctx.updateDocument)
@@ -152,7 +154,7 @@ class CoreSyncUnitTests {
 
     @Test
     fun testInsertOneAndSync() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
         assertEquals(
@@ -175,7 +177,7 @@ class CoreSyncUnitTests {
 
     @Test
     fun testDeleteOneById() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
         var deleteResult = coreSync.deleteOneById(ctx.testDocumentId)

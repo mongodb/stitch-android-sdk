@@ -17,7 +17,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIt
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoDatabaseImpl
-import com.mongodb.stitch.core.services.mongodb.remote.internal.TestUtils
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
@@ -41,11 +40,10 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import java.lang.Exception
-import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
-class SyncTestContext {
+class SyncTestHarness {
     companion object {
         /**
          * Conflict handler used for testing purposes.
@@ -54,8 +52,10 @@ class SyncTestContext {
          *                     document
          * @param exceptionToThrow if set, will throw an exceptionToThrow after comparing the events
          */
-        open class TestConflictHandler(var shouldConflictBeResolvedByRemote: Boolean,
-                                       var exceptionToThrow: Exception? = null): ConflictHandler<BsonDocument> {
+        open class TestConflictHandler(
+            var shouldConflictBeResolvedByRemote: Boolean,
+            var exceptionToThrow: Exception? = null
+        ) : ConflictHandler<BsonDocument> {
             override fun resolveConflict(documentId: BsonValue?,
                                          localEvent: ChangeEvent<BsonDocument>?,
                                          remoteEvent: ChangeEvent<BsonDocument>?): BsonDocument? {
@@ -70,7 +70,7 @@ class SyncTestContext {
          * Network monitor used for testing purposes.
          * Can be switched online or offline via the syncHarness.
          */
-        open class TestNetworkMonitor: NetworkMonitor {
+        open class TestNetworkMonitor : NetworkMonitor {
             private val networkStateListeners = mutableListOf<NetworkMonitor.StateListener>()
             var isOnline: Boolean = true
                 set(value) {
@@ -97,7 +97,7 @@ class SyncTestContext {
          * Auth monitor used for testing purposes.
          * Can be logged on or off via the syncHarness.
          */
-        open class TestAuthMonitor: AuthMonitor {
+        open class TestAuthMonitor : AuthMonitor {
             var isAuthed = true
             override fun isLoggedIn(): Boolean {
                 return isAuthed
@@ -107,7 +107,7 @@ class SyncTestContext {
         /**
          * Test event stream that can passed on injected events.
          */
-        private class TestEventStream(private val testContext: DataSynchronizerTestContext): EventStream {
+        private class TestEventStream(private val testContext: DataSynchronizerTestContext) : EventStream {
             override fun nextEvent(): Event {
                 return testContext.nextStreamEvent
             }
@@ -123,8 +123,10 @@ class SyncTestContext {
             }
         }
 
-        private open class TestChangeEventListener(private val expectedEvent: ChangeEvent<BsonDocument>?,
-                                                   private val emitEventSemaphore: Semaphore?): ChangeEventListener<BsonDocument> {
+        private open class TestChangeEventListener(
+            private val expectedEvent: ChangeEvent<BsonDocument>?,
+            private val emitEventSemaphore: Semaphore?
+        ) : ChangeEventListener<BsonDocument> {
             override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>?) {
                 try {
                     if (expectedEvent != null) {
@@ -147,15 +149,6 @@ class SyncTestContext {
                 BsonObjectId().value.toHexString())
         }
 
-        fun withoutId(document: BsonDocument?): BsonDocument? {
-            if (document == null) {
-                return null
-            }
-            val newDoc = BsonDocument.parse(document.toJson())
-            newDoc.remove("_id")
-            return newDoc
-        }
-
         fun withoutVersionId(document: BsonDocument?): BsonDocument? {
             if (document == null) {
                 return null
@@ -171,8 +164,7 @@ class SyncTestContext {
          * @param expectedEvent event we are expecting to see
          * @Param actualEvent actual event generated
          */
-        fun compareEvents(expectedEvent: ChangeEvent<BsonDocument>,
-                          actualEvent: ChangeEvent<BsonDocument>) {
+        fun compareEvents(expectedEvent: ChangeEvent<BsonDocument>, actualEvent: ChangeEvent<BsonDocument>) {
             // assert that our actualEvent is correct
             Assert.assertEquals(expectedEvent.operationType, actualEvent.operationType)
             Assert.assertEquals(expectedEvent.documentKey, actualEvent.documentKey)
@@ -192,8 +184,10 @@ class SyncTestContext {
             Assert.assertEquals(expectedEvent.hasUncommittedWrites(), actualEvent.hasUncommittedWrites())
         }
 
-        private fun newErrorListener(emitErrorSemaphore: Semaphore? = null,
-                                     expectedDocumentId: BsonValue? = null): ErrorListener {
+        private fun newErrorListener(
+            emitErrorSemaphore: Semaphore? = null,
+            expectedDocumentId: BsonValue? = null
+        ): ErrorListener {
             open class TestErrorListener: ErrorListener {
                 override fun onError(actualDocumentId: BsonValue?, error: Exception?) {
                     if (expectedDocumentId != null) {
@@ -265,10 +259,11 @@ class SyncTestContext {
         val authMonitor: TestAuthMonitor = spy(TestAuthMonitor())
 
         private val localClient by lazy {
+            val clientKey = ObjectId().toHexString()
             SyncMongoClientFactory.getClient(
                 StitchAppClientInfo(
-                    ObjectId().toHexString(),
-                    ObjectId().toHexString(),
+                    clientKey,
+                    String.format("%s/%s", System.getProperty("java.io.tmpdir"), clientKey),
                     ObjectId().toHexString(),
                     ObjectId().toHexString(),
                     CodecRegistries.fromCodecs(bsonDocumentCodec),
@@ -527,7 +522,7 @@ class SyncTestContext {
         oldCtx?.dataSynchronizer?.close()
     }
 
-    internal fun newTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
+    internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
         oldCtx?.dataSynchronizer?.close()
         oldCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
         return oldCtx!!

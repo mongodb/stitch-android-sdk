@@ -16,7 +16,7 @@ import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.lang.Exception
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -28,13 +28,13 @@ import java.util.concurrent.atomic.AtomicInteger
  * that must be implemented to properly test Sync.
  *
  * The tests should be proxied from a [SyncIntTestRunner] implementor.
- * [SyncIntHarness] and [SyncIntTestRunner] should be in sync
+ * [SyncIntTestProxy] and [SyncIntTestRunner] should be in sync
  * on the these test methods.
  *
  * @param syncTestRunner a runner that contains the necessary properties
  *                       to run the tests
  */
-class SyncIntHarness(private val syncTestRunner: SyncIntTestRunner) {
+class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     @Test
     fun testSync() {
         testSyncInBothDirections {

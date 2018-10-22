@@ -23,9 +23,11 @@ interface CoreSyncMethods {
      *                         document.
      * @param errorListener the error listener to invoke when an irrecoverable error occurs
      */
-    fun configure(conflictResolver: ConflictHandler<Document?>,
-                  changeEventListener: ChangeEventListener<Document>?,
-                  errorListener: ErrorListener?)
+    fun configure(
+        conflictResolver: ConflictHandler<Document?>,
+        changeEventListener: ChangeEventListener<Document>?,
+        errorListener: ErrorListener?
+    )
 
     /**
      * Requests that the given document _id be synchronized.

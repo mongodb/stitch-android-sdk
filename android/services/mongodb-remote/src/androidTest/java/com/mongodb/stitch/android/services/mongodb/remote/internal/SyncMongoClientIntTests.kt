@@ -22,7 +22,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchro
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import com.mongodb.stitch.core.testutils.sync.CoreRemoteMethods
 import com.mongodb.stitch.core.testutils.sync.CoreSyncMethods
-import com.mongodb.stitch.core.testutils.sync.SyncIntHarness
+import com.mongodb.stitch.core.testutils.sync.SyncIntTestProxy
 import com.mongodb.stitch.core.testutils.sync.SyncIntTestRunner
 import org.bson.BsonValue
 import org.bson.Document
@@ -35,7 +35,7 @@ import org.junit.Before
 import org.junit.Test
 
 class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
-    private class RemoteMethods(private val remoteMongoCollection: RemoteMongoCollection<Document>): CoreRemoteMethods {
+    private class RemoteMethods(private val remoteMongoCollection: RemoteMongoCollection<Document>) : CoreRemoteMethods {
         override fun insertOne(document: Document): RemoteInsertOneResult {
             return Tasks.await(remoteMongoCollection.insertOne(document))
         }
@@ -56,10 +56,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         }
     }
 
-    private class SyncMethods(private val sync: Sync<Document>): CoreSyncMethods {
-        override fun configure(conflictResolver: ConflictHandler<Document?>,
-                               changeEventListener: ChangeEventListener<Document>?,
-                               errorListener: ErrorListener?) {
+    private class SyncMethods(private val sync: Sync<Document>) : CoreSyncMethods {
+        override fun configure(
+            conflictResolver: ConflictHandler<Document?>,
+            changeEventListener: ChangeEventListener<Document>?,
+            errorListener: ErrorListener?
+        ) {
             sync.configure(conflictResolver, changeEventListener, errorListener)
         }
 
@@ -108,7 +110,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     private lateinit var remoteMongoClient: RemoteMongoClient
     private lateinit var mongoClient: RemoteMongoClient
 
-    private val harness = SyncIntHarness(this)
+    private val testProxy = SyncIntTestProxy(this)
 
     @Before
     override fun setup() {
@@ -176,122 +178,122 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     @Test
     override fun testSync() {
-        harness.testSync()
+        testProxy.testSync()
     }
 
     @Test
     override fun testUpdateConflicts() {
-        harness.testUpdateConflicts()
+        testProxy.testUpdateConflicts()
     }
 
     @Test
     override fun testUpdateRemoteWins() {
-        harness.testUpdateRemoteWins()
+        testProxy.testUpdateRemoteWins()
     }
 
     @Test
     override fun testUpdateLocalWins() {
-        harness.testUpdateLocalWins()
+        testProxy.testUpdateLocalWins()
     }
 
     @Test
     override fun testDeleteOneByIdNoConflict() {
-        harness.testDeleteOneByIdNoConflict()
+        testProxy.testDeleteOneByIdNoConflict()
     }
 
     @Test
     override fun testDeleteOneByIdConflict() {
-        harness.testDeleteOneByIdConflict()
+        testProxy.testDeleteOneByIdConflict()
     }
 
     @Test
     override fun testInsertThenUpdateThenSync() {
-        harness.testInsertThenUpdateThenSync()
+        testProxy.testInsertThenUpdateThenSync()
     }
 
     @Test
     override fun testInsertThenSyncUpdateThenUpdate() {
-        harness.testInsertThenSyncUpdateThenUpdate()
+        testProxy.testInsertThenSyncUpdateThenUpdate()
     }
 
     @Test
     override fun testInsertThenSyncThenRemoveThenInsertThenUpdate() {
-        harness.testInsertThenSyncThenRemoveThenInsertThenUpdate()
+        testProxy.testInsertThenSyncThenRemoveThenInsertThenUpdate()
     }
 
     @Test
     override fun testRemoteDeletesLocalNoConflict() {
-        harness.testRemoteDeletesLocalNoConflict()
+        testProxy.testRemoteDeletesLocalNoConflict()
     }
 
     @Test
     override fun testRemoteDeletesLocalConflict() {
-        harness.testRemoteDeletesLocalConflict()
+        testProxy.testRemoteDeletesLocalConflict()
     }
 
     @Test
     override fun testRemoteInsertsLocalUpdates() {
-        harness.testRemoteInsertsLocalUpdates()
+        testProxy.testRemoteInsertsLocalUpdates()
     }
 
     @Test
     override fun testRemoteInsertsWithVersionLocalUpdates() {
-        harness.testRemoteInsertsWithVersionLocalUpdates()
+        testProxy.testRemoteInsertsWithVersionLocalUpdates()
     }
 
     @Test
     override fun testResolveConflictWithDelete() {
-        harness.testResolveConflictWithDelete()
+        testProxy.testResolveConflictWithDelete()
     }
 
     @Test
     override fun testTurnDeviceOffAndOn() {
-        harness.testTurnDeviceOffAndOn()
+        testProxy.testTurnDeviceOffAndOn()
     }
 
     @Test
     override fun testDesync() {
-        harness.testDesync()
+        testProxy.testDesync()
     }
 
     @Test
     override fun testInsertInsertConflict() {
-        harness.testInsertInsertConflict()
+        testProxy.testInsertInsertConflict()
     }
 
     @Test
     override fun testFrozenDocumentConfig() {
-        harness.testFrozenDocumentConfig()
+        testProxy.testFrozenDocumentConfig()
     }
 
     @Test
     override fun testConfigure() {
-        harness.testConfigure()
+        testProxy.testConfigure()
     }
 
     @Test
     override fun testSyncVersioningScheme() {
-        harness.testSyncVersioningScheme()
+        testProxy.testSyncVersioningScheme()
     }
 
     @Test
     override fun testUnsupportedSpvFails() {
-        harness.testUnsupportedSpvFails()
+        testProxy.testUnsupportedSpvFails()
     }
 
     @Test
     override fun testStaleFetchSingle() {
-        harness.testStaleFetchSingle()
+        testProxy.testStaleFetchSingle()
     }
 
     @Test
     override fun testStaleFetchSingleDeleted() {
-        harness.testStaleFetchSingleDeleted()
+        testProxy.testStaleFetchSingleDeleted()
     }
 
     @Test
     override fun testStaleFetchMultiple() {
-        harness.testStaleFetchMultiple()
+        testProxy.testStaleFetchMultiple()
     }
 
     /**

@@ -13,8 +13,8 @@ import org.junit.Test
  * Each @Test method in this interface reflects a test
  * that must be implemented to properly test Sync.
  *
- * The tests should be proxied to a [SyncIntHarness] proxy.
- * [SyncIntHarness] and [SyncIntTestRunner] should be in sync
+ * The tests should be proxied to a [SyncIntTestProxy] proxy.
+ * [SyncIntTestProxy] and [SyncIntTestRunner] should be in sync
  * on the these test methods.
  */
 interface SyncIntTestRunner {

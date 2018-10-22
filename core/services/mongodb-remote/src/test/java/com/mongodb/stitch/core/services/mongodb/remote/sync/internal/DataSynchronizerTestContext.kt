@@ -45,9 +45,11 @@ interface DataSynchronizerTestContext {
 
     fun verifyErrorListenerCalledForActiveDoc(times: Int, error: Exception? = null)
 
-    fun verifyConflictHandlerCalledForActiveDoc(times: Int,
-                                                expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
-                                                expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null)
+    fun verifyConflictHandlerCalledForActiveDoc(
+        times: Int,
+        expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
+        expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null
+    )
 
     fun verifyStreamFunctionCalled(times: Int, expectedArgs: List<Any>)
 

@@ -56,7 +56,7 @@ abstract class BaseStitchIntTest {
             listeners.remove(listener)
         }
     }
-    
+
     private val adminClient: StitchAdminClient by lazy {
         StitchAdminClient.create(getStitchBaseURL())
     }

@@ -12,10 +12,10 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.util.*
+import java.util.Collections
 
 class NamespaceChangeStreamListenerUnitTests {
-    private val harness = SyncTestContext()
+    private val harness = SyncTestHarness()
 
     @After
     fun teardown() {
@@ -25,7 +25,7 @@ class NamespaceChangeStreamListenerUnitTests {
 
     @Test
     fun testOpenStream() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (namespaceChangeStreamListener, nsConfigMock) = harness.createNamespaceChangeStreamListenerWithContext(ctx)
 
         // assert the stream does not open since we are offline
@@ -58,7 +58,7 @@ class NamespaceChangeStreamListenerUnitTests {
 
     @Test
     fun testStoreEvent() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val (namespaceChangeStreamListener, nsConfigMock) = harness.createNamespaceChangeStreamListenerWithContext(ctx)
         // assert nothing happens when we try to store events on a closed stream
         assertFalse(namespaceChangeStreamListener.isOpen)
@@ -93,7 +93,7 @@ class NamespaceChangeStreamListenerUnitTests {
         // assert that the events have been drained from the event map
         val actualEvents = namespaceChangeStreamListener.events
         assertEquals(1, actualEvents.size)
-        SyncTestContext.compareEvents(expectedChangeEvent, actualEvents.values.first())
+        SyncTestHarness.compareEvents(expectedChangeEvent, actualEvents.values.first())
         assertEquals(0, namespaceChangeStreamListener.events.size)
     }
 }

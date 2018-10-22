@@ -4,7 +4,7 @@ import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncTestContext.Companion.withoutVersionId
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncTestHarness.Companion.withoutVersionId
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
@@ -24,26 +24,13 @@ import org.mockito.Mockito.verify
 import java.lang.Exception
 
 class DataSynchronizerUnitTests {
-    private val harness = SyncTestContext()
-
-    @After
-    fun teardown() {
-        harness.teardown()
-        CoreRemoteClientFactory.close()
-        ServerEmbeddedMongoClientFactory.getInstance().close()
-    }
-
     companion object {
-//        @AfterClass
-//        fun teardown() {
-//            CoreRemoteClientFactory.close()
-//            ServerEmbeddedMongoClientFactory.getInstance().close()
-//        }
-
-        private fun setupPendingReplace(ctx: DataSynchronizerTestContext,
-                                        expectedDocument: BsonDocument,
-                                        shouldConflictBeResolvedByRemote: Boolean = false,
-                                        shouldWaitForError: Boolean = false) {
+        private fun setupPendingReplace(
+            ctx: DataSynchronizerTestContext,
+            expectedDocument: BsonDocument,
+            shouldConflictBeResolvedByRemote: Boolean = false,
+            shouldWaitForError: Boolean = false
+        ) {
             ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
             ctx.queueConsumableRemoteInsertEvent()
             ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
@@ -80,9 +67,18 @@ class DataSynchronizerUnitTests {
         }
     }
 
+    private val harness = SyncTestHarness()
+
+    @After
+    fun teardown() {
+        harness.teardown()
+        CoreRemoteClientFactory.close()
+        ServerEmbeddedMongoClientFactory.getInstance().close()
+    }
+
     @Test
     fun testNew() {
-        val ctx = harness.newTestContext(shouldPreconfigure = false)
+        val ctx = harness.freshTestContext(shouldPreconfigure = false)
 
         // a fresh, non-configured dataSynchronizer should not be running.
         assertFalse(ctx.dataSynchronizer.isRunning)
@@ -90,7 +86,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testOnNetworkStateChanged() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
 
         // verify that, since we are offline, start has not been called
         ctx.isOnline = false
@@ -106,7 +102,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testStartAndStop() {
-        val ctx = harness.newTestContext(shouldPreconfigure = false)
+        val ctx = harness.freshTestContext(shouldPreconfigure = false)
         assertFalse(ctx.dataSynchronizer.isRunning)
         ctx.reconfigure()
 
@@ -119,7 +115,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testSuccessfulInsert() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
 
         // insert the doc, wait, sync, and assert that the expected change events are emitted
         ctx.insertTestDocument()
@@ -152,7 +148,7 @@ class DataSynchronizerUnitTests {
     @Test
     fun testConflictedInsert() {
         val duplicateInsertException = StitchServiceException("E11000", StitchServiceErrorCode.MONGODB_ERROR)
-        var ctx = harness.newTestContext()
+        var ctx = harness.freshTestContext()
         // setup our expectations
         ctx.mockInsertException(duplicateInsertException)
 
@@ -178,7 +174,7 @@ class DataSynchronizerUnitTests {
 
         // 2: Insert -> Conflict -> Insert (local wins)
         // reset
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         ctx.mockInsertException(duplicateInsertException)
         ctx.insertTestDocument()
 
@@ -199,7 +195,7 @@ class DataSynchronizerUnitTests {
 
         // 3: Insert -> Conflict -> Exception -> Freeze
         // reset
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         ctx.mockInsertException(duplicateInsertException)
         ctx.insertTestDocument()
 
@@ -223,7 +219,7 @@ class DataSynchronizerUnitTests {
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
 
         // 4: Unknown -> Delete
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         ctx.mockInsertException(duplicateInsertException)
         ctx.insertTestDocument()
         ctx.doSyncPass()
@@ -235,7 +231,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testFailedInsert() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         // prepare the exceptionToThrow
         val expectedException = StitchServiceException("bad", StitchServiceErrorCode.UNKNOWN)
         ctx.mockInsertException(expectedException)
@@ -261,7 +257,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testSuccessfulReplace() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val expectedDocument = BsonDocument("_id", ctx.testDocumentId).append("count", BsonInt32(3))
         setupPendingReplace(ctx, expectedDocument)
 
@@ -279,7 +275,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testConflictedReplace() {
-        var ctx = harness.newTestContext()
+        var ctx = harness.freshTestContext()
         var expectedDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
 
         // 1: Replace -> Conflict -> Replace (local wins)
@@ -304,7 +300,7 @@ class DataSynchronizerUnitTests {
         assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
 
         // 2: Replace -> Conflict -> Delete (remote wins)
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         expectedDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
         setupPendingReplace(ctx, expectedDoc, shouldConflictBeResolvedByRemote = true)
 
@@ -313,7 +309,7 @@ class DataSynchronizerUnitTests {
         assertNull(ctx.findTestDocumentFromLocalCollection())
 
         // 3: Replace -> Conflict -> Exception -> Freeze
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         expectedDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
         ctx.exceptionToThrowDuringConflict = Exception("bad")
         // verify that, though the conflict handler was called, the exceptionToThrow was emitted
@@ -335,7 +331,7 @@ class DataSynchronizerUnitTests {
         assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
 
         // 4: Unknown -> Freeze
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         expectedDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
         ctx.queueConsumableRemoteUnknownEvent()
         setupPendingReplace(ctx, expectedDoc)
@@ -352,7 +348,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testSuccessfulUpdate() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         // setup our expectations
         val docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
 
@@ -400,7 +396,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testConflictedUpdate() {
-        var ctx = harness.newTestContext()
+        var ctx = harness.freshTestContext()
         // setup our expectations
         var docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
         var expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
@@ -440,7 +436,7 @@ class DataSynchronizerUnitTests {
 
         // 2: Update -> Conflict -> Update (local wins)
         // reset (delete, insert, sync)
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
         expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
@@ -484,7 +480,7 @@ class DataSynchronizerUnitTests {
 
         // 3: Update -> Conflict -> Exception -> Freeze
         // reset (delete, insert, sync)
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
         expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
@@ -536,7 +532,7 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         // 4: Unknown -> Freeze
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
         ctx.insertTestDocument()
         ctx.queueConsumableRemoteUnknownEvent()
         ctx.doSyncPass()
@@ -550,7 +546,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testFailedUpdate() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
             // set up expectations and insert
         val docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
         val expectedEvent = ChangeEvent.changeEventForLocalUpdate(
@@ -595,7 +591,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testSuccessfulDelete() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
 
         // insert a new document. assert that the correct change events
         // have been reflected w/ and w/o pending writes
@@ -635,7 +631,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testConflictedDelete() {
-        var ctx = harness.newTestContext()
+        var ctx = harness.freshTestContext()
 
         var expectedLocalEvent = ChangeEvent.changeEventForLocalDelete(
             ctx.namespace,
@@ -674,7 +670,7 @@ class DataSynchronizerUnitTests {
             ctx.findTestDocumentFromLocalCollection())
 
         // 2: Local wins
-        ctx = harness.newTestContext()
+        ctx = harness.freshTestContext()
 
         expectedLocalEvent = ChangeEvent.changeEventForLocalDelete(
             ctx.namespace,
@@ -715,7 +711,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testFailedDelete() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
 
         val expectedEvent = ChangeEvent.changeEventForLocalDelete(
             ctx.namespace,
@@ -752,7 +748,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testInsertOneAndSync() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
 
         ctx.insertTestDocument()
 
@@ -770,7 +766,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testUpdateOneById() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
         val expectedDocumentAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
         // assert this doc does not exist
         assertNull(ctx.findTestDocumentFromLocalCollection())
@@ -794,13 +790,13 @@ class DataSynchronizerUnitTests {
         updateResult = ctx.updateTestDocument()
         ctx.waitForEvent()
 
-
         // assert the UpdateResult is non-zero
         assertEquals(1, updateResult.matchedCount)
         assertEquals(1, updateResult.modifiedCount)
         assertNull(updateResult.upsertedId)
         assertTrue(updateResult.wasAcknowledged())
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1,
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            1,
             ChangeEvent.changeEventForLocalUpdate(
                 ctx.namespace, ctx.testDocumentId, ctx.updateDocument, expectedDocumentAfterUpdate, true))
         // assert that the updated document equals what we've expected
@@ -810,7 +806,7 @@ class DataSynchronizerUnitTests {
 
     @Test
     fun testDeleteOneById() {
-        val ctx = harness.newTestContext()
+        val ctx = harness.freshTestContext()
 
         // 0: Pre-checks
         // assert this doc does not exist
@@ -860,27 +856,27 @@ class DataSynchronizerUnitTests {
         assertNull(ctx.findTestDocumentFromLocalCollection())
     }
 
-//    @Test
-//    fun testConfigure() {
-//        val ctx = harness.newTestContext(false)
-//        ctx.verifyStartCalled(0)
-//
-//        // without a configuration it should not be
-//        // configured or running
-//        assertFalse(ctx.dataSynchronizer.isRunning)
-//
-//        // this call will configure the data synchronizer
-//        ctx.insertTestDocument()
-//
-//        ctx.verifyStartCalled(1)
-//
-//        ctx.deleteTestDocument()
-//
-//        ctx.insertTestDocument()
-//        ctx.waitForEvent()
-//
-//        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(
-//            ctx.namespace, ctx.testDocument, true))
-//        assertTrue(ctx.dataSynchronizer.isRunning)
-//    }
+    @Test
+    fun testConfigure() {
+        val ctx = harness.freshTestContext(false)
+        ctx.verifyStartCalled(0)
+
+        // without a configuration it should not be
+        // configured or running
+        assertFalse(ctx.dataSynchronizer.isRunning)
+
+        // this call will configure the data synchronizer
+        ctx.insertTestDocument()
+
+        ctx.verifyStartCalled(1)
+
+        ctx.deleteTestDocument()
+
+        ctx.insertTestDocument()
+        ctx.waitForEvent()
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(
+            ctx.namespace, ctx.testDocument, true))
+        assertTrue(ctx.dataSynchronizer.isRunning)
+    }
 }
