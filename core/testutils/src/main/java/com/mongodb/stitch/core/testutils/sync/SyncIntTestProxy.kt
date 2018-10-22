@@ -16,6 +16,7 @@ import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Ignore
 import org.junit.Test
 import java.lang.Exception
 import java.util.UUID
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * @param syncTestRunner a runner that contains the necessary properties
  *                       to run the tests
  */
+@Ignore
 class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     @Test
     fun testSync() {
