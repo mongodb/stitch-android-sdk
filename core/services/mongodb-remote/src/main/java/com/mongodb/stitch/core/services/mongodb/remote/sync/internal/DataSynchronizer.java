@@ -1169,7 +1169,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     instanceChangeStreamListener.removeWatcher(namespace, watcher);
   }
 
-  Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(MongoNamespace namespace) {
+  Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(final MongoNamespace namespace) {
     return instanceChangeStreamListener.getEventsForNamespace(namespace);
   }
 

@@ -15,7 +15,7 @@ import org.mockito.Mockito.verify
 import java.util.*
 
 class NamespaceChangeStreamListenerUnitTests {
-    private val harness = SyncHarness()
+    private val harness = SyncTestContext()
 
     @After
     fun teardown() {
@@ -93,7 +93,7 @@ class NamespaceChangeStreamListenerUnitTests {
         // assert that the events have been drained from the event map
         val actualEvents = namespaceChangeStreamListener.events
         assertEquals(1, actualEvents.size)
-        SyncHarness.compareEvents(expectedChangeEvent, actualEvents.values.first())
+        SyncTestContext.compareEvents(expectedChangeEvent, actualEvents.values.first())
         assertEquals(0, namespaceChangeStreamListener.events.size)
     }
 }

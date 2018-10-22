@@ -1,6 +1,9 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
+import com.mongodb.client.result.DeleteResult
+import com.mongodb.client.result.UpdateResult
+import com.mongodb.stitch.core.StitchAppClientInfo
 import com.mongodb.stitch.core.internal.common.AuthMonitor
 import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.core.internal.net.EventStream
@@ -8,6 +11,7 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.internal.net.Stream
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
@@ -26,6 +30,7 @@ import org.bson.BsonString
 import org.bson.BsonValue
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
+import org.bson.types.ObjectId
 import org.junit.Assert
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers
@@ -38,8 +43,9 @@ import org.mockito.Mockito.times
 import java.lang.Exception
 import java.util.*
 import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 
-class SyncHarness {
+class SyncTestContext {
     companion object {
         /**
          * Conflict handler used for testing purposes.
@@ -98,7 +104,10 @@ class SyncHarness {
             }
         }
 
-        private class TestEventStream(private val testContext: TestContext): EventStream {
+        /**
+         * Test event stream that can passed on injected events.
+         */
+        private class TestEventStream(private val testContext: DataSynchronizerTestContext): EventStream {
             override fun nextEvent(): Event {
                 return testContext.nextStreamEvent
             }
@@ -114,6 +123,20 @@ class SyncHarness {
             }
         }
 
+        private open class TestChangeEventListener(private val expectedEvent: ChangeEvent<BsonDocument>?,
+                                                   private val emitEventSemaphore: Semaphore?): ChangeEventListener<BsonDocument> {
+            override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>?) {
+                try {
+                    if (expectedEvent != null) {
+                        compareEvents(expectedEvent, actualEvent!!)
+                        Assert.assertEquals(expectedEvent.id, documentId)
+                    }
+                } finally {
+                    emitEventSemaphore?.release()
+                }
+            }
+        }
+
         fun newDoc(key: String = "hello", value: BsonValue = BsonString("world")): BsonDocument {
             return BsonDocument("_id", BsonObjectId()).append(key, value)
         }
@@ -122,6 +145,15 @@ class SyncHarness {
             return MongoNamespace(
                 BsonObjectId().value.toHexString(),
                 BsonObjectId().value.toHexString())
+        }
+
+        fun withoutId(document: BsonDocument?): BsonDocument? {
+            if (document == null) {
+                return null
+            }
+            val newDoc = BsonDocument.parse(document.toJson())
+            newDoc.remove("_id")
+            return newDoc
         }
 
         fun withoutVersionId(document: BsonDocument?): BsonDocument? {
@@ -133,6 +165,12 @@ class SyncHarness {
             return newDoc
         }
 
+        /**
+         * Compare the properties of given events
+         *
+         * @param expectedEvent event we are expecting to see
+         * @Param actualEvent actual event generated
+         */
         fun compareEvents(expectedEvent: ChangeEvent<BsonDocument>,
                           actualEvent: ChangeEvent<BsonDocument>) {
             // assert that our actualEvent is correct
@@ -153,7 +191,7 @@ class SyncHarness {
 
             Assert.assertEquals(expectedEvent.hasUncommittedWrites(), actualEvent.hasUncommittedWrites())
         }
-        
+
         private fun newErrorListener(emitErrorSemaphore: Semaphore? = null,
                                      expectedDocumentId: BsonValue? = null): ErrorListener {
             open class TestErrorListener: ErrorListener {
@@ -178,81 +216,12 @@ class SyncHarness {
 
         private fun newChangeEventListener(emitEventSemaphore: Semaphore? = null,
                                            expectedEvent: ChangeEvent<BsonDocument>? = null): ChangeEventListener<BsonDocument> {
-            open class TestChangeEventListener: ChangeEventListener<BsonDocument> {
-                override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>?) {
-                    try {
-                        if (expectedEvent != null) {
-                            compareEvents(expectedEvent, actualEvent!!)
-                            Assert.assertEquals(expectedEvent.id, documentId)
-                        }
-                    } finally {
-                        emitEventSemaphore?.release()
-                    }
-                }
-            }
-            return Mockito.spy(TestChangeEventListener())
+            return Mockito.spy(TestChangeEventListener(expectedEvent, emitEventSemaphore))
         }
     }
 
-    interface TestContext {
-        val namespace: MongoNamespace
-        val testDocument: BsonDocument
-        val testDocumentId: BsonValue
-        var updateDocument: BsonDocument
-
-        val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument>
-        var shouldConflictBeResolvedByRemote: Boolean
-        var exceptionToThrowDuringConflict: Exception?
-        var isOnline: Boolean
-        var isLoggedIn: Boolean
-        var nextStreamEvent: Event
-        val dataSynchronizer: DataSynchronizer
-
-        fun reconfigure()
-
-        fun waitForError()
-
-        fun waitForEvent()
-
-        fun insertTestDocument()
-
-        fun updateTestDocument()
-
-        fun deleteTestDocument()
-
-        fun doSyncPass()
-
-        fun findTestDocumentFromLocalCollection(): BsonDocument?
-
-        fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>? = null)
-
-        fun verifyErrorListenerCalledForActiveDoc(times: Int, error: Exception? = null)
-
-        fun verifyConflictHandlerCalledForActiveDoc(times: Int,
-                                                    expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
-                                                    expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null)
-
-        fun verifyStreamFunctionCalled(times: Int, expectedArgs: List<Any>)
-
-        fun verifyStartCalled(times: Int)
-
-        fun verifyStopCalled(times: Int)
-
-        fun queueConsumableRemoteInsertEvent()
-
-        fun queueConsumableRemoteUpdateEvent()
-
-        fun queueConsumableRemoteDeleteEvent()
-
-        fun queueConsumableRemoteUnknownEvent()
-
-        fun mockInsertException(exception: Exception)
-
-        fun mockUpdateResult(remoteUpdateResult: RemoteUpdateResult)
-    }
-
     @Suppress("UNCHECKED_CAST")
-    private class TestContextImpl(shouldPreconfigure: Boolean = true): TestContext {
+    private class DataSynchronizerTestContextImpl(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
         override val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument> =
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
@@ -297,8 +266,16 @@ class SyncHarness {
 
         private val localClient by lazy {
             SyncMongoClientFactory.getClient(
-                TestUtils.getClientInfo(),
-                "mongodblocal",
+                StitchAppClientInfo(
+                    ObjectId().toHexString(),
+                    ObjectId().toHexString(),
+                    ObjectId().toHexString(),
+                    ObjectId().toHexString(),
+                    CodecRegistries.fromCodecs(bsonDocumentCodec),
+                    networkMonitor,
+                    authMonitor
+                ),
+                "local",
                 ServerEmbeddedMongoClientFactory.getInstance()
             )
         }
@@ -370,11 +347,11 @@ class SyncHarness {
         }
 
         override fun waitForEvent() {
-            eventSemaphore?.acquire()
+            eventSemaphore?.tryAcquire(2, TimeUnit.SECONDS)
         }
 
         override fun waitForError() {
-            errorSemaphore?.acquire()
+            errorSemaphore?.tryAcquire(2, TimeUnit.SECONDS)
         }
 
         /**
@@ -388,20 +365,20 @@ class SyncHarness {
             dataSynchronizer.insertOneAndSync(namespace, testDocument)
         }
 
-        override fun updateTestDocument() {
+        override fun updateTestDocument(): UpdateResult {
             configureNewChangeEventListener()
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            dataSynchronizer.updateOneById(namespace, testDocumentId, updateDocument)
+            return dataSynchronizer.updateOneById(namespace, testDocumentId, updateDocument)
         }
 
-        override fun deleteTestDocument() {
+        override fun deleteTestDocument(): DeleteResult {
             configureNewChangeEventListener()
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            dataSynchronizer.deleteOneById(namespace, testDocumentId)
+            return dataSynchronizer.deleteOneById(namespace, testDocumentId)
         }
 
         override fun doSyncPass() {
@@ -506,19 +483,35 @@ class SyncHarness {
             `when`(collectionMock.updateOne(any(), any())).thenReturn(remoteUpdateResult)
         }
 
+        override fun mockUpdateException(exception: Exception) {
+            `when`(collectionMock.updateOne(any(), any())).thenAnswer {
+                throw exception
+            }
+        }
+
+        override fun mockDeleteResult(remoteDeleteResult: RemoteDeleteResult) {
+            `when`(collectionMock.deleteOne(any())).thenReturn(remoteDeleteResult)
+        }
+
+        override fun mockDeleteException(exception: Exception) {
+            `when`(collectionMock.deleteOne(any())).thenAnswer {
+                throw exception
+            }
+        }
+
         private fun configureNewErrorListener() {
             val emitErrorSemaphore = Semaphore(0)
+            this.errorSemaphore?.release()
             this.errorListener = newErrorListener(emitErrorSemaphore)
             this.reconfigure()
-            this.errorSemaphore?.release()
             this.errorSemaphore = emitErrorSemaphore
         }
 
         private fun configureNewChangeEventListener(expectedChangeEvent: ChangeEvent<BsonDocument>? = null) {
             val emitEventSemaphore = Semaphore(0)
+            this.eventSemaphore?.release()
             this.changeEventListener = newChangeEventListener(emitEventSemaphore, expectedChangeEvent)
             this.reconfigure()
-            this.eventSemaphore?.release()
             this.eventSemaphore = emitEventSemaphore
         }
 
@@ -528,23 +521,31 @@ class SyncHarness {
         }
     }
 
-    internal fun newTestContext(shouldPreconfigure: Boolean = true): TestContext {
-        return TestContextImpl(shouldPreconfigure)
+    private var oldCtx: DataSynchronizerTestContext? = null
+
+    internal fun teardown() {
+        oldCtx?.dataSynchronizer?.close()
     }
 
-    internal fun createNamespaceChangeStreamListenerWithContext(context: TestContext): Pair<NamespaceChangeStreamListener, NamespaceSynchronizationConfig> {
+    internal fun newTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
+        oldCtx?.dataSynchronizer?.close()
+        oldCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
+        return oldCtx!!
+    }
+
+    internal fun createNamespaceChangeStreamListenerWithContext(context: DataSynchronizerTestContext): Pair<NamespaceChangeStreamListener, NamespaceSynchronizationConfig> {
         val nsConfigMock = Mockito.mock(NamespaceSynchronizationConfig::class.java)
         val namespaceChangeStreamListener = NamespaceChangeStreamListener(
             context.namespace,
             nsConfigMock,
-            (context as TestContextImpl).service,
+            (context as DataSynchronizerTestContextImpl).service,
             context.networkMonitor,
             context.authMonitor)
 
         return namespaceChangeStreamListener to nsConfigMock
     }
 
-    internal fun createCoreSyncWithContext(context: TestContext): Pair<CoreSync<BsonDocument>, SyncOperations<BsonDocument>> {
+    internal fun createCoreSyncWithContext(context: DataSynchronizerTestContext): Pair<CoreSync<BsonDocument>, SyncOperations<BsonDocument>> {
         val syncOperations = Mockito.spy(SyncOperations(
             context.namespace,
             BsonDocument::class.java,
@@ -554,58 +555,9 @@ class SyncHarness {
             context.namespace,
             BsonDocument::class.java,
             context.dataSynchronizer,
-            (context as TestContextImpl).service,
+            (context as DataSynchronizerTestContextImpl).service,
             syncOperations)
 
         return coreSync to syncOperations
     }
-//
-//    fun deleteTestDocument(expectedChangeEvent: ChangeEvent<BsonDocument>? = null,
-//                           expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
-//                           expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null,
-//                           withConfiguration: Boolean = true): SemaphoreResultHolder<DeleteResult> {
-//        val semaphoreHolder = SemaphoreResultHolder<DeleteResult>()
-//        if (withConfiguration) {
-//            semaphoreHolder.withEventSemaphore(configureNewChangeEventListener(expectedChangeEvent))
-//            semaphoreHolder.withErrorSemaphore(configureNewErrorListener())
-//            configureNewConflictHandler(expectedLocalConflictEvent, expectedRemoteConflictEvent)
-//        }
-//
-//        return semaphoreHolder.withResult(dataSynchronizer.deleteOneById(namespace, testDocument["_id"]))
-//    }
-//
-//    fun deleteTestDocumentAndWait(expectedChangeEvent: ChangeEvent<BsonDocument>? = ChangeEvent.changeEventForLocalDelete(namespace, testDocumentId, false),
-//                                  expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
-//                                  expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null): SemaphoreResultHolder<DeleteResult> {
-//        val semaphoreHolder = deleteTestDocument(expectedChangeEvent, expectedLocalConflictEvent, expectedRemoteConflictEvent)
-//
-//        semaphoreHolder.emitEventSemaphore?.acquire()
-//
-//        if (shouldExpectError) {
-//            semaphoreHolder.emitErrorSemaphore?.acquire()
-//        }
-//
-//        return semaphoreHolder
-//    }
-
-//    fun start() {
-//        dataSynchronizer.start()
-//    }
-//
-//    fun stop() {
-//        dataSynchronizer.stop()
-//    }
-//
-//    fun onNetworkStateChanged() {
-//        dataSynchronizer.onNetworkStateChanged()
-//    }
-//
-//    fun isRunning(): Boolean {
-//        return dataSynchronizer.isRunning
-//    }
-//
-//    internal fun getSynchronizedDocuments(): Set<CoreDocumentSynchronizationConfig> {
-//        return this.dataSynchronizer.getSynchronizedDocuments(namespace)
-//    }
-//
 }

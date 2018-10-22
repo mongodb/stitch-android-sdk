@@ -56,6 +56,11 @@ public final class StitchEvent<T> {
                       final String data,
                       final Decoder<T> decoder) {
     this.eventName = eventName;
+    if (data == null) {
+      this.data = null;
+      this.error = null;
+      return;
+    }
 
     final StringBuilder decodedStringBuilder = new StringBuilder(data.length());
     for (int chIdx = 0; chIdx < data.length(); chIdx++) {
@@ -117,11 +122,7 @@ public final class StitchEvent<T> {
         this.data = null;
         break;
       case Event.MESSAGE_EVENT:
-        if (data != null) {
-          this.data = BsonUtils.parseValue(data, decoder);
-        } else {
-          this.data = null;
-        }
+        this.data = BsonUtils.parseValue(decodedData, decoder);
         this.error = null;
         break;
       default:
