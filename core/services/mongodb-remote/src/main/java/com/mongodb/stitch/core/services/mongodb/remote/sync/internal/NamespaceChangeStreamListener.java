@@ -37,6 +37,8 @@ import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nullable;
+
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.Document;
@@ -258,7 +260,7 @@ public class NamespaceChangeStreamListener {
   }
 
   /**
-   * Returns the latest change events.
+   * Returns the latest change events, and clears them from the change stream listener.
    *
    * @return the latest change events.
    */
@@ -276,6 +278,33 @@ public class NamespaceChangeStreamListener {
     try {
       this.events.clear();
       return events;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * If there is an unprocessed change event for a particular document ID, fetch it from the
+   * change stream listener, and remove it. By reading the event here, we are assuming it will be
+   * processed by the consumer.
+   *
+   * @return the latest unprocessed change event for the given document ID, or null if none exists.
+   */
+  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+          final BsonValue documentId
+  ) {
+    final ChangeEvent<BsonDocument> event;
+    nsLock.readLock().lock();
+    try {
+      event = this.events.get(documentId);
+    } finally {
+      nsLock.readLock().unlock();
+    }
+
+    nsLock.writeLock().lock();
+    try {
+      this.events.remove(documentId);
+      return event;
     } finally {
       nsLock.writeLock().unlock();
     }

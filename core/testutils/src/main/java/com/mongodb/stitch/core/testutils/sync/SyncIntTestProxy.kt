@@ -1088,31 +1088,27 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val docToInsert = withNewUnsupportedSyncVersion(Document("hello", "world"))
 
         val errorEmittedSem = Semaphore(0)
-
-        // configure Sync to fail the test if there is a conflict. configure an error listener
-        // that flags whether or not it has been called.
         coll.configure(
             failingConflictHandler,
             null,
-            ErrorListener { documentId, error -> errorEmittedSem.release() })
+            ErrorListener { _, _ -> errorEmittedSem.release() })
 
-        // insert the doc with the unsupported version
         remoteColl.insertOne(docToInsert)
 
-        // find it, and sync it. assert that it's been synced
         val doc = remoteColl.find(docToInsert).first()!!
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
         coll.syncOne(doc1Id)
-        Assert.assertTrue(coll.getSyncedIds().contains(doc1Id))
+
+        assertTrue(coll.syncedIds.contains(doc1Id))
 
         // syncing on this document with an unsupported spv should cause the document to desync
         goOnline()
         streamAndSync()
 
-        Assert.assertFalse(coll.getSyncedIds().contains(doc1Id))
+        assertFalse(coll.syncedIds.contains(doc1Id))
 
         // an error should also have been emitted
-        Assert.assertTrue(errorEmittedSem.tryAcquire(10, TimeUnit.SECONDS))
+        assertTrue(errorEmittedSem.tryAcquire(10, TimeUnit.SECONDS))
     }
 
     @Test
