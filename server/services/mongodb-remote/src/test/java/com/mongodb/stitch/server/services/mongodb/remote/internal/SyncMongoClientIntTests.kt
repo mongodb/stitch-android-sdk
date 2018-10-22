@@ -32,7 +32,7 @@ import org.junit.Before
 import org.junit.Test
 
 class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
-    private class RemoteMethods(private val remoteMongoCollection: RemoteMongoCollection<Document>): ProxyRemoteMethods {
+    private class RemoteMethods(private val remoteMongoCollection: RemoteMongoCollection<Document>) : ProxyRemoteMethods {
         override fun insertOne(document: Document): RemoteInsertOneResult {
             return remoteMongoCollection.insertOne(document)
         }
@@ -54,8 +54,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
         }
     }
 
-    private class SyncMethods(private val sync: Sync<Document>): ProxySyncMethods {
-        override fun configure(conflictResolver: ConflictHandler<Document?>, changeEventListener: ChangeEventListener<Document>?, errorListener: ErrorListener?) {
+    private class SyncMethods(private val sync: Sync<Document>) : ProxySyncMethods {
+        override fun configure(
+            conflictResolver: ConflictHandler<Document?>,
+            changeEventListener: ChangeEventListener<Document>?,
+            errorListener: ErrorListener?
+        ) {
             sync.configure(conflictResolver, changeEventListener, errorListener)
         }
 
@@ -149,7 +153,9 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
 
     @After
     override fun teardown() {
-        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+        if (::mongoClient.isInitialized) {
+            (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+        }
         super.teardown()
     }
 

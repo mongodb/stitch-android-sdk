@@ -14,6 +14,8 @@ import org.bson.BsonValue
 import org.bson.Document
 import org.junit.Assert
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.lang.Exception
 import java.util.UUID
@@ -964,6 +966,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
         // configure Sync, each entry with flags checking
         // that the listeners/handlers have been called
+        val changeEventListenerSemaphore = Semaphore(0)
         coll.configure(
             ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 hasConflictHandlerBeenInvoked = true
@@ -972,6 +975,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             },
             ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
                 hasChangeEventListenerBeenInvoked = true
+                changeEventListenerSemaphore.release()
             },
             ErrorListener { _, _ -> }
         )
@@ -984,6 +988,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // sync. assert that the conflict handler and
         // change event listener have been called
         streamAndSync()
+
+        changeEventListenerSemaphore.tryAcquire(3, TimeUnit.SECONDS)
         Assert.assertTrue(hasConflictHandlerBeenInvoked)
         Assert.assertTrue(hasChangeEventListenerBeenInvoked)
     }
@@ -1099,13 +1105,13 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
         coll.syncOne(doc1Id)
 
-        assertTrue(coll.syncedIds.contains(doc1Id))
+        assertTrue(coll.getSyncedIds().contains(doc1Id))
 
         // syncing on this document with an unsupported spv should cause the document to desync
         goOnline()
         streamAndSync()
 
-        assertFalse(coll.syncedIds.contains(doc1Id))
+        assertFalse(coll.getSyncedIds().contains(doc1Id))
 
         // an error should also have been emitted
         assertTrue(errorEmittedSem.tryAcquire(10, TimeUnit.SECONDS))

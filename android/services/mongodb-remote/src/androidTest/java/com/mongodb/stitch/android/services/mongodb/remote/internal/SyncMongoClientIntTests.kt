@@ -156,7 +156,9 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     @After
     override fun teardown() {
-        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+        if (::mongoClient.isInitialized) {
+            (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+        }
         super.teardown()
     }
 

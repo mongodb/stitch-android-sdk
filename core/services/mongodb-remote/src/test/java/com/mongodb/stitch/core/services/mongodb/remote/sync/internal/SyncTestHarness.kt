@@ -42,6 +42,7 @@ import org.mockito.Mockito.times
 import java.lang.Exception
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import java.util.Random
 
 class SyncTestHarness {
     companion object {
@@ -56,9 +57,11 @@ class SyncTestHarness {
             var shouldConflictBeResolvedByRemote: Boolean,
             var exceptionToThrow: Exception? = null
         ) : ConflictHandler<BsonDocument> {
-            override fun resolveConflict(documentId: BsonValue?,
-                                         localEvent: ChangeEvent<BsonDocument>?,
-                                         remoteEvent: ChangeEvent<BsonDocument>?): BsonDocument? {
+            override fun resolveConflict(
+                documentId: BsonValue?,
+                localEvent: ChangeEvent<BsonDocument>?,
+                remoteEvent: ChangeEvent<BsonDocument>?
+            ): BsonDocument? {
                 if (exceptionToThrow != null) {
                     throw exceptionToThrow!!
                 }
@@ -188,7 +191,7 @@ class SyncTestHarness {
             emitErrorSemaphore: Semaphore? = null,
             expectedDocumentId: BsonValue? = null
         ): ErrorListener {
-            open class TestErrorListener: ErrorListener {
+            open class TestErrorListener : ErrorListener {
                 override fun onError(actualDocumentId: BsonValue?, error: Exception?) {
                     if (expectedDocumentId != null) {
                         Assert.assertEquals(expectedDocumentId, actualDocumentId)
@@ -200,22 +203,26 @@ class SyncTestHarness {
             return Mockito.spy(TestErrorListener())
         }
 
-        private fun newConflictHandler(shouldConflictBeResolvedByRemote: Boolean = true,
-                                       exceptionToThrow: Exception? = null): TestConflictHandler {
+        private fun newConflictHandler(
+            shouldConflictBeResolvedByRemote: Boolean = true,
+            exceptionToThrow: Exception? = null
+        ): TestConflictHandler {
             return Mockito.spy(
                 TestConflictHandler(
                     shouldConflictBeResolvedByRemote = shouldConflictBeResolvedByRemote,
                     exceptionToThrow = exceptionToThrow))
         }
 
-        private fun newChangeEventListener(emitEventSemaphore: Semaphore? = null,
-                                           expectedEvent: ChangeEvent<BsonDocument>? = null): ChangeEventListener<BsonDocument> {
+        private fun newChangeEventListener(
+            emitEventSemaphore: Semaphore? = null,
+            expectedEvent: ChangeEvent<BsonDocument>? = null
+        ): ChangeEventListener<BsonDocument> {
             return Mockito.spy(TestChangeEventListener(expectedEvent, emitEventSemaphore))
         }
     }
 
     @Suppress("UNCHECKED_CAST")
-    private class DataSynchronizerTestContextImpl(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
+    private class DataSynchronizerTestContextImpl(shouldPreconfigure: Boolean = true) : DataSynchronizerTestContext {
         override val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument> =
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
@@ -438,9 +445,11 @@ class SyncTestHarness {
             Mockito.verify(errorListener, times(times)).onError(eq(testDocumentId), eq(error))
         }
 
-        override fun verifyConflictHandlerCalledForActiveDoc(times: Int,
-                                                             expectedLocalConflictEvent: ChangeEvent<BsonDocument>?,
-                                                             expectedRemoteConflictEvent: ChangeEvent<BsonDocument>?) {
+        override fun verifyConflictHandlerCalledForActiveDoc(
+            times: Int,
+            expectedLocalConflictEvent: ChangeEvent<BsonDocument>?,
+            expectedRemoteConflictEvent: ChangeEvent<BsonDocument>?
+        ) {
             val localChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
             val remoteChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
 
