@@ -2,8 +2,10 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoWriteException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
+import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -24,7 +26,7 @@ class CoreSyncUnitTests {
         CoreRemoteClientFactory.close()
         ServerEmbeddedMongoClientFactory.getInstance().close()
     }
-    
+
     @Test
     fun testSyncOne() {
         val ctx = harness.freshTestContext()
