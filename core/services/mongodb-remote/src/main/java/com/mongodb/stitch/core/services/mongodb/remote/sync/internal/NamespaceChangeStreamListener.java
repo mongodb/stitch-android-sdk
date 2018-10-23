@@ -57,6 +57,7 @@ public class NamespaceChangeStreamListener {
   private ReadWriteLock nsLock;
   private final Set<Callback<ChangeEvent<BsonDocument>, Object>> watchers;
   private Stream<ChangeEvent<BsonDocument>> currentStream;
+  private Set<BsonValue> watchedIds;
 
   NamespaceChangeStreamListener(
       final MongoNamespace namespace,
@@ -189,7 +190,9 @@ public class NamespaceChangeStreamListener {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());
-    args.put("ids", nsConfig.getSynchronizedDocumentIds());
+
+    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
+    args.put("ids", idsToWatch);
 
     currentStream =
         service.streamFunction(
@@ -199,6 +202,7 @@ public class NamespaceChangeStreamListener {
 
     if (currentStream.isOpen()) {
       this.nsConfig.setStale(true);
+      this.setWatchedIds(idsToWatch);
     }
 
     return currentStream.isOpen();
@@ -308,5 +312,16 @@ public class NamespaceChangeStreamListener {
     } finally {
       nsLock.writeLock().unlock();
     }
+  }
+
+  private synchronized void setWatchedIds(final Set<BsonValue> ids) {
+    watchedIds = ids;
+  }
+
+  public synchronized Set<BsonValue> getWatchedIds() {
+    if (watchedIds == null) {
+      return Collections.emptySet();
+    }
+    return new HashSet<>(watchedIds);
   }
 }

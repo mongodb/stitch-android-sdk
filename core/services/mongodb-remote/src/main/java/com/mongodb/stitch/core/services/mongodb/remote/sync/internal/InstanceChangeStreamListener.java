@@ -100,4 +100,13 @@ interface InstanceChangeStreamListener {
   @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
           final MongoNamespace namespace,
           final BsonValue documentId);
+
+  /**
+   * Returns whether or not a given document in a namespace is being watched.
+   *
+   * @param namespace the namespace where the document lives.
+   * @param id the id of the documetn.
+   * @return whether or not a given document in a namespace is being watched.
+   */
+  boolean isDocumentBeingWatched(final MongoNamespace namespace, final BsonValue id);
 }

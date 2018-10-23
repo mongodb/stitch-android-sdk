@@ -133,6 +133,18 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     return true;
   }
 
+  public boolean isDocumentBeingWatched(final MongoNamespace namespace, final BsonValue id) {
+    instanceLock.writeLock().lock();
+    try {
+      if (!nsStreamers.containsKey(namespace)) {
+        return false;
+      }
+      return nsStreamers.get(namespace).getWatchedIds().contains(id);
+    } finally {
+      instanceLock.writeLock().unlock();
+    }
+  }
+
   @Override
   public void addWatcher(final MongoNamespace namespace,
                          final Callback<ChangeEvent<BsonDocument>, Object> watcher) {

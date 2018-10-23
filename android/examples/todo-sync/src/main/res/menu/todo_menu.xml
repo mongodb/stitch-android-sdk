@@ -19,4 +19,8 @@
         android:id="@+id/clear_all_action"
         android:title="@string/clear_all_action_label"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/login_action"
+        android:title="@string/login_action_label"
+        app:showAsAction="never" />
 </menu>
