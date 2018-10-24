@@ -44,6 +44,11 @@ public final class OkHttpTransport implements Transport {
     this.client = new OkHttpClient();
   }
 
+  public void close() {
+    client.dispatcher().executorService().shutdown();
+    client.connectionPool().evictAll();
+  }
+
   private static okhttp3.Request buildRequest(final Request request) {
     final okhttp3.Request.Builder reqBuilder =
         new okhttp3.Request.Builder()
@@ -125,7 +130,7 @@ public final class OkHttpTransport implements Transport {
         StitchError.handleRequestError(transportResponse);
       }
 
-      return new OkHttpEventStream(response.body().source(), call);
+      return new OkHttpEventStream(response, response.body().source(), call);
     } catch (final InterruptedIOException ex) {
       Thread.currentThread().interrupt();
       throw ex;

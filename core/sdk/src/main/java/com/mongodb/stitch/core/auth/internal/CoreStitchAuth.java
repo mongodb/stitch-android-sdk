@@ -561,6 +561,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     if (refresherThread != null) {
       refresherThread.interrupt();
     }
+    requestClient.close();
   }
 
   protected StitchRequestClient getRequestClient() {
