@@ -5,6 +5,7 @@ import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.StitchAppClientInfo
 import com.mongodb.stitch.core.internal.common.AuthMonitor
+import com.mongodb.stitch.core.internal.common.ThreadDispatcher
 import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.core.internal.net.EventStream
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
@@ -276,7 +277,8 @@ class SyncUnitTestHarness {
                     ObjectId().toHexString(),
                     CodecRegistries.fromCodecs(bsonDocumentCodec),
                     networkMonitor,
-                    authMonitor
+                    authMonitor,
+                    ThreadDispatcher()
                 ),
                 "local",
                 ServerEmbeddedMongoClientFactory.getInstance()
@@ -298,7 +300,8 @@ class SyncUnitTestHarness {
                 localClient,
                 remoteClient,
                 networkMonitor,
-                authMonitor
+                authMonitor,
+                ThreadDispatcher()
             ))
 
         private var eventSemaphore: Semaphore? = null
