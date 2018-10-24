@@ -37,7 +37,7 @@ import javax.annotation.Nonnull;
  */
 public final class Stitch {
   private static final String DEFAULT_BASE_URL = "https://stitch.mongodb.com";
-  private static final Long DEFAULT_DEFAULT_REQUEST_TIMEOUT = 15000L;
+  private static final Long DEFAULT_DEFAULT_REQUEST_TIMEOUT = 60000L;
   private static final String TAG = Stitch.class.getSimpleName();
   private static final Map<String, StitchAppClientImpl> appClients = new HashMap<>();
   private static boolean initialized;

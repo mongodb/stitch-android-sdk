@@ -150,7 +150,6 @@ public class TodoListActivity extends AppCompatActivity {
           Log.d(TAG, "error logging in", e);
           Toast.makeText(TodoListActivity.this, "Failed logging in", Toast.LENGTH_SHORT).show();
         });
-    System.out.println("RETURNING FROM LOGIN");
   }
 
   private class ListUpdateListener implements ChangeEventListener<BsonDocument> {
