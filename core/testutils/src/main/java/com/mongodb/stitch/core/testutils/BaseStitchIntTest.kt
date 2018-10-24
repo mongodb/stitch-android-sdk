@@ -22,6 +22,7 @@ import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.admin.services.service
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyAuthProvider
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bson.types.ObjectId
@@ -29,8 +30,32 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
+import java.util.concurrent.CopyOnWriteArrayList
 
 abstract class BaseStitchIntTest {
+    class TestNetworkMonitor : NetworkMonitor {
+        private var _connectedState = false
+        var connectedState: Boolean
+            set(value) {
+                _connectedState = value
+                listeners.forEach { it.onNetworkStateChanged() }
+            }
+            get() = _connectedState
+
+        private var listeners = CopyOnWriteArrayList<NetworkMonitor.StateListener>()
+
+        override fun isConnected(): Boolean {
+            return connectedState
+        }
+
+        override fun addNetworkStateListener(listener: NetworkMonitor.StateListener) {
+            listeners.add(listener)
+        }
+
+        override fun removeNetworkStateListener(listener: NetworkMonitor.StateListener) {
+            listeners.remove(listener)
+        }
+    }
 
     private val adminClient: StitchAdminClient by lazy {
         StitchAdminClient.create(getStitchBaseURL())

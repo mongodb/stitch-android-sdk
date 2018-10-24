@@ -183,6 +183,8 @@ public final class ChangeEvent<DocumentT> {
           removedFields);
       asDoc.put(ChangeEventCoder.Fields.UPDATE_DESCRIPTION_FIELD, updateDescDoc);
     }
+    asDoc.put(ChangeEventCoder.Fields.WRITE_PENDING_FIELD,
+        new BsonBoolean(value.hasUncommittedWrites));
     return asDoc;
   }
 
@@ -235,7 +237,7 @@ public final class ChangeEvent<DocumentT> {
             nsDoc.getString(ChangeEventCoder.Fields.NS_COLL_FIELD).getValue()),
         document.getDocument(ChangeEventCoder.Fields.DOCUMENT_KEY_FIELD),
         updateDescription,
-        nsDoc.getBoolean(
+        document.getBoolean(
             ChangeEventCoder.Fields.WRITE_PENDING_FIELD,
             BsonBoolean.FALSE).getValue());
   }
@@ -303,7 +305,7 @@ public final class ChangeEvent<DocumentT> {
       static final String UPDATE_DESCRIPTION_UPDATED_FIELDS_FIELD = "updatedFields";
       static final String UPDATE_DESCRIPTION_REMOVED_FIELDS_FIELD = "removedFields";
 
-      static final String WRITE_PENDING_FIELD = "write_pending";
+      static final String WRITE_PENDING_FIELD = "writePending";
     }
   }
 
