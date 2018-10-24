@@ -1509,7 +1509,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId
   ) {
     syncConfig.addSynchronizedDocument(namespace, documentId);
-    triggerListeningToNamespace(namespace, documentId, true);
+    triggerListeningToNamespace(namespace);
   }
 
   /**
@@ -1524,7 +1524,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId
   ) {
     syncConfig.removeSynchronizedDocument(namespace, documentId);
-    triggerListeningToNamespace(namespace, documentId, false);
+    triggerListeningToNamespace(namespace);
   }
 
   public <T> Collection<T> find(
@@ -1596,7 +1596,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     );
     config.setSomePendingWrites(logicalT, event);
     final BsonValue documentId = BsonUtils.getDocumentId(document);
-    triggerListeningToNamespace(namespace, documentId, true);
+    triggerListeningToNamespace(namespace);
     emitEvent(documentId, event);
   }
 
@@ -1822,20 +1822,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           logicalT,
           namespace,
           ex));
-    } finally {
-      syncLock.unlock();
-    }
-  }
-
-  void triggerListeningToNamespace(
-      final MongoNamespace namespace, final BsonValue id, final boolean fromSync) {
-    syncLock.lock();
-    try {
-      if (instanceChangeStreamListener.isDocumentBeingWatched(namespace, id) == fromSync) {
-        // don't restart for a noop
-        return;
-      }
-      triggerListeningToNamespace(namespace);
     } finally {
       syncLock.unlock();
     }
