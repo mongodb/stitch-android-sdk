@@ -18,8 +18,6 @@ package com.mongodb.stitch.android.examples.todosync;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -167,15 +165,13 @@ public class TodoListActivity extends AppCompatActivity {
   private class ItemUpdateListener implements ChangeEventListener<Document> {
     @Override
     public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
-      final Handler mainHandler = new Handler(Looper.getMainLooper());
       if (event.getOperationType() == ChangeEvent.OperationType.DELETE) {
-        mainHandler.post(() ->
-            todoAdapter.removeItemById(event.getDocumentKey().getObjectId("_id").getValue()));
+        todoAdapter.removeItemById(event.getDocumentKey().getObjectId("_id").getValue());
         return;
       }
       if (TodoItem.isTodoItem(event.getFullDocument())) {
         final TodoItem item = new TodoItem(event.getFullDocument());
-        mainHandler.post(() -> todoAdapter.updateOrAddItem(item));
+        todoAdapter.updateOrAddItem(item);
       }
     }
   }

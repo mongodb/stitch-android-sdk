@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core;
 
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
+import com.mongodb.stitch.core.internal.common.Dispatcher;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import org.bson.codecs.configuration.CodecRegistry;
@@ -30,6 +31,7 @@ public final class StitchAppClientInfo {
   private final CodecRegistry codecRegistry;
   private final NetworkMonitor networkMonitor;
   private final AuthMonitor authMonitor;
+  private final Dispatcher eventDispatcher;
 
   /**
    * Constructs the {@link StitchAppClientInfo}.
@@ -43,6 +45,7 @@ public final class StitchAppClientInfo {
    * @param codecRegistry the codec registry being used for encoding/decoding of JSON.
    * @param networkMonitor the network monitor that the client will used to check internet status.
    * @param authMonitor the auth monitor that the client will used to check auth status.
+   * @param eventDispatcher the dispatcher that the client will used to send events on.
    */
   public StitchAppClientInfo(
       final String clientAppId,
@@ -51,7 +54,8 @@ public final class StitchAppClientInfo {
       final String localAppVersion,
       final CodecRegistry codecRegistry,
       final NetworkMonitor networkMonitor,
-      final AuthMonitor authMonitor
+      final AuthMonitor authMonitor,
+      final Dispatcher eventDispatcher
   ) {
     this.clientAppId = clientAppId;
     this.dataDirectory = dataDirectory;
@@ -60,6 +64,7 @@ public final class StitchAppClientInfo {
     this.codecRegistry = codecRegistry;
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
+    this.eventDispatcher = eventDispatcher;
   }
 
   /**
@@ -124,5 +129,14 @@ public final class StitchAppClientInfo {
    */
   public AuthMonitor getAuthMonitor() {
     return authMonitor;
+  }
+
+  /**
+   * Gets the {@link Dispatcher} that the client will use to send events on.
+   *
+   * @return the {@link Dispatcher} that the client will use to send events on.
+   */
+  public Dispatcher getEventDispatcher() {
+    return eventDispatcher;
   }
 }

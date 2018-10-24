@@ -16,13 +16,34 @@
 
 package com.mongodb.stitch.android.core.internal.common;
 
-import com.google.android.gms.tasks.Task;
-import com.mongodb.stitch.core.internal.common.ThreadDispatcher;
+import android.os.Handler;
+import android.os.Looper;
+
+import com.mongodb.stitch.core.internal.common.Dispatcher;
 
 import java.util.concurrent.Callable;
 
-public final class TaskDispatcher extends ThreadDispatcher {
-  public <T> Task<T> dispatchTask(final Callable<T> callable) {
-    return dispatch(callable, new TaskCallbackAdapter<T>());
+public final class MainLooperDispatcher implements Dispatcher {
+
+  private final Handler mainHandler;
+
+  public MainLooperDispatcher() {
+    mainHandler = new Handler(Looper.getMainLooper());
+  }
+
+  @Override
+  public <T> void dispatch(final Callable<T> callable) {
+    mainHandler.post(() -> {
+      try {
+        callable.call();
+      } catch (final Exception e) {
+        e.printStackTrace();
+      }
+    });
+  }
+
+  @Override
+  public void close() {
+
   }
 }

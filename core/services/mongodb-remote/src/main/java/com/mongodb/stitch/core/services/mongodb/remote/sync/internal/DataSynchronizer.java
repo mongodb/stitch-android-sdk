@@ -120,7 +120,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoClient localClient,
       final CoreRemoteMongoClient remoteClient,
       final NetworkMonitor networkMonitor,
-      final AuthMonitor authMonitor
+      final AuthMonitor authMonitor,
+      final Dispatcher eventDispatcher
   ) {
     this.service = service;
     this.localClient = localClient;
@@ -129,7 +130,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.authMonitor = authMonitor;
     this.syncLock = new ReentrantLock();
     this.listenersLock = new ReentrantLock();
-    this.eventDispatcher = new Dispatcher();
+    this.eventDispatcher = eventDispatcher;
 
     // TODO: add back after SERVER-35421
     // final MongoDatabase configDb = localClient.getDatabase("sync_config");
@@ -534,6 +535,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       currentRemoteVersionInfo = DocumentVersionInfo
           .getRemoteVersionInfo(remoteChangeEvent.getFullDocument());
     } catch (final Exception e) {
+      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
           String.format(
               Locale.US,
@@ -738,6 +740,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       newestRemoteVersionInfo = DocumentVersionInfo
           .getRemoteVersionInfo(newestRemoteDocument);
     } catch (final Exception e) {
+      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
           String.format(
               Locale.US,
@@ -861,6 +864,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             unprocessedEventVersion = DocumentVersionInfo
                 .getRemoteVersionInfo(unprocessedRemoteEvent.getFullDocument());
           } catch (final Exception e) {
+            desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
             emitError(docConfig,
                 String.format(
                     Locale.US,
@@ -1303,6 +1307,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             .getRemoteVersionInfo(remoteEvent.getFullDocument());
         remoteVersion = remoteVersionInfo.getVersionDoc();
       } catch (final Exception e) {
+        desyncDocumentFromRemote(namespace, docConfig.getDocumentId());
         emitError(docConfig,
             String.format(
                 Locale.US,

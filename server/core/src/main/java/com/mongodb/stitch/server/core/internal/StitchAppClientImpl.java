@@ -20,6 +20,7 @@ import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.internal.CoreStitchAppClient;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
+import com.mongodb.stitch.core.internal.common.ThreadDispatcher;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
@@ -60,7 +61,8 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
             config.getLocalAppVersion(),
             config.getCodecRegistry(),
             config.getNetworkMonitor(),
-            this);
+            this,
+            new ThreadDispatcher());
     this.routes = new StitchAppRoutes(this.info.getClientAppId());
     final StitchRequestClient requestClient =
         new StitchRequestClient(
