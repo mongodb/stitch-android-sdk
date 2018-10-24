@@ -338,7 +338,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return whether or not the synchronization pass was successful.
    */
   public boolean doSyncPass() {
-    if (!syncLock.tryLock()) {
+    if (!this.isConfigured || !syncLock.tryLock()) {
       return false;
     }
     try {
@@ -402,7 +402,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // 2. Run remote to local (R2L) sync routine
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
       final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
-          instanceChangeStreamListener.getEventsForNamespace(nsConfig.getNamespace());
+          getEventsForNamespace(nsConfig.getNamespace());
 
       final Set<BsonValue> unseenIds = nsConfig.getStaleDocumentIds();
       final Set<BsonDocument> latestDocumentsFromStale =
@@ -1409,6 +1409,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     instanceChangeStreamListener.removeWatcher(namespace, watcher);
   }
 
+  Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(final MongoNamespace namespace) {
+    return instanceChangeStreamListener.getEventsForNamespace(namespace);
+  }
+
   // ----- CRUD operations -----
 
   /**
@@ -1757,7 +1761,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     emitEvent(documentId, changeEventForLocalDelete(namespace, documentId, false));
   }
 
-  void triggerListeningToNamespace(final MongoNamespace namespace) {
+  private void triggerListeningToNamespace(final MongoNamespace namespace) {
     syncLock.lock();
     try {
       final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);

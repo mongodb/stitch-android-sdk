@@ -56,6 +56,11 @@ public final class StitchEvent<T> {
                       final String data,
                       final Decoder<T> decoder) {
     this.eventName = eventName;
+    if (data == null) {
+      this.data = null;
+      this.error = null;
+      return;
+    }
 
     final StringBuilder decodedStringBuilder = new StringBuilder(data.length());
     for (int chIdx = 0; chIdx < data.length(); chIdx++) {
