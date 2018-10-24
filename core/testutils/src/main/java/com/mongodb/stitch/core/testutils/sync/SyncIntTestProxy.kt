@@ -985,13 +985,13 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // insert a document remotely, and wait for the event to store
         val sem = watchForEvents(syncTestRunner.namespace)
         remoteColl.insertOne(Document("_id", insertedId).append("fly", "away"))
-        sem.tryAcquire(3, TimeUnit.SECONDS)
+        assertTrue(sem.tryAcquire(10, TimeUnit.SECONDS))
 
         // sync. assert that the conflict handler and
         // change event listener have been called
         streamAndSync()
 
-        changeEventListenerSemaphore.tryAcquire(3, TimeUnit.SECONDS)
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
         Assert.assertTrue(hasConflictHandlerBeenInvoked)
         Assert.assertTrue(hasChangeEventListenerBeenInvoked)
     }

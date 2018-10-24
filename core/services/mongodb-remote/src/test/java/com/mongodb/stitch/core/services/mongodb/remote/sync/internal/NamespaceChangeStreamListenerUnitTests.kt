@@ -15,7 +15,7 @@ import org.mockito.Mockito.verify
 import java.util.Collections
 
 class NamespaceChangeStreamListenerUnitTests {
-    private val harness = SyncTestHarness()
+    private val harness = SyncUnitTestHarness()
 
     @After
     fun teardown() {
@@ -52,7 +52,7 @@ class NamespaceChangeStreamListenerUnitTests {
             "collection" to ctx.namespace.collectionName,
             "ids" to nsConfigMock.synchronizedDocumentIds
         ))
-        ctx.verifyStreamFunctionCalled(times = 1, expectedArgs = expectedArgs)
+        ctx.verifyWatchFunctionCalled(times = 1, expectedArgs = expectedArgs)
         verify(nsConfigMock).setStale(eq(true))
     }
 
@@ -78,6 +78,7 @@ class NamespaceChangeStreamListenerUnitTests {
         assertTrue(namespaceChangeStreamListener.openStream())
         ctx.nextStreamEvent = Event.Builder().withEventName("message").build()
         namespaceChangeStreamListener.storeNextEvent()
+        assertEquals(0, namespaceChangeStreamListener.events.size)
         assertTrue(namespaceChangeStreamListener.isOpen)
 
         // assert that, with an expected ChangeEvent, the event is stored
@@ -93,7 +94,7 @@ class NamespaceChangeStreamListenerUnitTests {
         // assert that the events have been drained from the event map
         val actualEvents = namespaceChangeStreamListener.events
         assertEquals(1, actualEvents.size)
-        SyncTestHarness.compareEvents(expectedChangeEvent, actualEvents.values.first())
+        SyncUnitTestHarness.compareEvents(expectedChangeEvent, actualEvents.values.first())
         assertEquals(0, namespaceChangeStreamListener.events.size)
     }
 }

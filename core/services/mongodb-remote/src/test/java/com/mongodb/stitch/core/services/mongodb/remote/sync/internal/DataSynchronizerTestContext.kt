@@ -14,7 +14,7 @@ import java.lang.Exception
 /**
  * Testing context to test a data synchronizer.
  *
- * Should be served fresh only by the [SyncTestHarness].
+ * Should be served fresh only by the [SyncUnitTestHarness].
  *
  * Multiple instances of the testing context could result in
  * race conditions if not opened and closed properly.
@@ -108,7 +108,7 @@ interface DataSynchronizerTestContext {
     /**
      * Verify the stream function was called.
      */
-    fun verifyStreamFunctionCalled(times: Int, expectedArgs: List<Any>)
+    fun verifyWatchFunctionCalled(times: Int, expectedArgs: List<Any>)
 
     /**
      * Verify dataSynchronizer.start() has been called.

@@ -2,7 +2,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.client.FindIterable
 import com.mongodb.client.MongoCollection
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncTestHarness.Companion.newNamespace
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.newNamespace
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString

@@ -9,6 +9,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.mockito.ArgumentCaptor
@@ -18,7 +19,7 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
 class CoreSyncUnitTests {
-    private val harness = SyncTestHarness()
+    private val harness = SyncUnitTestHarness()
 
     @After
     fun teardown() {
@@ -89,28 +90,28 @@ class CoreSyncUnitTests {
 
         assertEquals(
             ctx.testDocument,
-            SyncTestHarness.withoutVersionId(findIterable.filter(filterDoc).first()))
+            SyncUnitTestHarness.withoutSyncVersion(findIterable.filter(filterDoc).first()))
         verify(syncOperations, times(5)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
 
         expectedRemoteFindOptions.sort(sortDoc)
         assertEquals(
             ctx.testDocument,
-            SyncTestHarness.withoutVersionId(findIterable.sort(sortDoc).first()))
+            SyncUnitTestHarness.withoutSyncVersion(findIterable.sort(sortDoc).first()))
         verify(syncOperations, times(6)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
 
         expectedRemoteFindOptions.projection(projectionDoc)
         assertEquals(
             ctx.testDocument,
-            SyncTestHarness.withoutVersionId(findIterable.projection(projectionDoc).first()))
+            SyncUnitTestHarness.withoutSyncVersion(findIterable.projection(projectionDoc).first()))
         verify(syncOperations, times(7)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
 
         expectedRemoteFindOptions.limit(10)
         assertEquals(
             ctx.testDocument,
-            SyncTestHarness.withoutVersionId(findIterable.limit(10).first()))
+            SyncUnitTestHarness.withoutSyncVersion(findIterable.limit(10).first()))
         verify(syncOperations, times(8)).findFirst(eq(filterDoc), eq(BsonDocument::class.java), remoteFindCaptor.capture())
         compareRemoteFindOptions(expectedRemoteFindOptions, remoteFindCaptor.value)
     }
@@ -126,7 +127,7 @@ class CoreSyncUnitTests {
 
         assertEquals(
             ctx.testDocument,
-            SyncTestHarness.withoutVersionId(coreSync.findOneById(ctx.testDocumentId)))
+            SyncUnitTestHarness.withoutSyncVersion(coreSync.findOneById(ctx.testDocumentId)))
 
         verify(syncOperations, times(2)).findOneById(
             eq(ctx.testDocumentId), eq(BsonDocument::class.java))
@@ -174,6 +175,7 @@ class CoreSyncUnitTests {
             coreSync.insertOneAndSync(ctx.testDocument)
             fail("should have received duplicate key error index")
         } catch (e: MongoWriteException) {
+            assertTrue(e.message?.contains("E11000") ?: false)
             assertNotNull(e)
         }
 

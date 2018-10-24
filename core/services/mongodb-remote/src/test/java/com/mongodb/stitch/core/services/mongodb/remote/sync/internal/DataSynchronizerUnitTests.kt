@@ -4,7 +4,7 @@ import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncTestHarness.Companion.withoutVersionId
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
@@ -67,7 +67,7 @@ class DataSynchronizerUnitTests {
         }
     }
 
-    private val harness = SyncTestHarness()
+    private val harness = SyncUnitTestHarness()
 
     @After
     fun teardown() {
@@ -138,7 +138,7 @@ class DataSynchronizerUnitTests {
         // verify the appropriate doc was inserted
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).insertOne(docCaptor.capture())
-        assertEquals(ctx.testDocument, withoutVersionId(docCaptor.value))
+        assertEquals(ctx.testDocument, withoutSyncVersion(docCaptor.value))
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
         // verify the conflict and error handlers not called
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
@@ -344,6 +344,10 @@ class DataSynchronizerUnitTests {
         ctx.queueConsumableRemoteUnknownEvent()
         ctx.doSyncPass()
         assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
+
+        ctx.queueConsumableRemoteDeleteEvent()
+        ctx.doSyncPass()
+        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
     }
 
     @Test
@@ -384,7 +388,7 @@ class DataSynchronizerUnitTests {
         ))
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).updateOne(any(), docCaptor.capture())
-        assertEquals(docAfterUpdate, withoutVersionId(docCaptor.value))
+        assertEquals(docAfterUpdate, withoutSyncVersion(docCaptor.value))
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
 
@@ -574,7 +578,7 @@ class DataSynchronizerUnitTests {
         ctx.waitForError()
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).updateOne(any(), docCaptor.capture())
-        assertEquals(expectedEvent.fullDocument, withoutVersionId(docCaptor.value))
+        assertEquals(expectedEvent.fullDocument, withoutSyncVersion(docCaptor.value))
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 0)
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 1, error = expectedException)
@@ -649,6 +653,7 @@ class DataSynchronizerUnitTests {
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedLocalEvent)
 
         // create conflict here
+        // 1: Remote wins
         `when`(ctx.collectionMock.deleteOne(any())).thenReturn(RemoteDeleteResult(0))
         ctx.queueConsumableRemoteUpdateEvent()
 
@@ -733,12 +738,12 @@ class DataSynchronizerUnitTests {
 
         ctx.doSyncPass()
         ctx.waitForError()
-        // verify we are inserting!
+        // verify we have deleted the correct doc
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).deleteOne(docCaptor.capture())
         assertEquals(
             BsonDocument("_id", ctx.testDocument["_id"]!!.asObjectId()),
-            withoutVersionId(docCaptor.value))
+            withoutSyncVersion(docCaptor.value))
         ctx.verifyChangeEventListenerCalledForActiveDoc(0)
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
         ctx.verifyErrorListenerCalledForActiveDoc(1, expectedException)
@@ -812,7 +817,7 @@ class DataSynchronizerUnitTests {
         // assert this doc does not exist
         assertNull(ctx.findTestDocumentFromLocalCollection())
 
-        // update the non-existent document...
+        // delete the non-existent document...
         var deleteResult = ctx.deleteTestDocument()
         // ...which should continue to not exist...
         assertNull(ctx.findTestDocumentFromLocalCollection())

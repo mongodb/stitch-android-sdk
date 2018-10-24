@@ -31,6 +31,7 @@ import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
 import org.junit.Assert
+import org.junit.Assert.assertTrue
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
@@ -44,7 +45,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.Random
 
-class SyncTestHarness {
+class SyncUnitTestHarness {
     companion object {
         /**
          * Conflict handler used for testing purposes.
@@ -152,7 +153,7 @@ class SyncTestHarness {
                 BsonObjectId().value.toHexString())
         }
 
-        fun withoutVersionId(document: BsonDocument?): BsonDocument? {
+        fun withoutSyncVersion(document: BsonDocument?): BsonDocument? {
             if (document == null) {
                 return null
             }
@@ -177,7 +178,7 @@ class SyncTestHarness {
             } else if (expectedEvent.fullDocument == null) {
                 Assert.assertNull(actualEvent.fullDocument)
             } else {
-                Assert.assertEquals(expectedEvent.fullDocument, withoutVersionId(actualEvent.fullDocument))
+                Assert.assertEquals(expectedEvent.fullDocument, withoutSyncVersion(actualEvent.fullDocument))
             }
             Assert.assertEquals(expectedEvent.id, actualEvent.id)
             Assert.assertEquals(expectedEvent.namespace, actualEvent.namespace)
@@ -349,11 +350,11 @@ class SyncTestHarness {
         }
 
         override fun waitForEvent() {
-            eventSemaphore?.tryAcquire(2, TimeUnit.SECONDS)
+            assertTrue(eventSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
         }
 
         override fun waitForError() {
-            errorSemaphore?.tryAcquire(2, TimeUnit.SECONDS)
+            assertTrue(errorSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
         }
 
         /**
@@ -422,7 +423,8 @@ class SyncTestHarness {
         }
 
         override fun findTestDocumentFromLocalCollection(): BsonDocument? {
-            return withoutVersionId(
+            // TODO: this may be rendered unnecessary with STITCH-1972
+            return withoutSyncVersion(
                 dataSynchronizer.findOneById(
                     namespace,
                     testDocumentId,
@@ -433,7 +435,7 @@ class SyncTestHarness {
         override fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>?) {
             val changeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
             Mockito.verify(changeEventListener, times(times)).onEvent(
-                eq(testDocument["_id"]),
+                eq(testDocumentId),
                 changeEventArgumentCaptor.capture() as ChangeEvent<BsonDocument>?)
 
             if (expectedChangeEvent != null) {
@@ -467,7 +469,7 @@ class SyncTestHarness {
             }
         }
 
-        override fun verifyStreamFunctionCalled(times: Int, expectedArgs: List<Any>) {
+        override fun verifyWatchFunctionCalled(times: Int, expectedArgs: List<Any>) {
             Mockito.verify(service, times(times)).streamFunction(eq("watch"), eq(expectedArgs), eq(ChangeEvent.changeEventCoder))
         }
 
@@ -525,16 +527,16 @@ class SyncTestHarness {
         }
     }
 
-    private var oldCtx: DataSynchronizerTestContext? = null
+    private var latestCtx: DataSynchronizerTestContext? = null
 
     internal fun teardown() {
-        oldCtx?.dataSynchronizer?.close()
+        latestCtx?.dataSynchronizer?.close()
     }
 
     internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
-        oldCtx?.dataSynchronizer?.close()
-        oldCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
-        return oldCtx!!
+        latestCtx?.dataSynchronizer?.close()
+        latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
+        return latestCtx!!
     }
 
     internal fun createNamespaceChangeStreamListenerWithContext(context: DataSynchronizerTestContext): Pair<NamespaceChangeStreamListener, NamespaceSynchronizationConfig> {
