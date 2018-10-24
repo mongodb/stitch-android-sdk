@@ -21,6 +21,7 @@ import com.mongodb.stitch.core.internal.common.StitchError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ import okhttp3.Call;
 import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
@@ -92,6 +94,7 @@ public final class OkHttpTransport implements Transport {
             .connectTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
             .readTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
             .writeTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
+            .protocols(Collections.singletonList(Protocol.HTTP_1_1))
             .build();
     return handleResponse(reqClient.newCall(buildRequest(request)).execute());
   }
@@ -111,6 +114,7 @@ public final class OkHttpTransport implements Transport {
           .connectTimeout(STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS)
           .readTimeout(0, TimeUnit.MILLISECONDS)
           .writeTimeout(0, TimeUnit.MILLISECONDS)
+          .protocols(Collections.singletonList(Protocol.HTTP_1_1))
           .build().newCall(httpRequest);
       final okhttp3.Response response = call.execute();
 
