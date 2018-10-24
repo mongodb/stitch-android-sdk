@@ -1323,7 +1323,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             remoteVersion);
       } else {
         // ii. Otherwise, replace the local document with the resolved document locally, mark that
-        //     there are pending writes for this document, and emit a REPLACE change event.
+        //     there are pending writes for this document, and emit an UPDATE change event, or a
+        //     DELETE change event (if the remoteEvent's operation type was DELETE).
         replaceOrUpsertOneFromResolution(
             namespace,
             docConfig.getDocumentId(),
@@ -1564,6 +1565,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
+    final BsonDocument oldDocument =
+        getLocalCollection(namespace).find(getDocumentIdFilter(documentId)).first();
+
     final BsonDocument result = getLocalCollection(namespace)
         .findOneAndUpdate(
             getDocumentIdFilter(documentId),
@@ -1572,8 +1576,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (result == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
-    final ChangeEvent<BsonDocument> event =
-        changeEventForLocalUpdate(namespace, documentId, update, result, true);
+    final ChangeEvent<BsonDocument> event = changeEventForLocalUpdate(
+            namespace,
+            documentId,
+            ChangeEvent.UpdateDescription.diff(oldDocument, result),
+            result,
+            true);
     config.setSomePendingWrites(
         logicalT,
         event);
@@ -1607,7 +1615,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
             document,
-            new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
+            new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.BEFORE));
     final ChangeEvent<BsonDocument> event;
     if (fromDelete) {
       event = changeEventForLocalInsert(namespace, result, true);
@@ -1616,7 +1624,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           atVersion,
           event);
     } else {
-      event = changeEventForLocalReplace(namespace, documentId, result, true);
+      event = changeEventForLocalUpdate(
+          namespace,
+          documentId,
+          ChangeEvent.UpdateDescription.diff(result, document),
+          document,
+          true);
       config.setSomePendingWrites(
           logicalT,
           atVersion,

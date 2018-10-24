@@ -30,6 +30,7 @@ import java.util.Map;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
+import org.bson.BsonElement;
 import org.bson.BsonReader;
 import org.bson.BsonString;
 import org.bson.BsonType;
@@ -40,6 +41,8 @@ import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
+
+import javax.annotation.Nullable;
 
 // TODO: Should there be a local and remote type for the pending part?
 public final class ChangeEvent<DocumentT> {
@@ -150,6 +153,116 @@ public final class ChangeEvent<DocumentT> {
 
     public Collection<String> getRemovedFields() {
       return removedFields;
+    }
+
+    /**
+     * Convert this update description to an update document.
+     * @return an update document with the appropriate $set and $unset
+     *         documents
+     */
+    BsonDocument toUpdateDocument() {
+      final List<BsonElement> unsets = new ArrayList<>();
+      for (final String removedField : this.removedFields) {
+        unsets.add(new BsonElement(removedField, new BsonBoolean(true)));
+      }
+      return new BsonDocument("$set", this.updatedFields)
+          .append("$unset", new BsonDocument(unsets));
+    }
+
+    static UpdateDescription fromUpdateDocument(final BsonDocument updateDocument) {
+      final BsonDocument updatedFields = updateDocument.getDocument("$set");
+      final BsonDocument removedFields = updateDocument.getDocument("$unset");
+      final List<String> removedFieldsKeys = new ArrayList<>();
+
+      for (final Map.Entry<String, BsonValue> stringBsonValueEntry : removedFields.entrySet()) {
+        removedFieldsKeys.add(stringBsonValueEntry.getKey());
+      }
+
+      return new UpdateDescription(updatedFields, removedFieldsKeys);
+    }
+
+    /**
+     * Find the diff between two documents.
+     *
+     * NOTE: This does not do a full diff on [BsonArray]. If there is
+     * an inequality between the old and new array, the old array will
+     * simply be replaced by the new one.
+     *
+     * @param thisDocument original document
+     * @param thatDocument document to diff on
+     * @param onKey the key for our depth level
+     * @param updatedFields contiguous document of updated fields,
+     *                      nested or otherwise
+     * @param removedFields contiguous list of removedFields,
+     *                      nested or otherwise
+     * @return a description of the updated fields and removed keys between
+     *         the documents
+     */
+    private static UpdateDescription diff(final BsonDocument thisDocument,
+                                          final BsonDocument thatDocument,
+                                          final @Nullable String onKey,
+                                          final BsonDocument updatedFields,
+                                          final List<String> removedFields) {
+      // for each key in this document...
+      for (Map.Entry<String, BsonValue> entry: thisDocument.entrySet()) {
+        final String key = entry.getKey();
+        final BsonValue oldValue = entry.getValue();
+
+        final String actualKey = onKey == null ? key : String.format("%s.%s", onKey, key);
+        // if the key exists in the other document AND both are BsonDocuments
+        // diff the documents recursively, carrying over the keys to keep
+        // updatedFields and removedFields flat.
+        // this will allow us to reference whole objects as well as nested
+        // properties.
+        // else if the key does not exist, the key has been removed.
+        if (thatDocument.containsKey(key)) {
+          final BsonValue newValue = thatDocument.get(key);
+          if (oldValue instanceof BsonDocument && newValue instanceof BsonDocument) {
+            diff((BsonDocument) oldValue,
+                (BsonDocument) newValue,
+                actualKey,
+                updatedFields,
+                removedFields);
+          } else if (!oldValue.equals(newValue)) {
+            updatedFields.put(actualKey, newValue);
+          }
+        } else {
+          removedFields.add(actualKey);
+        }
+      }
+
+      // for each key in the other document...
+      for (Map.Entry<String, BsonValue> entry: thatDocument.entrySet()) {
+        final String key = entry.getKey();
+        final BsonValue newValue= entry.getValue();
+        // if the key is not in the this document,
+        // it is a new key with a new value.
+        // updatedFields will included keys that must
+        // be newly created.
+        final String actualKey = onKey == null ? key : String.format("%s.%s", onKey, key);;
+        if (!thisDocument.containsKey(key)) {
+          updatedFields.put(actualKey, newValue);
+        }
+      }
+
+      return new UpdateDescription(updatedFields, removedFields);
+    }
+
+    /**
+     * Find the diff between two documents.
+     *
+     * NOTE: This does not do a full diff on [BsonArray]. If there is
+     * an inequality between the old and new array, the old array will
+     * simply be replaced by the new one.
+     *
+     * @param thisDocument original document
+     * @param thatDocument document to diff on
+     * @return a description of the updated fields and removed keys between
+     *         the documents
+     */
+    static UpdateDescription diff(BsonDocument thisDocument,
+                                  BsonDocument thatDocument) {
+      return UpdateDescription.diff(thisDocument, thatDocument, null, new BsonDocument(), new ArrayList<>());
     }
   }
 
@@ -343,14 +456,7 @@ public final class ChangeEvent<DocumentT> {
   static ChangeEvent<BsonDocument> changeEventForLocalUpdate(
       final MongoNamespace namespace,
       final BsonValue documentId,
-
-      // Unused for now since embedded does not offer change streams
-      // nor a way to get an UpdateDescription. This results in updates
-      // being processed as full document replacements (FDRs). Some
-      // workarounds are diffing the previous and new document or parsing
-      // the update modifiers against the old document. FDRs are bad
-      // because they require more permissive Stitch rules.
-      final BsonDocument update,
+      final UpdateDescription update,
       final BsonDocument document,
       final boolean writePending
   ) {
@@ -360,7 +466,7 @@ public final class ChangeEvent<DocumentT> {
         document,
         namespace,
         new BsonDocument("_id", documentId),
-        null,
+        update,
         writePending);
   }
 
