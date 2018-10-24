@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
+import com.mongodb.stitch.core.internal.common.Dispatcher;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
@@ -34,7 +35,8 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient {
                                    final String instanceKey,
                                    final MongoClient localClient,
                                    final NetworkMonitor networkMonitor,
-                                   final AuthMonitor authMonitor) {
+                                   final AuthMonitor authMonitor,
+                                   final Dispatcher eventDispatcher) {
     this.service = service;
     this.networkMonitor = networkMonitor;
     this.tempDb = localClient.getDatabase("sync_temp");
@@ -45,7 +47,8 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient {
         localClient,
         this,
         networkMonitor,
-        authMonitor
+        authMonitor,
+        eventDispatcher
     );
   }
 

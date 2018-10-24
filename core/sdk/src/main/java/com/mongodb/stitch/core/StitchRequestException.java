@@ -53,6 +53,6 @@ public class StitchRequestException extends StitchException {
 
   @Override
   public String toString() {
-    return String.format("%s(%s): %s", super.toString(), errorCode.name(), errorCode.toString());
+    return String.format("(%s): %s: %s", super.toString(), errorCode.name(), errorCode.toString());
   }
 }

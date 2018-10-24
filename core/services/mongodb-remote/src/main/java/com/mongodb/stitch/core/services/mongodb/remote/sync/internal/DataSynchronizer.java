@@ -120,7 +120,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoClient localClient,
       final CoreRemoteMongoClient remoteClient,
       final NetworkMonitor networkMonitor,
-      final AuthMonitor authMonitor
+      final AuthMonitor authMonitor,
+      final Dispatcher eventDispatcher
   ) {
     this.service = service;
     this.localClient = localClient;
@@ -129,7 +130,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.authMonitor = authMonitor;
     this.syncLock = new ReentrantLock();
     this.listenersLock = new ReentrantLock();
-    this.eventDispatcher = new Dispatcher();
+    this.eventDispatcher = eventDispatcher;
 
     // TODO: add back after SERVER-35421
     // final MongoDatabase configDb = localClient.getDatabase("sync_config");
@@ -246,15 +247,18 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public void start() {
     syncLock.lock();
     try {
-      if (syncThread != null || !this.isConfigured) {
+      if (!this.isConfigured) {
         return;
       }
+      instanceChangeStreamListener.stop();
       instanceChangeStreamListener.start();
-      syncThread = new Thread(new DataSynchronizerRunner(
-          new WeakReference<>(this),
-          networkMonitor,
-          logger));
-      if (syncThreadEnabled) {
+      if (syncThread == null) {
+        syncThread = new Thread(new DataSynchronizerRunner(
+            new WeakReference<>(this),
+            networkMonitor,
+            logger));
+      }
+      if (syncThreadEnabled && !isRunning) {
         syncThread.start();
         isRunning = true;
       }
@@ -526,8 +530,24 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         docConfig.getDocumentId(),
         remoteChangeEvent.getOperationType().toString()));
 
-    final DocumentVersionInfo currentRemoteVersionInfo = DocumentVersionInfo
-            .getRemoteVersionInfo(remoteChangeEvent.getFullDocument());
+    final DocumentVersionInfo currentRemoteVersionInfo;
+    try {
+      currentRemoteVersionInfo = DocumentVersionInfo
+          .getRemoteVersionInfo(remoteChangeEvent.getFullDocument());
+    } catch (final Exception e) {
+      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+      emitError(docConfig,
+          String.format(
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
+                  + "document that could not have its version info parsed "
+                  + "; dropping the event, and desyncing the document",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId()));
+      return;
+    }
+
 
     if (currentRemoteVersionInfo.hasVersion()
         && currentRemoteVersionInfo.getVersion().getSyncProtocolVersion() != 1) {
@@ -715,8 +735,23 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
 
 
-    final DocumentVersionInfo newestRemoteVersionInfo =
-            DocumentVersionInfo.getRemoteVersionInfo(newestRemoteDocument);
+    final DocumentVersionInfo newestRemoteVersionInfo;
+    try {
+      newestRemoteVersionInfo = DocumentVersionInfo
+          .getRemoteVersionInfo(newestRemoteDocument);
+    } catch (final Exception e) {
+      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+      emitError(docConfig,
+          String.format(
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
+                  + "document that could not have its version info parsed "
+                  + "; dropping the event, and desyncing the document",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId()));
+      return;
+    }
 
     // ii. If the current GUID of the remote document (as determined by this lookup) is equal
     //     to the GUID of the local document, drop the event. We’re believed to be behind in
@@ -824,10 +859,23 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         docConfig.getDocumentId());
 
         if (unprocessedRemoteEvent != null) {
-          final DocumentVersionInfo unprocessedEventVersion =
-                  DocumentVersionInfo.getRemoteVersionInfo(
-                          unprocessedRemoteEvent.getFullDocument()
-                  );
+          final DocumentVersionInfo unprocessedEventVersion;
+          try {
+            unprocessedEventVersion = DocumentVersionInfo
+                .getRemoteVersionInfo(unprocessedRemoteEvent.getFullDocument());
+          } catch (final Exception e) {
+            desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+            emitError(docConfig,
+                String.format(
+                    Locale.US,
+                    "t='%d': syncLocalToRemote ns=%s documentId=%s got a remote "
+                        + "document that could not have its version info parsed "
+                        + "; dropping the event, and desyncing the document",
+                    logicalT,
+                    nsConfig.getNamespace(),
+                    docConfig.getDocumentId()));
+            return;
+          }
 
           // 1. If it does and the version info is different, record that a conflict has occurred.
           //    Difference is determined if either the GUID is different or the version counter is
@@ -1109,16 +1157,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   committedEvent.getUpdateDescription(),
                   false));
 
-          if (nextVersion == null) {
-            final IllegalStateException illegalStateException = new IllegalStateException(
-                    "expected completed write to have version");
-
-            emitError(
-                    docConfig,
-                    illegalStateException.getMessage(),
-                    illegalStateException
-            );
-          }
           docConfig.setPendingWritesComplete(nextVersion);
         } else {
           // v. Otherwise, invoke the collection-level conflict handler with the local change event
@@ -1264,9 +1302,23 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       // would end up deleting it, unless we receive a notification in time.
       remoteVersion = null;
     } else {
-      final DocumentVersionInfo remoteVersionInfo = DocumentVersionInfo
-          .getRemoteVersionInfo(remoteEvent.getFullDocument());
-      remoteVersion = remoteVersionInfo.getVersionDoc();
+      try {
+        final DocumentVersionInfo remoteVersionInfo = DocumentVersionInfo
+            .getRemoteVersionInfo(remoteEvent.getFullDocument());
+        remoteVersion = remoteVersionInfo.getVersionDoc();
+      } catch (final Exception e) {
+        desyncDocumentFromRemote(namespace, docConfig.getDocumentId());
+        emitError(docConfig,
+            String.format(
+                Locale.US,
+                "t='%d': resolveConflict ns=%s documentId=%s got a remote "
+                    + "document that could not have its version info parsed "
+                    + "; dropping the event, and desyncing the document",
+                logicalT,
+                namespace,
+                docConfig.getDocumentId()));
+        return;
+      }
     }
 
     final boolean acceptRemote =
@@ -1457,7 +1509,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId
   ) {
     syncConfig.addSynchronizedDocument(namespace, documentId);
-    triggerListeningToNamespace(namespace);
+    triggerListeningToNamespace(namespace, documentId, true);
   }
 
   /**
@@ -1472,7 +1524,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId
   ) {
     syncConfig.removeSynchronizedDocument(namespace, documentId);
-    triggerListeningToNamespace(namespace);
+    triggerListeningToNamespace(namespace, documentId, false);
   }
 
   public <T> Collection<T> find(
@@ -1543,8 +1595,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         BsonUtils.getDocumentId(document)
     );
     config.setSomePendingWrites(logicalT, event);
-    triggerListeningToNamespace(namespace);
-    emitEvent(BsonUtils.getDocumentId(document), event);
+    final BsonValue documentId = BsonUtils.getDocumentId(document);
+    triggerListeningToNamespace(namespace, documentId, true);
+    emitEvent(documentId, event);
   }
 
   /**
@@ -1774,6 +1827,20 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
+  void triggerListeningToNamespace(
+      final MongoNamespace namespace, final BsonValue id, final boolean fromSync) {
+    syncLock.lock();
+    try {
+      if (instanceChangeStreamListener.isDocumentBeingWatched(namespace, id) == fromSync) {
+        // don't restart for a noop
+        return;
+      }
+      triggerListeningToNamespace(namespace);
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
   /**
    * Whether or not the DataSynchronizer is running in the background.
    *
@@ -1827,16 +1894,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 "emitEvent ns=%s documentId=%s emit exception: %s",
                 event.getNamespace(),
                 documentId,
-                ex));
-            emitError(
-                namespaceSynchronizationConfig.getSynchronizedDocument(documentId),
-                String.format(
-                Locale.US,
-                "emitEvent ns=%s documentId=%s emit exception: %s",
-                event.getNamespace(),
-                documentId,
-                ex),
-                ex);
+                ex), ex);
           }
           return null;
         }

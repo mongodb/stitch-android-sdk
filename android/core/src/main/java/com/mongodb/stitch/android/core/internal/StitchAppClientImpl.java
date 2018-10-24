@@ -20,6 +20,7 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
 import com.mongodb.stitch.android.core.auth.internal.StitchAuthImpl;
+import com.mongodb.stitch.android.core.internal.common.MainLooperDispatcher;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.core.push.StitchPush;
 import com.mongodb.stitch.android.core.push.internal.StitchPushImpl;
@@ -68,7 +69,8 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
             config.getLocalAppVersion(),
             config.getCodecRegistry(),
             config.getNetworkMonitor(),
-            this);
+            this,
+            new MainLooperDispatcher());
     this.routes = new StitchAppRoutes(this.info.getClientAppId());
     final StitchRequestClient requestClient =
         new StitchRequestClient(

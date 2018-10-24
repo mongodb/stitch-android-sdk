@@ -28,17 +28,27 @@ import android.widget.TextView;
 
 import com.google.android.gms.tasks.Task;
 
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.bson.types.ObjectId;
 
 public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoItemViewHolder> {
   private static final String TAG = TodoAdapter.class.getSimpleName();
   private final ItemUpdater itemUpdater;
   private List<TodoItem> todoItems;
+  private Map<ObjectId, Integer> todoItemIdsToIdx;
 
   TodoAdapter(final List<TodoItem> todoItems, final ItemUpdater itemUpdater) {
     this.todoItems = todoItems;
+    this.todoItemIdsToIdx = new HashMap<>();
+    for (int i = 0; i < this.todoItems.size(); i++) {
+      final TodoItem item = this.todoItems.get(i);
+      this.todoItemIdsToIdx.put(item.getId(), i);
+    }
     this.itemUpdater = itemUpdater;
   }
 
@@ -69,19 +79,68 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoItemViewHo
     return todoItems.size();
   }
 
-  public void updateItems(final Task<List<TodoItem>> todoItems) {
-    todoItems.addOnCompleteListener(task -> {
+  public synchronized void updateOrAddItem(final TodoItem todoItem) {
+    if (todoItemIdsToIdx.containsKey(todoItem.getId())) {
+      todoItems.set(todoItemIdsToIdx.get(todoItem.getId()), todoItem);
+    } else {
+      todoItems.add(todoItem);
+      todoItemIdsToIdx.put(todoItem.getId(), todoItems.size() - 1);
+    }
+    TodoAdapter.this.notifyDataSetChanged();
+  }
+
+  public synchronized void removeItemById(final ObjectId id) {
+    if (!todoItemIdsToIdx.containsKey(id)) {
+      return;
+    }
+    todoItems.remove((int) todoItemIdsToIdx.remove(id));
+    // update indexes
+    for (int i = 0; i < todoItems.size(); i++) {
+      final TodoItem item = todoItems.get(i);
+      todoItemIdsToIdx.put(item.getId(), i);
+    }
+    TodoAdapter.this.notifyDataSetChanged();
+  }
+
+  public synchronized void replaceItems(
+      final Task<List<TodoItem>> newTodoItems, final boolean removeUnseen) {
+    newTodoItems.addOnCompleteListener(task -> {
       if (!task.isSuccessful()) {
         Log.e(TAG, "failed to get items", task.getException());
+        return;
       }
-      resetItems(task.isSuccessful()
-          ? task.getResult() : Collections.emptyList());
+      final Set<Integer> unseenIdxs = new HashSet<>(todoItemIdsToIdx.values());
+      final List<TodoItem> newItems = task.getResult();
+
+      // replace existing items and add new ones
+      for (final TodoItem newItem : newItems) {
+        if (todoItemIdsToIdx.containsKey(newItem.getId())) {
+          final Integer idx = todoItemIdsToIdx.get(newItem.getId());
+          todoItems.set(idx, newItem);
+          unseenIdxs.remove(idx);
+        } else {
+          todoItems.add(newItem);
+        }
+      }
+      if (removeUnseen) {
+        // remove all items we did not see in new list
+        for (final Integer idx : unseenIdxs) {
+          final TodoItem removedItem = todoItems.remove((int) idx);
+          todoItemIdsToIdx.remove(removedItem.getId());
+        }
+      }
+      // update indexes
+      for (int i = 0; i < todoItems.size(); i++) {
+        final TodoItem item = todoItems.get(i);
+        todoItemIdsToIdx.put(item.getId(), i);
+      }
       TodoAdapter.this.notifyDataSetChanged();
     });
   }
 
-  private synchronized void resetItems(final List<TodoItem> todoItems) {
-    this.todoItems = todoItems;
+  public synchronized void clearItems() {
+    todoItems.clear();
+    todoItemIdsToIdx.clear();
   }
 
   // Callback for checkbox updates

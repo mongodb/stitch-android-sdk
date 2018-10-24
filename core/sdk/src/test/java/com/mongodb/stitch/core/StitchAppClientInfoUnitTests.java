@@ -38,6 +38,7 @@ public class StitchAppClientInfoUnitTests {
             localAppVersion,
             BsonUtils.DEFAULT_CODEC_REGISTRY,
             null,
+            null,
             null);
 
     assertEquals(stitchAppClientInfo.getClientAppId(), clientAppId);
