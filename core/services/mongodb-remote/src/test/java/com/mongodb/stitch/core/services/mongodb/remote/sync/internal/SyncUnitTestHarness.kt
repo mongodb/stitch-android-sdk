@@ -1,6 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
+import com.mongodb.client.MongoClient
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.StitchAppClientInfo
@@ -266,7 +267,7 @@ class SyncUnitTestHarness {
         val networkMonitor: TestNetworkMonitor = spy(TestNetworkMonitor())
         val authMonitor: TestAuthMonitor = spy(TestAuthMonitor())
 
-        private val localClient by lazy {
+        override val localClient: MongoClient by lazy {
             val clientKey = ObjectId().toHexString()
             SyncMongoClientFactory.getClient(
                 StitchAppClientInfo(
@@ -400,7 +401,7 @@ class SyncUnitTestHarness {
 
         override fun queueConsumableRemoteUpdateEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(namespace, testDocumentId, updateDocument, testDocument, false)),
+                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(namespace, testDocumentId, null, testDocument, false)),
                 mapOf())
         }
 

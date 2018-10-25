@@ -986,9 +986,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               try {
                 result = remoteColl.updateOne(
                         localVersionInfo.getFilter(),
-                        translatedUpdate.isEmpty()
-                                // See: changeEventForLocalUpdate for why we do this
-                                ? nextDoc : translatedUpdate);
+                    translatedUpdate.isEmpty() ? nextDoc : translatedUpdate);
               } catch (final StitchServiceException ex) {
                 // b. If an error happens, report an error to the error listener.
                 emitError(
@@ -1330,7 +1328,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             docConfig.getDocumentId(),
             docForStorage,
             remoteVersion,
-            remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE);
+            remoteEvent);
       }
     }
   }
@@ -1569,7 +1567,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
-    final BsonDocument oldDocument =
+    final BsonDocument documentBeforeUpdate =
         getLocalCollection(namespace).find(getDocumentIdFilter(documentId)).first();
 
     final BsonDocument result = getLocalCollection(namespace)
@@ -1577,15 +1575,19 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             getDocumentIdFilter(documentId),
             update,
             new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
+
     if (result == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
-    final ChangeEvent<BsonDocument> event = changeEventForLocalUpdate(
+
+    final ChangeEvent<BsonDocument> event =
+        changeEventForLocalUpdate(
             namespace,
             documentId,
-            ChangeEvent.UpdateDescription.diff(oldDocument, result),
+            ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, result),
             result,
             true);
+
     config.setSomePendingWrites(
         logicalT,
         event);
@@ -1606,7 +1608,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId,
       final BsonDocument document,
       final BsonDocument atVersion,
-      final boolean fromDelete
+      final ChangeEvent<BsonDocument> remoteEvent
   ) {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
@@ -1615,30 +1617,27 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    final BsonDocument result = getLocalCollection(namespace)
+    final BsonDocument documentAfterUpdate = getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
             document,
-            new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.BEFORE));
+            new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
+
     final ChangeEvent<BsonDocument> event;
-    if (fromDelete) {
-      event = changeEventForLocalInsert(namespace, result, true);
-      config.setSomePendingWrites(
-          logicalT,
-          atVersion,
-          event);
+    if (remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE) {
+      event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
     } else {
       event = changeEventForLocalUpdate(
           namespace,
           documentId,
-          ChangeEvent.UpdateDescription.diff(result, document),
+          ChangeEvent.UpdateDescription.diff(remoteEvent.getFullDocument(), document),
           document,
           true);
-      config.setSomePendingWrites(
-          logicalT,
-          atVersion,
-          event);
     }
+    config.setSomePendingWrites(
+        logicalT,
+        atVersion,
+        event);
     emitEvent(documentId, event);
   }
 
@@ -1663,13 +1662,28 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    getLocalCollection(namespace)
+    BsonDocument beforeResult = getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
             document,
-            new FindOneAndReplaceOptions().upsert(true));
+            new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.BEFORE));
     config.setPendingWritesComplete(atVersion);
-    emitEvent(documentId, changeEventForLocalReplace(namespace, documentId, document, false));
+
+    if (beforeResult != null) {
+      emitEvent(documentId,
+          changeEventForLocalUpdate(
+              namespace,
+              documentId,
+              ChangeEvent.UpdateDescription.diff(
+                  beforeResult, document), document, false));
+    } else {
+      emitEvent(documentId,
+          changeEventForLocalReplace(
+              namespace,
+              documentId,
+              document,
+              false));
+    }
   }
 
   /**

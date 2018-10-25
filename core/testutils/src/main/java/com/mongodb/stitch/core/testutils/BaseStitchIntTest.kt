@@ -124,6 +124,6 @@ abstract class BaseStitchIntTest {
     }
 
     fun addRule(svc: Service, config: RuleCreator): RuleResponse {
-        return svc.rules.create(config)
+        return svc.rules.create(data = config)
     }
 }

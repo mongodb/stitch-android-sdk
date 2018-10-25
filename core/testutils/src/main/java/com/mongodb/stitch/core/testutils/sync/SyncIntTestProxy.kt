@@ -1,6 +1,14 @@
 package com.mongodb.stitch.core.testutils.sync
 
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.core.admin.Apps
+import com.mongodb.stitch.core.admin.create
+import com.mongodb.stitch.core.admin.get
+import com.mongodb.stitch.core.admin.list
+import com.mongodb.stitch.core.admin.remove
+import com.mongodb.stitch.core.admin.services.rules.RuleCreator
+import com.mongodb.stitch.core.admin.services.rules.rule
+import com.mongodb.stitch.core.admin.update
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
@@ -1226,6 +1234,64 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         }
     }
 
+    @Test
+    fun testShouldUpdateUsingUpdateDescription() {
+        testSyncInBothDirections {
+            val coll = syncTestRunner.syncMethods()
+            val remoteColl = syncTestRunner.remoteMethods()
+
+            val docToInsert = Document(
+                mapOf("i_am" to "the walrus", "they_are" to "the egg men"))
+
+            println(docToInsert.toJson())
+            remoteColl.insertOne(docToInsert)
+
+            val doc = remoteColl.find(docToInsert).first()!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+            val doc1Filter = Document("_id", doc1Id)
+
+            coll.configure(failingConflictHandler, null, null)
+            coll.syncOne(doc1Id)
+            streamAndSync()
+
+            // because the "they_are" field has already been added, set
+            // a rule that prevents writing to the "they_are" field that we've added.
+            // a full replace would therefore break our rule, preventing validation.
+            // only an actual update document (with $set and $unset)
+            // can work for the rest of this test
+            syncTestRunner.mdbService.rules.rule(syncTestRunner.mdbRule._id).remove()
+            val localUpdate = Document("\$set", Document("i_am", "the egg men"))
+            val result = coll.updateOneById(doc1Id, localUpdate)
+            assertEquals(1, result.matchedCount)
+            val expectedLocalDocument = Document(doc)
+            expectedLocalDocument["i_am"] = "the egg men"
+            assertEquals(expectedLocalDocument, withoutSyncVersion(coll.findOneById(doc1Id)!!))
+
+            // set they_are to unwriteable. the update should only update i_am
+            // setting i_am to false and they_are to true would fail this test
+            syncTestRunner.mdbService.rules.create(
+                RuleCreator.MongoDb(
+                    database = syncTestRunner.namespace.databaseName,
+                    collection = syncTestRunner.namespace.collectionName,
+                    roles = listOf(
+                        RuleCreator.MongoDb.Role(
+                            fields = Document(
+                                "i_am", Document("write", true)
+                            ).append(
+                                "they_are", Document("write", false)
+                            )
+                        )
+                    ),
+                    schema = RuleCreator.MongoDb.Schema()
+                )
+            )
+
+            streamAndSync()
+            assertEquals(expectedLocalDocument, withoutSyncVersion(coll.findOneById(doc1Id)!!))
+            assertEquals(expectedLocalDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
+        }
+    }
+
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {
         println("watching for $n change event(s) ns=$namespace")
         val waitFor = AtomicInteger(n)
@@ -1342,6 +1408,11 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
     private val failingConflictHandler = ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
         Assert.fail("did not expect a conflict")
+        throw IllegalStateException("unreachable")
+    }
+
+    private val failingErrorListener = ErrorListener { _: BsonValue, error: Exception ->
+        Assert.fail("did not expect an error: ${error.message}")
         throw IllegalStateException("unreachable")
     }
 

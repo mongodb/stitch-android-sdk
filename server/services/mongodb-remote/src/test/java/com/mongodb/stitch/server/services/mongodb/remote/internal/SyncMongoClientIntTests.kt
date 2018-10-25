@@ -1,10 +1,12 @@
 package com.mongodb.stitch.server.services.mongodb.remote.internal
 
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
+import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult
@@ -99,6 +101,10 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
     private val mongodbUriProp = "test.stitch.mongodbURI"
     private lateinit var remoteMongoClient: RemoteMongoClient
     private lateinit var mongoClient: RemoteMongoClient
+    override lateinit var mdbService: Apps.App.Services.Service
+    override lateinit var mdbRule: RuleResponse
+    private lateinit var mdbService2: Apps.App.Services.Service
+
     private var dbName = ObjectId().toHexString()
     private var collName = ObjectId().toHexString()
     override var namespace = MongoNamespace(dbName, collName)
@@ -119,28 +125,30 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
 
         addProvider(app.second, ProviderConfigs.Anon)
         addProvider(app2.second, ProviderConfigs.Anon)
-        val svc = addService(
+        mdbService = addService(
             app.second,
             "mongodb",
             "mongodb1",
-            ServiceConfigs.Mongo(getMongoDbUri()))
-        val svc2 = addService(
+            ServiceConfigs.Mongo(getMongoDbUri())).second
+        mdbService2 = addService(
             app2.second,
             "mongodb",
             "mongodb1",
-            ServiceConfigs.Mongo(getMongoDbUri()))
-
-        val rule = Document()
-        rule["read"] = Document()
-        rule["write"] = Document()
-        rule["other_fields"] = Document()
+            ServiceConfigs.Mongo(getMongoDbUri())).second
 
         dbName = ObjectId().toHexString()
         collName = ObjectId().toHexString()
         namespace = MongoNamespace(dbName, collName)
 
-        addRule(svc.second, RuleCreator.MongoDb("$dbName.$collName", rule))
-        addRule(svc2.second, RuleCreator.MongoDb("$dbName.$collName", rule))
+        val rule = RuleCreator.MongoDb(
+            database = dbName,
+            collection = collName,
+            roles = listOf(RuleCreator.MongoDb.Role(
+                read = true, write = true
+            )),
+            schema = RuleCreator.MongoDb.Schema())
+        mdbRule = addRule(mdbService, rule)
+        addRule(mdbService2, rule)
 
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
@@ -293,6 +301,11 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
     @Test
     override fun testStaleFetchMultiple() {
         testProxy.testStaleFetchMultiple()
+    }
+
+    @Test
+    override fun testShouldUpdateUsingUpdateDescription() {
+        testProxy.testShouldUpdateUsingUpdateDescription()
     }
 
     /**

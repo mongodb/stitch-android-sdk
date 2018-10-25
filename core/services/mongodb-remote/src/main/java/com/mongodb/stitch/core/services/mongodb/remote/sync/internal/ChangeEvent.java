@@ -18,6 +18,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
+import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
@@ -169,18 +170,6 @@ public final class ChangeEvent<DocumentT> {
           .append("$unset", new BsonDocument(unsets));
     }
 
-    static UpdateDescription fromUpdateDocument(final BsonDocument updateDocument) {
-      final BsonDocument updatedFields = updateDocument.getDocument("$set");
-      final BsonDocument removedFields = updateDocument.getDocument("$unset");
-      final List<String> removedFieldsKeys = new ArrayList<>();
-
-      for (final Map.Entry<String, BsonValue> stringBsonValueEntry : removedFields.entrySet()) {
-        removedFieldsKeys.add(stringBsonValueEntry.getKey());
-      }
-
-      return new UpdateDescription(updatedFields, removedFieldsKeys);
-    }
-
     /**
      * Find the diff between two documents.
      *
@@ -206,6 +195,9 @@ public final class ChangeEvent<DocumentT> {
       // for each key in this document...
       for (Map.Entry<String, BsonValue> entry: thisDocument.entrySet()) {
         final String key = entry.getKey();
+        if (key.equals("_id") || key.equals(DOCUMENT_VERSION_FIELD)) {
+          continue;
+        }
         final BsonValue oldValue = entry.getValue();
 
         final String actualKey = onKey == null ? key : String.format("%s.%s", onKey, key);
@@ -234,6 +226,10 @@ public final class ChangeEvent<DocumentT> {
       // for each key in the other document...
       for (Map.Entry<String, BsonValue> entry: thatDocument.entrySet()) {
         final String key = entry.getKey();
+        if (key.equals("_id") || key.equals(DOCUMENT_VERSION_FIELD)) {
+          continue;
+        }
+
         final BsonValue newValue= entry.getValue();
         // if the key is not in the this document,
         // it is a new key with a new value.

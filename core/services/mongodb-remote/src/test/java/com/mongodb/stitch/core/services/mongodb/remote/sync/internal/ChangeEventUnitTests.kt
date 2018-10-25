@@ -1,11 +1,16 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
+import com.mongodb.client.MongoCollection
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.UpdateDescription.diff
 import org.bson.BsonArray
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
+import org.bson.BsonElement
+import org.bson.BsonInt32
 import org.bson.BsonObjectId
 import org.bson.BsonString
+import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -119,5 +124,147 @@ class ChangeEventUnitTests {
         assertEquals(expectedUpdateDescription.updatedFields, changeEventFromDocument.updateDescription.updatedFields)
         assertEquals(expectedUpdateDescription.removedFields, changeEventFromDocument.updateDescription.removedFields)
         assertEquals(true, changeEventFromDocument.hasUncommittedWrites())
+    }
+
+    @Test
+    fun testUpdateDescriptionDiff() {
+        val originalJson = """
+         {
+           "shop_name": "nkd pizza",
+           "address": {
+             "street": "9 orwell rd",
+             "city": "dublin 6",
+             "county": "dublin"
+           },
+           "rating": 5,
+           "menu": [
+             "cheese",
+             "pepperoni",
+             "veggie"
+           ],
+           "employees": [
+             {
+               "name": "aoife",
+               "age": 26,
+               "euro_per_hr": 18,
+               "title": "junior employee"
+             },
+             {
+               "name": "niamh",
+               "age": 27,
+               "euro_per_hr": 20,
+               "title": "chef"
+             },
+           ]
+         }
+        """.trimIndent()
+
+        val expectedJson = """
+         {
+           "shop_name": "nkd pizza",
+           "address": {
+             "street": "10 orwell rd",
+             "city": "dublin 6",
+             "county": "dublin"
+           },
+           "menu": [
+             "cheese",
+             "veggie"
+           ],
+           "employees": [
+             {
+               "name": "aoife",
+               "age": 26,
+               "euro_per_hr": 18,
+               "title": "senior employee"
+             },
+             {
+               "name": "niamh",
+               "age": 27,
+               "euro_per_hr": 20,
+               "title": "chef"
+             },
+             {
+               "name": "alice",
+               "age": 29,
+               "euro_per_hr": 14,
+               "title": "cashier"
+             },
+           ]
+         }
+        """.trimIndent()
+
+                val expectedJson2 = """
+         {
+           "hello": "world"
+         }
+        """.trimIndent()
+
+        val harness = SyncUnitTestHarness()
+        val client = harness.freshTestContext().localClient
+        val collection: MongoCollection<BsonDocument> = client
+            .getDatabase("dublin")
+            .getCollection("restaurants${ObjectId().toHexString()}", BsonDocument::class.java)
+
+        fun withoutId(document: BsonDocument): BsonDocument {
+            val newDocument = BsonDocument(document.map { BsonElement(it.key, it.value) })
+            newDocument.remove("_id")
+            return newDocument
+        }
+
+        fun testUpdatedDocumentMatchesExpectation(originalDocument: BsonDocument,
+                                                  expectedDocumentAfterUpdate: BsonDocument) {
+            // create an update description via diff'ing the two documents.
+            val updateDescription = diff(withoutId(originalDocument), withoutId(expectedDocumentAfterUpdate))
+
+            // create an update document from the update description.
+            // update the original document with the update document
+            collection.updateOne(BsonDocument("_id", originalDocument.getObjectId("_id")), updateDescription.toUpdateDocument())
+
+            // assert that our newly updated document reflects our expectations
+            assertEquals(
+                withoutId(expectedDocumentAfterUpdate),
+                collection.aggregate(
+                    listOf(
+                        BsonDocument(
+                            "\$project",
+                            BsonDocument("_id", BsonInt32(0))
+                                .append("employees", BsonDocument("_id", BsonInt32(0)))
+                        ))).first())
+        }
+
+        // insert our original document.
+        // assert that, without comparing ids, our
+        // inserted document equals our original document
+        val originalDocument = BsonDocument.parse(originalJson)
+        collection.insertOne(originalDocument)
+        assertEquals(
+            withoutId(originalDocument),
+            collection.aggregate(
+                listOf(
+                    BsonDocument(
+                        "\$project",
+                        BsonDocument("_id", BsonInt32(0))
+                            .append("employees", BsonDocument("_id", BsonInt32(0)))
+                    ))).first())
+
+        val expectedDocumentAfterUpdate = BsonDocument.parse(expectedJson)
+        expectedDocumentAfterUpdate["_id"] = originalDocument["_id"]
+        testUpdatedDocumentMatchesExpectation(originalDocument, expectedDocumentAfterUpdate)
+        testUpdatedDocumentMatchesExpectation(expectedDocumentAfterUpdate, BsonDocument.parse(expectedJson2))
+    }
+
+    @Test
+    fun testUpdateDescriptionToUpdateDoc() {
+        val updatedFields = BsonDocument("hi", BsonString("there"))
+        val removedFields = listOf("meow", "bark")
+
+        val updateDoc = ChangeEvent.UpdateDescription(
+            updatedFields,
+            removedFields
+        ).toUpdateDocument()
+
+        assertEquals(updatedFields, updateDoc["\$set"])
+        assertEquals(removedFields, updateDoc["\$unset"]?.asDocument()?.entries?.map { it.key })
     }
 }

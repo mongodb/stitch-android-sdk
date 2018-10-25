@@ -92,8 +92,9 @@ inline fun <Creator, reified T> Creatable<Creator, T>.create(data: Creator): T {
             .withBody(writer.writeValueAsString(data).toByteArray())
 
     val response = adminAuth.doAuthenticatedRequest(reqBuilder.build())
+    val str = response.body?.bufferedReader().use { it?.readText() }
     return objMapper.readValue(
-            response.body,
+            str,
             T::class.java
     )
 }
@@ -201,7 +202,7 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
                     // / Resource for a specific rule of a service
                     class Rule(adminAuth: StitchAdminAuth, url: String) :
                             BasicResource(adminAuth, url),
-                            Gettable<RuleResponse>, Removable
+                            Gettable<RuleResponse>, Removable, Updatable<RuleCreator>
                 }
 
                 val rules by lazy { Rules(this.adminAuth, "$url/rules") }

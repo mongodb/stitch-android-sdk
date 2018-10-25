@@ -1,14 +1,19 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
+import com.mongodb.client.MongoClient
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
+import com.mongodb.stitch.core.StitchAppClientInfo
 import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
+import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonValue
+import org.bson.codecs.configuration.CodecRegistries
+import org.bson.types.ObjectId
 import java.lang.Exception
 
 /**
@@ -28,6 +33,8 @@ interface DataSynchronizerTestContext {
     val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument>
     var shouldConflictBeResolvedByRemote: Boolean
     var exceptionToThrowDuringConflict: Exception?
+
+    val localClient: MongoClient
 
     /**
      * Whether or not we are online. Acts as a switch.
