@@ -99,6 +99,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
           getUserFactory()
               .makeUser(
                   this.authInfo.getUserId(),
+                  this.authInfo.getDeviceId(),
                   this.authInfo.getLoggedInProviderType(),
                   this.authInfo.getLoggedInProviderName(),
                   this.authInfo.getUserProfile());
@@ -465,6 +466,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         getUserFactory()
             .makeUser(
                 authInfo.getUserId(),
+                authInfo.getDeviceId(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 null);
@@ -513,6 +515,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         getUserFactory()
             .makeUser(
                 authInfo.getUserId(),
+                authInfo.getDeviceId(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 profile);

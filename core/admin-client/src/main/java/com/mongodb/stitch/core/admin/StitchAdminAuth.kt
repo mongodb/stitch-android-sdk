@@ -26,11 +26,13 @@ class StitchAdminAuth(
 
     override fun getUserFactory(): StitchUserFactory<StitchAdminUser> {
         return StitchUserFactory { id,
+                                   deviceId,
                                    loggedInProviderType,
                                    loggedInProviderName,
                                    userProfile ->
             StitchAdminUser(
                     id,
+                    deviceId,
                     loggedInProviderType,
                     loggedInProviderName,
                     userProfile

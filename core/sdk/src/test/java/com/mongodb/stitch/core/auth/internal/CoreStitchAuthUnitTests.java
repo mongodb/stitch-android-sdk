@@ -588,10 +588,12 @@ public class CoreStitchAuthUnitTests {
     @Override
     protected StitchUserFactory<CoreStitchUserImpl> getUserFactory() {
       return (String id,
+          String deviceId,
           String loggedInProviderType,
           String loggedInProviderName,
           StitchUserProfileImpl userProfile) ->
-          new CoreStitchUserImpl(id, loggedInProviderType, loggedInProviderName, userProfile) {};
+          new CoreStitchUserImpl(
+              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile) {};
     }
 
     @Override

@@ -25,6 +25,8 @@ import java.util.List;
 public interface CoreStitchUser {
   String getId();
 
+  String getDeviceId();
+
   String getLoggedInProviderType();
 
   String getLoggedInProviderName();

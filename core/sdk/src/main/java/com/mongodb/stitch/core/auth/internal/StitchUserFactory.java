@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.auth.internal;
 public interface StitchUserFactory<StitchUserT extends CoreStitchUser> {
   StitchUserT makeUser(
       String id,
+      String deviceId,
       String loggedInProviderType,
       String loggedInProviderName,
       StitchUserProfileImpl userProfile);
