@@ -14,7 +14,7 @@ class StitchAdminClient private constructor(
     companion object {
         const val apiPath = "/api/admin/v3.0"
         private const val defaultServerUrl = "https://stitch.mongodb.com"
-        private const val defaultRequestTimeout = 15000L
+        private const val defaultRequestTimeout = 60000L
 
         fun create(baseUrl: String = defaultServerUrl): StitchAdminClient {
             val requestClient = StitchRequestClient(
