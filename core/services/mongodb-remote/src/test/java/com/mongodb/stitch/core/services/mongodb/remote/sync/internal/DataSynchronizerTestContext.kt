@@ -10,6 +10,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
 import org.bson.BsonDocument
 import org.bson.BsonValue
+import java.io.Closeable
 import java.lang.Exception
 
 /**
@@ -20,7 +21,7 @@ import java.lang.Exception
  * Multiple instances of the testing context could result in
  * race conditions if not opened and closed properly.
  */
-interface DataSynchronizerTestContext {
+interface DataSynchronizerTestContext: Closeable {
     val namespace: MongoNamespace
     val testDocument: BsonDocument
     val testDocumentId: BsonValue

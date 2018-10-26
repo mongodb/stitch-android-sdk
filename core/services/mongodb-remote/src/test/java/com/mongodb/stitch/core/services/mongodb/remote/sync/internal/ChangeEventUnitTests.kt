@@ -254,6 +254,8 @@ class ChangeEventUnitTests {
         expectedDocumentAfterUpdate["_id"] = originalDocument["_id"]
         testUpdatedDocumentMatchesExpectation(originalDocument, expectedDocumentAfterUpdate)
         testUpdatedDocumentMatchesExpectation(expectedDocumentAfterUpdate, BsonDocument.parse(expectedJson2))
+
+        harness.close()
     }
 
     @Test

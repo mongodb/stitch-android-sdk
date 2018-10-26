@@ -47,7 +47,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.Random
 
-class SyncUnitTestHarness {
+class SyncUnitTestHarness: AutoCloseable {
     companion object {
         /**
          * Conflict handler used for testing purposes.
@@ -509,6 +509,10 @@ class SyncUnitTestHarness {
             }
         }
 
+        override fun close() {
+            dataSynchronizer.close()
+        }
+
         private fun configureNewErrorListener() {
             val emitErrorSemaphore = Semaphore(0)
             this.errorSemaphore?.release()
@@ -533,7 +537,7 @@ class SyncUnitTestHarness {
 
     private var latestCtx: DataSynchronizerTestContext? = null
 
-    internal fun teardown() {
+    override fun close() {
         latestCtx?.dataSynchronizer?.close()
     }
 
