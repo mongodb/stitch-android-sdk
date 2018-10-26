@@ -17,7 +17,18 @@
 package com.mongodb.stitch.android.examples.todosync;
 
 import java.util.Date;
-import org.bson.Document;
+
+import org.bson.BsonBoolean;
+import org.bson.BsonDateTime;
+import org.bson.BsonDocument;
+import org.bson.BsonObjectId;
+import org.bson.BsonReader;
+import org.bson.BsonString;
+import org.bson.BsonWriter;
+import org.bson.codecs.BsonDocumentCodec;
+import org.bson.codecs.Codec;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.EncoderContext;
 import org.bson.types.ObjectId;
 
 class TodoItem {
@@ -25,50 +36,101 @@ class TodoItem {
   public static final String TODO_LIST_DATABASE = "todo";
   public static final String TODO_LIST_COLLECTION = "items";
 
-  public static final String ID_KEY = "_id";
-  public static final String OWNER_ID = "owner_id";
-  public static final String TASK_KEY = "task";
-  public static final String CHECKED_KEY = "checked";
-  public static final String DONE_DATE_KEY = "done_date";
-
   private final ObjectId id;
   private final String ownerId;
   private final String task;
-  private final Boolean checked;
+  private final boolean checked;
   private Date doneDate;
 
   /** Constructs a todo item from a MongoDB document. */
-  TodoItem(final Document todoItemDoc) {
-    this.id = todoItemDoc.getObjectId(ID_KEY);
-    this.ownerId = todoItemDoc.getString(OWNER_ID);
-    this.task = todoItemDoc.getString(TASK_KEY);
-    this.checked = todoItemDoc.getBoolean(CHECKED_KEY);
-    if (todoItemDoc.containsKey(DONE_DATE_KEY)) {
-      this.doneDate = todoItemDoc.getDate(DONE_DATE_KEY);
-    }
-  }
-
-  /** Returns if a MongoDB document is a todo item. */
-  public static boolean isTodoItem(final Document todoItemDoc) {
-    return todoItemDoc.containsKey(ID_KEY)
-        && todoItemDoc.containsKey(OWNER_ID)
-        && todoItemDoc.containsKey(TASK_KEY)
-        && todoItemDoc.containsKey(CHECKED_KEY);
-  }
-
-  public Boolean getChecked() {
-    return checked;
-  }
-
-  public String getTask() {
-    return task;
+  TodoItem(
+      final ObjectId id,
+      final String ownerId,
+      final String task,
+      final boolean checked,
+      final Date doneDate
+  ) {
+    this.id = id;
+    this.ownerId = ownerId;
+    this.task = task;
+    this.checked = checked;
+    this.doneDate = doneDate;
   }
 
   public ObjectId getId() {
     return id;
   }
 
-  public Date getDoneDate() {
-    return new Date(doneDate.getTime());
+  public String getOwnerId() {
+    return ownerId;
   }
+
+  public String getTask() {
+    return task;
+  }
+
+  public Boolean isChecked() {
+    return checked;
+  }
+
+  public Date getDoneDate() {
+    return doneDate;
+  }
+
+  static BsonDocument toBsonDocument(final TodoItem item) {
+    final BsonDocument asDoc = new BsonDocument();
+    asDoc.put(Fields.ID, new BsonObjectId(item.getId()));
+    asDoc.put(Fields.OWNER_ID, new BsonString(item.getOwnerId()));
+    asDoc.put(Fields.TASK, new BsonString(item.getTask()));
+    asDoc.put(Fields.CHECKED, new BsonBoolean(item.isChecked()));
+    if (item.getDoneDate() != null) {
+      asDoc.put(Fields.DONE_DATE, new BsonDateTime(item.getDoneDate().getTime()));
+    }
+    return asDoc;
+  }
+
+  static TodoItem fromBsonDocument(final BsonDocument doc) {
+    final Date doneDate;
+    if (doc.containsKey(Fields.DONE_DATE)) {
+      doneDate = new Date(doc.getDateTime(Fields.DONE_DATE).getValue());
+    } else {
+      doneDate = null;
+    }
+    return new TodoItem(
+        doc.getObjectId(Fields.ID).getValue(),
+        doc.getString(Fields.OWNER_ID).getValue(),
+        doc.getString(Fields.TASK).getValue(),
+        doc.getBoolean(Fields.CHECKED).getValue(),
+        doneDate
+    );
+  }
+
+  static final class Fields {
+    static final String ID = "_id";
+    static final String OWNER_ID = "owner_id";
+    static final String TASK = "task";
+    static final String CHECKED = "checked";
+    static final String DONE_DATE = "done_date";
+  }
+
+  public static final Codec<TodoItem> codec = new Codec<TodoItem>() {
+
+    @Override
+    public void encode(
+        final BsonWriter writer, final TodoItem value, final EncoderContext encoderContext) {
+      new BsonDocumentCodec().encode(writer, toBsonDocument(value), encoderContext);
+    }
+
+    @Override
+    public Class<TodoItem> getEncoderClass() {
+      return TodoItem.class;
+    }
+
+    @Override
+    public TodoItem decode(
+        final BsonReader reader, final DecoderContext decoderContext) {
+      final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
+      return fromBsonDocument(document);
+    }
+  };
 }
