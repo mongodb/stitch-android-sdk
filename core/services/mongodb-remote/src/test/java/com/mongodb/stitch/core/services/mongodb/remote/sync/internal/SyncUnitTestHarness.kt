@@ -42,12 +42,13 @@ import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
+import java.io.Closeable
 import java.lang.Exception
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.Random
 
-class SyncUnitTestHarness: AutoCloseable {
+class SyncUnitTestHarness: Closeable {
     companion object {
         /**
          * Conflict handler used for testing purposes.
