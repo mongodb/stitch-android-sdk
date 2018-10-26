@@ -21,7 +21,7 @@ import java.lang.Exception
  * Multiple instances of the testing context could result in
  * race conditions if not opened and closed properly.
  */
-interface DataSynchronizerTestContext: Closeable {
+interface DataSynchronizerTestContext : Closeable {
     val namespace: MongoNamespace
     val testDocument: BsonDocument
     val testDocumentId: BsonValue

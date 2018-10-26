@@ -48,7 +48,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.Random
 
-class SyncUnitTestHarness: Closeable {
+class SyncUnitTestHarness : Closeable {
     companion object {
         /**
          * Conflict handler used for testing purposes.
