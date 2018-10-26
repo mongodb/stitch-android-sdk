@@ -98,6 +98,18 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   }
 
   /**
+   * Unfreeze a document.
+   *
+   * @param documentId the id of the document to unfreeze
+   * @return true if successfully unfrozen, false if the document
+   *         could not be found or there was an error unfreezing
+   */
+  @Override
+  public boolean unfreezeDocument(final BsonValue documentId) {
+    return this.dataSynchronizer.unfreezeDocument(namespace, documentId);
+  }
+
+  /**
    * Finds a single document by the given id. It is first searched for in the local synchronized
    * cache and if not found and there is internet connectivity, it is searched for remotely.
    *

@@ -77,6 +77,11 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
+  public boolean unfreezeDocument(BsonValue documentId) {
+    return this.proxy.unfreezeDocument(documentId);
+  }
+
+  @Override
   public SyncFindIterable<DocumentT> find() {
     return new SyncFindIterableImpl<>(proxy.find());
   }

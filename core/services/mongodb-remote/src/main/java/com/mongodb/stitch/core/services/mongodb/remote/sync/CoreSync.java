@@ -80,6 +80,15 @@ public interface CoreSync<DocumentT> {
   Set<BsonValue> getSyncedIds();
 
   /**
+   * Unfreeze a document.
+   *
+   * @param documentId the id of the document to unfreeze
+   * @return true if successfully unfrozen, false if the document
+   *         could not be found or there was an error unfreezing
+   */
+  boolean unfreezeDocument(final BsonValue documentId);
+
+  /**
    * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @return the find iterable interface

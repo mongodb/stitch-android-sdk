@@ -1527,6 +1527,32 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     triggerListeningToNamespace(namespace);
   }
 
+  /**
+   * Unfreeze a document.
+   *
+   * @param documentId the id of the document to unfreeze
+   * @return true if successfully unfrozen, false if the document
+   *         could not be found or there was an error unfreezing
+   */
+  boolean unfreezeDocument(
+      final MongoNamespace namespace,
+      final BsonValue documentId
+  ) {
+    final NamespaceSynchronizationConfig namespaceSynchronizationConfig =
+        syncConfig.getNamespaceConfig(namespace);
+    if (namespaceSynchronizationConfig == null) {
+      return false;
+    }
+
+    final CoreDocumentSynchronizationConfig config =
+        namespaceSynchronizationConfig.getSynchronizedDocument(documentId);
+    if (config == null) {
+      return false;
+    }
+    config.setFrozen(false);
+    return !config.isFrozen();
+  }
+
   public <T> Collection<T> find(
       final MongoNamespace namespace,
       final BsonDocument filter,

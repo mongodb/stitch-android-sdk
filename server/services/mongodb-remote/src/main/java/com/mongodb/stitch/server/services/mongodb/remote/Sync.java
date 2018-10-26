@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.server.services.mongodb.remote;
 
+import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
@@ -82,6 +83,15 @@ public interface Sync<DocumentT> {
    * @return the set of synchronized document ids in a namespace.
    */
   Set<BsonValue> getSyncedIds();
+
+  /**
+   * Unfreeze a document.
+   *
+   * @param documentId the id of the document to unfreeze
+   * @return true if successfully unfrozen, false if the document
+   *         could not be found or there was an error unfreezing
+   */
+  boolean unfreezeDocument(final BsonValue documentId);
 
   /**
    * Finds all documents in the collection.
