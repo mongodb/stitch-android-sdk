@@ -2,7 +2,6 @@ package com.mongodb.stitch.core.testutils.sync
 
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.core.admin.Apps
-import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest

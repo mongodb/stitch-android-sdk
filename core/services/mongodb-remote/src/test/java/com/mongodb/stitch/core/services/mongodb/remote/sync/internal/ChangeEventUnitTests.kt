@@ -212,8 +212,10 @@ class ChangeEventUnitTests {
             return newDocument
         }
 
-        fun testUpdatedDocumentMatchesExpectation(originalDocument: BsonDocument,
-                                                  expectedDocumentAfterUpdate: BsonDocument) {
+        fun testUpdatedDocumentMatchesExpectation(
+            originalDocument: BsonDocument,
+            expectedDocumentAfterUpdate: BsonDocument
+        ) {
             // create an update description via diff'ing the two documents.
             val updateDescription = diff(withoutId(originalDocument), withoutId(expectedDocumentAfterUpdate))
 

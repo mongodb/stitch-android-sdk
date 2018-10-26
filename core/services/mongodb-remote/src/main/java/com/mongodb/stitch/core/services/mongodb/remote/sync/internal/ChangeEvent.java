@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -42,8 +43,6 @@ import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
-
-import javax.annotation.Nullable;
 
 // TODO: Should there be a local and remote type for the pending part?
 public final class ChangeEvent<DocumentT> {
@@ -193,8 +192,9 @@ public final class ChangeEvent<DocumentT> {
                                           final BsonDocument updatedFields,
                                           final List<String> removedFields) {
       // for each key in this document...
-      for (Map.Entry<String, BsonValue> entry: thisDocument.entrySet()) {
+      for (final Map.Entry<String, BsonValue> entry: thisDocument.entrySet()) {
         final String key = entry.getKey();
+        // don't worry about the _id or version field for now
         if (key.equals("_id") || key.equals(DOCUMENT_VERSION_FIELD)) {
           continue;
         }
@@ -224,13 +224,14 @@ public final class ChangeEvent<DocumentT> {
       }
 
       // for each key in the other document...
-      for (Map.Entry<String, BsonValue> entry: thatDocument.entrySet()) {
+      for (final Map.Entry<String, BsonValue> entry: thatDocument.entrySet()) {
         final String key = entry.getKey();
+        // don't worry about the _id or version field for now
         if (key.equals("_id") || key.equals(DOCUMENT_VERSION_FIELD)) {
           continue;
         }
 
-        final BsonValue newValue= entry.getValue();
+        final BsonValue newValue = entry.getValue();
         // if the key is not in the this document,
         // it is a new key with a new value.
         // updatedFields will included keys that must
@@ -256,9 +257,15 @@ public final class ChangeEvent<DocumentT> {
      * @return a description of the updated fields and removed keys between
      *         the documents
      */
-    static UpdateDescription diff(BsonDocument thisDocument,
-                                  BsonDocument thatDocument) {
-      return UpdateDescription.diff(thisDocument, thatDocument, null, new BsonDocument(), new ArrayList<>());
+    static UpdateDescription diff(final BsonDocument thisDocument,
+                                  final BsonDocument thatDocument) {
+      return UpdateDescription.diff(
+          thisDocument,
+          thatDocument,
+          null,
+          new BsonDocument(),
+          new ArrayList<>()
+      );
     }
   }
 

@@ -1,14 +1,10 @@
 package com.mongodb.stitch.core.testutils.sync
 
 import com.mongodb.MongoNamespace
-import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.create
-import com.mongodb.stitch.core.admin.get
-import com.mongodb.stitch.core.admin.list
 import com.mongodb.stitch.core.admin.remove
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.rule
-import com.mongodb.stitch.core.admin.update
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener

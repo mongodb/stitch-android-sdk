@@ -1662,7 +1662,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    BsonDocument beforeResult = getLocalCollection(namespace)
+    final BsonDocument beforeResult = getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
             document,
