@@ -20,6 +20,7 @@ import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.stitch.core.internal.common.ThreadDispatcher;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
@@ -100,6 +101,7 @@ public final class TestUtils {
           public boolean isLoggedIn() {
             return true;
           }
-        });
+        },
+        new ThreadDispatcher());
   }
 }

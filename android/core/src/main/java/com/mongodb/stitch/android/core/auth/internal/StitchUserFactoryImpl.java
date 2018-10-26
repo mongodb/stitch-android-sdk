@@ -31,9 +31,11 @@ public final class StitchUserFactoryImpl implements StitchUserFactory<StitchUser
   @Override
   public StitchUser makeUser(
       final String id,
+      final String deviceId,
       final String loggedInProviderType,
       final String loggedInProviderName,
       final StitchUserProfileImpl userProfile) {
-    return new StitchUserImpl(id, loggedInProviderType, loggedInProviderName, userProfile, auth);
+    return new StitchUserImpl(
+        id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, auth);
   }
 }

@@ -986,6 +986,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             ErrorListener { _, _ -> }
         )
 
+        waitForAllStreamsOpen()
+
         // insert a document remotely
         remoteColl.insertOne(Document("_id", insertedId).append("fly", "away"))
 
@@ -1306,12 +1308,16 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         return sem
     }
 
+    private fun waitForAllStreamsOpen() {
+        while (!syncTestRunner.dataSynchronizer.areAllStreamsOpen()) {
+            println("waiting for all streams to open before doing sync pass")
+            Thread.sleep(1000)
+        }
+    }
+
     private fun streamAndSync() {
         if (syncTestRunner.testNetworkMonitor.connectedState) {
-            while (!syncTestRunner.dataSynchronizer.areAllStreamsOpen()) {
-                println("waiting for all streams to open before doing sync pass")
-                Thread.sleep(1000)
-            }
+            waitForAllStreamsOpen()
         }
         syncTestRunner.dataSynchronizer.doSyncPass()
     }

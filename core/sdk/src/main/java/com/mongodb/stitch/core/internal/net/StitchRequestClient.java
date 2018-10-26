@@ -85,4 +85,8 @@ public class StitchRequestClient {
         .withBody(stitchReq.getBody())
         .build();
   }
+
+  public void close() {
+    transport.close();
+  }
 }

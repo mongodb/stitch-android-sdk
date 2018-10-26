@@ -19,13 +19,16 @@ package com.mongodb.stitch.core.internal.net;
 import java.io.IOException;
 
 import okhttp3.Call;
+import okhttp3.Response;
 import okio.BufferedSource;
 
 public class OkHttpEventStream extends EventStreamReader implements EventStream {
+  private final Response response;
   private final BufferedSource source;
   private final Call call;
 
-  OkHttpEventStream(final BufferedSource source, final Call call) {
+  OkHttpEventStream(final Response response, final BufferedSource source, final Call call) {
+    this.response = response;
     this.source = source;
     this.call = call;
   }

@@ -20,4 +20,6 @@ public interface Transport {
   Response roundTrip(Request request) throws Exception;
 
   EventStream stream(Request request) throws Exception;
+
+  void close();
 }

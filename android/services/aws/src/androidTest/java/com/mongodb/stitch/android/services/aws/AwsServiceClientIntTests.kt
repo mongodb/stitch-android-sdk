@@ -107,7 +107,7 @@ class AwsServiceClientIntTests : BaseStitchAndroidIntTest() {
         var httpResult = transport.roundTrip(Request.Builder()
                 .withMethod(Method.GET)
                 .withUrl(location)
-                .withTimeout(1500L)
+                .withTimeout(60000L)
                 .build())
         assertEquals(body, readAllToString(httpResult.body))
 
@@ -125,7 +125,7 @@ class AwsServiceClientIntTests : BaseStitchAndroidIntTest() {
         httpResult = transport.roundTrip(Request.Builder()
                 .withMethod(Method.GET)
                 .withUrl(location)
-                .withTimeout(1500L)
+                .withTimeout(60000L)
                 .build())
         assertEquals(body, readAllToString(httpResult.body))
     }

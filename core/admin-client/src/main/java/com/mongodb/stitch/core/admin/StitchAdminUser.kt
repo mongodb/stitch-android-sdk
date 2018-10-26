@@ -8,6 +8,7 @@ import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl
 
 class StitchAdminUser(
     private val id: String,
+    private val deviceId: String,
     private val loggedInProviderType: String,
     private val loggedInProviderName: String,
     private val profile: StitchUserProfileImpl?
@@ -35,5 +36,9 @@ class StitchAdminUser(
 
     override fun getId(): String {
         return id
+    }
+
+    override fun getDeviceId(): String {
+        return deviceId
     }
 }

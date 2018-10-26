@@ -20,7 +20,7 @@ The official [MongoDB Stitch](https://stitch.mongodb.com/) SDK for Android/Java.
 
 ## Installation
 
-The SDK artifacts are hosted by JCenter/Bintray at https://bintray.com/mongodb/MongoDB. Use the ` jcenter()` repository to get these artifacts.
+The SDK artifacts are hosted by JCenter/Bintray at https://bintray.com/mongodb/MongoDB. Use the `jcenter() and mavenCentral()` repositories to get these artifacts.
 
 ### Android
 

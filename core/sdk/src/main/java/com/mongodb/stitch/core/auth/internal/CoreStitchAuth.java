@@ -42,6 +42,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.meta.When;
@@ -67,6 +69,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   private Thread refresherThread;
   private AuthInfo authInfo;
   private StitchUserT currentUser;
+  private Lock authLock;
 
   protected CoreStitchAuth(
       final StitchRequestClient requestClient,
@@ -76,6 +79,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     this.requestClient = requestClient;
     this.authRoutes = authRoutes;
     this.storage = storage;
+    this.authLock = new ReentrantLock();
 
     final AuthInfo info;
     try {
@@ -95,6 +99,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
           getUserFactory()
               .makeUser(
                   this.authInfo.getUserId(),
+                  this.authInfo.getDeviceId(),
                   this.authInfo.getLoggedInProviderType(),
                   this.authInfo.getLoggedInProviderName(),
                   this.authInfo.getUserProfile());
@@ -201,7 +206,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   @Override
-  public synchronized <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
+  public <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
                                                final Decoder<T> decoder) {
     if (!isLoggedIn()) {
       throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
@@ -220,40 +225,55 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  protected synchronized StitchUserT loginWithCredentialInternal(
+  protected StitchUserT loginWithCredentialInternal(
       final StitchCredential credential) {
-    if (!isLoggedIn()) {
+    authLock.lock();
+    try {
+      if (!isLoggedIn()) {
+        return doLogin(credential, false);
+      }
+
+      if (credential.getProviderCapabilities().getReusesExistingSession()
+          && credential.getProviderType().equals(currentUser.getLoggedInProviderType())) {
+        return currentUser;
+      }
+
+      logoutInternal();
       return doLogin(credential, false);
+    } finally {
+      authLock.unlock();
     }
-
-    if (credential.getProviderCapabilities().getReusesExistingSession()
-        && credential.getProviderType().equals(currentUser.getLoggedInProviderType())) {
-      return currentUser;
-    }
-
-    logoutInternal();
-    return doLogin(credential, false);
   }
 
-  protected synchronized StitchUserT linkUserWithCredentialInternal(
+  protected StitchUserT linkUserWithCredentialInternal(
       final CoreStitchUser user, final StitchCredential credential) {
-    if (user != currentUser) {
-      throw new StitchClientException(StitchClientErrorCode.USER_NO_LONGER_VALID);
-    }
+    authLock.lock();
+    try {
+      if (user != currentUser) {
+        throw new StitchClientException(StitchClientErrorCode.USER_NO_LONGER_VALID);
+      }
 
-    return doLogin(credential, true);
+      return doLogin(credential, true);
+    } finally {
+      authLock.unlock();
+    }
   }
 
   protected synchronized void logoutInternal() {
-    if (!isLoggedIn()) {
-      return;
-    }
+    authLock.lock();
     try {
-      doLogout();
-    } catch (final StitchServiceException ex) {
-      // Do nothing
+      if (!isLoggedIn()) {
+        return;
+      }
+      try {
+        doLogout();
+      } catch (final StitchServiceException ex) {
+        // Do nothing
+      } finally {
+        clearAuth();
+      }
     } finally {
-      clearAuth();
+      authLock.unlock();
     }
   }
 
@@ -329,43 +349,53 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   // use this critical section to create a queue of pending outbound requests
   // that should wait on the result of doing a token refresh or logout. This will
   // prevent too many refreshes happening one after the other.
-  private synchronized void tryRefreshAccessToken(final Long reqStartedAt) {
-    if (!isLoggedIn()) {
-      throw new StitchClientException(StitchClientErrorCode.LOGGED_OUT_DURING_REQUEST);
-    }
-
+  private void tryRefreshAccessToken(final Long reqStartedAt) {
+    authLock.lock();
     try {
-      final Jwt jwt = Jwt.fromEncoded(authInfo.getAccessToken());
-      if (jwt.getIssuedAt() >= reqStartedAt) {
-        return;
+      if (!isLoggedIn()) {
+        throw new StitchClientException(StitchClientErrorCode.LOGGED_OUT_DURING_REQUEST);
       }
-    } catch (final IOException e) {
-      // Swallow
-    }
 
-    // retry
-    refreshAccessToken();
+      try {
+        final Jwt jwt = Jwt.fromEncoded(authInfo.getAccessToken());
+        if (jwt.getIssuedAt() >= reqStartedAt) {
+          return;
+        }
+      } catch (final IOException e) {
+        // Swallow
+      }
+
+      // retry
+      refreshAccessToken();
+    } finally {
+      authLock.unlock();
+    }
   }
 
-  synchronized void refreshAccessToken() {
-    final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
-    reqBuilder
-        .withRefreshToken()
-        .withPath(authRoutes.getSessionRoute())
-        .withMethod(Method.POST);
-
-    final Response response = doAuthenticatedRequest(reqBuilder.build());
+  void refreshAccessToken() {
+    authLock.lock();
     try {
-      final AuthInfo partialInfo = AuthInfo.readFromApi(response.getBody());
-      authInfo = authInfo.merge(partialInfo);
-    } catch (final IOException e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
-    }
+      final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
+      reqBuilder
+          .withRefreshToken()
+          .withPath(authRoutes.getSessionRoute())
+          .withMethod(Method.POST);
 
-    try {
-      authInfo.writeToStorage(storage);
-    } catch (final IOException e) {
-      throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
+      final Response response = doAuthenticatedRequest(reqBuilder.build());
+      try {
+        final AuthInfo partialInfo = AuthInfo.readFromApi(response.getBody());
+        authInfo = authInfo.merge(partialInfo);
+      } catch (final IOException e) {
+        throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
+      }
+
+      try {
+        authInfo.writeToStorage(storage);
+      } catch (final IOException e) {
+        throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
+      }
+    } finally {
+      authLock.unlock();
     }
   }
 
@@ -375,7 +405,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     authBody.put(AuthLoginFields.OPTIONS, options);
   }
 
-  // callers of doLogin should be synchronized before calling in.
+  // callers of doLogin should be serialized before calling in.
   private StitchUserT doLogin(final StitchCredential credential, final boolean asLinkRequest) {
     final Response response = doLoginRequest(credential, asLinkRequest);
     final StitchUserT user = processLoginResponse(credential, response, asLinkRequest);
@@ -436,6 +466,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         getUserFactory()
             .makeUser(
                 authInfo.getUserId(),
+                authInfo.getDeviceId(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 null);
@@ -484,6 +515,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         getUserFactory()
             .makeUser(
                 authInfo.getUserId(),
+                authInfo.getDeviceId(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 profile);
@@ -532,6 +564,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     if (refresherThread != null) {
       refresherThread.interrupt();
     }
+    requestClient.close();
   }
 
   protected StitchRequestClient getRequestClient() {

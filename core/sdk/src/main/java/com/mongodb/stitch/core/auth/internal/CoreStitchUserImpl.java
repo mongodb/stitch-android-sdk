@@ -24,16 +24,19 @@ import java.util.List;
 
 public abstract class CoreStitchUserImpl implements CoreStitchUser {
   private final String id;
+  private final String deviceId;
   private final String loggedInProviderType;
   private final String loggedInProviderName;
   private final StitchUserProfileImpl profile;
 
   protected CoreStitchUserImpl(
       final String id,
+      final String deviceId,
       final String loggedInProviderType,
       final String loggedInProviderName,
       final StitchUserProfileImpl profile) {
     this.id = id;
+    this.deviceId = deviceId;
     this.loggedInProviderType = loggedInProviderType;
     this.loggedInProviderName = loggedInProviderName;
     this.profile = profile == null ? StitchUserProfileImpl.empty() : profile;
@@ -41,6 +44,10 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
 
   public String getId() {
     return id;
+  }
+
+  public String getDeviceId() {
+    return deviceId;
   }
 
   public String getLoggedInProviderType() {

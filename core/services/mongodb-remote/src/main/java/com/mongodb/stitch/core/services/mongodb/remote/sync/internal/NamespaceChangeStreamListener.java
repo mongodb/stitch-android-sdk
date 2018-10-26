@@ -189,7 +189,9 @@ public class NamespaceChangeStreamListener {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());
-    args.put("ids", nsConfig.getSynchronizedDocumentIds());
+
+    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
+    args.put("ids", idsToWatch);
 
     currentStream =
         service.streamFunction(

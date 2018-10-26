@@ -46,7 +46,8 @@ public abstract class CoreRemoteClientFactory {
             instanceKey,
             SyncMongoClientFactory.getClient(appInfo, service.getName(), clientFactory),
             appInfo.getNetworkMonitor(),
-            appInfo.getAuthMonitor());
+            appInfo.getAuthMonitor(),
+            appInfo.getEventDispatcher());
     syncInstances.put(instanceKey, syncClient);
     return syncClient;
   }

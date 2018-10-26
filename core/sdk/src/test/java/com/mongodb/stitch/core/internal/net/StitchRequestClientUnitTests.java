@@ -67,7 +67,7 @@ public class StitchRequestClientUnitTests {
     final Request expectedRequest = new Request.Builder()
         .withMethod(Method.GET)
         .withUrl(URI.create(domain).resolve(path).toString())
-        .withTimeout(1500L)
+        .withTimeout(60000L)
         .build();
     assertEquals(expectedRequest, actualRequest);
 
@@ -165,7 +165,7 @@ public class StitchRequestClientUnitTests {
         .withUrl(URI.create(domain).resolve(path).toString())
         .withBody("{\"my\" : {\"$numberInt\" : \"24\"}}".getBytes(StandardCharsets.UTF_8))
         .withHeaders(expectedHeaders)
-        .withTimeout(1500L)
+        .withTimeout(60000L)
         .build();
     assertEquals(expectedRequest, actualRequest);
 

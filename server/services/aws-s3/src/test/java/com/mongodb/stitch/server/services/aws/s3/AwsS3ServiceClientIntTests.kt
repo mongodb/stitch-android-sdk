@@ -87,7 +87,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
         var httpResult = transport.roundTrip(Request.Builder()
                 .withMethod(Method.GET)
                 .withUrl(expectedLocation)
-                .withTimeout(1500L)
+                .withTimeout(60000L)
                 .build())
         assertEquals(body, readAllToString(httpResult.body))
 
@@ -99,7 +99,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
         httpResult = transport.roundTrip(Request.Builder()
                 .withMethod(Method.GET)
                 .withUrl(expectedLocation)
-                .withTimeout(1500L)
+                .withTimeout(60000L)
                 .build())
         assertEquals(body, readAllToString(httpResult.body))
 
@@ -110,7 +110,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
         httpResult = transport.roundTrip(Request.Builder()
                 .withMethod(Method.GET)
                 .withUrl(expectedLocation)
-                .withTimeout(1500L)
+                .withTimeout(60000L)
                 .build())
         assertEquals(body, readAllToString(httpResult.body))
 
@@ -122,7 +122,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
         httpResult = transport.roundTrip(Request.Builder()
                 .withMethod(Method.GET)
                 .withUrl(expectedLocation)
-                .withTimeout(1500L)
+                .withTimeout(60000L)
                 .build())
         assertEquals(body, readAllToString(httpResult.body))
 

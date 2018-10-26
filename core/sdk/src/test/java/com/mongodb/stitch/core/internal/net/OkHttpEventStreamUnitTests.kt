@@ -20,7 +20,7 @@ class OkHttpEventStreamUnitTests {
         buffer.write("$dataOdds\n".toByteArray())
         buffer.write("$dataTreason\n\n".toByteArray())
 
-        val stream = OkHttpEventStream(buffer, Mockito.mock(Call::class.java))
+        val stream = OkHttpEventStream(null, buffer, Mockito.mock(Call::class.java))
 
         assert(stream.isActive)
 

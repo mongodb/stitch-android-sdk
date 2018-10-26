@@ -4,6 +4,7 @@ import com.mongodb.MongoNamespace
 import com.mongodb.stitch.core.StitchAppClientInfo
 import com.mongodb.stitch.core.internal.common.AuthMonitor
 import com.mongodb.stitch.core.internal.common.BsonUtils
+import com.mongodb.stitch.core.internal.common.ThreadDispatcher
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.compareEvents
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
@@ -46,7 +47,8 @@ class CoreDocumentSynchronizationConfigUnitTests {
                     "<local-app-version>",
                     BsonUtils.DEFAULT_CODEC_REGISTRY,
                     networkMonitor,
-                    authMonitor
+                    authMonitor,
+                    ThreadDispatcher()
             ),
             "mongodblocal",
             ServerEmbeddedMongoClientFactory.getInstance()
