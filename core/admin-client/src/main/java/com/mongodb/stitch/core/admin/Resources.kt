@@ -92,9 +92,8 @@ inline fun <Creator, reified T> Creatable<Creator, T>.create(data: Creator): T {
             .withBody(writer.writeValueAsString(data).toByteArray())
 
     val response = adminAuth.doAuthenticatedRequest(reqBuilder.build())
-    val str = response.body?.bufferedReader().use { it?.readText() }
     return objMapper.readValue(
-            str,
+            response.body,
             T::class.java
     )
 }

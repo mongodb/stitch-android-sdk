@@ -1411,11 +1411,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         throw IllegalStateException("unreachable")
     }
 
-    private val failingErrorListener = ErrorListener { _: BsonValue, error: Exception ->
-        Assert.fail("did not expect an error: ${error.message}")
-        throw IllegalStateException("unreachable")
-    }
-
     private fun testSyncInBothDirections(testFun: () -> Unit) {
         println("running tests with L2R going first")
         syncTestRunner.dataSynchronizer.swapSyncDirection(true)

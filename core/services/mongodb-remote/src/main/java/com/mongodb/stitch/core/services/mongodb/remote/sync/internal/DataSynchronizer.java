@@ -1313,7 +1313,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (acceptRemote) {
         // i. If the remote document is equal to the resolved document, replace the document
         //    locally, mark the document as having no pending writes, and emit a REPLACE change
-        //    event.
+        //    event if the document had not existed prior, or UPDATE if it had.
         replaceOrUpsertOneFromRemote(
             namespace,
             docConfig.getDocumentId(),
