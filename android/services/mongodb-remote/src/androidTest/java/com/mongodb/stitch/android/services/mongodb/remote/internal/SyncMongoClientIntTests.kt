@@ -152,7 +152,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         addRule(svc2.second, rule)
 
         val client = getAppClient(app.first)
-        client.auth.loginWithCredential(AnonymousCredential())
+        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
         mongoClient = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.stop()
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.disableSyncThread()

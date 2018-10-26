@@ -841,7 +841,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             val remoteColl = syncTestRunner.remoteMethods()
 
             // insert a new document remotely
-            val docToInsert = Document("_id", "hello")
+            val docToInsert = Document()
             remoteColl.insertOne(docToInsert)
 
             // configure Sync to resolve a custom document when handling a conflict
