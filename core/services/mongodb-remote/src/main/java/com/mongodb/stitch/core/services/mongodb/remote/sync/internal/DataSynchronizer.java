@@ -1375,7 +1375,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // ii. Otherwise, replace the local document with the resolved document locally, mark that
         //     there are pending writes for this document, and emit an UPDATE change event, or a
         //     DELETE change event (if the remoteEvent's operation type was DELETE).
-        replaceOrUpsertOneFromResolution(
+        updateOrUpsertOneFromResolution(
             namespace,
             docConfig.getDocumentId(),
             docForStorage,
@@ -1620,6 +1620,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
+    // TODO: STITCH-1958
     final BsonDocument documentBeforeUpdate =
         getLocalCollection(namespace).find(getDocumentIdFilter(documentId)).first();
 
@@ -1656,7 +1657,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param documentId the _id of the document.
    * @param document   the replacement document.
    */
-  private void replaceOrUpsertOneFromResolution(
+  private void updateOrUpsertOneFromResolution(
       final MongoNamespace namespace,
       final BsonValue documentId,
       final BsonDocument document,
@@ -1683,7 +1684,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       event = changeEventForLocalUpdate(
           namespace,
           documentId,
-          ChangeEvent.UpdateDescription.diff(remoteEvent.getFullDocument(), document),
+          ChangeEvent.UpdateDescription.diff(remoteEvent.getFullDocument(), documentAfterUpdate),
           document,
           true);
     }
@@ -1715,28 +1716,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    final BsonDocument beforeResult = getLocalCollection(namespace)
+    getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
             document,
-            new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.BEFORE));
+            new FindOneAndReplaceOptions().upsert(true));
     config.setPendingWritesComplete(atVersion);
 
-    if (beforeResult != null) {
-      emitEvent(documentId,
-          changeEventForLocalUpdate(
-              namespace,
-              documentId,
-              ChangeEvent.UpdateDescription.diff(
-                  beforeResult, document), document, false));
-    } else {
-      emitEvent(documentId,
-          changeEventForLocalReplace(
-              namespace,
-              documentId,
-              document,
-              false));
-    }
+    emitEvent(documentId, changeEventForLocalReplace(namespace, documentId, document, false));
   }
 
   /**

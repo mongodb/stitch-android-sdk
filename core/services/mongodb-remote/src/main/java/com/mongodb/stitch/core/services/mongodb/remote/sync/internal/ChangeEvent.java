@@ -165,19 +165,28 @@ public final class ChangeEvent<DocumentT> {
       for (final String removedField : this.removedFields) {
         unsets.add(new BsonElement(removedField, new BsonBoolean(true)));
       }
-      return new BsonDocument("$set", this.updatedFields)
-          .append("$unset", new BsonDocument(unsets));
+      final BsonDocument updateDocument = new BsonDocument();
+
+      if (this.updatedFields.size() > 0) {
+        updateDocument.append("$set", this.updatedFields);
+      }
+
+      if (unsets.size() > 0) {
+          updateDocument.append("$unset", new BsonDocument(unsets));
+      }
+
+      return updateDocument;
     }
 
     /**
      * Find the diff between two documents.
      *
-     * NOTE: This does not do a full diff on [BsonArray]. If there is
+     * NOTE: This does not do a full diff on {@link BsonArray}. If there is
      * an inequality between the old and new array, the old array will
      * simply be replaced by the new one.
      *
-     * @param thisDocument original document
-     * @param thatDocument document to diff on
+     * @param beforeDocument original document
+     * @param afterDocument document to diff on
      * @param onKey the key for our depth level
      * @param updatedFields contiguous document of updated fields,
      *                      nested or otherwise
@@ -186,13 +195,13 @@ public final class ChangeEvent<DocumentT> {
      * @return a description of the updated fields and removed keys between
      *         the documents
      */
-    private static UpdateDescription diff(final BsonDocument thisDocument,
-                                          final BsonDocument thatDocument,
+    private static UpdateDescription diff(final BsonDocument beforeDocument,
+                                          final BsonDocument afterDocument,
                                           final @Nullable String onKey,
                                           final BsonDocument updatedFields,
                                           final List<String> removedFields) {
       // for each key in this document...
-      for (final Map.Entry<String, BsonValue> entry: thisDocument.entrySet()) {
+      for (final Map.Entry<String, BsonValue> entry: beforeDocument.entrySet()) {
         final String key = entry.getKey();
         // don't worry about the _id or version field for now
         if (key.equals("_id") || key.equals(DOCUMENT_VERSION_FIELD)) {
@@ -207,8 +216,8 @@ public final class ChangeEvent<DocumentT> {
         // this will allow us to reference whole objects as well as nested
         // properties.
         // else if the key does not exist, the key has been removed.
-        if (thatDocument.containsKey(key)) {
-          final BsonValue newValue = thatDocument.get(key);
+        if (afterDocument.containsKey(key)) {
+          final BsonValue newValue = afterDocument.get(key);
           if (oldValue instanceof BsonDocument && newValue instanceof BsonDocument) {
             diff((BsonDocument) oldValue,
                 (BsonDocument) newValue,
@@ -224,7 +233,7 @@ public final class ChangeEvent<DocumentT> {
       }
 
       // for each key in the other document...
-      for (final Map.Entry<String, BsonValue> entry: thatDocument.entrySet()) {
+      for (final Map.Entry<String, BsonValue> entry: afterDocument.entrySet()) {
         final String key = entry.getKey();
         // don't worry about the _id or version field for now
         if (key.equals("_id") || key.equals(DOCUMENT_VERSION_FIELD)) {
@@ -237,7 +246,7 @@ public final class ChangeEvent<DocumentT> {
         // updatedFields will included keys that must
         // be newly created.
         final String actualKey = onKey == null ? key : String.format("%s.%s", onKey, key);;
-        if (!thisDocument.containsKey(key)) {
+        if (!beforeDocument.containsKey(key)) {
           updatedFields.put(actualKey, newValue);
         }
       }
@@ -252,16 +261,16 @@ public final class ChangeEvent<DocumentT> {
      * an inequality between the old and new array, the old array will
      * simply be replaced by the new one.
      *
-     * @param thisDocument original document
-     * @param thatDocument document to diff on
+     * @param beforeDocument original document
+     * @param afterDocument document to diff on
      * @return a description of the updated fields and removed keys between
      *         the documents
      */
-    static UpdateDescription diff(final BsonDocument thisDocument,
-                                  final BsonDocument thatDocument) {
+    static UpdateDescription diff(final BsonDocument beforeDocument,
+                                  final BsonDocument afterDocument) {
       return UpdateDescription.diff(
-          thisDocument,
-          thatDocument,
+          beforeDocument,
+          afterDocument,
           null,
           new BsonDocument(),
           new ArrayList<>()
@@ -462,13 +471,13 @@ public final class ChangeEvent<DocumentT> {
       final MongoNamespace namespace,
       final BsonValue documentId,
       final UpdateDescription update,
-      final BsonDocument document,
+      final BsonDocument fullDocumentAfterUpdate,
       final boolean writePending
   ) {
     return new ChangeEvent<>(
         new BsonDocument(),
         ChangeEvent.OperationType.UPDATE,
-        document,
+        fullDocumentAfterUpdate,
         namespace,
         new BsonDocument("_id", documentId),
         update,

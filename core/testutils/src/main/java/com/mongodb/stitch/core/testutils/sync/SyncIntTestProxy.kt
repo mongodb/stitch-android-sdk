@@ -12,7 +12,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
+import org.bson.BsonBoolean
 import org.bson.BsonDocument
+import org.bson.BsonElement
 import org.bson.BsonObjectId
 import org.bson.BsonValue
 import org.bson.Document
@@ -1239,16 +1241,66 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             val remoteColl = syncTestRunner.remoteMethods()
 
             val docToInsert = Document(
-                mapOf("i_am" to "the walrus", "they_are" to "the egg men"))
+                mapOf(
+                    "i_am" to "the walrus",
+                    "they_are" to "the egg men",
+                    "members" to listOf(
+                        "paul", "john", "george", "pete"
+                    ),
+                    "where_to_be" to mapOf(
+                        "under_the_sea" to mapOf(
+                            "octopus_garden" to "in the shade"
+                        ),
+                        "the_land_of_submarines" to mapOf(
+                            "a_yellow_submarine" to "a yellow submarine"
+                        )
+                    ),
+                    "year" to 1960
+                ))
+            val docAfterUpdate = Document.parse("""
+                {
+                    "i_am": "the egg men",
+                    "they_are": "the egg men",
+                    "members": [ "paul", "john", "george", "ringo" ],
+                    "where_to_be": {
+                        "under_the_sea": {
+                            "octopus_garden": "near a cave"
+                        },
+                        "the_land_of_submarines": {
+                            "a_yellow_submarine": "a yellow submarine"
+                        }
+                    }
+                }
+            """)
+            val updateDoc = BsonDocument.parse("""
+                {
+                    "${'$'}set": {
+                       "i_am": "the egg men",
+                       "members": [ "paul", "john", "george", "ringo" ],
+                       "where_to_be.under_the_sea.octopus_garden": "near a cave"
+                    },
+                    "${'$'}unset": {
+                        "year": true
+                    }
+                }
+            """)
 
-            println(docToInsert.toJson())
             remoteColl.insertOne(docToInsert)
-
             val doc = remoteColl.find(docToInsert).first()!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
 
-            coll.configure(failingConflictHandler, null, null)
+            val eventSemaphore = Semaphore(0)
+            coll.configure(failingConflictHandler, ChangeEventListener { documentId, event ->
+                assertEquals(
+                    updateDoc["\$set"],
+                    event.updateDescription.updatedFields)
+                assertEquals(
+                    updateDoc["\$unset"],
+                    BsonDocument(
+                        event.updateDescription.removedFields.map { BsonElement(it, BsonBoolean(true)) }))
+                eventSemaphore.release()
+            }, null)
             coll.syncOne(doc1Id)
             streamAndSync()
 
@@ -1258,12 +1310,9 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // only an actual update document (with $set and $unset)
             // can work for the rest of this test
             syncTestRunner.mdbService.rules.rule(syncTestRunner.mdbRule._id).remove()
-            val localUpdate = Document("\$set", Document("i_am", "the egg men"))
-            val result = coll.updateOneById(doc1Id, localUpdate)
+            val result = coll.updateOneById(doc1Id, updateDoc)
             assertEquals(1, result.matchedCount)
-            val expectedLocalDocument = Document(doc)
-            expectedLocalDocument["i_am"] = "the egg men"
-            assertEquals(expectedLocalDocument, withoutSyncVersion(coll.findOneById(doc1Id)!!))
+            assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(coll.findOneById(doc1Id)!!)))
 
             // set they_are to unwriteable. the update should only update i_am
             // setting i_am to false and they_are to true would fail this test
@@ -1277,6 +1326,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
                                 "i_am", Document("write", true)
                             ).append(
                                 "they_are", Document("write", false)
+                            ).append(
+                                "where_to_be.the_land_of_submarines", Document("write", false)
                             )
                         )
                     ),
@@ -1285,8 +1336,9 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             )
 
             streamAndSync()
-            assertEquals(expectedLocalDocument, withoutSyncVersion(coll.findOneById(doc1Id)!!))
-            assertEquals(expectedLocalDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
+            assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(coll.findOneById(doc1Id)!!)))
+            assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(remoteColl.find(doc1Filter).first()!!)))
+            assertTrue(eventSemaphore.tryAcquire(10, TimeUnit.SECONDS))
         }
     }
 
