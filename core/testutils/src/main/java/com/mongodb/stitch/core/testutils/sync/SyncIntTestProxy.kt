@@ -1292,7 +1292,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
             val eventSemaphore = Semaphore(0)
             coll.configure(failingConflictHandler, ChangeEventListener { _, event ->
-                if (!event.hasUncommittedWrites()) {
+                if (event.operationType == ChangeEvent.OperationType.UPDATE
+                    && !event.hasUncommittedWrites()) {
                     assertEquals(
                         updateDoc["\$set"],
                         event.updateDescription.updatedFields)
