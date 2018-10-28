@@ -274,7 +274,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     }
 
     @Test
-    override fun testFrozenDocumentConfig() {
+    override fun testPausedDocumentConfig() {
         testProxy.testPausedDocumentConfig()
     }
 

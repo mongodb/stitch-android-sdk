@@ -113,7 +113,7 @@ interface SyncIntTestRunner {
     fun testInsertInsertConflict()
 
     @Test
-    fun testFrozenDocumentConfig()
+    fun testPausedDocumentConfig()
 
     @Test
     fun testConfigure()
