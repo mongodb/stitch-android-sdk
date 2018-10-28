@@ -210,7 +210,7 @@ class DataSynchronizerUnitTests {
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 1)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 1, error = ctx.exceptionToThrowDuringConflict)
 
-        // assert that the local doc is the same. this is frozen now
+        // assert that the local doc is the same. this is paused now
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
 
         ctx.exceptionToThrowDuringConflict = null
@@ -240,7 +240,7 @@ class DataSynchronizerUnitTests {
         ctx.insertTestDocument()
         ctx.waitForEvent()
 
-        // sync, verifying that the expected exceptionToThrow was emitted, freezing the document
+        // sync, verifying that the expected exceptionToThrow was emitted, pausing the document
         ctx.doSyncPass()
         ctx.waitForError()
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 0)
@@ -249,7 +249,7 @@ class DataSynchronizerUnitTests {
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
 
         // prepare a remote delete event, sync, and assert that nothing was affecting
-        // (since we're frozen)
+        // (since we're paused)
         ctx.queueConsumableRemoteDeleteEvent()
         ctx.doSyncPass()
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
@@ -318,7 +318,7 @@ class DataSynchronizerUnitTests {
         assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
 
         // clear issues. open a path for a delete.
-        // do another sync pass. the doc should remain the same as it is frozen
+        // do another sync pass. the doc should remain the same as it is paused
         ctx.exceptionToThrowDuringConflict = null
         ctx.shouldConflictBeResolvedByRemote = false
         ctx.doSyncPass()
@@ -340,7 +340,7 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
 
-        // should be frozen since the operation type was unknown
+        // should be paused since the operation type was unknown
         ctx.queueConsumableRemoteUnknownEvent()
         ctx.doSyncPass()
         assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
@@ -530,11 +530,11 @@ class DataSynchronizerUnitTests {
         ctx.verifyConflictHandlerCalledForActiveDoc(1, expectedLocalEvent, expectedRemoteEvent)
         ctx.verifyErrorListenerCalledForActiveDoc(1, ctx.exceptionToThrowDuringConflict)
 
-        // assert that this document is still the locally updated doc. this is frozen now
+        // assert that this document is still the locally updated doc. this is paused now
         assertEquals(docAfterUpdate, ctx.findTestDocumentFromLocalCollection())
 
         // clear issues. open a path for a delete.
-        // do another sync pass. the doc should remain the same as it is frozen
+        // do another sync pass. the doc should remain the same as it is paused
         ctx.exceptionToThrowDuringConflict = null
         ctx.shouldConflictBeResolvedByRemote = false
 
@@ -553,7 +553,7 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
 
-        // should be frozen since the operation type was unknown
+        // should be paused since the operation type was unknown
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
@@ -609,7 +609,7 @@ class DataSynchronizerUnitTests {
             ctx.findTestDocumentFromLocalCollection())
 
         // prepare a remote delete event, sync, and assert that nothing was affecting
-        // (since we're frozen)
+        // (since we're paused)
         ctx.queueConsumableRemoteDeleteEvent()
         ctx.doSyncPass()
         assertEquals(docAfterUpdate, ctx.findTestDocumentFromLocalCollection())
@@ -905,5 +905,43 @@ class DataSynchronizerUnitTests {
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(
             ctx.namespace, ctx.testDocument, true))
         assertTrue(ctx.dataSynchronizer.isRunning)
+    }
+
+    @Test
+    fun testResumeSyncForDocument() {
+        val ctx = harness.freshTestContext()
+
+        // assert that resume returns false for a doc that doesn't exist yet
+        assertFalse(ctx.dataSynchronizer.resumeSyncForDocument(ctx.namespace, ctx.testDocumentId))
+
+        // insert and sync
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        // throw and exception on the next sync pass, pausing the
+        // document config
+        ctx.exceptionToThrowDuringConflict = Exception("intentional")
+        ctx.queueConsumableRemoteUnknownEvent()
+        ctx.doSyncPass()
+
+        // assert that the doc is paused
+        assertEquals(
+            ctx.testDocumentId,
+            ctx.dataSynchronizer.getPausedDocumentIds(ctx.namespace).firstOrNull())
+
+        // attempt a remote delete, which should fail
+        ctx.queueConsumableRemoteDeleteEvent()
+        ctx.doSyncPass()
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+
+        // assert that resume returns true for our paused doc
+        assertTrue(ctx.dataSynchronizer.resumeSyncForDocument(ctx.namespace, ctx.testDocumentId))
+        assertTrue(ctx.dataSynchronizer.getPausedDocumentIds(ctx.namespace).isEmpty())
+
+        // queue another remote delete, one that should work
+        // now that the document is no longer paused
+        ctx.queueConsumableRemoteDeleteEvent()
+        ctx.doSyncPass()
+        assertNull(ctx.findTestDocumentFromLocalCollection())
     }
 }

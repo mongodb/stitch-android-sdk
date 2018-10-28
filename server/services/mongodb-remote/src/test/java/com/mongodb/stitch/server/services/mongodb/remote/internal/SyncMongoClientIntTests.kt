@@ -96,6 +96,14 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
         override fun find(filter: Bson): Iterable<Document?> {
             return sync.find(filter)
         }
+
+        override fun resumeSyncForDocument(documentId: BsonValue): Boolean {
+            return sync.resumeSyncForDocument(documentId)
+        }
+
+        override fun getPausedDocumentIds(): Set<BsonValue> {
+            return sync.pausedDocumentIds
+        }
     }
 
     private val mongodbUriProp = "test.stitch.mongodbURI"
@@ -269,8 +277,8 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
     }
 
     @Test
-    override fun testFrozenDocumentConfig() {
-        testProxy.testFrozenDocumentConfig()
+    override fun testPausedDocumentConfig() {
+        testProxy.testPausedDocumentConfig()
     }
 
     @Test
@@ -306,6 +314,11 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
     @Test
     override fun testShouldUpdateUsingUpdateDescription() {
         testProxy.testShouldUpdateUsingUpdateDescription()
+    }
+
+    @Test
+    override fun testResumeSyncForDocumentResumesSync() {
+        testProxy.testResumeSyncForDocumentResumesSync()
     }
 
     /**

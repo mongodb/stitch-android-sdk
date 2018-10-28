@@ -87,7 +87,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
             1,
             expectedTestVersion,
             expectedEvent)
-        config.isFrozen = true
+        config.isPaused = true
         config.isStale = true
 
         val doc = config.toBsonDocument()
@@ -95,7 +95,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         assertEquals(id, doc[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD])
 
         assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE).value)
-        assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_FROZEN).value)
+        assertTrue(doc.getBoolean(CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_PAUSED).value)
         assertEquals(expectedTestVersion,
             doc[CoreDocumentSynchronizationConfig.ConfigCodec.Fields.LAST_KNOWN_REMOTE_VERSION_FIELD])
         assertEquals(
@@ -105,7 +105,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
 
         config = CoreDocumentSynchronizationConfig.fromBsonDocument(doc)
 
-        assertTrue(config.isFrozen)
+        assertTrue(config.isPaused)
         assertEquals(namespace, config.namespace)
         assertEquals(expectedTestVersion, config.lastKnownRemoteVersion)
         compareEvents(expectedEvent, config.lastUncommittedChangeEvent)

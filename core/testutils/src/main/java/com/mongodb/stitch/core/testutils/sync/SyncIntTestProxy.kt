@@ -871,7 +871,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     }
 
     @Test
-    fun testFrozenDocumentConfig() {
+    fun testPausedDocumentConfig() {
         testSyncInBothDirections {
             val testSync = syncTestRunner.syncMethods()
             val remoteColl = syncTestRunner.remoteMethods()
@@ -924,7 +924,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             sem.acquire()
             streamAndSync()
 
-            // it should not have updated the local doc, as the local doc should be frozen
+            // it should not have updated the local doc, as the local doc should be paused
             assertEquals(
                 withoutId(expectedDoc),
                 withoutSyncVersion(withoutId(testSync.find(Document("_id", result.insertedId)).first()!!)))
@@ -949,7 +949,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             )
             sem.acquire()
 
-            // now that we're sync'd and unfrozen, it should be reflected locally
+            // now that we're sync'd and resumed, it should be reflected locally
             // TODO: STITCH-1958 Possible race condition here for update listening
             streamAndSync()
 
@@ -1342,6 +1342,90 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(coll.findOneById(doc1Id)!!)))
             assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(remoteColl.find(doc1Filter).first()!!)))
             assertTrue(eventSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun testResumeSyncForDocumentResumesSync() {
+        testSyncInBothDirections {
+            val testSync = syncTestRunner.syncMethods()
+            val remoteColl = syncTestRunner.remoteMethods()
+            var errorEmitted = false
+
+            var conflictCounter = 0
+
+            testSync.configure(
+                ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                    if (conflictCounter == 0) {
+                        conflictCounter++
+                        errorEmitted = true
+                        throw Exception("ouch")
+                    }
+                    remoteEvent.fullDocument
+                },
+                ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
+                },
+                ErrorListener { _, _ ->
+                })
+
+            // insert an initial doc
+            val testDoc = Document("hello", "world")
+            val result = testSync.insertOneAndSync(testDoc)
+
+            // do a sync pass, synchronizing the doc
+            streamAndSync()
+
+            Assert.assertNotNull(remoteColl.find(Document("_id", testDoc["_id"])).first())
+
+            // update the doc
+            val expectedDoc = Document("hello", "computer")
+            testSync.updateOneById(result.insertedId, Document("\$set", expectedDoc))
+
+            // create a conflict
+            var sem = watchForEvents(syncTestRunner.namespace)
+            remoteColl.updateOne(Document("_id", result.insertedId), withNewSyncVersionSet(Document("\$inc", Document("foo", 2))))
+            sem.acquire()
+
+            // do a sync pass, and throw an error during the conflict resolver
+            // freezing the document
+            streamAndSync()
+            Assert.assertTrue(errorEmitted)
+            assertEquals(result.insertedId, testSync.getPausedDocumentIds().first())
+
+            // update the doc remotely
+            val nextDoc = Document("hello", "friend")
+
+            sem = watchForEvents(syncTestRunner.namespace)
+            remoteColl.updateOne(Document("_id", result.insertedId), nextDoc)
+            sem.acquire()
+            streamAndSync()
+
+            // it should not have updated the local doc, as the local doc should be paused
+            assertEquals(
+                withoutId(expectedDoc),
+                withoutSyncVersion(withoutId(testSync.find(Document("_id", result.insertedId)).first()!!)))
+
+            // resume syncing here
+            assertTrue(testSync.resumeSyncForDocument(result.insertedId))
+
+            // update the doc remotely
+            val lastDoc = Document("good night", "computer")
+
+            sem = watchForEvents(syncTestRunner.namespace)
+            remoteColl.updateOne(
+                Document("_id", result.insertedId),
+                withNewSyncVersion(lastDoc)
+            )
+            sem.acquire()
+
+            // now that we're sync'd and resumed, it should be reflected locally
+            streamAndSync()
+
+            assertTrue(testSync.getPausedDocumentIds().isEmpty())
+            assertEquals(
+                withoutId(lastDoc),
+                withoutSyncVersion(
+                    withoutId(testSync.find(Document("_id", result.insertedId)).first()!!)))
         }
     }
 

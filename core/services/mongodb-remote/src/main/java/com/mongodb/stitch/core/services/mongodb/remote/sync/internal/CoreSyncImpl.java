@@ -97,6 +97,16 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     return this.dataSynchronizer.getSynchronizedDocumentIds(namespace);
   }
 
+  @Override
+  public Set<BsonValue> getPausedDocumentIds() {
+    return this.dataSynchronizer.getPausedDocumentIds(namespace);
+  }
+
+  @Override
+  public boolean resumeSyncForDocument(final BsonValue documentId) {
+    return this.dataSynchronizer.resumeSyncForDocument(namespace, documentId);
+  }
+
   /**
    * Finds a single document by the given id. It is first searched for in the local synchronized
    * cache and if not found and there is internet connectivity, it is searched for remotely.

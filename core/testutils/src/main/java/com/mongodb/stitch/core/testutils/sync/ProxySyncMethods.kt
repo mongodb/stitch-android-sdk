@@ -92,4 +92,21 @@ interface ProxySyncMethods {
      * @return the result of the local or remote update.
      */
     fun deleteOneById(documentId: BsonValue): RemoteDeleteResult
+
+    /**
+     * Return the set of synchronized document _ids in a namespace
+     * that have been paused due to an irrecoverable error.
+     *
+     * @return the set of paused document _ids in a namespace
+     */
+    fun getPausedDocumentIds(): Set<BsonValue>
+
+    /**
+     * A document that is paused no longer has remote updates applied to it.
+     * Any local updates to this document cause it to be resumed. An example of pausing a document
+     * is when a conflict is being resolved for that document and the handler throws an exception.
+     *
+     * @param documentId the id of the document to resume syncing
+     */
+    fun resumeSyncForDocument(documentId: BsonValue): Boolean
 }

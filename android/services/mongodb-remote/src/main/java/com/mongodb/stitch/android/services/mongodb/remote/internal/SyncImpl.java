@@ -80,6 +80,16 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
+  public Set<BsonValue> getPausedDocumentIds() {
+    return this.proxy.getPausedDocumentIds();
+  }
+
+  @Override
+  public boolean resumeSyncForDocument(@NonNull final BsonValue documentId) {
+    return this.proxy.resumeSyncForDocument(documentId);
+  }
+
+  @Override
   public SyncFindIterable<DocumentT> find() {
     return new SyncFindIterableImpl<>(proxy.find(), dispatcher);
   }

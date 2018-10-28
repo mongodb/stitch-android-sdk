@@ -430,7 +430,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
 
-        if (docConfig == null || docConfig.isFrozen()) {
+        if (docConfig == null || docConfig.isPaused()) {
           // Not interested in this event.
           continue;
         }
@@ -446,7 +446,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       for (final BsonValue docId : unseenIds) {
         final CoreDocumentSynchronizationConfig docConfig =
             nsConfig.getSynchronizedDocument(docId);
-        if (docConfig == null || docConfig.isFrozen()) {
+        if (docConfig == null || docConfig.isPaused()) {
           // means we aren't actually synchronizing on this remote doc
           continue;
         }
@@ -475,7 +475,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             nsConfig.getSynchronizedDocument(unseenId);
         if (docConfig == null
             || docConfig.getLastKnownRemoteVersion() == null
-            || docConfig.isFrozen()) {
+            || docConfig.isPaused()) {
           // means we aren't actually synchronizing on this remote doc
           continue;
         }
@@ -812,7 +812,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       // a. For each document that has local writes pending
       for (final CoreDocumentSynchronizationConfig docConfig : nsConfig) {
-        if (!docConfig.hasUncommittedWrites() || docConfig.isFrozen()) {
+        if (!docConfig.hasUncommittedWrites() || docConfig.isPaused()) {
           continue;
         }
         if (docConfig.getLastResolution() == logicalT) {
@@ -1213,7 +1213,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       });
     }
 
-    docConfig.setFrozen(true);
+    docConfig.setPaused(true);
 
     this.logger.error(msg);
     this.logger.error(
@@ -1497,6 +1497,26 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   /**
+   * Return the set of synchronized document _ids in a namespace
+   * that have been paused due to an irrecoverable error.
+   *
+   * @param namespace the namespace to get paused document _ids for.
+   * @return the set of paused document _ids in a namespace
+   */
+  public Set<BsonValue> getPausedDocumentIds(final MongoNamespace namespace) {
+    final Set<BsonValue> pausedDocumentIds = new HashSet<>();
+
+    for (final CoreDocumentSynchronizationConfig config :
+        this.syncConfig.getSynchronizedDocuments(namespace)) {
+      if (config.isPaused()) {
+        pausedDocumentIds.add(config.getDocumentId());
+      }
+    }
+
+    return pausedDocumentIds;
+  }
+
+  /**
    * Requests that a document be synchronized by the given _id. Actual synchronization of the
    * document will happen later in a {@link DataSynchronizer#doSyncPass()} iteration.
    *
@@ -1524,6 +1544,38 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   ) {
     syncConfig.removeSynchronizedDocument(namespace, documentId);
     triggerListeningToNamespace(namespace);
+  }
+
+  /**
+   * A document that is paused no longer has remote updates applied to it.
+   * Any local updates to this document cause it to be resumed. An example of pausing a document
+   * is when a conflict is being resolved for that document and the handler throws an exception.
+   *
+   * This method allows you to resume sync for a document.
+   *
+   * @param namespace namespace for the document
+   * @param documentId the id of the document to resume syncing
+   * @return true if successfully resumed, false if the document
+   *         could not be found or there was an error resuming
+   */
+  boolean resumeSyncForDocument(
+      final MongoNamespace namespace,
+      final BsonValue documentId
+  ) {
+    if (namespace == null || documentId == null) {
+      return false;
+    }
+
+    final NamespaceSynchronizationConfig namespaceSynchronizationConfig;
+    final CoreDocumentSynchronizationConfig config;
+
+    if ((namespaceSynchronizationConfig = syncConfig.getNamespaceConfig(namespace)) == null
+        || (config = namespaceSynchronizationConfig.getSynchronizedDocument(documentId)) == null) {
+      return false;
+    }
+
+    config.setPaused(false);
+    return !config.isPaused();
   }
 
   public <T> Collection<T> find(

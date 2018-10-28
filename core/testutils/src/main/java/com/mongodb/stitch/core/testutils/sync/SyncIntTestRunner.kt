@@ -113,7 +113,7 @@ interface SyncIntTestRunner {
     fun testInsertInsertConflict()
 
     @Test
-    fun testFrozenDocumentConfig()
+    fun testPausedDocumentConfig()
 
     @Test
     fun testConfigure()
@@ -135,4 +135,7 @@ interface SyncIntTestRunner {
 
     @Test
     fun testShouldUpdateUsingUpdateDescription()
+
+    @Test
+    fun testResumeSyncForDocumentResumesSync()
 }
