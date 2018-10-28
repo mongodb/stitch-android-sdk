@@ -71,7 +71,7 @@ class DataSynchronizerUnitTests {
 
     @After
     fun teardown() {
-        harness.teardown()
+        harness.close()
         CoreRemoteClientFactory.close()
         ServerEmbeddedMongoClientFactory.getInstance().close()
     }
@@ -369,7 +369,7 @@ class DataSynchronizerUnitTests {
             expectedChangeEvent = ChangeEvent.changeEventForLocalUpdate(
                 ctx.namespace,
                 ctx.testDocumentId,
-                ctx.updateDocument,
+                ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
                 docAfterUpdate,
                 true
             ))
@@ -382,13 +382,24 @@ class DataSynchronizerUnitTests {
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1, expectedChangeEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ctx.updateDocument,
+            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             false
         ))
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).updateOne(any(), docCaptor.capture())
-        assertEquals(docAfterUpdate, withoutSyncVersion(docCaptor.value))
+
+        // create what we expect the diff to look like
+        val expectedDiff = ChangeEvent.UpdateDescription.diff(
+            BsonDocument.parse(ctx.testDocument.toJson()),
+            docAfterUpdate).toUpdateDocument()
+        expectedDiff.remove("\$unset")
+
+        // get the actual diff. remove the versioning info
+        val actualDiff = docCaptor.value
+        actualDiff.getDocument("\$set").remove(DataSynchronizer.DOCUMENT_VERSION_FIELD)
+
+        assertEquals(expectedDiff, actualDiff)
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
 
@@ -406,7 +417,7 @@ class DataSynchronizerUnitTests {
         var expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ctx.updateDocument,
+            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true)
 
@@ -445,7 +456,7 @@ class DataSynchronizerUnitTests {
         expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ctx.updateDocument,
+            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true)
         var expectedRemoteEvent = ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
@@ -489,7 +500,7 @@ class DataSynchronizerUnitTests {
         expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ctx.updateDocument,
+            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true)
         expectedRemoteEvent = ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
@@ -556,7 +567,7 @@ class DataSynchronizerUnitTests {
         val expectedEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocument["_id"],
-            ctx.updateDocument,
+            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true
         )
@@ -578,7 +589,18 @@ class DataSynchronizerUnitTests {
         ctx.waitForError()
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).updateOne(any(), docCaptor.capture())
-        assertEquals(expectedEvent.fullDocument, withoutSyncVersion(docCaptor.value))
+
+        // create what we expect the diff to look like
+        val expectedDiff = ChangeEvent.UpdateDescription.diff(
+            BsonDocument.parse(ctx.testDocument.toJson()),
+            expectedEvent.fullDocument).toUpdateDocument()
+        expectedDiff.remove("\$unset")
+
+        // get the actual diff. remove the versioning info
+        val actualDiff = docCaptor.value
+        actualDiff.getDocument("\$set").remove(DataSynchronizer.DOCUMENT_VERSION_FIELD)
+
+        assertEquals(expectedDiff, actualDiff)
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 0)
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 1, error = expectedException)
@@ -667,7 +689,7 @@ class DataSynchronizerUnitTests {
             false
         ))
         ctx.verifyConflictHandlerCalledForActiveDoc(1, expectedLocalEvent,
-            ChangeEvent.changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId, ctx.updateDocument, ctx.testDocument, false))
+            ChangeEvent.changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId, null, ctx.testDocument, false))
         ctx.verifyErrorListenerCalledForActiveDoc(0)
 
         assertEquals(
@@ -707,7 +729,7 @@ class DataSynchronizerUnitTests {
         ctx.verifyConflictHandlerCalledForActiveDoc(1,
             ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, true),
             ChangeEvent.changeEventForLocalUpdate(
-                ctx.namespace, ctx.testDocumentId, ctx.updateDocument, ctx.testDocument, false
+                ctx.namespace, ctx.testDocumentId, null, ctx.testDocument, false
             ))
         ctx.verifyErrorListenerCalledForActiveDoc(0)
 
@@ -803,7 +825,7 @@ class DataSynchronizerUnitTests {
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
             ChangeEvent.changeEventForLocalUpdate(
-                ctx.namespace, ctx.testDocumentId, ctx.updateDocument, expectedDocumentAfterUpdate, true))
+                ctx.namespace, ctx.testDocumentId, ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()), expectedDocumentAfterUpdate, true))
         // assert that the updated document equals what we've expected
         assertEquals(ctx.testDocument["_id"], ctx.findTestDocumentFromLocalCollection()?.get("_id"))
         assertEquals(expectedDocumentAfterUpdate, ctx.findTestDocumentFromLocalCollection()!!)

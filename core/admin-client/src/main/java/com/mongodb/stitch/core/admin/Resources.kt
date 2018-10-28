@@ -201,7 +201,7 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
                     // / Resource for a specific rule of a service
                     class Rule(adminAuth: StitchAdminAuth, url: String) :
                             BasicResource(adminAuth, url),
-                            Gettable<RuleResponse>, Removable
+                            Gettable<RuleResponse>, Removable, Updatable<RuleCreator>
                 }
 
                 val rules by lazy { Rules(this.adminAuth, "$url/rules") }
