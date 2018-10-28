@@ -1390,6 +1390,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // freezing the document
             streamAndSync()
             Assert.assertTrue(errorEmitted)
+            assertEquals(result.insertedId, testSync.getPausedDocumentIds().first())
 
             // update the doc remotely
             val nextDoc = Document("hello", "friend")
@@ -1420,6 +1421,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // now that we're sync'd and resumed, it should be reflected locally
             streamAndSync()
 
+            assertTrue(testSync.getPausedDocumentIds().isEmpty())
             assertEquals(
                 withoutId(lastDoc),
                 withoutSyncVersion(

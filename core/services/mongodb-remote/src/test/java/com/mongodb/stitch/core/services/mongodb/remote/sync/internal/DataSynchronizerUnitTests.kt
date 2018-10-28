@@ -925,10 +925,9 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         // assert that the doc is paused
-        assertTrue(
-            ctx.dataSynchronizer
-                .getSynchronizedDocuments(ctx.namespace)
-                .firstOrNull()?.isPaused ?: false)
+        assertEquals(
+            ctx.testDocumentId,
+            ctx.dataSynchronizer.getPausedDocumentIds(ctx.namespace).firstOrNull())
 
         // attempt a remote delete, which should fail
         ctx.queueConsumableRemoteDeleteEvent()
@@ -937,6 +936,7 @@ class DataSynchronizerUnitTests {
 
         // assert that resume returns true for our paused doc
         assertTrue(ctx.dataSynchronizer.resumeSyncForDocument(ctx.namespace, ctx.testDocumentId))
+        assertTrue(ctx.dataSynchronizer.getPausedDocumentIds(ctx.namespace).isEmpty())
 
         // queue another remote delete, one that should work
         // now that the document is no longer paused

@@ -98,6 +98,11 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   }
 
   @Override
+  public Set<BsonValue> getPausedDocumentIds() {
+    return this.dataSynchronizer.getPausedDocumentIds(namespace);
+  }
+
+  @Override
   public boolean resumeSyncForDocument(final BsonValue documentId) {
     return this.dataSynchronizer.resumeSyncForDocument(namespace, documentId);
   }

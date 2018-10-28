@@ -80,6 +80,14 @@ public interface CoreSync<DocumentT> {
   Set<BsonValue> getSyncedIds();
 
   /**
+   * Return the set of synchronized document _ids in a namespace
+   * that have been paused due to an irrecoverable error.
+   *
+   * @return the set of paused document _ids in a namespace
+   */
+  Set<BsonValue> getPausedDocumentIds();
+
+  /**
    * A document that is paused no longer has remote updates applied to it.
    * Any local updates to this document cause it to be resumed. An example of pausing a document
    * is when a conflict is being resolved for that document and the handler throws an exception.

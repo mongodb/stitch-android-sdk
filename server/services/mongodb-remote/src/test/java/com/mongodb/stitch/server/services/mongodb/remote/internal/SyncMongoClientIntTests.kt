@@ -100,6 +100,10 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
         override fun resumeSyncForDocument(documentId: BsonValue): Boolean {
             return sync.resumeSyncForDocument(documentId)
         }
+
+        override fun getPausedDocumentIds(): Set<BsonValue> {
+            return sync.pausedDocumentIds
+        }
     }
 
     private val mongodbUriProp = "test.stitch.mongodbURI"

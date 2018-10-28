@@ -1497,6 +1497,26 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   /**
+   * Return the set of synchronized document _ids in a namespace
+   * that have been paused due to an irrecoverable error.
+   *
+   * @param namespace the namespace to get paused document _ids for.
+   * @return the set of paused document _ids in a namespace
+   */
+  public Set<BsonValue> getPausedDocumentIds(final MongoNamespace namespace) {
+    final Set<BsonValue> pausedDocumentIds = new HashSet<>();
+
+    for (final CoreDocumentSynchronizationConfig config :
+        this.syncConfig.getSynchronizedDocuments(namespace)) {
+      if (config.isPaused()) {
+        pausedDocumentIds.add(config.getDocumentId());
+      }
+    }
+
+    return pausedDocumentIds;
+  }
+
+  /**
    * Requests that a document be synchronized by the given _id. Actual synchronization of the
    * document will happen later in a {@link DataSynchronizer#doSyncPass()} iteration.
    *
