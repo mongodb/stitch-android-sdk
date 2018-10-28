@@ -1533,6 +1533,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *
    * This method allows you to resume sync for a document.
    *
+   * @param namespace namespace for the document
    * @param documentId the id of the document to resume syncing
    * @return true if successfully resumed, false if the document
    *         could not be found or there was an error resuming

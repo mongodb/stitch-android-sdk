@@ -95,7 +95,7 @@ interface ProxySyncMethods {
 
     /**
      * A document that is paused no longer has remote updates applied to it.
-     * Any local updates to this document cause it to be thawed. An example of pausing a document
+     * Any local updates to this document cause it to be resumed. An example of pausing a document
      * is when a conflict is being resolved for that document and the handler throws an exception.
      *
      * @param documentId the id of the document to resume syncing
