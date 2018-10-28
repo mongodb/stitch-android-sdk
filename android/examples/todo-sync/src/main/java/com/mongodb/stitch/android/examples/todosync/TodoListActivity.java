@@ -38,6 +38,7 @@ import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
 import com.mongodb.stitch.core.auth.providers.serverapikey.ServerApiKeyCredential;
+import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
@@ -45,15 +46,17 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import org.bson.BsonDocument;
-import org.bson.BsonInt64;
 import org.bson.BsonObjectId;
 import org.bson.BsonRegularExpression;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
+import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.types.ObjectId;
 
 public class TodoListActivity extends AppCompatActivity {
@@ -62,8 +65,8 @@ public class TodoListActivity extends AppCompatActivity {
   private final ListUpdateListener listUpdateListener = new ListUpdateListener();
   private final ItemUpdateListener itemUpdateListener = new ItemUpdateListener();
   private TodoAdapter todoAdapter;
-  private RemoteMongoCollection<BsonDocument> lists;
-  private RemoteMongoCollection<Document> items;
+  private RemoteMongoCollection<Document> lists;
+  private RemoteMongoCollection<TodoItem> items;
   private String userId;
 
   private static final String TODO_LISTS_DATABASE = "todo";
@@ -79,14 +82,21 @@ public class TodoListActivity extends AppCompatActivity {
 
     final RemoteMongoClient mongoClient = client.getServiceClient(
         RemoteMongoClient.factory, "mongodb-atlas");
+
+    // Set up collections
     items = mongoClient
         .getDatabase(TodoItem.TODO_LIST_DATABASE)
-        .getCollection(TodoItem.TODO_LIST_COLLECTION);
+        .getCollection(TodoItem.TODO_LIST_COLLECTION, TodoItem.class)
+        .withCodecRegistry(CodecRegistries.fromRegistries(
+            BsonUtils.DEFAULT_CODEC_REGISTRY,
+            CodecRegistries.fromCodecs(TodoItem.codec)));
     lists =
         mongoClient
             .getDatabase(TODO_LISTS_DATABASE)
-            .getCollection(TODO_LISTS_COLLECTION, BsonDocument.class);
+            .getCollection(TODO_LISTS_COLLECTION);
 
+    // Configure sync to be remote wins on both collections meaning and conflict that occurs should
+    // prefer the remote version as the resolution.
     items.sync().configure(
         DefaultSyncConflictResolvers.remoteWins(),
         itemUpdateListener,
@@ -109,12 +119,12 @@ public class TodoListActivity extends AppCompatActivity {
           @Override
           public void updateChecked(final ObjectId itemId, final boolean isChecked) {
             final Document updateDoc =
-                new Document("$set", new Document(TodoItem.CHECKED_KEY, isChecked));
+                new Document("$set", new Document(TodoItem.Fields.CHECKED, isChecked));
 
             if (isChecked) {
-              updateDoc.append("$currentDate", new Document(TodoItem.DONE_DATE_KEY, true));
+              updateDoc.append("$currentDate", new Document(TodoItem.Fields.DONE_DATE, true));
             } else {
-              updateDoc.append("$unset", new Document(TodoItem.DONE_DATE_KEY, ""));
+              updateDoc.append("$unset", new Document(TodoItem.Fields.DONE_DATE, ""));
             }
 
             items.sync().updateOneById(new BsonObjectId(itemId), updateDoc);
@@ -127,56 +137,15 @@ public class TodoListActivity extends AppCompatActivity {
         });
     todoRecyclerView.setAdapter(todoAdapter);
 
+    // Start with the current local items
+    todoAdapter.replaceItems(getItems(), false);
+
     doLogin();
-  }
-
-  private void doLogin() {
-    Stitch.getDefaultAppClient().getAuth().loginWithCredential(
-        new ServerApiKeyCredential(
-            "xEfxAP4jFWaWEs5WWpff7XyQMh1T56CCMmDEV9oxXtItPHBveA6bc6IEjOhQLes6"))
-        .addOnSuccessListener(user -> {
-          userId = user.getId();
-          invalidateOptionsMenu();
-          Toast.makeText(TodoListActivity.this, "Logged in", Toast.LENGTH_SHORT).show();
-          todoAdapter.replaceItems(getItemsFromServer(), false);
-
-          if (lists.sync().getSyncedIds().isEmpty()) {
-            lists.sync().insertOneAndSync(
-                new BsonDocument("_id", new BsonString(userId)));
-          }
-        })
-        .addOnFailureListener(e -> {
-          invalidateOptionsMenu();
-          Log.d(TAG, "error logging in", e);
-          Toast.makeText(TodoListActivity.this, "Failed logging in", Toast.LENGTH_SHORT).show();
-        });
-  }
-
-  private class ListUpdateListener implements ChangeEventListener<BsonDocument> {
-    @Override
-    public void onEvent(final BsonValue documentId, final ChangeEvent<BsonDocument> event) {
-      if (!event.hasUncommittedWrites()) {
-        todoAdapter.replaceItems(getItemsFromServer(), false);
-      }
-    }
-  }
-
-  private class ItemUpdateListener implements ChangeEventListener<Document> {
-    @Override
-    public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
-      if (event.getOperationType() == ChangeEvent.OperationType.DELETE) {
-        todoAdapter.removeItemById(event.getDocumentKey().getObjectId("_id").getValue());
-        return;
-      }
-      if (TodoItem.isTodoItem(event.getFullDocument())) {
-        final TodoItem item = new TodoItem(event.getFullDocument());
-        todoAdapter.updateOrAddItem(item);
-      }
-    }
   }
 
   @Override
   public boolean onPrepareOptionsMenu(final Menu menu) {
+    // Only enable options besides login when logged in
     final boolean loggedIn = Stitch.getDefaultAppClient().getAuth().isLoggedIn();
     for (int i = 0; i < menu.size(); i++) {
       if (menu.getItem(i).getItemId() == R.id.login_action) {
@@ -227,71 +196,54 @@ public class TodoListActivity extends AppCompatActivity {
         showAddItemDialog();
         return true;
       case R.id.clear_checked_action:
-        clearCheckedItems();
+        clearCheckedTodoItems();
         return true;
       case R.id.clear_all_action:
-        clearAllItems();
+        clearAllTodoItems();
         return true;
       default:
         return super.onOptionsItemSelected(item);
     }
   }
 
-  private Task<List<TodoItem>> getItemsFromServer() {
-    return items.find().into(new ArrayList<>())
-        .continueWith(task -> {
-          if (!task.isSuccessful()) {
-            return Collections.emptyList();
+  private void doLogin() {
+    Stitch.getDefaultAppClient().getAuth().loginWithCredential(
+        new ServerApiKeyCredential(
+            "xEfxAP4jFWaWEs5WWpff7XyQMh1T56CCMmDEV9oxXtItPHBveA6bc6IEjOhQLes6"))
+        .addOnSuccessListener(user -> {
+          userId = user.getId();
+          invalidateOptionsMenu();
+          Toast.makeText(TodoListActivity.this, "Logged in", Toast.LENGTH_SHORT).show();
+
+          if (lists.sync().getSyncedIds().isEmpty()) {
+            lists.sync().insertOneAndSync(new Document("_id", userId));
           }
-          final List<TodoItem> todoItems = new ArrayList<>();
-          for (final Document doc : task.getResult()) {
-            if (TodoItem.isTodoItem(doc)) {
-              final TodoItem item = new TodoItem(doc);
-              items.sync().syncOne(new BsonObjectId(item.getId()));
-              todoItems.add(item);
-            }
-          }
-          return todoItems;
+        })
+        .addOnFailureListener(e -> {
+          invalidateOptionsMenu();
+          Log.d(TAG, "error logging in", e);
+          Toast.makeText(TodoListActivity.this, "Failed logging in", Toast.LENGTH_SHORT).show();
         });
   }
 
-  private Task<List<TodoItem>> getItems() {
-    return items.sync().find().into(new ArrayList<>())
-        .continueWith(task -> {
-          if (!task.isSuccessful()) {
-            return Collections.emptyList();
-          }
-          final List<TodoItem> todoItems = new ArrayList<>();
-          for (final Document doc : task.getResult()) {
-            if (TodoItem.isTodoItem(doc)) {
-              final TodoItem item = new TodoItem(doc);
-              todoItems.add(item);
-            }
-          }
-          return todoItems;
-        });
+  private class ListUpdateListener implements ChangeEventListener<Document> {
+    @Override
+    public void onEvent(final BsonValue documentId, final ChangeEvent<Document> event) {
+      if (!event.hasUncommittedWrites()) {
+        todoAdapter.replaceItems(getItemsFromServer(), false);
+      }
+    }
   }
 
-  private Task<List<TodoItem>> getItemsWithRegexFilter(final String regex) {
-    return items.sync().find(
-        new Document(
-            TodoItem.TASK_KEY,
-            new Document().append("$regex",
-                new BsonRegularExpression(regex)).append("$options", "i")))
-        .into(new ArrayList<>())
-        .continueWith(task -> {
-          if (!task.isSuccessful()) {
-            return Collections.emptyList();
-          }
-          final List<TodoItem> todoItems = new ArrayList<>();
-          for (final Document doc : task.getResult()) {
-            if (TodoItem.isTodoItem(doc)) {
-              final TodoItem item = new TodoItem(doc);
-              todoItems.add(item);
-            }
-          }
-          return todoItems;
-        });
+  private class ItemUpdateListener implements ChangeEventListener<TodoItem> {
+    @Override
+    public void onEvent(final BsonValue documentId, final ChangeEvent<TodoItem> event) {
+      if (event.getOperationType() == ChangeEvent.OperationType.DELETE) {
+        todoAdapter.removeItemById(event.getDocumentKey().getObjectId("_id").getValue());
+        return;
+      }
+      todoAdapter.updateOrAddItem(event.getFullDocument());
+    }
   }
 
   private void showAddItemDialog() {
@@ -339,52 +291,94 @@ public class TodoListActivity extends AppCompatActivity {
     builder.show();
   }
 
+  private Task<List<TodoItem>> getItemsFromServer() {
+    // Filter out uncommitted, deleted items at the time of this refresh
+    // During the Stitch Mobile Sync beta, this type of code is necessary but not completely
+    // sufficient to guarantee that we always show a view of items that are consistent remotely and
+    // locally. In the future, sync will handle this type of logic more correctly and safely.
+    return items.sync().find().into(new ArrayList<>())
+        .continueWithTask(localTask -> {
+          if (!localTask.isSuccessful()) {
+            return Tasks.forResult(Collections.emptyList());
+          }
+          final Set<BsonValue> syncedIds = items.sync().getSyncedIds();
+          final Map<ObjectId, TodoItem> localItems = new HashMap<>();
+          for (final TodoItem item : localTask.getResult()) {
+            localItems.put(item.getId(), item);
+          }
+          return items.find().into(new ArrayList<>())
+              .continueWith(remoteTask -> {
+                if (!remoteTask.isSuccessful()) {
+                  return Collections.emptyList();
+                }
+                final List<TodoItem> remoteItems = remoteTask.getResult();
+                for (final TodoItem item : remoteItems) {
+                  items.sync().syncOne(new BsonObjectId(item.getId()));
+                }
+                final List<TodoItem> filteredItems = new ArrayList<>(remoteItems.size());
+                for (final TodoItem remoteItem : remoteItems) {
+                  // Filter out uncommitted, deleted items
+                  if (syncedIds.contains(new BsonObjectId(remoteItem.getId()))) {
+                    if (localItems.containsKey(remoteItem.getId())) {
+                      // Local is correct, not remote
+                      filteredItems.add(localItems.get(remoteItem.getId()));
+                    }
+                    // exclude as deleted. wait for events if real changes happen
+                  } else {
+                    filteredItems.add(remoteItem);
+                  }
+                }
+                return filteredItems;
+              });
+        });
+  }
+
+  private Task<List<TodoItem>> getItems() {
+    return items.sync().find().into(new ArrayList<>());
+  }
+
+  private Task<List<TodoItem>> getItemsWithRegexFilter(final String regex) {
+    return items.sync().find(
+        new Document(
+            TodoItem.Fields.TASK,
+            new Document().append("$regex",
+                new BsonRegularExpression(regex)).append("$options", "i")))
+        .into(new ArrayList<>());
+  }
+
+  private void addTodoItem(final String task) {
+    final TodoItem newItem = new TodoItem(new ObjectId(), userId, task, false, null);
+    items.sync().insertOneAndSync(newItem)
+        .addOnSuccessListener(result -> {
+          todoAdapter.updateOrAddItem(newItem);
+          touchList();
+        })
+        .addOnFailureListener(e -> Log.e(TAG, "failed to insert todo item", e));
+  }
+
   private void updateTodoItemTask(final ObjectId itemId, final String newTask) {
     final BsonObjectId docId = new BsonObjectId(itemId);
     items.sync().updateOneById(
         docId,
-        new Document("$set", new Document(TodoItem.TASK_KEY, newTask)))
+        new Document("$set", new Document(TodoItem.Fields.TASK, newTask)))
         .addOnSuccessListener(result -> {
-          items.sync().find(new BsonDocument("_id", docId)).first()
-              .addOnSuccessListener(doc -> {
-                if (doc == null) {
+          items.sync().find(new Document("_id", docId)).first()
+              .addOnSuccessListener(item -> {
+                if (item == null) {
                   return;
                 }
-                if (!TodoItem.isTodoItem(doc)) {
-                  return;
-                }
-                todoAdapter.updateOrAddItem(new TodoItem(doc));
+                todoAdapter.updateOrAddItem(item);
               })
               .addOnFailureListener(e -> Log.e(TAG, "failed to find todo item", e));
         })
         .addOnFailureListener(e -> Log.e(TAG, "failed to insert todo item", e));
   }
 
-  private void addTodoItem(final String task) {
-    final Document newItem =
-        new Document()
-            .append(TodoItem.OWNER_ID, userId)
-            .append(TodoItem.TASK_KEY, task)
-            .append(TodoItem.CHECKED_KEY, false);
-    items.sync().insertOneAndSync(newItem)
-        .addOnSuccessListener(result -> {
-          todoAdapter.updateOrAddItem(new TodoItem(newItem));
-          touchList();
-        })
-        .addOnFailureListener(e -> Log.e(TAG, "failed to insert todo item", e));
-  }
-
-  private void touchList() {
-    lists.sync().updateOneById(
-        new BsonString(userId),
-        new BsonDocument("$inc", new BsonDocument("i", new BsonInt64(1))));
-  }
-
-  private void clearCheckedItems() {
+  private void clearCheckedTodoItems() {
     final List<Task<RemoteDeleteResult>> tasks = new ArrayList<>();
     getItems().addOnSuccessListener(todoItems -> {
       for (final TodoItem item : todoItems) {
-        if (item.getChecked()) {
+        if (item.isChecked()) {
           tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
         }
       }
@@ -393,7 +387,7 @@ public class TodoListActivity extends AppCompatActivity {
     });
   }
 
-  private void clearAllItems() {
+  private void clearAllTodoItems() {
     final List<Task<RemoteDeleteResult>> tasks = new ArrayList<>();
     getItems().addOnSuccessListener(todoItems -> {
       for (final TodoItem item : todoItems) {
@@ -402,5 +396,9 @@ public class TodoListActivity extends AppCompatActivity {
       Tasks.whenAllComplete(tasks)
           .addOnCompleteListener(task -> todoAdapter.clearItems());
     });
+  }
+
+  private void touchList() {
+    lists.sync().updateOneById(new BsonString(userId), new Document("$inc", new Document("i", 1)));
   }
 }

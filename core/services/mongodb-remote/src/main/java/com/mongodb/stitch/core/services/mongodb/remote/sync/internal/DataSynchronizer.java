@@ -1034,9 +1034,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               try {
                 result = remoteColl.updateOne(
                         localVersionInfo.getFilter(),
-                        translatedUpdate.isEmpty()
-                                // See: changeEventForLocalUpdate for why we do this
-                                ? nextDoc : translatedUpdate);
+                    translatedUpdate.isEmpty() ? nextDoc : translatedUpdate);
               } catch (final StitchServiceException ex) {
                 // b. If an error happens, report an error to the error listener.
                 emitError(
@@ -1367,7 +1365,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (acceptRemote) {
         // i. If the remote document is equal to the resolved document, replace the document
         //    locally, mark the document as having no pending writes, and emit a REPLACE change
-        //    event.
+        //    event if the document had not existed prior, or UPDATE if it had.
         replaceOrUpsertOneFromRemote(
             namespace,
             docConfig.getDocumentId(),
@@ -1375,13 +1373,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             remoteVersion);
       } else {
         // ii. Otherwise, replace the local document with the resolved document locally, mark that
-        //     there are pending writes for this document, and emit a REPLACE change event.
-        replaceOrUpsertOneFromResolution(
+        //     there are pending writes for this document, and emit an UPDATE change event, or a
+        //     DELETE change event (if the remoteEvent's operation type was DELETE).
+        updateOrUpsertOneFromResolution(
             namespace,
             docConfig.getDocumentId(),
             docForStorage,
             remoteVersion,
-            remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE);
+            remoteEvent);
       }
     }
   }
@@ -1647,16 +1646,28 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
+    // TODO: STITCH-1958
+    final BsonDocument documentBeforeUpdate =
+        getLocalCollection(namespace).find(getDocumentIdFilter(documentId)).first();
+
     final BsonDocument result = getLocalCollection(namespace)
         .findOneAndUpdate(
             getDocumentIdFilter(documentId),
             update,
             new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
+
     if (result == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
+
     final ChangeEvent<BsonDocument> event =
-        changeEventForLocalUpdate(namespace, documentId, update, result, true);
+        changeEventForLocalUpdate(
+            namespace,
+            documentId,
+            ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, result),
+            result,
+            true);
+
     config.setSomePendingWrites(
         logicalT,
         event);
@@ -1672,12 +1683,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param documentId the _id of the document.
    * @param document   the replacement document.
    */
-  private void replaceOrUpsertOneFromResolution(
+  private void updateOrUpsertOneFromResolution(
       final MongoNamespace namespace,
       final BsonValue documentId,
       final BsonDocument document,
       final BsonDocument atVersion,
-      final boolean fromDelete
+      final ChangeEvent<BsonDocument> remoteEvent
   ) {
     // TODO: lock down id
     final CoreDocumentSynchronizationConfig config =
@@ -1686,25 +1697,27 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    final BsonDocument result = getLocalCollection(namespace)
+    final BsonDocument documentAfterUpdate = getLocalCollection(namespace)
         .findOneAndReplace(
             getDocumentIdFilter(documentId),
             document,
             new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
+
     final ChangeEvent<BsonDocument> event;
-    if (fromDelete) {
-      event = changeEventForLocalInsert(namespace, result, true);
-      config.setSomePendingWrites(
-          logicalT,
-          atVersion,
-          event);
+    if (remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE) {
+      event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
     } else {
-      event = changeEventForLocalReplace(namespace, documentId, result, true);
-      config.setSomePendingWrites(
-          logicalT,
-          atVersion,
-          event);
+      event = changeEventForLocalUpdate(
+          namespace,
+          documentId,
+          ChangeEvent.UpdateDescription.diff(remoteEvent.getFullDocument(), documentAfterUpdate),
+          document,
+          true);
     }
+    config.setSomePendingWrites(
+        logicalT,
+        atVersion,
+        event);
     emitEvent(documentId, event);
   }
 
@@ -1735,6 +1748,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             document,
             new FindOneAndReplaceOptions().upsert(true));
     config.setPendingWritesComplete(atVersion);
+
     emitEvent(documentId, changeEventForLocalReplace(namespace, documentId, document, false));
   }
 

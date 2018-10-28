@@ -58,12 +58,14 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
                 "mongodb1",
                 ServiceConfigs.Mongo(getMongoDbUri()))
 
-        val rule = Document()
-        rule["read"] = Document()
-        rule["write"] = Document()
-        rule["other_fields"] = Document()
-
-        addRule(svc.second, RuleCreator.MongoDb("$dbName.$collName", rule))
+        val rule = RuleCreator.MongoDb(
+            database = dbName,
+            collection = collName,
+            roles = listOf(RuleCreator.MongoDb.Role(
+                read = true, write = true
+            )),
+            schema = RuleCreator.MongoDb.Schema())
+        addRule(svc.second, rule)
 
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())

@@ -26,7 +26,7 @@ import org.bson.diagnostics.Logger;
  */
 class DataSynchronizerRunner implements Runnable, NetworkMonitor.StateListener {
 
-  private static final Long SHORT_SLEEP_MILLIS = 500L;
+  private static final Long SHORT_SLEEP_MILLIS = 1000L;
   private static final Long LONG_SLEEP_MILLIS = 5000L;
 
   private final WeakReference<DataSynchronizer> dataSynchronizerRef;

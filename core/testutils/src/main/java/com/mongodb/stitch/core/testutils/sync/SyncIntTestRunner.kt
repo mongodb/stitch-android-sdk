@@ -1,6 +1,8 @@
 package com.mongodb.stitch.core.testutils.sync
 
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.core.admin.Apps
+import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import org.junit.After
@@ -34,6 +36,8 @@ interface SyncIntTestRunner {
      */
     val namespace: MongoNamespace
 
+    var mdbService: Apps.App.Services.Service
+    var mdbRule: RuleResponse
     /**
      * A series of remote methods, independent of platform,
      * that have been normalized for testing.
@@ -128,4 +132,7 @@ interface SyncIntTestRunner {
 
     @Test
     fun testStaleFetchMultiple()
+
+    @Test
+    fun testShouldUpdateUsingUpdateDescription()
 }

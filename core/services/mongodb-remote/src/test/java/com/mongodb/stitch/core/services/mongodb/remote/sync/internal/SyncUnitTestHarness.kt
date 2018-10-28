@@ -1,6 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
+import com.mongodb.client.MongoClient
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.StitchAppClientInfo
@@ -41,12 +42,13 @@ import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
+import java.io.Closeable
 import java.lang.Exception
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.Random
 
-class SyncUnitTestHarness {
+class SyncUnitTestHarness : Closeable {
     companion object {
         /**
          * Conflict handler used for testing purposes.
@@ -267,7 +269,7 @@ class SyncUnitTestHarness {
         val networkMonitor: TestNetworkMonitor = spy(TestNetworkMonitor())
         val authMonitor: TestAuthMonitor = spy(TestAuthMonitor())
 
-        private val localClient by lazy {
+        override val localClient: MongoClient by lazy {
             val clientKey = ObjectId().toHexString()
             SyncMongoClientFactory.getClient(
                 StitchAppClientInfo(
@@ -403,7 +405,7 @@ class SyncUnitTestHarness {
 
         override fun queueConsumableRemoteUpdateEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(namespace, testDocumentId, updateDocument, testDocument, false)),
+                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(namespace, testDocumentId, null, testDocument, false)),
                 mapOf())
         }
 
@@ -508,6 +510,10 @@ class SyncUnitTestHarness {
             }
         }
 
+        override fun close() {
+            dataSynchronizer.close()
+        }
+
         private fun configureNewErrorListener() {
             val emitErrorSemaphore = Semaphore(0)
             this.errorSemaphore?.release()
@@ -532,7 +538,7 @@ class SyncUnitTestHarness {
 
     private var latestCtx: DataSynchronizerTestContext? = null
 
-    internal fun teardown() {
+    override fun close() {
         latestCtx?.dataSynchronizer?.close()
     }
 

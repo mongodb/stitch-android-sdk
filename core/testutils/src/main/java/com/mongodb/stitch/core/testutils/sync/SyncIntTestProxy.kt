@@ -1,6 +1,10 @@
 package com.mongodb.stitch.core.testutils.sync
 
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.core.admin.create
+import com.mongodb.stitch.core.admin.remove
+import com.mongodb.stitch.core.admin.services.rules.RuleCreator
+import com.mongodb.stitch.core.admin.services.rules.rule
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
@@ -8,7 +12,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
+import org.bson.BsonBoolean
 import org.bson.BsonDocument
+import org.bson.BsonElement
 import org.bson.BsonObjectId
 import org.bson.BsonValue
 import org.bson.Document
@@ -837,7 +843,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             val remoteColl = syncTestRunner.remoteMethods()
 
             // insert a new document remotely
-            val docToInsert = Document("_id", "hello")
+            val docToInsert = Document()
             remoteColl.insertOne(docToInsert)
 
             // configure Sync to resolve a custom document when handling a conflict
@@ -1225,6 +1231,117 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             streamAndSync()
             Assert.assertNotNull(coll.findOneById(doc1Id))
             Assert.assertNotNull(coll.findOneById(doc2Id))
+        }
+    }
+
+    @Test
+    fun testShouldUpdateUsingUpdateDescription() {
+        testSyncInBothDirections {
+            val coll = syncTestRunner.syncMethods()
+            val remoteColl = syncTestRunner.remoteMethods()
+
+            val docToInsert = Document(
+                mapOf(
+                    "i_am" to "the walrus",
+                    "they_are" to "the egg men",
+                    "members" to listOf(
+                        "paul", "john", "george", "pete"
+                    ),
+                    "where_to_be" to mapOf(
+                        "under_the_sea" to mapOf(
+                            "octopus_garden" to "in the shade"
+                        ),
+                        "the_land_of_submarines" to mapOf(
+                            "a_yellow_submarine" to "a yellow submarine"
+                        )
+                    ),
+                    "year" to 1960
+                ))
+            val docAfterUpdate = Document.parse("""
+                {
+                    "i_am": "the egg men",
+                    "they_are": "the egg men",
+                    "members": [ "paul", "john", "george", "ringo" ],
+                    "where_to_be": {
+                        "under_the_sea": {
+                            "octopus_garden": "near a cave"
+                        },
+                        "the_land_of_submarines": {
+                            "a_yellow_submarine": "a yellow submarine"
+                        }
+                    }
+                }
+            """)
+            val updateDoc = BsonDocument.parse("""
+                {
+                    "${'$'}set": {
+                       "i_am": "the egg men",
+                       "members": [ "paul", "john", "george", "ringo" ],
+                       "where_to_be.under_the_sea.octopus_garden": "near a cave"
+                    },
+                    "${'$'}unset": {
+                        "year": true
+                    }
+                }
+            """)
+
+            remoteColl.insertOne(docToInsert)
+            val doc = remoteColl.find(docToInsert).first()!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+            val doc1Filter = Document("_id", doc1Id)
+
+            val eventSemaphore = Semaphore(0)
+            coll.configure(failingConflictHandler, ChangeEventListener { _, event ->
+                if (event.operationType == ChangeEvent.OperationType.UPDATE &&
+                    !event.hasUncommittedWrites()) {
+                    assertEquals(
+                        updateDoc["\$set"],
+                        event.updateDescription.updatedFields)
+                    assertEquals(
+                        updateDoc["\$unset"],
+                        BsonDocument(
+                            event.updateDescription.removedFields.map { BsonElement(it, BsonBoolean(true)) }))
+                    eventSemaphore.release()
+                }
+            }, null)
+            coll.syncOne(doc1Id)
+            streamAndSync()
+
+            // because the "they_are" field has already been added, set
+            // a rule that prevents writing to the "they_are" field that we've added.
+            // a full replace would therefore break our rule, preventing validation.
+            // only an actual update document (with $set and $unset)
+            // can work for the rest of this test
+            syncTestRunner.mdbService.rules.rule(syncTestRunner.mdbRule._id).remove()
+            val result = coll.updateOneById(doc1Id, updateDoc)
+            assertEquals(1, result.matchedCount)
+            assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(coll.findOneById(doc1Id)!!)))
+
+            // set they_are to unwriteable. the update should only update i_am
+            // setting i_am to false and they_are to true would fail this test
+            syncTestRunner.mdbService.rules.create(
+                RuleCreator.MongoDb(
+                    database = syncTestRunner.namespace.databaseName,
+                    collection = syncTestRunner.namespace.collectionName,
+                    roles = listOf(
+                        RuleCreator.MongoDb.Role(
+                            fields = Document(
+                                "i_am", Document("write", true)
+                            ).append(
+                                "they_are", Document("write", false)
+                            ).append(
+                                "where_to_be.the_land_of_submarines", Document("write", false)
+                            )
+                        )
+                    ),
+                    schema = RuleCreator.MongoDb.Schema()
+                )
+            )
+
+            streamAndSync()
+            assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(coll.findOneById(doc1Id)!!)))
+            assertEquals(docAfterUpdate, withoutId(withoutSyncVersion(remoteColl.find(doc1Filter).first()!!)))
+            assertTrue(eventSemaphore.tryAcquire(10, TimeUnit.SECONDS))
         }
     }
 

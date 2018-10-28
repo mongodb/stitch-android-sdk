@@ -71,7 +71,7 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoItemViewHo
     final TodoItem item = todoItems.get(position);
 
     holder.taskTextView.setText(item.getTask());
-    holder.taskCheckbox.setChecked(item.getChecked());
+    holder.taskCheckbox.setChecked(item.isChecked());
   }
 
   @Override

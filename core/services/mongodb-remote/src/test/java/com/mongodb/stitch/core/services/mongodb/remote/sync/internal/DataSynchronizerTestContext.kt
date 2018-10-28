@@ -1,6 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
+import com.mongodb.client.MongoClient
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.internal.net.Event
@@ -9,6 +10,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
 import org.bson.BsonDocument
 import org.bson.BsonValue
+import java.io.Closeable
 import java.lang.Exception
 
 /**
@@ -19,7 +21,7 @@ import java.lang.Exception
  * Multiple instances of the testing context could result in
  * race conditions if not opened and closed properly.
  */
-interface DataSynchronizerTestContext {
+interface DataSynchronizerTestContext : Closeable {
     val namespace: MongoNamespace
     val testDocument: BsonDocument
     val testDocumentId: BsonValue
@@ -28,6 +30,8 @@ interface DataSynchronizerTestContext {
     val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument>
     var shouldConflictBeResolvedByRemote: Boolean
     var exceptionToThrowDuringConflict: Exception?
+
+    val localClient: MongoClient
 
     /**
      * Whether or not we are online. Acts as a switch.
