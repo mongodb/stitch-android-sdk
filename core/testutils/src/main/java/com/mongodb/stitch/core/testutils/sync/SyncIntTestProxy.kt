@@ -1291,7 +1291,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             val doc1Filter = Document("_id", doc1Id)
 
             val eventSemaphore = Semaphore(0)
-            coll.configure(failingConflictHandler, ChangeEventListener { documentId, event ->
+            coll.configure(failingConflictHandler, ChangeEventListener { _, event ->
                 assertEquals(
                     updateDoc["\$set"],
                     event.updateDescription.updatedFields)

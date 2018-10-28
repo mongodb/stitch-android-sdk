@@ -172,7 +172,7 @@ public final class ChangeEvent<DocumentT> {
       }
 
       if (unsets.size() > 0) {
-          updateDocument.append("$unset", new BsonDocument(unsets));
+        updateDocument.append("$unset", new BsonDocument(unsets));
       }
 
       return updateDocument;
