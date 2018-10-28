@@ -54,7 +54,7 @@ class CoreDocumentSynchronizationConfig {
   private long lastResolution;
   private BsonDocument lastKnownRemoteVersion;
   private boolean isStale;
-  private boolean isFrozen;
+  private boolean isPaused;
 
   CoreDocumentSynchronizationConfig(
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
@@ -83,7 +83,7 @@ class CoreDocumentSynchronizationConfig {
     this.lastKnownRemoteVersion = config.lastKnownRemoteVersion;
     this.lastUncommittedChangeEvent = config.lastUncommittedChangeEvent;
     this.isStale = config.isStale;
-    this.isFrozen = config.isFrozen;
+    this.isPaused = config.isPaused;
   }
 
   private CoreDocumentSynchronizationConfig(
@@ -93,7 +93,7 @@ class CoreDocumentSynchronizationConfig {
       final long lastResolution,
       final BsonDocument lastVersion,
       final boolean isStale,
-      final boolean isFrozen
+      final boolean isPaused
   ) {
     this.namespace = namespace;
     this.documentId = documentId;
@@ -103,7 +103,7 @@ class CoreDocumentSynchronizationConfig {
     this.docLock = new ReentrantReadWriteLock();
     this.docsColl = null;
     this.isStale = isStale;
-    this.isFrozen = isFrozen;
+    this.isPaused = isPaused;
   }
 
   static BsonDocument getDocFilter(
@@ -146,22 +146,22 @@ class CoreDocumentSynchronizationConfig {
   }
 
   /**
-   * A document that is frozen no longer has remote updates applied to it.
-   * Any local updates to this document cause it to be thawed. An example of freezing a document
+   * A document that is paused no longer has remote updates applied to it.
+   * Any local updates to this document cause it to be thawed. An example of pausing a document
    * is when a conflict is being resolved for that document and the handler throws an exception.
    *
-   * @param isFrozen whether or not this config is frozen
+   * @param isPaused whether or not this config is frozen
    */
-  void setFrozen(final boolean isFrozen) {
+  void setPaused(final boolean isPaused) {
     docLock.writeLock().lock();
     try {
       docsColl.updateOne(
           getDocFilter(namespace, documentId),
           new BsonDocument("$set",
               new BsonDocument(
-                  ConfigCodec.Fields.IS_FROZEN,
-                  new BsonBoolean(isFrozen))));
-      this.isFrozen = isFrozen;
+                  ConfigCodec.Fields.IS_PAUSED,
+                  new BsonBoolean(isPaused))));
+      this.isPaused = isPaused;
     } catch (IllegalStateException e) {
       // eat this
     } finally {
@@ -169,8 +169,8 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
-  boolean isFrozen() {
-    return isFrozen;
+  boolean isPaused() {
+    return isPaused;
   }
 
   /**
@@ -185,9 +185,9 @@ class CoreDocumentSynchronizationConfig {
       final ChangeEvent<BsonDocument> changeEvent
   ) {
     // if we were frozen
-    if (isFrozen) {
+    if (isPaused) {
       // unfreeze the document due to the local write
-      setFrozen(false);
+      setPaused(false);
       // and now the unfrozen document is now stale
       // TODO: STITCH-1958 make sure the stream has started before this is set
       setStale(true);
@@ -431,7 +431,7 @@ class CoreDocumentSynchronizationConfig {
         asDoc.put(ConfigCodec.Fields.LAST_UNCOMMITTED_CHANGE_EVENT, encoded);
       }
       asDoc.put(ConfigCodec.Fields.IS_STALE, new BsonBoolean(isStale));
-      asDoc.put(ConfigCodec.Fields.IS_FROZEN, new BsonBoolean(isFrozen));
+      asDoc.put(ConfigCodec.Fields.IS_PAUSED, new BsonBoolean(isPaused));
       return asDoc;
     } finally {
       docLock.readLock().unlock();
@@ -444,7 +444,7 @@ class CoreDocumentSynchronizationConfig {
     keyPresent(ConfigCodec.Fields.SCHEMA_VERSION_FIELD, document);
     keyPresent(ConfigCodec.Fields.LAST_RESOLUTION_FIELD, document);
     keyPresent(ConfigCodec.Fields.IS_STALE, document);
-    keyPresent(ConfigCodec.Fields.IS_FROZEN, document);
+    keyPresent(ConfigCodec.Fields.IS_PAUSED, document);
 
     final int schemaVersion =
         document.getNumber(ConfigCodec.Fields.SCHEMA_VERSION_FIELD).intValue();
@@ -484,7 +484,7 @@ class CoreDocumentSynchronizationConfig {
         document.getNumber(ConfigCodec.Fields.LAST_RESOLUTION_FIELD).longValue(),
         lastVersion,
         document.getBoolean(ConfigCodec.Fields.IS_STALE).getValue(),
-        document.getBoolean(ConfigCodec.Fields.IS_FROZEN, new BsonBoolean(false)).getValue());
+        document.getBoolean(ConfigCodec.Fields.IS_PAUSED, new BsonBoolean(false)).getValue());
   }
 
   static final ConfigCodec configCodec = new ConfigCodec();
@@ -522,7 +522,7 @@ class CoreDocumentSynchronizationConfig {
       static final String LAST_KNOWN_REMOTE_VERSION_FIELD = "last_known_remote_version";
       static final String LAST_UNCOMMITTED_CHANGE_EVENT = "last_uncommitted_change_event";
       static final String IS_STALE = "is_stale";
-      static final String IS_FROZEN = "is_frozen";
+      static final String IS_PAUSED = "is_paused";
     }
   }
 }

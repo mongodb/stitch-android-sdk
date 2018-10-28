@@ -135,4 +135,7 @@ interface SyncIntTestRunner {
 
     @Test
     fun testShouldUpdateUsingUpdateDescription()
+
+    @Test
+    fun testResumeSyncForDocumentResumesSync()
 }

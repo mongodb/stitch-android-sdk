@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.server.services.mongodb.remote;
 
-import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
@@ -85,13 +84,15 @@ public interface Sync<DocumentT> {
   Set<BsonValue> getSyncedIds();
 
   /**
-   * Unfreeze a document.
+   * A document that is paused no longer has remote updates applied to it.
+   * Any local updates to this document cause it to be resumed. An example of pausing a document
+   * is when a conflict is being resolved for that document and the handler throws an exception.
    *
-   * @param documentId the id of the document to unfreeze
-   * @return true if successfully unfrozen, false if the document
-   *         could not be found or there was an error unfreezing
+   * @param documentId the id of the document to resume syncing
+   * @return true if successfully resumed, false if the document
+   *         could not be found or there was an error resuming
    */
-  boolean unfreezeDocument(final BsonValue documentId);
+  boolean resumeSyncForDocument(@Nonnull final BsonValue documentId);
 
   /**
    * Finds all documents in the collection.

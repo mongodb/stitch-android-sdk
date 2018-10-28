@@ -97,16 +97,9 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     return this.dataSynchronizer.getSynchronizedDocumentIds(namespace);
   }
 
-  /**
-   * Unfreeze a document.
-   *
-   * @param documentId the id of the document to unfreeze
-   * @return true if successfully unfrozen, false if the document
-   *         could not be found or there was an error unfreezing
-   */
   @Override
-  public boolean unfreezeDocument(final BsonValue documentId) {
-    return this.dataSynchronizer.unfreezeDocument(namespace, documentId);
+  public boolean resumeSyncForDocument(final BsonValue documentId) {
+    return this.dataSynchronizer.resumeSyncForDocument(namespace, documentId);
   }
 
   /**

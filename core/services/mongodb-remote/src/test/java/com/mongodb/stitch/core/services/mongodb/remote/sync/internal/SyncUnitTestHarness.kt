@@ -405,7 +405,8 @@ class SyncUnitTestHarness : Closeable {
 
         override fun queueConsumableRemoteUpdateEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(namespace, testDocumentId, null, testDocument, false)),
+                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(
+                    namespace, testDocumentId, null, testDocument, false)),
                 mapOf())
         }
 

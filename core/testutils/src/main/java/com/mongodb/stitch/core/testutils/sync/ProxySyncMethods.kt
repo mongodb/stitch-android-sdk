@@ -92,4 +92,13 @@ interface ProxySyncMethods {
      * @return the result of the local or remote update.
      */
     fun deleteOneById(documentId: BsonValue): RemoteDeleteResult
+
+    /**
+     * A document that is paused no longer has remote updates applied to it.
+     * Any local updates to this document cause it to be thawed. An example of pausing a document
+     * is when a conflict is being resolved for that document and the handler throws an exception.
+     *
+     * @param documentId the id of the document to resume syncing
+     */
+    fun resumeSyncForDocument(documentId: BsonValue): Boolean
 }

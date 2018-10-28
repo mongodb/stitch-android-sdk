@@ -98,6 +98,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         override fun find(filter: Bson): Iterable<Document?> {
             return Tasks.await(sync.find(filter).into(mutableListOf<Document>()))
         }
+
+        override fun resumeSyncForDocument(documentId: BsonValue): Boolean {
+            return sync.resumeSyncForDocument(documentId)
+        }
     }
 
     private var dbName = ObjectId().toHexString()
@@ -271,7 +275,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     @Test
     override fun testFrozenDocumentConfig() {
-        testProxy.testFrozenDocumentConfig()
+        testProxy.testPausedDocumentConfig()
     }
 
     @Test
@@ -306,6 +310,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     override fun testShouldUpdateUsingUpdateDescription() {
         testProxy.testShouldUpdateUsingUpdateDescription()
+    }
+
+    @Test
+    override fun testResumeSyncForDocumentResumesSync() {
+        testProxy.testResumeSyncForDocumentResumesSync()
     }
 
     /**

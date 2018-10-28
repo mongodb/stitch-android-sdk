@@ -80,8 +80,8 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public boolean unfreezeDocument(final BsonValue documentId) {
-    return this.proxy.unfreezeDocument(documentId);
+  public boolean resumeSyncForDocument(@NonNull final BsonValue documentId) {
+    return this.proxy.resumeSyncForDocument(documentId);
   }
 
   @Override
