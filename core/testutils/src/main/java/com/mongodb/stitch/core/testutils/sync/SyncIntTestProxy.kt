@@ -1292,14 +1292,16 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
             val eventSemaphore = Semaphore(0)
             coll.configure(failingConflictHandler, ChangeEventListener { _, event ->
-                assertEquals(
-                    updateDoc["\$set"],
-                    event.updateDescription.updatedFields)
-                assertEquals(
-                    updateDoc["\$unset"],
-                    BsonDocument(
-                        event.updateDescription.removedFields.map { BsonElement(it, BsonBoolean(true)) }))
-                eventSemaphore.release()
+                if (!event.hasUncommittedWrites()) {
+                    assertEquals(
+                        updateDoc["\$set"],
+                        event.updateDescription.updatedFields)
+                    assertEquals(
+                        updateDoc["\$unset"],
+                        BsonDocument(
+                            event.updateDescription.removedFields.map { BsonElement(it, BsonBoolean(true)) }))
+                    eventSemaphore.release()
+                }
             }, null)
             coll.syncOne(doc1Id)
             streamAndSync()
