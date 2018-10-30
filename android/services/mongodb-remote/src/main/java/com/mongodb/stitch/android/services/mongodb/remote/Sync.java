@@ -194,7 +194,7 @@ public interface Sync<DocumentT> {
 
   /**
    * Inserts the provided document. If the document is missing an identifier, the client should
-   * generate one.
+   * generate one. Begin synchronizating on the document's id.
    *
    * @param document the document to insert
    * @return the result of the insert one operation
@@ -202,7 +202,7 @@ public interface Sync<DocumentT> {
   Task<SyncInsertOneResult> insertOneAndSync(final DocumentT document);
 
   /**
-   * Inserts one or more documents.
+   * Inserts one or more documents. Begin synchronizing on the documents' ids.
    *
    * @param documents the documents to insert
    * @return the result of the insert many operation
@@ -210,9 +210,9 @@ public interface Sync<DocumentT> {
   Task<SyncInsertManyResult> insertManyAndSync(final List<DocumentT> documents);
 
   /**
-   * Removes at most one document from the collection that matches the given filter.  If no
-   * documents match, the collection is not
-   * modified.
+   * Removes at most one document that has been synchronized from the remote
+   * from the collection that matches the given filter.  If no
+   * documents match, the collection is not modified.
    *
    * @param filter the query filter to apply the the delete operation
    * @return the result of the remove one operation
@@ -220,8 +220,8 @@ public interface Sync<DocumentT> {
   Task<SyncDeleteResult> deleteOne(final Bson filter);
 
   /**
-   * Removes all documents from the collection that match the given query filter.  If no documents
-   * match, the collection is not modified.
+   * Removes all documents from the collection that have been synchronized from the remote
+   * that match the given query filter.  If no documents match, the collection is not modified.
    *
    * @param filter the query filter to apply the the delete operation
    * @return the result of the remove many operation
@@ -229,7 +229,8 @@ public interface Sync<DocumentT> {
   Task<SyncDeleteResult> deleteMany(final Bson filter);
 
   /**
-   * Update a single document in the collection according to the specified arguments.
+   * Update a single document that has been synchronized from the remote
+   * in the collection according to the specified arguments.
    *
    * @param filter a document describing the query filter, which may not be null.
    * @param update a document describing the update, which may not be null. The update to
@@ -239,7 +240,8 @@ public interface Sync<DocumentT> {
   Task<SyncUpdateResult> updateOne(final Bson filter, final Bson update);
 
   /**
-   * Update a single document in the collection according to the specified arguments.
+   * Update a single document that has been synchronized from the remote
+   * in the collection according to the specified arguments.
    *
    * @param filter        a document describing the query filter, which may not be null.
    * @param update        a document describing the update, which may not be null. The update to
@@ -253,7 +255,8 @@ public interface Sync<DocumentT> {
       final SyncUpdateOptions updateOptions);
 
   /**
-   * Update all documents in the collection according to the specified arguments.
+   * Update all documents that have been synchronized from the remote
+   * in the collection according to the specified arguments.
    *
    * @param filter a document describing the query filter, which may not be null.
    * @param update a document describing the update, which may not be null. The update to
@@ -263,7 +266,8 @@ public interface Sync<DocumentT> {
   Task<SyncUpdateResult> updateMany(final Bson filter, final Bson update);
 
   /**
-   * Update all documents in the collection according to the specified arguments.
+   * Update all documents that have been synchronized from the remote
+   * in the collection according to the specified arguments.
    *
    * @param filter        a document describing the query filter, which may not be null.
    * @param update        a document describing the update, which may not be null. The update to

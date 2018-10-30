@@ -1,6 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
-import com.mongodb.operation.UpdateOperation
+import com.mongodb.client.model.CountOptions
+import com.mongodb.client.model.UpdateOptions
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
@@ -16,6 +17,7 @@ import org.junit.After
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -781,6 +783,65 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
+    fun testCount() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        val doc1 = BsonDocument("hello", BsonString("world"))
+        val doc2 = BsonDocument("goodbye", BsonString("computer"))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+
+        assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        assertEquals(1, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument(), CountOptions().limit(1)))
+
+        assertEquals(1, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument("_id", doc1["_id"])))
+
+        ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+    }
+
+    @Test
+    fun testAggregate() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        val doc1 = BsonDocument("hello", BsonString("world")).append("a", BsonString("b"))
+        val doc2 = BsonDocument("hello", BsonString("computer")).append("a", BsonString("b"))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+
+        val iterable = ctx.dataSynchronizer.aggregate(ctx.namespace,
+                listOf(
+                    BsonDocument(
+                        "\$project",
+                        BsonDocument("_id", BsonInt32(0))
+                            .append("a", BsonInt32(0))
+                    ),
+                    BsonDocument(
+                        "\$match",
+                        BsonDocument("hello", BsonString("computer"))
+                    )))
+
+        assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+        assertEquals(1, iterable.count())
+
+        val actualDoc = iterable.first()!!
+
+        assertNull(actualDoc["a"])
+        assertNull(actualDoc["_id"])
+        assertEquals(BsonString("computer"), actualDoc["hello"])
+    }
+
+    @Test
     fun testInsertOneAndSync() {
         val ctx = harness.freshTestContext()
 
@@ -881,6 +942,50 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
+    fun testUpsertOne() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        val doc1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+
+        val result = ctx.dataSynchronizer.updateOne(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
+            UpdateOptions().upsert(true))
+
+        assertEquals(1, result.matchedCount)
+        assertEquals(1, result.modifiedCount)
+        assertNotNull(result.upsertedId)
+
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1.append("_id", result.upsertedId), true)
+
+        ctx.waitForEvents(amount = 1)
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            1,
+            expectedEvent1)
+
+        assertEquals(
+            doc1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+
+        ctx.dataSynchronizer.updateMany(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))))
+
+        ctx.waitForEvents(amount = 2)
+
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc1["_id"])
+
+        assertEquals(
+            expectedDocAfterUpdate1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+    }
+
+    @Test
     fun testUpdateMany() {
         val ctx = harness.freshTestContext()
 
@@ -892,9 +997,9 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2, doc3))
 
-        var expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
-        var expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
-        var expectedEvent3 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc3, true)
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
+        val expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
+        val expectedEvent3 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc3, true)
 
         ctx.waitForEvents(amount = 3)
 
@@ -904,36 +1009,101 @@ class DataSynchronizerUnitTests {
             expectedEvent2,
             expectedEvent3)
 
-        ctx.dataSynchronizer.updateMany(
+        val result = ctx.dataSynchronizer.updateMany(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
             BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))))
 
+        assertEquals(2, result.modifiedCount)
+        assertEquals(2, result.matchedCount)
+        assertNull(result.upsertedId)
+
         ctx.waitForEvents(amount = 2)
 
-        expectedEvent1 = ChangeEvent.changeEventForLocalUpdate(
-            ctx.namespace,
-            doc1["_id"],
-            ChangeEvent.UpdateDescription(
-                BsonDocument("count", BsonInt32(2)),
-                listOf()
-            ),
-            BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)),
-            true)
-        expectedEvent2 = ChangeEvent.changeEventForLocalUpdate(
-            ctx.namespace,
-            doc2["_id"],
-            ChangeEvent.UpdateDescription(
-                BsonDocument("count", BsonInt32(2)),
-                listOf()
-            ),
-            BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)),
-            true)
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc1["_id"])
+        val expectedDocAfterUpdate2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc2["_id"])
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             5,
             expectedEvent1,
-            expectedEvent2)
+            expectedEvent2,
+            expectedEvent3,
+            ChangeEvent.changeEventForLocalUpdate(
+                ctx.namespace,
+                doc1["_id"],
+                ChangeEvent.UpdateDescription(
+                    BsonDocument("count", BsonInt32(2)),
+                    listOf()
+                ),
+                expectedDocAfterUpdate1,
+                true),
+            ChangeEvent.changeEventForLocalUpdate(
+                ctx.namespace,
+                doc2["_id"],
+                ChangeEvent.UpdateDescription(
+                    BsonDocument("count", BsonInt32(2)),
+                    listOf()
+                ),
+                expectedDocAfterUpdate2,
+                true))
+
+        assertEquals(
+            expectedDocAfterUpdate1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+        assertEquals(
+            expectedDocAfterUpdate2,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc2["_id"])).first())
+        assertEquals(
+            doc3,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc3["_id"])).first())
+    }
+
+    @Test
+    fun testUpsertMany() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        val doc1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+
+        var result = ctx.dataSynchronizer.updateMany(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
+            UpdateOptions().upsert(true))
+
+        assertEquals(0, result.matchedCount)
+        assertEquals(0, result.modifiedCount)
+        assertNotNull(result.upsertedId)
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1.append("_id", result.upsertedId), true)
+
+        ctx.waitForEvents(amount = 1)
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            1,
+            expectedEvent1)
+
+        assertEquals(
+            doc1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+
+        result = ctx.dataSynchronizer.updateMany(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
+            UpdateOptions().upsert(true))
+
+        assertEquals(1, result.matchedCount)
+        assertEquals(1, result.modifiedCount)
+        assertNull(result.upsertedId)
+
+        ctx.waitForEvents(amount = 2)
+
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc1["_id"])
+
+        assertEquals(
+            expectedDocAfterUpdate1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
     }
 
     @Test
@@ -986,6 +1156,30 @@ class DataSynchronizerUnitTests {
             ))
         // assert that the updated document equals what we've expected
         assertNull(ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testDeleteMany() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        var result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+        assertEquals(0, result.deletedCount)
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        val doc1 = BsonDocument("hello", BsonString("world"))
+        val doc2 = BsonDocument("goodbye", BsonString("computer"))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+
+        assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        assertEquals(2, result.deletedCount)
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+        assertNull(ctx.dataSynchronizer.find(ctx.namespace, BsonDocument()).firstOrNull())
     }
 
     @Test

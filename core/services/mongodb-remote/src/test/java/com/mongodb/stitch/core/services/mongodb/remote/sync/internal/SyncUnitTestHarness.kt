@@ -47,6 +47,7 @@ import java.lang.Exception
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.Random
+import java.util.concurrent.locks.ReentrantLock
 
 class SyncUnitTestHarness : Closeable {
     companion object {
@@ -130,28 +131,7 @@ class SyncUnitTestHarness : Closeable {
             }
         }
 
-        val eventAccumulator = mutableListOf<ChangeEvent<BsonDocument>>()
-        var totalEventsToAccumulate = 1
-
-        private open class TestChangeEventListener(
-            private val expectedEvent: ChangeEvent<BsonDocument>?,
-            private val emitEventSemaphore: Semaphore?
-        ) : ChangeEventListener<BsonDocument> {
-            override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>) {
-                eventAccumulator.add(actualEvent)
-                try {
-                    if (expectedEvent != null) {
-                        compareEvents(expectedEvent, actualEvent)
-                        Assert.assertEquals(expectedEvent.id, documentId)
-                    }
-                } finally {
-                    if (eventAccumulator.size == totalEventsToAccumulate) {
-                        eventAccumulator.clear()
-                        emitEventSemaphore?.release()
-                    }
-                }
-            }
-        }
+        val waitLock = ReentrantLock()
 
         fun newDoc(key: String = "hello", value: BsonValue = BsonString("world")): BsonDocument {
             return BsonDocument("_id", BsonObjectId()).append(key, value)
@@ -227,13 +207,37 @@ class SyncUnitTestHarness : Closeable {
         private fun newChangeEventListener(
             emitEventSemaphore: Semaphore? = null,
             expectedEvent: ChangeEvent<BsonDocument>? = null
-        ): ChangeEventListener<BsonDocument> {
-            return Mockito.spy(TestChangeEventListener(expectedEvent, emitEventSemaphore))
+        ): DataSynchronizerTestContextImpl.TestChangeEventListener {
+            return Mockito.spy(DataSynchronizerTestContextImpl.TestChangeEventListener(expectedEvent, emitEventSemaphore))
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     private class DataSynchronizerTestContextImpl(shouldPreconfigure: Boolean = true) : DataSynchronizerTestContext {
+        open class TestChangeEventListener(
+            private val expectedEvent: ChangeEvent<BsonDocument>?,
+            var emitEventSemaphore: Semaphore?
+        ) : ChangeEventListener<BsonDocument> {
+            val eventAccumulator = mutableListOf<ChangeEvent<BsonDocument>>()
+            var totalEventsToAccumulate = 0
+
+            override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>?) {
+                waitLock.lock()
+                try {
+                    eventAccumulator.add(actualEvent!!)
+                    if (expectedEvent != null) {
+                        compareEvents(expectedEvent, actualEvent)
+                        Assert.assertEquals(expectedEvent.id, documentId)
+                    }
+                } finally {
+                    if (eventAccumulator.size >= totalEventsToAccumulate) {
+                        emitEventSemaphore?.release()
+                    }
+                    waitLock.unlock()
+                }
+            }
+        }
+
         override val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument> =
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
@@ -363,8 +367,15 @@ class SyncUnitTestHarness : Closeable {
         }
 
         override fun waitForEvents(amount: Int) {
-            totalEventsToAccumulate = amount
-            assertTrue(eventSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
+            waitLock.lock()
+            changeEventListener.totalEventsToAccumulate = amount
+            if (changeEventListener.totalEventsToAccumulate > changeEventListener.eventAccumulator.size) {
+                // means sem has been called and we need to wait for more events
+                eventSemaphore = Semaphore(0)
+                changeEventListener.emitEventSemaphore = eventSemaphore
+            }
+            waitLock.unlock()
+            assertTrue(changeEventListener.emitEventSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
         }
 
         override fun waitForError() {
