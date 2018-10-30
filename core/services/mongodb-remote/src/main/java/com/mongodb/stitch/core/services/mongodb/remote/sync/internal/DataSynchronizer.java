@@ -543,14 +543,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } catch (final Exception e) {
       desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
-            String.format(
-                Locale.US,
-                "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
-                    + "document that could not have its version info parsed "
-                    + "; dropping the event, and desyncing the document",
-                logicalT,
-                nsConfig.getNamespace(),
-                docConfig.getDocumentId()));
+          String.format(
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
+                  + "document that could not have its version info parsed "
+                  + "; dropping the event, and desyncing the document",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId()));
       return;
     }
 
@@ -560,15 +560,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
 
       emitError(docConfig,
-          String.format(
-              Locale.US,
-              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
-                  + "document with an unsupported synchronization protocol version "
-                  + "%d; dropping the event, and desyncing the document",
-              logicalT,
-              nsConfig.getNamespace(),
-              docConfig.getDocumentId(),
-              currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
+            String.format(
+                  Locale.US,
+                  "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
+                      + "document with an unsupported synchronization protocol version "
+                      + "%d; dropping the event, and desyncing the document",
+                  logicalT,
+                  nsConfig.getNamespace(),
+                  docConfig.getDocumentId(),
+                  currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
 
       return;
     }
@@ -644,7 +644,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // iv. Otherwise, check if the version info of the incoming remote change event is different
     //     from the version of the local document.
     final DocumentVersionInfo lastKnownLocalVersionInfo = DocumentVersionInfo
-        .getLocalVersionInfo(docConfig);
+          .getLocalVersionInfo(docConfig);
 
     // 1. If both the local document version and the remote change event version are empty, drop
     //    the event. The absence of a version is effectively a version, and the pending write will
@@ -686,28 +686,28 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // i. drop the event if the version counter of the remote event less than or equal to the
         // version counter of the local document
         logger.info(String.format(
-            Locale.US,
-            "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote change event "
-                + "is stale; dropping the event",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId()));
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote change event "
+                    + "is stale; dropping the event",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId()));
         return;
       } else {
         // ii. raise a conflict if the version counter of the remote event is greater than the
         //     version counter of the local document
         logger.info(String.format(
-            Locale.US,
-            "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote event version "
-                + "has higher counter than local version but a write is pending; "
-                + "raising conflict",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId()));
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote event version "
+                    + "has higher counter than local version but a write is pending; "
+                    + "raising conflict",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId()));
         resolveConflict(
-            nsConfig.getNamespace(),
-            docConfig,
-            remoteChangeEvent);
+              nsConfig.getNamespace(),
+              docConfig,
+              remoteChangeEvent);
         return;
       }
     }
