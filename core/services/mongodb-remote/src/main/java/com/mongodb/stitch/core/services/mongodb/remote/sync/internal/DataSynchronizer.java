@@ -734,9 +734,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               nsConfig.getNamespace(),
               docConfig,
               changeEventForLocalDelete(
-                  nsConfig.getNamespace(),
-                  docConfig.getDocumentId(),
-                  docConfig.hasUncommittedWrites()));
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId(),
+                      docConfig.hasUncommittedWrites()));
       return;
     }
 
@@ -763,16 +763,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //     to the GUID of the local document, drop the event. We’re believed to be behind in
     //     the change stream at this point.
     if (newestRemoteVersionInfo.hasVersion()
-        && newestRemoteVersionInfo.getVersion().getInstanceId()
-        .equals(localVersion.instanceId)) {
+            && newestRemoteVersionInfo.getVersion().getInstanceId()
+                    .equals(localVersion.instanceId)) {
 
       logger.info(String.format(
-          Locale.US,
-          "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
-              + "indicates that this is a stale event; dropping the event",
-          logicalT,
-          nsConfig.getNamespace(),
-          docConfig.getDocumentId()));
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
+                      + "indicates that this is a stale event; dropping the event",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId()));
       return;
 
     }
@@ -782,21 +782,21 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //      event. This means the remote document is a legitimately new document and we should
     //      handle the conflict.
     logger.info(String.format(
-          Locale.US,
-          "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
-                + "indicates a remote replace occurred, but a local write is pending; raising "
-                + "conflict with synthesized replace event",
-          logicalT,
-          nsConfig.getNamespace(),
-          docConfig.getDocumentId()));
+            Locale.US,
+            "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
+                      + "indicates a remote replace occurred, but a local write is pending; raising "
+                      + "conflict with synthesized replace event",
+            logicalT,
+            nsConfig.getNamespace(),
+            docConfig.getDocumentId()));
     resolveConflict(
-          nsConfig.getNamespace(),
-          docConfig,
-          changeEventForLocalReplace(
-              nsConfig.getNamespace(),
-              docConfig.getDocumentId(),
-              newestRemoteDocument,
-              docConfig.hasUncommittedWrites()));
+            nsConfig.getNamespace(),
+            docConfig,
+            changeEventForLocalReplace(
+                    nsConfig.getNamespace(),
+                    docConfig.getDocumentId(),
+                    newestRemoteDocument,
+                    docConfig.hasUncommittedWrites()));
   }
 
   /**
@@ -860,9 +860,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // ii. Check if the internal remote change stream listener has an unprocessed event for
         //     this document.
         final ChangeEvent<BsonDocument> unprocessedRemoteEvent =
-              instanceChangeStreamListener.getUnprocessedEventForDocumentId(
-                    nsConfig.getNamespace(),
-                    docConfig.getDocumentId());
+                instanceChangeStreamListener.getUnprocessedEventForDocumentId(
+                        nsConfig.getNamespace(),
+                        docConfig.getDocumentId());
 
         if (unprocessedRemoteEvent != null) {
           final DocumentVersionInfo unprocessedEventVersion;
@@ -920,7 +920,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
                 // i. That is not a duplicate key exception, report an error to the error listener.
                 if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
-                    || !ex.getMessage().contains("E11000")) {
+                        || !ex.getMessage().contains("E11000")) {
                   this.emitError(docConfig, String.format(
                           Locale.US,
                           "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
@@ -976,7 +976,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         String.format(
                                 Locale.US,
                                 "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
-                                       + "replacing: %s",
+                                        + "replacing: %s",
                                 logicalT,
                                 nsConfig.getNamespace(),
                                 docConfig.getDocumentId(),
@@ -1030,7 +1030,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               if (!localChangeEvent.getUpdateDescription().getRemovedFields().isEmpty()) {
                 final BsonDocument unsets = new BsonDocument();
                 for (final String field :
-                    localChangeEvent.getUpdateDescription().getRemovedFields()) {
+                        localChangeEvent.getUpdateDescription().getRemovedFields()) {
                   unsets.put(field, BsonBoolean.TRUE);
                 }
                 translatedUpdate.put("$unset", unsets);
@@ -1223,7 +1223,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     this.logger.error(msg);
     this.logger.error(
-        String.format("Setting document %s to frozen", docConfig.getDocumentId()));
+            String.format("Setting document %s to frozen", docConfig.getDocumentId()));
   }
 
 
@@ -1246,7 +1246,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       logger.warn(String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s no conflict resolver set; cannot "
-              + "resolve yet",
+                  + "resolve yet",
           logicalT,
           namespace,
           docConfig.getDocumentId()));
@@ -1362,7 +1362,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       logger.info(String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s replacing local with resolved document "
-              + "with remote version acknowledged: %s",
+                  + "with remote version acknowledged: %s",
           logicalT,
           namespace,
           docConfig.getDocumentId(),
@@ -1455,12 +1455,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * Queues up a callback to be removed and invoked on the next change event.
    */
   public void addWatcher(final MongoNamespace namespace,
-                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                                     final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     instanceChangeStreamListener.addWatcher(namespace, watcher);
   }
 
   public void removeWatcher(final MongoNamespace namespace,
-                            final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                          final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     instanceChangeStreamListener.removeWatcher(namespace, watcher);
   }
 
