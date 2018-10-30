@@ -561,14 +561,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       emitError(docConfig,
               String.format(
-                    Locale.US,
-                    "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
-                          + "document with an unsupported synchronization protocol version "
-                          + "%d; dropping the event, and desyncing the document",
-                    logicalT,
-                    nsConfig.getNamespace(),
-                    docConfig.getDocumentId(),
-                    currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
+                      Locale.US,
+                      "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
+                              + "document with an unsupported synchronization protocol version "
+                              + "%d; dropping the event, and desyncing the document",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId(),
+                      currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
 
       return;
     }
@@ -666,12 +666,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //    adhering to the mobile sync protocol.
     if (!lastKnownLocalVersionInfo.hasVersion() || !currentRemoteVersionInfo.hasVersion()) {
       logger.info(String.format(
-            Locale.US,
-            "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
-                  + "empty version but a write is pending; waiting for next L2R pass",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId()));
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
+                      + "empty version but a write is pending; waiting for next L2R pass",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId()));
       resolveConflict(nsConfig.getNamespace(), docConfig, remoteChangeEvent);
       return;
     }
@@ -716,27 +716,27 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //     fetch the latest version (this is to guard against the case where the unprocessed
     //     change event is stale).
     final BsonDocument newestRemoteDocument = this.getRemoteCollection(nsConfig.getNamespace())
-        .find(new Document("_id", docConfig.getDocumentId())).first();
+            .find(new Document("_id", docConfig.getDocumentId())).first();
 
     if (newestRemoteDocument == null) {
       // i. If the document is not found with a remote lookup, this means the document was
       //    deleted remotely, so raise a conflict using a synthesized delete event as the remote
       //    change event.
       logger.info(String.format(
-          Locale.US,
-          "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote event version "
-              + "stale and latest document lookup indicates a remote delete occurred, but "
-              + "a write is pending; raising conflict",
-          logicalT,
-          nsConfig.getNamespace(),
-          docConfig.getDocumentId()));
-      resolveConflict(
-          nsConfig.getNamespace(),
-          docConfig,
-          changeEventForLocalDelete(
+              Locale.US,
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote event version "
+                      + "stale and latest document lookup indicates a remote delete occurred, but "
+                      + "a write is pending; raising conflict",
+              logicalT,
               nsConfig.getNamespace(),
-              docConfig.getDocumentId(),
-              docConfig.hasUncommittedWrites()));
+              docConfig.getDocumentId()));
+      resolveConflict(
+              nsConfig.getNamespace(),
+              docConfig,
+              changeEventForLocalDelete(
+                  nsConfig.getNamespace(),
+                  docConfig.getDocumentId(),
+                  docConfig.hasUncommittedWrites()));
       return;
     }
 
