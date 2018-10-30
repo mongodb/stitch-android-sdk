@@ -544,13 +544,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
             String.format(
-                  Locale.US,
-                  "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
-                        + "document that could not have its version info parsed "
-                        + "; dropping the event, and desyncing the document",
-                  logicalT,
-                  nsConfig.getNamespace(),
-                  docConfig.getDocumentId()));
+                Locale.US,
+                "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
+                    + "document that could not have its version info parsed "
+                    + "; dropping the event, and desyncing the document",
+                logicalT,
+                nsConfig.getNamespace(),
+                docConfig.getDocumentId()));
       return;
     }
 
