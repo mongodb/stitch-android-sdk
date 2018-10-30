@@ -25,6 +25,7 @@ interface DataSynchronizerTestContext : Closeable {
     val namespace: MongoNamespace
     val testDocument: BsonDocument
     val testDocumentId: BsonValue
+    val testDocumentFilter: BsonDocument
     var updateDocument: BsonDocument
 
     val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument>
@@ -62,7 +63,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Wait for an event to be emitted.
      */
-    fun waitForEvent()
+    fun waitForEvents(amount: Int = 1)
 
     /**
      * Reconfigure dataSynchronizer. Insert the contextual test document.
@@ -93,7 +94,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Verify the changeEventListener was called for the test document.
      */
-    fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>? = null)
+    fun verifyChangeEventListenerCalledForActiveDoc(times: Int, vararg expectedChangeEvents: ChangeEvent<BsonDocument> = arrayOf())
 
     /**
      * Verify the errorListener was called for the test document.

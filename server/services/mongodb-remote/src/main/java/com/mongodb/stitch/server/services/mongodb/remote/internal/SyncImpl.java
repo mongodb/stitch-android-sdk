@@ -16,21 +16,27 @@
 
 package com.mongodb.stitch.server.services.mongodb.remote.internal;
 
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
 import com.mongodb.stitch.server.services.mongodb.remote.Sync;
+import com.mongodb.stitch.server.services.mongodb.remote.SyncAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.SyncFindIterable;
 
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
@@ -108,28 +114,68 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public DocumentT findOneById(final BsonValue documentId) {
-    return proxy.findOneById(documentId);
+  public long count() {
+    return this.count(new BsonDocument());
   }
 
   @Override
-  public <ResultT> ResultT findOneById(final BsonValue documentId,
-                                       final Class<ResultT> resultClass) {
-    return proxy.findOneById(documentId, resultClass);
+  public long count(Bson filter) {
+    return this.count(filter, new SyncCountOptions());
   }
 
   @Override
-  public RemoteDeleteResult deleteOneById(final BsonValue documentId) {
-    return proxy.deleteOneById(documentId);
+  public long count(Bson filter, SyncCountOptions options) {
+    return this.proxy.count(filter, options);
   }
 
   @Override
-  public RemoteInsertOneResult insertOneAndSync(final DocumentT document) {
-    return this.proxy.insertOneAndSync(document);
+  public SyncAggregateIterable<DocumentT> aggregate(List<? extends Bson> pipeline) {
+    return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline));
   }
 
   @Override
-  public RemoteUpdateResult updateOneById(final BsonValue documentId, final Bson update) {
-    return proxy.updateOneById(documentId, update);
+  public <ResultT> SyncAggregateIterable<ResultT> aggregate(List<? extends Bson> pipeline,
+                                                            Class<ResultT> resultClass) {
+    return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline, resultClass));
+  }
+
+  @Override
+  public SyncInsertOneResult insertOneAndSync(DocumentT document) {
+    return proxy.insertOneAndSync(document);
+  }
+
+  @Override
+  public SyncInsertManyResult insertManyAndSync(List<DocumentT> documents) {
+    return proxy.insertManyAndSync(documents);
+  }
+
+  @Override
+  public SyncUpdateResult updateOne(Bson filter, Bson update) {
+    return proxy.updateOne(filter, update);
+  }
+
+  @Override
+  public SyncUpdateResult updateOne(Bson filter, Bson update, SyncUpdateOptions updateOptions) {
+    return proxy.updateOne(filter, update, updateOptions);
+  }
+
+  @Override
+  public SyncUpdateResult updateMany(Bson filter, Bson update) {
+    return proxy.updateMany(filter, update);
+  }
+
+  @Override
+  public SyncUpdateResult updateMany(Bson filter, Bson update, SyncUpdateOptions updateOptions) {
+    return proxy.updateMany(filter, update, updateOptions);
+  }
+
+  @Override
+  public SyncDeleteResult deleteOne(Bson filter) {
+    return proxy.deleteOne(filter);
+  }
+
+  @Override
+  public SyncDeleteResult deleteMany(Bson filter) {
+    return proxy.deleteMany(filter);
   }
 }

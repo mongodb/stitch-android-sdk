@@ -13,6 +13,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatcher
+import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.times
@@ -117,49 +119,28 @@ class CoreSyncUnitTests {
     }
 
     @Test
-    fun testFindOneById() {
-        val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
-
-        assertNull(coreSync.findOneById(ctx.testDocumentId))
-
-        ctx.insertTestDocument()
-
-        assertEquals(
-            ctx.testDocument,
-            SyncUnitTestHarness.withoutSyncVersion(coreSync.findOneById(ctx.testDocumentId)))
-
-        verify(syncOperations, times(2)).findOneById(
-            eq(ctx.testDocumentId), eq(BsonDocument::class.java))
-
-        verify(ctx.dataSynchronizer, times(2)).findOneById(
-            eq(ctx.namespace), eq(ctx.testDocumentId), eq(BsonDocument::class.java), any()
-        )
-    }
-
-    @Test
     fun testUpdateOneById() {
         val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
-        var result = coreSync.updateOneById(ctx.testDocumentId, ctx.updateDocument)
+        var result = coreSync.updateOne(ctx.testDocumentFilter, ctx.updateDocument)
         assertEquals(0, result.matchedCount)
         assertEquals(0, result.modifiedCount)
         assertNull(result.upsertedId)
 
         ctx.insertTestDocument()
 
-        result = coreSync.updateOneById(ctx.testDocumentId, ctx.updateDocument)
+        result = coreSync.updateOne(ctx.testDocumentFilter, ctx.updateDocument)
 
         assertEquals(1, result.matchedCount)
         assertEquals(1, result.modifiedCount)
         assertNull(result.upsertedId)
 
-        verify(syncOperations, times(2)).updateOneById(
-            eq(ctx.testDocumentId), eq(ctx.updateDocument))
+        verify(syncOperations, times(2)).updateOne(
+            eq(ctx.testDocumentFilter), eq(ctx.updateDocument), any())
 
-        verify(ctx.dataSynchronizer, times(2)).updateOneById(
-            eq(ctx.namespace), eq(ctx.testDocumentId), eq(ctx.updateDocument))
+        verify(ctx.dataSynchronizer, times(2)).updateOne(
+            eq(ctx.namespace), eq(ctx.testDocumentFilter), eq(ctx.updateDocument), any())
     }
 
     @Test
@@ -191,20 +172,20 @@ class CoreSyncUnitTests {
         val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
 
-        var deleteResult = coreSync.deleteOneById(ctx.testDocumentId)
+        var deleteResult = coreSync.deleteOne(ctx.testDocumentFilter)
 
         assertEquals(0, deleteResult.deletedCount)
 
         ctx.insertTestDocument()
 
-        deleteResult = coreSync.deleteOneById(ctx.testDocumentId)
+        deleteResult = coreSync.deleteOne(ctx.testDocumentFilter)
 
         assertEquals(1, deleteResult.deletedCount)
 
-        verify(syncOperations, times(2)).deleteOneById(
-            eq(ctx.testDocumentId))
+        verify(syncOperations, times(2)).deleteOne(
+            eq(ctx.testDocumentFilter))
 
-        verify(ctx.dataSynchronizer, times(2)).deleteOneById(
-            eq(ctx.namespace), eq(ctx.testDocumentId))
+        verify(ctx.dataSynchronizer, times(2)).deleteOne(
+            eq(ctx.namespace), eq(ctx.testDocumentFilter))
     }
 }

@@ -73,16 +73,12 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
             return sync.insertOneAndSync(document)
         }
 
-        override fun findOneById(id: BsonValue): Document? {
-            return sync.findOneById(id)
+        override fun updateOne(filter: Bson, update: Bson): RemoteUpdateResult {
+            return sync.updateOne(filter, update)
         }
 
-        override fun updateOneById(documentId: BsonValue, update: Bson): RemoteUpdateResult {
-            return sync.updateOneById(documentId, update)
-        }
-
-        override fun deleteOneById(documentId: BsonValue): RemoteDeleteResult {
-            return sync.deleteOneById(documentId)
+        override fun deleteOne(filter: Bson): RemoteDeleteResult {
+            return sync.deleteOne(filter)
         }
 
         override fun getSyncedIds(): Set<BsonValue> {
@@ -93,7 +89,7 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
             sync.desyncOne(id)
         }
 
-        override fun find(filter: Bson): Iterable<Document?> {
+        override fun find(filter: Bson): Iterable<Document> {
             return sync.find(filter)
         }
 
@@ -274,11 +270,6 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
     @Test
     override fun testInsertInsertConflict() {
         testProxy.testInsertInsertConflict()
-    }
-
-    @Test
-    override fun testPausedDocumentConfig() {
-        testProxy.testPausedDocumentConfig()
     }
 
     @Test

@@ -130,18 +130,25 @@ class SyncUnitTestHarness : Closeable {
             }
         }
 
+        val eventAccumulator = mutableListOf<ChangeEvent<BsonDocument>>()
+        var totalEventsToAccumulate = 1
+
         private open class TestChangeEventListener(
             private val expectedEvent: ChangeEvent<BsonDocument>?,
             private val emitEventSemaphore: Semaphore?
         ) : ChangeEventListener<BsonDocument> {
-            override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>?) {
+            override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>) {
+                eventAccumulator.add(actualEvent)
                 try {
                     if (expectedEvent != null) {
-                        compareEvents(expectedEvent, actualEvent!!)
+                        compareEvents(expectedEvent, actualEvent)
                         Assert.assertEquals(expectedEvent.id, documentId)
                     }
                 } finally {
-                    emitEventSemaphore?.release()
+                    if (eventAccumulator.size == totalEventsToAccumulate) {
+                        eventAccumulator.clear()
+                        emitEventSemaphore?.release()
+                    }
                 }
             }
         }
@@ -234,6 +241,7 @@ class SyncUnitTestHarness : Closeable {
         private val streamMock = Stream(TestEventStream(this), ChangeEvent.changeEventCoder)
         override val testDocument = newDoc("count", BsonInt32(1))
         override val testDocumentId: BsonObjectId by lazy { testDocument["_id"] as BsonObjectId }
+        override val testDocumentFilter by lazy { BsonDocument("_id", testDocumentId) }
         override var updateDocument: BsonDocument = BsonDocument("\$inc", BsonDocument("count", BsonInt32(1)))
         private val bsonDocumentCodec = BsonDocumentCodec()
 
@@ -354,7 +362,8 @@ class SyncUnitTestHarness : Closeable {
                 bsonDocumentCodec)
         }
 
-        override fun waitForEvent() {
+        override fun waitForEvents(amount: Int) {
+            totalEventsToAccumulate = amount
             assertTrue(eventSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
         }
 
@@ -378,7 +387,11 @@ class SyncUnitTestHarness : Closeable {
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            return dataSynchronizer.updateOneById(namespace, testDocumentId, updateDocument)
+            return dataSynchronizer.updateOne(
+                namespace,
+                BsonDocument("_id", testDocumentId),
+                updateDocument
+            )
         }
 
         override fun deleteTestDocument(): DeleteResult {
@@ -386,7 +399,7 @@ class SyncUnitTestHarness : Closeable {
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            return dataSynchronizer.deleteOneById(namespace, testDocumentId)
+            return dataSynchronizer.deleteOne(namespace, BsonDocument("_id", testDocumentId))
         }
 
         override fun doSyncPass() {
@@ -431,21 +444,31 @@ class SyncUnitTestHarness : Closeable {
         override fun findTestDocumentFromLocalCollection(): BsonDocument? {
             // TODO: this may be rendered unnecessary with STITCH-1972
             return withoutSyncVersion(
-                dataSynchronizer.findOneById(
+                dataSynchronizer.find(
                     namespace,
-                    testDocumentId,
+                    BsonDocument("_id", testDocumentId),
+                    10,
+                    null,
+                    null,
                     BsonDocument::class.java,
-                    CodecRegistries.fromCodecs(bsonDocumentCodec)))
+                    CodecRegistries.fromCodecs(bsonDocumentCodec)).firstOrNull())
         }
 
-        override fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>?) {
+        override fun verifyChangeEventListenerCalledForActiveDoc(
+            times: Int,
+            vararg expectedChangeEvents: ChangeEvent<BsonDocument>
+        ) {
             val changeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
             Mockito.verify(changeEventListener, times(times)).onEvent(
-                eq(testDocumentId),
+                any(),
                 changeEventArgumentCaptor.capture() as ChangeEvent<BsonDocument>?)
 
-            if (expectedChangeEvent != null) {
-                compareEvents(expectedChangeEvent, changeEventArgumentCaptor.value as ChangeEvent<BsonDocument>)
+            if (expectedChangeEvents.isNotEmpty()) {
+                changeEventArgumentCaptor.allValues.forEachIndexed { i, actualChangeEvent ->
+                    compareEvents(
+                        expectedChangeEvents[i],
+                        actualChangeEvent as ChangeEvent<BsonDocument>)
+                }
             }
         }
 

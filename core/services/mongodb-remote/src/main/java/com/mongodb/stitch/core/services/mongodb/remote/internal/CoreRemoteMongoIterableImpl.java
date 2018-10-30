@@ -48,7 +48,7 @@ public abstract class CoreRemoteMongoIterableImpl<DocumentT, ResultT>
     return service;
   }
 
-  Class<ResultT> geResultClass() {
+  Class<ResultT> getResultClass() {
     return resultClass;
   }
 

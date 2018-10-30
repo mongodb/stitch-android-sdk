@@ -17,16 +17,22 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.model.CountOptions;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncAggregateIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
 
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -107,64 +113,83 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     return this.dataSynchronizer.resumeSyncForDocument(namespace, documentId);
   }
 
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return the document if found locally or remotely.
-   */
-  @Nullable
-  public DocumentT findOneById(final BsonValue documentId) {
-    return findOneById(documentId, this.documentClass);
+  @Override
+  public long count() {
+    return count(new BsonDocument());
   }
 
-  /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param resultClass the class to decode each document into
-   * @param <ResultT>   the target document type of the iterable.
-   * @return the document if found locally or remotely.
-   */
-  @Nullable
-  public <ResultT> ResultT findOneById(final BsonValue documentId,
-                                       final Class<ResultT> resultClass) {
-    return syncOperations.findOneById(documentId, resultClass).execute(service);
+  @Override
+  public long count(final Bson filter) {
+    return count(filter, new SyncCountOptions());
   }
 
-  /**
-   * Updates a document by the given id. It is first searched for in the local synchronized cache
-   * and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @param update the update specifier.
-   * @return the result of the local or remote update.
-   */
-  public RemoteUpdateResult updateOneById(final BsonValue documentId, final Bson update) {
-    return syncOperations.updateOneById(documentId, update).execute(service);
+  @Override
+  public long count(final Bson filter, final SyncCountOptions options) {
+    CountOptions countOptions = new CountOptions().limit(options.getLimit());
+    return this.dataSynchronizer.count(this.namespace, filter, countOptions);
   }
 
-  /**
-   * Inserts a single document and begins to synchronize it.
-   *
-   * @param document the document to insert and synchronize.
-   * @return the result of the insertion.
-   */
-  public RemoteInsertOneResult insertOneAndSync(final DocumentT document) {
+  @Override
+  public CoreSyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
+    return this.aggregate(pipeline, this.documentClass);
+  }
+
+  @Override
+  public <ResultT> CoreSyncAggregateIterable<ResultT> aggregate(
+      final List<? extends Bson> pipeline,
+      final Class<ResultT> resultClass
+  ) {
+    return new CoreSyncAggregateIterableImpl<>(
+        pipeline, resultClass, service, syncOperations
+    );
+  }
+
+  @Override
+  public SyncUpdateResult updateOne(final Bson filter, final Bson update) {
+    return this.updateOne(filter, update, new SyncUpdateOptions());
+  }
+
+  @Override
+  public SyncUpdateResult updateOne(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
+  ) {
+    return syncOperations.updateOne(filter, update, updateOptions).execute(service);
+  }
+
+  @Override
+  public SyncUpdateResult updateMany(final Bson filter, final Bson update) {
+    return this.updateMany(filter, update, new SyncUpdateOptions());
+  }
+
+  @Override
+  public SyncUpdateResult updateMany(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
+  ) {
+    return this.syncOperations.updateMany(filter, update, updateOptions).execute(service);
+  }
+
+  @Override
+  public SyncInsertOneResult insertOneAndSync(DocumentT document) {
     return syncOperations.insertOneAndSync(document).execute(service);
   }
 
-  /**
-   * Deletes a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
-   *
-   * @param documentId the _id of the document to search for.
-   * @return the result of the local or remote update.
-   */
-  public RemoteDeleteResult deleteOneById(final BsonValue documentId) {
-    return syncOperations.deleteOneById(documentId).execute(service);
+  @Override
+  public SyncInsertManyResult insertManyAndSync(List<DocumentT> documents) {
+    return syncOperations.insertManyAndSync(documents).execute(service);
+  }
+
+  @Override
+  public SyncDeleteResult deleteOne(Bson filter) {
+    return syncOperations.deleteOne(filter).execute(service);
+  }
+
+  @Override
+  public SyncDeleteResult deleteMany(Bson filter) {
+    return syncOperations.deleteMany(filter).execute(service);
   }
 
   @Override

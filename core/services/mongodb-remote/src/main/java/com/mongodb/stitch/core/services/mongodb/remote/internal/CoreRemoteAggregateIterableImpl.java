@@ -38,6 +38,6 @@ class CoreRemoteAggregateIterableImpl<DocumentT, ResultT>
   }
 
   Operation<Collection<ResultT>> asOperation() {
-    return getOperations().aggregate(pipeline, geResultClass());
+    return getOperations().aggregate(pipeline, getResultClass());
   }
 }

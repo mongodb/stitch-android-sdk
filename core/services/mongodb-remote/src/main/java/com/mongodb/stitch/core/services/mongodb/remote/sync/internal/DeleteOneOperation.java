@@ -21,31 +21,29 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
+
 import javax.annotation.Nullable;
 import org.bson.BsonValue;
+import org.bson.conversions.Bson;
 
-class DeleteOneByIdOperation implements Operation<RemoteDeleteResult> {
-
+class DeleteOneOperation implements Operation<SyncDeleteResult> {
   private final MongoNamespace namespace;
-  private final BsonValue documentId;
+  private final Bson filter;
   private final DataSynchronizer dataSynchronizer;
 
-  DeleteOneByIdOperation(
+  DeleteOneOperation(
       final MongoNamespace namespace,
-      final BsonValue documentId,
+      final Bson filter,
       final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
-    this.documentId = documentId;
+    this.filter = filter;
     this.dataSynchronizer = dataSynchronizer;
   }
 
-  public RemoteDeleteResult execute(@Nullable final CoreStitchServiceClient service) {
-    final DeleteResult localResult =
-        this.dataSynchronizer.deleteOneById(namespace, documentId);
-    if (localResult.getDeletedCount() == 1) {
-      return new RemoteDeleteResult(localResult.getDeletedCount());
-    }
-    return new RemoteDeleteResult(0);
+  public SyncDeleteResult execute(@Nullable final CoreStitchServiceClient service) {
+    final DeleteResult localResult = this.dataSynchronizer.deleteOne(namespace, filter);
+    return new SyncDeleteResult(localResult.getDeletedCount());
   }
 }

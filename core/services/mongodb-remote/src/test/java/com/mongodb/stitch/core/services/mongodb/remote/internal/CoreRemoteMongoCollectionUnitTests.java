@@ -355,7 +355,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             funcArgsArg.capture(),
             resultClassArg.capture());
 
-    assertEquals("insertMany", funcNameArg.getValue());
+    assertEquals("insertManyAndSync", funcNameArg.getValue());
     assertEquals(1, funcArgsArg.getValue().size());
     final Document expectedArgs = new Document();
     expectedArgs.put("database", "dbName1");

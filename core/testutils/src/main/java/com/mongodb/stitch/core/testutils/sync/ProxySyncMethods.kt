@@ -6,6 +6,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
+import org.bson.BsonDocument
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
@@ -55,26 +56,17 @@ interface ProxySyncMethods {
      * @param filter the query filter
      * @return the find iterable interface
      */
-    fun find(filter: Bson): Iterable<Document?>
-
-    /**
-     * Finds a single document by the given id. It is first searched for in the local synchronized
-     * cache and if not found and there is internet connectivity, it is searched for remotely.
-     *
-     * @param id the _id of the document to search for.
-     * @return the document if found locally or remotely.
-     */
-    fun findOneById(id: BsonValue): Document?
+    fun find(filter: Bson = BsonDocument()): Iterable<Document?>
 
     /**
      * Updates a document by the given id. It is first searched for in the local synchronized cache
      * and if not found and there is internet connectivity, it is searched for remotely.
      *
-     * @param documentId the _id of the document to search for.
+     * @param filter the query filter
      * @param update the update specifier.
      * @return the result of the local or remote update.
      */
-    fun updateOneById(documentId: BsonValue, update: Bson): RemoteUpdateResult
+    fun updateOne(filter: Bson, update: Bson): RemoteUpdateResult
 
     /**
      * Inserts a single document and begins to synchronize it.
@@ -88,10 +80,10 @@ interface ProxySyncMethods {
      * Deletes a single document by the given id. It is first searched for in the local synchronized
      * cache and if not found and there is internet connectivity, it is searched for remotely.
      *
-     * @param documentId the _id of the document to search for.
+     * @param filter the query filter
      * @return the result of the local or remote update.
      */
-    fun deleteOneById(documentId: BsonValue): RemoteDeleteResult
+    fun deleteOne(filter: Bson): RemoteDeleteResult
 
     /**
      * Return the set of synchronized document _ids in a namespace

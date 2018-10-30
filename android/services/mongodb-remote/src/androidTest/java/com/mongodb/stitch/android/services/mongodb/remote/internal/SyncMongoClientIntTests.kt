@@ -75,16 +75,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             return Tasks.await(sync.insertOneAndSync(document))
         }
 
-        override fun findOneById(id: BsonValue): Document? {
-            return Tasks.await(sync.findOneById(id))
+        override fun updateOne(filter: Bson, update: Bson): RemoteUpdateResult {
+            return Tasks.await(sync.updateOne(filter, update))
         }
 
-        override fun updateOneById(documentId: BsonValue, update: Bson): RemoteUpdateResult {
-            return Tasks.await(sync.updateOneById(documentId, update))
-        }
-
-        override fun deleteOneById(documentId: BsonValue): RemoteDeleteResult {
-            return Tasks.await(sync.deleteOneById(documentId))
+        override fun deleteOne(filter: Bson): RemoteDeleteResult {
+            return Tasks.await(sync.deleteOne(filter))
         }
 
         override fun desyncOne(id: BsonValue) {
@@ -275,11 +271,6 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     override fun testInsertInsertConflict() {
         testProxy.testInsertInsertConflict()
-    }
-
-    @Test
-    override fun testPausedDocumentConfig() {
-        testProxy.testPausedDocumentConfig()
     }
 
     @Test

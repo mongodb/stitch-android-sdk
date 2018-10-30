@@ -19,12 +19,13 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
+
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
-class InsertOneAndSyncOperation<T> implements Operation<RemoteInsertOneResult> {
+class InsertOneAndSyncOperation implements Operation<SyncInsertOneResult> {
 
   private final MongoNamespace namespace;
   private final BsonDocument document;
@@ -40,8 +41,8 @@ class InsertOneAndSyncOperation<T> implements Operation<RemoteInsertOneResult> {
     this.dataSynchronizer = dataSynchronizer;
   }
 
-  public RemoteInsertOneResult execute(@Nullable final CoreStitchServiceClient service) {
+  public SyncInsertOneResult execute(@Nullable final CoreStitchServiceClient service) {
     this.dataSynchronizer.insertOneAndSync(namespace, document);
-    return new RemoteInsertOneResult(BsonUtils.getDocumentId(document));
+    return new SyncInsertOneResult(BsonUtils.getDocumentId(document));
   }
 }

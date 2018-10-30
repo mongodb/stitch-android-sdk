@@ -24,12 +24,15 @@ import static com.mongodb.stitch.core.internal.common.BsonUtils.toBsonDocument;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
 
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
 import org.bson.codecs.CollectibleCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SyncOperations<DocumentT> {
 
@@ -66,8 +69,6 @@ public class SyncOperations<DocumentT> {
     return createSyncFindOperation(namespace, filter, resultClass, options);
   }
 
-
-
   private <ResultT> SyncFindOperation<ResultT> createSyncFindOperation(
       final MongoNamespace findNamespace,
       final Bson filter,
@@ -93,32 +94,47 @@ public class SyncOperations<DocumentT> {
         .sort(sortDoc);
   }
 
-  <ResultT> FindOneByIdOperation<ResultT> findOneById(
-      final BsonValue documentId,
-      final Class<ResultT> resultClass
-  ) {
-    notNull("documentId", documentId);
-    return new FindOneByIdOperation<>(
-        namespace,
-        documentId,
-        resultClass,
-        dataSynchronizer);
+  /**
+   * Aggregates documents according to the specified aggregation pipeline.
+   *
+   * @param pipeline    the aggregation pipeline
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return an iterable containing the result of the aggregation operation
+   */
+  <ResultT> AggregateOperation<ResultT> aggregate(
+      final List<? extends Bson> pipeline,
+      final Class<ResultT> resultClass) {
+    return new AggregateOperation<>(namespace, dataSynchronizer, pipeline, resultClass);
   }
 
-  UpdateOneByIdOperation<DocumentT> updateOneById(
-      final BsonValue documentId,
-      final Bson update
+  UpdateOneOperation updateOne(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
   ) {
-    return new UpdateOneByIdOperation<>(
+    return new UpdateOneOperation(
         namespace,
-        documentId,
+        filter,
         toBsonDocument(update, documentClass, codecRegistry),
-        dataSynchronizer);
+        dataSynchronizer,
+        updateOptions);
   }
 
-  public InsertOneAndSyncOperation insertOneAndSync(
-      final DocumentT document
+  UpdateManyOperation updateMany(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
   ) {
+    return new UpdateManyOperation(
+        namespace,
+        filter,
+        toBsonDocument(update, documentClass, codecRegistry),
+        dataSynchronizer,
+        updateOptions);
+  }
+
+  public InsertOneAndSyncOperation insertOneAndSync(final DocumentT document) {
     notNull("document", document);
     final DocumentT docToInsert;
     if (getCodec(codecRegistry, documentClass) instanceof CollectibleCodec) {
@@ -128,16 +144,46 @@ public class SyncOperations<DocumentT> {
     } else {
       docToInsert = document;
     }
-    return new InsertOneAndSyncOperation<>(
+
+    return new InsertOneAndSyncOperation(
         namespace,
         documentToBsonDocument(docToInsert, codecRegistry),
         dataSynchronizer);
   }
 
-  DeleteOneByIdOperation deleteOneById(final BsonValue documentId) {
-    return new DeleteOneByIdOperation(
+  InsertManyAndSyncOperation insertManyAndSync(final List<DocumentT> documents) {
+    final List<BsonDocument> bsonDocuments = new ArrayList<>();
+      for (final DocumentT document : documents) {
+        if (getCodec(codecRegistry, documentClass) instanceof CollectibleCodec) {
+          bsonDocuments.add(
+              documentToBsonDocument(
+                  ((CollectibleCodec<DocumentT>) getCodec(codecRegistry, documentClass))
+                      .generateIdIfAbsentFromDocument(document),
+                  codecRegistry
+              )
+          );
+        } else {
+          bsonDocuments.add(documentToBsonDocument(document, codecRegistry));
+      }
+    }
+
+    return new InsertManyAndSyncOperation(
         namespace,
-        documentId,
+        bsonDocuments,
+        dataSynchronizer);
+  }
+
+  DeleteOneOperation deleteOne(final Bson filter) {
+    return new DeleteOneOperation(
+        namespace,
+        filter,
+        dataSynchronizer);
+  }
+
+  DeleteManyOperation deleteMany(final Bson filter) {
+    return new DeleteManyOperation(
+        namespace,
+        filter,
         dataSynchronizer);
   }
 }

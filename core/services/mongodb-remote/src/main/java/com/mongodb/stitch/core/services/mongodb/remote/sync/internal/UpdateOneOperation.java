@@ -17,43 +17,50 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
+
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
+import org.bson.conversions.Bson;
 
-class UpdateOneByIdOperation<T> implements Operation<RemoteUpdateResult> {
+class UpdateOneOperation implements Operation<SyncUpdateResult> {
 
   private final MongoNamespace namespace;
-  private final BsonValue documentId;
+  private final Bson filter;
   private final BsonDocument update;
   private final DataSynchronizer dataSynchronizer;
+  private final SyncUpdateOptions syncUpdateOptions;
 
-  UpdateOneByIdOperation(
+  UpdateOneOperation(
       final MongoNamespace namespace,
-      final BsonValue documentId,
+      final Bson filter,
       final BsonDocument update,
-      final DataSynchronizer dataSynchronizer
+      final DataSynchronizer dataSynchronizer,
+      final SyncUpdateOptions syncUpdateOptions
   ) {
     this.namespace = namespace;
-    this.documentId = documentId;
+    this.filter = filter;
     this.update = update;
     this.dataSynchronizer = dataSynchronizer;
+    this.syncUpdateOptions = syncUpdateOptions;
   }
 
-  public RemoteUpdateResult execute(@Nullable final CoreStitchServiceClient service) {
-    final UpdateResult localResult =
-        this.dataSynchronizer.updateOneById(namespace, documentId, update);
-    if (localResult.getMatchedCount() == 1) {
-      return new RemoteUpdateResult(
-          localResult.getMatchedCount(),
-          localResult.getModifiedCount(),
-          null);
-    }
+  public SyncUpdateResult execute(@Nullable final CoreStitchServiceClient service) {
+    final UpdateResult localResult = this.dataSynchronizer.updateOne(
+        namespace,
+        filter,
+        update,
+        new UpdateOptions().upsert(this.syncUpdateOptions.isUpsert()));
 
-    return new RemoteUpdateResult(0, 0, null);
+    return new SyncUpdateResult(
+        localResult.getMatchedCount(),
+        localResult.getModifiedCount(),
+        localResult.getUpsertedId()
+    );
   }
 }

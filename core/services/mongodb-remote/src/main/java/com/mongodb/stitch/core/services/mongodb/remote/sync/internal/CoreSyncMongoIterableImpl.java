@@ -53,7 +53,7 @@ public abstract class CoreSyncMongoIterableImpl<OpsT, ResultT>
     return service;
   }
 
-  Class<ResultT> geResultClass() {
+  Class<ResultT> getResultClass() {
     return resultClass;
   }
 
