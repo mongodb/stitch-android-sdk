@@ -208,8 +208,7 @@ public class TodoListActivity extends AppCompatActivity {
 
   private void doLogin() {
     Stitch.getDefaultAppClient().getAuth().loginWithCredential(
-        new ServerApiKeyCredential(
-            "xEfxAP4jFWaWEs5WWpff7XyQMh1T56CCMmDEV9oxXtItPHBveA6bc6IEjOhQLes6"))
+        new ServerApiKeyCredential(getString(R.string.stitch_user1_api_key)))
         .addOnSuccessListener(user -> {
           userId = user.getId();
           invalidateOptionsMenu();

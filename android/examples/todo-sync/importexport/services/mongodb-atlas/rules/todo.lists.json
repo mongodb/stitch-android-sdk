@@ -1,0 +1,40 @@
+{
+    "database": "todo",
+    "collection": "lists",
+    "filters": [
+        {
+            "name": "owner",
+            "query": {
+                "_id": "%%user.id"
+            },
+            "apply_when": {}
+        }
+    ],
+    "roles": [
+        {
+            "name": "owner",
+            "apply_when": {
+                "_id": "%%user.id"
+            },
+            "fields": {
+                "_id": {
+                    "read": true
+                },
+                "i": {
+                    "write": true,
+                    "read": true
+                }
+            },
+            "insert": true,
+            "delete": true,
+            "additional_fields": {}
+        }
+    ],
+    "schema": {
+        "properties": {
+            "_id": {
+                "bsonType": "string"
+            }
+        }
+    }
+}

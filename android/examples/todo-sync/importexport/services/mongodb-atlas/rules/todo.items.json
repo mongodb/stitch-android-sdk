@@ -1,0 +1,67 @@
+{
+    "database": "todo",
+    "collection": "items",
+    "filters": [
+        {
+            "name": "owner",
+            "query": {
+                "owner_id": "%%user.id"
+            },
+            "apply_when": {}
+        }
+    ],
+    "roles": [
+        {
+            "name": "owner",
+            "apply_when": {
+                "owner_id": "%%user.id"
+            },
+            "fields": {
+                "_id": {
+                    "read": true
+                },
+                "checked": {
+                    "write": true,
+                    "read": true
+                },
+                "done_date": {
+                    "write": true,
+                    "read": true
+                },
+                "owner_id": {
+                    "write": true,
+                    "read": true
+                },
+                "task": {
+                    "write": true,
+                    "read": true
+                }
+            },
+            "insert": true,
+            "delete": true,
+            "additional_fields": {}
+        }
+    ],
+    "schema": {
+        "properties": {
+            "_id": {
+                "bsonType": "objectId"
+            },
+            "owner_id": {
+                "bsonType": "string",
+                "validate": {
+                    "%%this": "%%user.id"
+                }
+            },
+            "task": {
+                "bsonType": "string"
+            },
+            "checked": {
+                "bsonType": "boolean"
+            },
+            "done_date": {
+                "bsonType": "date"
+            }
+        }
+    }
+}
