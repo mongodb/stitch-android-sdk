@@ -10,6 +10,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
 import org.bson.BsonDocument
 import org.bson.BsonValue
+import org.bson.Document
 import java.io.Closeable
 import java.lang.Exception
 
@@ -113,7 +114,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Verify the stream function was called.
      */
-    fun verifyWatchFunctionCalled(times: Int, expectedArgs: List<Any>)
+    fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document)
 
     /**
      * Verify dataSynchronizer.start() has been called.
@@ -133,7 +134,10 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Queue a pseudo-remote update event to be consumed during R2L.
      */
-    fun queueConsumableRemoteUpdateEvent()
+    fun queueConsumableRemoteUpdateEvent(
+        id: BsonValue = testDocumentId,
+        document: BsonDocument = testDocument
+    )
 
     /**
      * Queue a pseudo-remote delete event to be consumed during R2L.

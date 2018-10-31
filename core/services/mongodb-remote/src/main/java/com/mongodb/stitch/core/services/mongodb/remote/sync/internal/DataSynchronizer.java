@@ -1556,7 +1556,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * A document that is paused no longer has remote updates applied to it.
    * Any local updates to this document cause it to be resumed. An example of pausing a document
    * is when a conflict is being resolved for that document and the handler throws an exception.
-   * <p>
+   *
    * This method allows you to resume sync for a document.
    *
    * @param namespace  namespace for the document
@@ -1831,28 +1831,35 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           }
         });
 
+    // use the matched ids from prior to create a new filter.
+    // this will prevent any race conditions if documents were
+    // inserted between the prior find
+    Bson updatedFilter = updateOptions.isUpsert()
+        ? filter : new BsonDocument("_id", new BsonDocument("$in", ids));
+
     // do the bulk write
     final UpdateResult result = this.getLocalCollection(namespace)
-        .updateMany(filter, update, updateOptions);
+        .updateMany(updatedFilter, update, updateOptions);
 
     // if this was an upsert, create the post-update filter using
     // the upserted id.
-    // else, use the matched ids from prior to create a new filter
-    final BsonDocument updatedFilter;
     if (result.getUpsertedId() != null) {
       updatedFilter = getDocumentIdFilter(result.getUpsertedId());
-    } else {
-      updatedFilter = new BsonDocument("_id", new BsonDocument("$in", ids));
     }
 
+    // iterate over the after-update docs using the updated filter
     this.getLocalCollection(namespace).find(updatedFilter).forEach(new Block<BsonDocument>() {
       @Override
       public void apply(@NonNull final BsonDocument afterDocument) {
-        final BsonDocument beforeDocument;
+        // get the id of the after-update document, and fetch the before-update
+        // document from the map we created from our pre-update `find`
         final BsonValue documentId = BsonUtils.getDocumentId(afterDocument);
+        final BsonDocument beforeDocument = idToBeforeDocumentMap.get(documentId);
 
-        if ((beforeDocument = idToBeforeDocumentMap.get(documentId)) == null
-            && !updateOptions.isUpsert()) {
+        // if there was no before-update document and this was not an upsert,
+        // a document that meets the filter criteria must have been
+        // inserted or upserted asynchronously between this find and the update.
+        if (beforeDocument == null && !updateOptions.isUpsert()) {
           return;
         }
 
@@ -1863,6 +1870,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         if (afterDocument.equals(beforeDocument)) {
           return;
         }
+
         final CoreDocumentSynchronizationConfig config;
         final ChangeEvent<BsonDocument> event;
 

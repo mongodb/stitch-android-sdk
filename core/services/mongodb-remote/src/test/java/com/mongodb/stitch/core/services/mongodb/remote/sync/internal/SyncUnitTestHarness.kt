@@ -29,6 +29,7 @@ import org.bson.BsonInt32
 import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.BsonValue
+import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
@@ -44,9 +45,10 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import java.io.Closeable
 import java.lang.Exception
+import java.util.Collections
+import java.util.Random
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import java.util.Random
 import java.util.concurrent.locks.ReentrantLock
 
 class SyncUnitTestHarness : Closeable {
@@ -427,10 +429,13 @@ class SyncUnitTestHarness : Closeable {
                 mapOf())
         }
 
-        override fun queueConsumableRemoteUpdateEvent() {
+        override fun queueConsumableRemoteUpdateEvent(
+            id: BsonValue,
+            document: BsonDocument
+        ) {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(
-                    namespace, testDocumentId, null, testDocument, false)),
+                mapOf(document to ChangeEvent.changeEventForLocalUpdate(
+                    namespace, id, null, document, false)),
                 mapOf())
         }
 
@@ -509,8 +514,9 @@ class SyncUnitTestHarness : Closeable {
             }
         }
 
-        override fun verifyWatchFunctionCalled(times: Int, expectedArgs: List<Any>) {
-            Mockito.verify(service, times(times)).streamFunction(eq("watch"), eq(expectedArgs), eq(ChangeEvent.changeEventCoder))
+        override fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document) {
+            Mockito.verify(service, times(times)).streamFunction(
+                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ChangeEvent.changeEventCoder))
         }
 
         override fun verifyStartCalled(times: Int) {

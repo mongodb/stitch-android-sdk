@@ -11,6 +11,7 @@ import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedM
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
+import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
@@ -971,6 +972,14 @@ class DataSynchronizerUnitTests {
             doc1,
             ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
 
+        // assert that the stream was opened
+        ctx.verifyWatchFunctionCalled(1, expectedArgs =
+        Document(mapOf(
+            "database" to ctx.namespace.databaseName,
+            "collection" to ctx.namespace.collectionName,
+            "ids" to setOf(result.upsertedId)
+        )))
+
         ctx.dataSynchronizer.updateMany(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
@@ -1077,7 +1086,9 @@ class DataSynchronizerUnitTests {
         assertEquals(0, result.modifiedCount)
         assertNotNull(result.upsertedId)
 
-        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1.append("_id", result.upsertedId), true)
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(
+            ctx.namespace,
+            doc1.append("_id", result.upsertedId), true)
 
         ctx.waitForEvents(amount = 1)
 
@@ -1087,7 +1098,28 @@ class DataSynchronizerUnitTests {
 
         assertEquals(
             doc1,
-            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", result.upsertedId)).first())
+
+        // assert that the stream was opened
+        ctx.verifyWatchFunctionCalled(1, expectedArgs =
+        Document(mapOf(
+            "database" to ctx.namespace.databaseName,
+            "collection" to ctx.namespace.collectionName,
+            "ids" to setOf(result.upsertedId)
+        )))
+
+        ctx.doSyncPass()
+
+        ctx.queueConsumableRemoteUpdateEvent(
+            id = result.upsertedId!!,
+            document = BsonDocument(
+                "name",
+                BsonString("philip")
+            ).append("count", BsonInt32(3)).append("_id", result.upsertedId))
+        ctx.doSyncPass()
+        assertEquals(
+            BsonDocument("name", BsonString("philip")).append("count", BsonInt32(3)).append("_id", result.upsertedId),
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", result.upsertedId)).first())
 
         val doc2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
 
@@ -1096,7 +1128,7 @@ class DataSynchronizerUnitTests {
         result = ctx.dataSynchronizer.updateMany(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
-            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(3))),
             UpdateOptions().upsert(true))
 
         assertEquals(2, result.matchedCount)
@@ -1106,11 +1138,13 @@ class DataSynchronizerUnitTests {
         // there should only be 2 events instead of 3 since only 1 document was modified
         ctx.waitForEvents(amount = 2)
 
-        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc1["_id"])
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(3)).append("_id", doc1["_id"])
 
         assertEquals(
             expectedDocAfterUpdate1,
             ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+
+        assertTrue(ctx.dataSynchronizer.areAllStreamsOpen())
     }
 
     @Test
