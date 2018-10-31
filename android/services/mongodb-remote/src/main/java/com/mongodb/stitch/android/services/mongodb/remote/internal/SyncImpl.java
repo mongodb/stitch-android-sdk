@@ -101,12 +101,12 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<Long> count(Bson filter) {
+  public Task<Long> count(final Bson filter) {
     return this.count(filter, new SyncCountOptions());
   }
 
   @Override
-  public Task<Long> count(Bson filter, SyncCountOptions options) {
+  public Task<Long> count(final Bson filter, final SyncCountOptions options) {
     return this.dispatcher.dispatchTask(new Callable<Long>() {
       @Override
       public Long call() throws Exception {
@@ -116,13 +116,13 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public SyncAggregateIterable<DocumentT> aggregate(List<? extends Bson> pipeline) {
+  public SyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
     return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline), dispatcher);
   }
 
   @Override
-  public <ResultT> SyncAggregateIterable<ResultT> aggregate(List<? extends Bson> pipeline,
-                                                            Class<ResultT> resultClass) {
+  public <ResultT> SyncAggregateIterable<ResultT> aggregate(final List<? extends Bson> pipeline,
+                                                            final Class<ResultT> resultClass) {
     return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline, resultClass), dispatcher);
   }
 
@@ -148,7 +148,7 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<SyncInsertOneResult> insertOneAndSync(DocumentT document) {
+  public Task<SyncInsertOneResult> insertOneAndSync(final DocumentT document) {
     return this.dispatcher.dispatchTask(new Callable<SyncInsertOneResult>() {
       @Override
       public SyncInsertOneResult call() throws Exception {
@@ -158,7 +158,7 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<SyncInsertManyResult> insertManyAndSync(List<DocumentT> documents) {
+  public Task<SyncInsertManyResult> insertManyAndSync(final List<DocumentT> documents) {
     return this.dispatcher.dispatchTask(new Callable<SyncInsertManyResult>() {
       @Override
       public SyncInsertManyResult call() throws Exception {
@@ -168,12 +168,16 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<SyncUpdateResult> updateOne(Bson filter, Bson update) {
+  public Task<SyncUpdateResult> updateOne(final Bson filter, final Bson update) {
     return this.updateOne(filter, update, new SyncUpdateOptions());
   }
 
   @Override
-  public Task<SyncUpdateResult> updateOne(Bson filter, Bson update, SyncUpdateOptions updateOptions) {
+  public Task<SyncUpdateResult> updateOne(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
+  ) {
     return this.dispatcher.dispatchTask(new Callable<SyncUpdateResult>() {
       @Override
       public SyncUpdateResult call() throws Exception {
@@ -183,12 +187,16 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<SyncUpdateResult> updateMany(Bson filter, Bson update) {
+  public Task<SyncUpdateResult> updateMany(final Bson filter, final Bson update) {
     return this.updateMany(filter, update, new SyncUpdateOptions());
   }
 
   @Override
-  public Task<SyncUpdateResult> updateMany(Bson filter, Bson update, SyncUpdateOptions updateOptions) {
+  public Task<SyncUpdateResult> updateMany(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
+  ) {
     return this.dispatcher.dispatchTask(new Callable<SyncUpdateResult>() {
       @Override
       public SyncUpdateResult call() throws Exception {
@@ -198,7 +206,7 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<SyncDeleteResult> deleteOne(Bson filter) {
+  public Task<SyncDeleteResult> deleteOne(final Bson filter) {
     return this.dispatcher.dispatchTask(new Callable<SyncDeleteResult>() {
       @Override
       public SyncDeleteResult call() throws Exception {
@@ -208,7 +216,7 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<SyncDeleteResult> deleteMany(Bson filter) {
+  public Task<SyncDeleteResult> deleteMany(final Bson filter) {
     return this.dispatcher.dispatchTask(new Callable<SyncDeleteResult>() {
       @Override
       public SyncDeleteResult call() throws Exception {

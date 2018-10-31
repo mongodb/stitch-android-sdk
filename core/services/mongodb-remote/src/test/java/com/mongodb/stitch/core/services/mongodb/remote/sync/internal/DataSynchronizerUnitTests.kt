@@ -1012,8 +1012,9 @@ class DataSynchronizerUnitTests {
         val result = ctx.dataSynchronizer.updateMany(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
-            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))))
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))))
 
+        ctx.findTestDocumentFromLocalCollection()
         assertEquals(2, result.modifiedCount)
         assertEquals(2, result.matchedCount)
         assertNull(result.upsertedId)
@@ -1064,17 +1065,18 @@ class DataSynchronizerUnitTests {
 
         ctx.reconfigure()
 
-        val doc1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+        val doc1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2))
 
         var result = ctx.dataSynchronizer.updateMany(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
-            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
             UpdateOptions().upsert(true))
 
         assertEquals(0, result.matchedCount)
         assertEquals(0, result.modifiedCount)
         assertNotNull(result.upsertedId)
+
         val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1.append("_id", result.upsertedId), true)
 
         ctx.waitForEvents(amount = 1)
@@ -1087,16 +1089,21 @@ class DataSynchronizerUnitTests {
             doc1,
             ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
 
+        val doc2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+
+        ctx.dataSynchronizer.insertOneAndSync(ctx.namespace, doc2)
+
         result = ctx.dataSynchronizer.updateMany(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
-            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
             UpdateOptions().upsert(true))
 
-        assertEquals(1, result.matchedCount)
+        assertEquals(2, result.matchedCount)
         assertEquals(1, result.modifiedCount)
         assertNull(result.upsertedId)
 
+        // there should only be 2 events instead of 3 since only 1 document was modified
         ctx.waitForEvents(amount = 2)
 
         val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc1["_id"])

@@ -20,6 +20,11 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import com.mongodb.stitch.core.testutils.sync.ProxyRemoteMethods
@@ -71,16 +76,36 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             sync.syncOne(id)
         }
 
-        override fun insertOneAndSync(document: Document): RemoteInsertOneResult {
+        override fun count(filter: Bson): Long {
+            return Tasks.await(sync.count())
+        }
+
+        override fun aggregate(pipeline: List<Bson>): Iterable<Document?> {
+            return Tasks.await(sync.aggregate(pipeline).into(mutableListOf<Document>()))
+        }
+
+        override fun insertOneAndSync(document: Document): SyncInsertOneResult {
             return Tasks.await(sync.insertOneAndSync(document))
         }
 
-        override fun updateOne(filter: Bson, update: Bson): RemoteUpdateResult {
-            return Tasks.await(sync.updateOne(filter, update))
+        override fun insertManyAndSync(documents: List<Document>): SyncInsertManyResult {
+            return Tasks.await(sync.insertManyAndSync(documents))
         }
 
-        override fun deleteOne(filter: Bson): RemoteDeleteResult {
+        override fun updateOne(filter: Bson, update: Bson, updateOptions: SyncUpdateOptions): SyncUpdateResult {
+            return Tasks.await(sync.updateOne(filter, update, updateOptions))
+        }
+
+        override fun updateMany(filter: Bson, update: Bson, updateOptions: SyncUpdateOptions): SyncUpdateResult {
+            return Tasks.await(sync.updateMany(filter, update, updateOptions))
+        }
+
+        override fun deleteOne(filter: Bson): SyncDeleteResult {
             return Tasks.await(sync.deleteOne(filter))
+        }
+
+        override fun deleteMany(filter: Bson): SyncDeleteResult {
+            return Tasks.await(sync.deleteMany(filter))
         }
 
         override fun desyncOne(id: BsonValue) {
@@ -310,6 +335,26 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     override fun testResumeSyncForDocumentResumesSync() {
         testProxy.testResumeSyncForDocumentResumesSync()
+    }
+
+    @Test
+    override fun testReadsBeforeAndAfterSync() {
+        testProxy.testReadsBeforeAndAfterSync()
+    }
+
+    @Test
+    override fun testInsertManyNoConflicts() {
+        testProxy.testInsertManyNoConflicts()
+    }
+
+    @Test
+    override fun testUpdateManyNoConflicts() {
+        testProxy.testUpdateManyNoConflicts()
+    }
+
+    @Test
+    override fun testDeleteManyNoConflicts() {
+        testProxy.testDeleteManyNoConflicts()
     }
 
     /**

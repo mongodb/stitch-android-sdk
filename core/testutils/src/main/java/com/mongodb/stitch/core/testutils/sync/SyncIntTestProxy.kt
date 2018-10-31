@@ -11,6 +11,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
@@ -21,6 +22,8 @@ import org.bson.Document
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
@@ -1341,6 +1344,188 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
                 withoutSyncVersion(
                     withoutId(testSync.find(Document("_id", result.insertedId)).first()!!)))
         }
+    }
+
+    @Test
+    fun testReadsBeforeAndAfterSync() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        coll.configure(failingConflictHandler, null, null)
+
+        val doc1 = Document("hello", "world")
+        val doc2 = Document("hello", "friend")
+        val doc3 = Document("hello", "goodbye")
+
+        val insertResult = remoteColl.insertMany(listOf(doc1, doc2, doc3))
+        assertEquals(3, insertResult.insertedIds.size)
+
+        assertEquals(0, coll.count())
+        assertEquals(0, coll.find().toList().size)
+        assertEquals(0, coll.aggregate(listOf(Document(mapOf(
+            "\$match" to mapOf("_id" to mapOf("\$in" to insertResult.insertedIds.map {
+                it.value }))
+        )))).toList().size)
+
+        insertResult.insertedIds.forEach { coll.syncOne(it.value) }
+        streamAndSync()
+
+        assertEquals(3, coll.count())
+        assertEquals(3, coll.find().toList().size)
+        assertEquals(3, coll.aggregate(listOf(Document(mapOf(
+            "\$match" to mapOf("_id" to mapOf("\$in" to insertResult.insertedIds.map {
+                it.value }))
+        )))).toList().size)
+
+        insertResult.insertedIds.forEach { coll.desyncOne(it.value) }
+        streamAndSync()
+
+        assertEquals(0, coll.count())
+        assertEquals(0, coll.find().toList().size)
+        assertEquals(0, coll.aggregate(listOf(Document(mapOf(
+            "\$match" to mapOf("_id" to mapOf("\$in" to insertResult.insertedIds.map {
+                it.value }))
+        )))).toList().size)
+    }
+
+    @Test
+    fun testInsertManyNoConflicts() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        coll.configure(failingConflictHandler, null, null)
+
+        val doc1 = Document("hello", "world")
+        val doc2 = Document("hello", "friend")
+        val doc3 = Document("hello", "goodbye")
+
+        val insertResult = coll.insertManyAndSync(listOf(doc1, doc2, doc3))
+        assertEquals(3, insertResult.insertedIds.size)
+
+        assertEquals(3, coll.count())
+        assertEquals(3, coll.find().toList().size)
+        assertEquals(3, coll.aggregate(listOf(Document(mapOf(
+            "\$match" to mapOf("_id" to mapOf("\$in" to insertResult.insertedIds.map {
+                it.value }))
+        )))).toList().size)
+
+        assertEquals(0, remoteColl.find(Document()).toList().size)
+        streamAndSync()
+
+        assertEquals(3, remoteColl.find(Document()).toList().size)
+        assertEquals(doc1, withoutSyncVersion(remoteColl.find(Document("_id", doc1["_id"])).first()!!))
+        assertEquals(doc2, withoutSyncVersion(remoteColl.find(Document("_id", doc2["_id"])).first()!!))
+        assertEquals(doc3, withoutSyncVersion(remoteColl.find(Document("_id", doc3["_id"])).first()!!))
+    }
+
+    @Test
+    fun testUpdateManyNoConflicts() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        coll.configure(failingConflictHandler, null, null)
+
+        var updateResult = coll.updateMany(
+            Document(mapOf(
+                "fish" to listOf("one", "two", "red", "blue")
+            )),
+            Document("\$set", mapOf(
+                "fish" to listOf("black", "blue", "old", "new")
+            )))
+
+        assertEquals(0, updateResult.modifiedCount)
+        assertEquals(0, updateResult.matchedCount)
+        assertNull(updateResult.upsertedId)
+
+        updateResult = coll.updateMany(
+            Document(mapOf(
+                "fish" to listOf("one", "two", "red", "blue")
+            )),
+            Document("\$set", mapOf(
+                "fish" to listOf("black", "blue", "old", "new")
+            )),
+            SyncUpdateOptions().upsert(true))
+
+        assertEquals(0, updateResult.modifiedCount)
+        assertEquals(0, updateResult.matchedCount)
+        assertNotNull(updateResult.upsertedId)
+
+        val doc1 = Document(mapOf(
+            "hello" to "world",
+            "fish" to listOf("one", "two", "red", "blue")
+        ))
+        val doc2 = Document("hello", "friend")
+        val doc3 = Document("hello", "goodbye")
+
+        val insertResult = coll.insertManyAndSync(listOf(doc1, doc2, doc3))
+        assertEquals(3, insertResult.insertedIds.size)
+
+        streamAndSync()
+
+        assertEquals(4, remoteColl.find(Document()).toList().size)
+
+        updateResult = coll.updateMany(
+            Document("fish", Document("\$exists", true)),
+            Document("\$set", Document("fish", listOf("trout", "mackerel", "cod", "hake")))
+        )
+
+        assertEquals(2, updateResult.modifiedCount)
+        assertEquals(2, updateResult.matchedCount)
+        assertNull(updateResult.upsertedId)
+
+        assertEquals(4, coll.count())
+
+        var localFound = coll.find(Document("fish", Document("\$exists", true)))
+        assertEquals(2, localFound.toList().size)
+        localFound.forEach { assertEquals(listOf("trout", "mackerel", "cod", "hake"), it!!["fish"]) }
+
+        streamAndSync()
+
+        val remoteFound = remoteColl.find(Document("fish", Document("\$exists", true)))
+        localFound = coll.find(Document("fish", Document("\$exists", true)))
+
+        assertEquals(2, localFound.toList().size)
+        assertEquals(2, remoteFound.toList().size)
+        localFound.forEach { assertEquals(listOf("trout", "mackerel", "cod", "hake"), it!!["fish"]) }
+        remoteFound.forEach { assertEquals(listOf("trout", "mackerel", "cod", "hake"), it!!["fish"]) }
+    }
+
+    @Test
+    fun testDeleteManyNoConflicts() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        coll.configure(failingConflictHandler, null, null)
+
+        val doc1 = Document("hello", "world")
+        val doc2 = Document("hello", "friend")
+        val doc3 = Document("hello", "goodbye")
+
+        val insertResult = coll.insertManyAndSync(listOf(doc1, doc2, doc3))
+        assertEquals(3, insertResult.insertedIds.size)
+
+        assertEquals(3, coll.count())
+        assertEquals(3, coll.find().toList().size)
+        assertEquals(3, coll.aggregate(listOf(Document(mapOf(
+            "\$match" to mapOf("_id" to mapOf("\$in" to insertResult.insertedIds.map {
+                it.value }))
+        )))).toList().size)
+
+        assertEquals(0, remoteColl.find(Document()).toList().size)
+        streamAndSync()
+
+        assertEquals(3, remoteColl.find(Document()).toList().size)
+        coll.deleteMany(Document(mapOf(
+            "_id" to mapOf("\$in" to insertResult.insertedIds.map {
+                it.value }))))
+
+        assertEquals(3, remoteColl.find(Document()).toList().size)
+        assertEquals(0, coll.find(Document()).toList().size)
+
+        streamAndSync()
+
+        assertEquals(0, remoteColl.find(Document()).toList().size)
+        assertEquals(0, coll.find(Document()).toList().size)
     }
 
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {

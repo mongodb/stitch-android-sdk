@@ -17,39 +17,33 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.model.CountOptions;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 import javax.annotation.Nullable;
 
 import org.bson.conversions.Bson;
 
-class AggregateOperation<T> implements Operation<Collection<T>> {
+class CountOperation implements Operation<Long> {
   private final MongoNamespace namespace;
   private final DataSynchronizer dataSynchronizer;
-  private final List<? extends Bson> pipeline;
-  private final Class<T> resultClass;
+  private final Bson filter;
+  private final CountOptions countOptions;
 
-  AggregateOperation(
+  CountOperation(
       final MongoNamespace namespace,
       final DataSynchronizer dataSynchronizer,
-      final List<? extends Bson> pipeline,
-      final Class<T> resultClass
+      final Bson filter,
+      final CountOptions countOptions
   ) {
     this.namespace = namespace;
-    this.dataSynchronizer = dataSynchronizer;
-    this.pipeline = pipeline;
-    this.resultClass = resultClass;
+    this.dataSynchronizer = dataSynchronizer;;
+    this.filter = filter;
+    this.countOptions = countOptions;
   }
 
-  public Collection<T> execute(@Nullable final CoreStitchServiceClient service) {
-    return this.dataSynchronizer.aggregate(
-        namespace, pipeline, resultClass
-    ).into(new ArrayList<>());
+  public Long execute(@Nullable final CoreStitchServiceClient service) {
+    return this.dataSynchronizer.count(namespace, filter, countOptions);
   }
 }
-

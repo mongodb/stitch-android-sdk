@@ -16,13 +16,8 @@
 
 package com.mongodb.stitch.server.services.mongodb.remote;
 
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncAggregateIterable;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
@@ -112,14 +107,15 @@ public interface Sync<DocumentT> {
   boolean resumeSyncForDocument(@Nonnull final BsonValue documentId);
 
   /**
-   * Counts the number of documents in the collection.
+   * Counts the number of documents in the collection that have been synchronized from the remote.
    *
    * @return the number of documents in the collection
    */
   long count();
 
   /**
-   * Counts the number of documents in the collection according to the given options.
+   * Counts the number of documents in the collection that have been synchronized from the remote
+   * according to the given options.
    *
    * @param filter the query filter
    * @return the number of documents in the collection
@@ -127,7 +123,8 @@ public interface Sync<DocumentT> {
   long count(final Bson filter);
 
   /**
-   * Counts the number of documents in the collection according to the given options.
+   * Counts the number of documents in the collection that have been synchronized from the remote
+   * according to the given options.
    *
    * @param filter  the query filter
    * @param options the options describing the count
@@ -136,14 +133,14 @@ public interface Sync<DocumentT> {
   long count(final Bson filter, final SyncCountOptions options);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @return the find iterable interface
    */
   SyncFindIterable<DocumentT> find();
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @param resultClass the class to decode each document into
    * @param <ResultT>   the target document type of the iterable.
@@ -152,7 +149,7 @@ public interface Sync<DocumentT> {
   <ResultT> SyncFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @param filter the query filter
    * @return the find iterable interface
@@ -160,7 +157,7 @@ public interface Sync<DocumentT> {
   SyncFindIterable<DocumentT> find(final Bson filter);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @param filter      the query filter
    * @param resultClass the class to decode each document into
@@ -173,7 +170,8 @@ public interface Sync<DocumentT> {
 
 
   /**
-   * Aggregates documents according to the specified aggregation pipeline.
+   * Aggregates documents that have been synchronized from the remote
+   * according to the specified aggregation pipeline.
    *
    * @param pipeline the aggregation pipeline
    * @return an iterable containing the result of the aggregation operation
@@ -181,7 +179,8 @@ public interface Sync<DocumentT> {
   SyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline);
 
   /**
-   * Aggregates documents according to the specified aggregation pipeline.
+   * Aggregates documents that have been synchronized from the remote
+   * according to the specified aggregation pipeline.
    *
    * @param pipeline    the aggregation pipeline
    * @param resultClass the class to decode each document into
@@ -194,7 +193,7 @@ public interface Sync<DocumentT> {
 
   /**
    * Inserts the provided document. If the document is missing an identifier, the client should
-   * generate one.
+   * generate one. Begin syncing the document against the remote.
    *
    * @param document the document to insert
    * @return the result of the insert one operation
@@ -202,7 +201,7 @@ public interface Sync<DocumentT> {
   SyncInsertOneResult insertOneAndSync(final DocumentT document);
 
   /**
-   * Inserts one or more documents.
+   * Inserts one or more documents. Begin syncing the documents against the remote.
    *
    * @param documents the documents to insert
    * @return the result of the insert many operation
@@ -210,8 +209,8 @@ public interface Sync<DocumentT> {
   SyncInsertManyResult insertManyAndSync(final List<DocumentT> documents);
 
   /**
-   * Removes at most one document from the collection that matches the given filter.  If no
-   * documents match, the collection is not
+   * Removes at most one document from the collection that has been synchronized from the remote
+   * and matches the given filter.  If no documents match, the collection is not
    * modified.
    *
    * @param filter the query filter to apply the the delete operation
@@ -220,7 +219,8 @@ public interface Sync<DocumentT> {
   SyncDeleteResult deleteOne(final Bson filter);
 
   /**
-   * Removes all documents from the collection that match the given query filter.  If no documents
+   * Removes all documents from the collection that have been synchronized from the remote
+   * and match the given query filter.  If no documents
    * match, the collection is not modified.
    *
    * @param filter the query filter to apply the the delete operation
@@ -229,7 +229,8 @@ public interface Sync<DocumentT> {
   SyncDeleteResult deleteMany(final Bson filter);
 
   /**
-   * Update a single document in the collection according to the specified arguments.
+   * Update a single document in the collection that has been synchronized from the remote
+   * according to the specified arguments.
    *
    * @param filter a document describing the query filter, which may not be null.
    * @param update a document describing the update, which may not be null. The update to
@@ -239,7 +240,8 @@ public interface Sync<DocumentT> {
   SyncUpdateResult updateOne(final Bson filter, final Bson update);
 
   /**
-   * Update a single document in the collection according to the specified arguments.
+   * Update a single document that has been synchronized from the remote
+   * in the collection according to the specified arguments.
    *
    * @param filter        a document describing the query filter, which may not be null.
    * @param update        a document describing the update, which may not be null. The update to
@@ -253,7 +255,8 @@ public interface Sync<DocumentT> {
       final SyncUpdateOptions updateOptions);
 
   /**
-   * Update all documents in the collection according to the specified arguments.
+   * Update all documents in the collection that have been synchronized from the remote
+   * according to the specified arguments.
    *
    * @param filter a document describing the query filter, which may not be null.
    * @param update a document describing the update, which may not be null. The update to
@@ -263,7 +266,8 @@ public interface Sync<DocumentT> {
   SyncUpdateResult updateMany(final Bson filter, final Bson update);
 
   /**
-   * Update all documents in the collection according to the specified arguments.
+   * Update all documents in the collection that have been synchronized from the remote
+   * according to the specified arguments.
    *
    * @param filter        a document describing the query filter, which may not be null.
    * @param update        a document describing the update, which may not be null. The update to

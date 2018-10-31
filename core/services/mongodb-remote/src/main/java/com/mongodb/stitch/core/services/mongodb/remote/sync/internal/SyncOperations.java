@@ -22,17 +22,19 @@ import static com.mongodb.stitch.core.internal.common.BsonUtils.getCodec;
 import static com.mongodb.stitch.core.internal.common.BsonUtils.toBsonDocument;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.model.CountOptions;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.bson.BsonDocument;
 import org.bson.codecs.CollectibleCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class SyncOperations<DocumentT> {
 
@@ -94,6 +96,14 @@ public class SyncOperations<DocumentT> {
         .sort(sortDoc);
   }
 
+  CountOperation count(final Bson filter, final SyncCountOptions countOptions) {
+    return new CountOperation(
+        namespace,
+        dataSynchronizer,
+        filter,
+        new CountOptions().limit(countOptions.getLimit()));
+  }
+
   /**
    * Aggregates documents according to the specified aggregation pipeline.
    *
@@ -153,17 +163,17 @@ public class SyncOperations<DocumentT> {
 
   InsertManyAndSyncOperation insertManyAndSync(final List<DocumentT> documents) {
     final List<BsonDocument> bsonDocuments = new ArrayList<>();
-      for (final DocumentT document : documents) {
-        if (getCodec(codecRegistry, documentClass) instanceof CollectibleCodec) {
-          bsonDocuments.add(
-              documentToBsonDocument(
-                  ((CollectibleCodec<DocumentT>) getCodec(codecRegistry, documentClass))
-                      .generateIdIfAbsentFromDocument(document),
-                  codecRegistry
-              )
-          );
-        } else {
-          bsonDocuments.add(documentToBsonDocument(document, codecRegistry));
+    for (final DocumentT document : documents) {
+      if (getCodec(codecRegistry, documentClass) instanceof CollectibleCodec) {
+        bsonDocuments.add(
+            documentToBsonDocument(
+                ((CollectibleCodec<DocumentT>) getCodec(codecRegistry, documentClass))
+                    .generateIdIfAbsentFromDocument(document),
+                codecRegistry
+            )
+        );
+      } else {
+        bsonDocuments.add(documentToBsonDocument(document, codecRegistry));
       }
     }
 

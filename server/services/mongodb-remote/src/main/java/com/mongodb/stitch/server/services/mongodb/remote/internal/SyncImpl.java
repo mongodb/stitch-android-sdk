@@ -119,63 +119,67 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public long count(Bson filter) {
+  public long count(final Bson filter) {
     return this.count(filter, new SyncCountOptions());
   }
 
   @Override
-  public long count(Bson filter, SyncCountOptions options) {
+  public long count(final Bson filter, final SyncCountOptions options) {
     return this.proxy.count(filter, options);
   }
 
   @Override
-  public SyncAggregateIterable<DocumentT> aggregate(List<? extends Bson> pipeline) {
+  public SyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
     return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline));
   }
 
   @Override
-  public <ResultT> SyncAggregateIterable<ResultT> aggregate(List<? extends Bson> pipeline,
-                                                            Class<ResultT> resultClass) {
+  public <ResultT> SyncAggregateIterable<ResultT> aggregate(final List<? extends Bson> pipeline,
+                                                            final Class<ResultT> resultClass) {
     return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline, resultClass));
   }
 
   @Override
-  public SyncInsertOneResult insertOneAndSync(DocumentT document) {
+  public SyncInsertOneResult insertOneAndSync(final DocumentT document) {
     return proxy.insertOneAndSync(document);
   }
 
   @Override
-  public SyncInsertManyResult insertManyAndSync(List<DocumentT> documents) {
+  public SyncInsertManyResult insertManyAndSync(final List<DocumentT> documents) {
     return proxy.insertManyAndSync(documents);
   }
 
   @Override
-  public SyncUpdateResult updateOne(Bson filter, Bson update) {
+  public SyncUpdateResult updateOne(final Bson filter, final Bson update) {
     return proxy.updateOne(filter, update);
   }
 
   @Override
-  public SyncUpdateResult updateOne(Bson filter, Bson update, SyncUpdateOptions updateOptions) {
+  public SyncUpdateResult updateOne(final Bson filter,
+                                    final Bson update,
+                                    final SyncUpdateOptions updateOptions) {
     return proxy.updateOne(filter, update, updateOptions);
   }
 
   @Override
-  public SyncUpdateResult updateMany(Bson filter, Bson update) {
+  public SyncUpdateResult updateMany(final Bson filter, final Bson update) {
     return proxy.updateMany(filter, update);
   }
 
   @Override
-  public SyncUpdateResult updateMany(Bson filter, Bson update, SyncUpdateOptions updateOptions) {
+  public SyncUpdateResult updateMany(final Bson filter,
+                                     final Bson update,
+                                     final SyncUpdateOptions updateOptions) {
     return proxy.updateMany(filter, update, updateOptions);
   }
 
   @Override
-  public SyncDeleteResult deleteOne(Bson filter) {
+  public SyncDeleteResult deleteOne(final Bson filter) {
     return proxy.deleteOne(filter);
   }
 
   @Override
-  public SyncDeleteResult deleteMany(Bson filter) {
+  public SyncDeleteResult deleteMany(final Bson filter) {
     return proxy.deleteMany(filter);
   }
 }

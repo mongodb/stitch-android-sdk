@@ -20,13 +20,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.google.android.gms.tasks.Task;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncAggregateIterable;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
@@ -119,7 +114,8 @@ public interface Sync<DocumentT> {
   Task<Long> count();
 
   /**
-   * Counts the number of documents in the collection according to the given options.
+   * Counts the number of documents in the collection that have been synchronized from the remote
+   * according to the given options.
    *
    * @param filter the query filter
    * @return the number of documents in the collection
@@ -127,7 +123,8 @@ public interface Sync<DocumentT> {
   Task<Long> count(final Bson filter);
 
   /**
-   * Counts the number of documents in the collection according to the given options.
+   * Counts the number of documents in the collection that have been synchronized from the remote
+   * according to the given options.
    *
    * @param filter  the query filter
    * @param options the options describing the count
@@ -136,14 +133,14 @@ public interface Sync<DocumentT> {
   Task<Long> count(final Bson filter, final SyncCountOptions options);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @return the find iterable interface
    */
   SyncFindIterable<DocumentT> find();
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @param resultClass the class to decode each document into
    * @param <ResultT>   the target document type of the iterable.
@@ -152,7 +149,7 @@ public interface Sync<DocumentT> {
   <ResultT> SyncFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @param filter the query filter
    * @return the find iterable interface
@@ -160,7 +157,7 @@ public interface Sync<DocumentT> {
   SyncFindIterable<DocumentT> find(final Bson filter);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized from the remote.
    *
    * @param filter      the query filter
    * @param resultClass the class to decode each document into
@@ -173,7 +170,8 @@ public interface Sync<DocumentT> {
 
 
   /**
-   * Aggregates documents according to the specified aggregation pipeline.
+   * Aggregates documents that have been synchronized from the remote
+   * according to the specified aggregation pipeline.
    *
    * @param pipeline the aggregation pipeline
    * @return an iterable containing the result of the aggregation operation
@@ -181,7 +179,8 @@ public interface Sync<DocumentT> {
   SyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline);
 
   /**
-   * Aggregates documents according to the specified aggregation pipeline.
+   * Aggregates documents that have been synchronized from the remote
+   * according to the specified aggregation pipeline.
    *
    * @param pipeline    the aggregation pipeline
    * @param resultClass the class to decode each document into

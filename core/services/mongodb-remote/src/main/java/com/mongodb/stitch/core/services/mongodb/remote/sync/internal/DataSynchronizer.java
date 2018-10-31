@@ -784,8 +784,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     logger.info(String.format(
             Locale.US,
             "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
-                      + "indicates a remote replace occurred, but a local write is pending; raising "
-                      + "conflict with synthesized replace event",
+                    + "indicates a remote replace occurred, but a local write is pending; raising "
+                    + "conflict with synthesized replace event",
             logicalT,
             nsConfig.getNamespace(),
             docConfig.getDocumentId()));
@@ -1734,14 +1734,19 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Bson filter,
       final Bson update,
       final UpdateOptions updateOptions) {
+    // read the local collection
     final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
 
+    // fetch the document prior to updating
     final BsonDocument documentBeforeUpdate = getLocalCollection(namespace).find(filter).first();
 
+    // if there was no document prior and this is not an upsert,
+    // do not acknowledge the update
     if (!updateOptions.isUpsert() && documentBeforeUpdate == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
+    // find and update the single document, returning the document post-update
     final BsonDocument documentAfterUpdate = localCollection.findOneAndUpdate(
         filter,
         update,
@@ -1752,6 +1757,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             .arrayFilters(updateOptions.getArrayFilters())
             .returnDocument(ReturnDocument.AFTER));
 
+    // if the document was deleted between our earlier check and now, it will not have
+    // been updated. do not acknowledge the update
     if (documentAfterUpdate == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
@@ -1760,8 +1767,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final CoreDocumentSynchronizationConfig config;
     final BsonValue documentId = BsonUtils.getDocumentId(documentAfterUpdate);
 
+    // if there was no document prior and this was an upsert,
+    // treat this as an insert.
+    // else this is an update
     if (documentBeforeUpdate == null && updateOptions.isUpsert()) {
       config = syncConfig.addSynchronizedDocument(namespace, documentId);
+      triggerListeningToNamespace(namespace);
       event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
     } else {
       config = syncConfig.getSynchronizedDocument(namespace, documentId);
@@ -1806,20 +1817,35 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Bson filter,
       final Bson update,
       final UpdateOptions updateOptions) {
-    Map<BsonValue, BsonDocument> idToBeforeDocumentMap = new HashMap<>();
+    // fetch all of the documents that this filter will match
+    final Map<BsonValue, BsonDocument> idToBeforeDocumentMap = new HashMap<>();
+    final BsonArray ids = new BsonArray();
     this.getLocalCollection(namespace)
         .find(filter)
         .forEach(new Block<BsonDocument>() {
           @Override
           public void apply(@NonNull final BsonDocument bsonDocument) {
-            idToBeforeDocumentMap.put(BsonUtils.getDocumentId(bsonDocument), bsonDocument);
+            final BsonValue documentId = BsonUtils.getDocumentId(bsonDocument);
+            ids.add(documentId);
+            idToBeforeDocumentMap.put(documentId, bsonDocument);
           }
         });
 
+    // do the bulk write
     final UpdateResult result = this.getLocalCollection(namespace)
         .updateMany(filter, update, updateOptions);
 
-    this.getLocalCollection(namespace).find(filter).forEach(new Block<BsonDocument>() {
+    // if this was an upsert, create the post-update filter using
+    // the upserted id.
+    // else, use the matched ids from prior to create a new filter
+    final BsonDocument updatedFilter;
+    if (result.getUpsertedId() != null) {
+      updatedFilter = getDocumentIdFilter(result.getUpsertedId());
+    } else {
+      updatedFilter = new BsonDocument("_id", new BsonDocument("$in", ids));
+    }
+
+    this.getLocalCollection(namespace).find(updatedFilter).forEach(new Block<BsonDocument>() {
       @Override
       public void apply(@NonNull final BsonDocument afterDocument) {
         final BsonDocument beforeDocument;
@@ -1830,11 +1856,22 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           return;
         }
 
+        // because we are looking up a bulk write, we may have queried documents
+        // that match the updated state, but were not actually modified.
+        // if the document before the update is the same as the updated doc,
+        // assume it was not modified and take no further action
+        if (afterDocument.equals(beforeDocument)) {
+          return;
+        }
         final CoreDocumentSynchronizationConfig config;
         final ChangeEvent<BsonDocument> event;
 
+        // if there was no earlier document and this was an upsert,
+        // treat the upsert as an insert, as far as sync is concerned
+        // else treat it as a standard update
         if (beforeDocument == null && updateOptions.isUpsert()) {
           config = syncConfig.addSynchronizedDocument(namespace, documentId);
+          triggerListeningToNamespace(namespace);
           event = changeEventForLocalInsert(namespace, afterDocument, true);
         } else {
           config = syncConfig.getSynchronizedDocument(namespace, documentId);
@@ -1989,14 +2026,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             .map(new Function<BsonDocument, BsonValue>() {
               @Override
               @NonNull
-              public BsonValue apply(@NonNull BsonDocument bsonDocument) {
+              public BsonValue apply(@NonNull final BsonDocument bsonDocument) {
                 return BsonUtils.getDocumentId(bsonDocument);
               }
             }).into(new HashSet<>());
 
     final DeleteResult result = getLocalCollection(namespace).deleteMany(filter);
 
-    for (BsonValue documentId : idsToDelete) {
+    for (final BsonValue documentId : idsToDelete) {
       final CoreDocumentSynchronizationConfig config =
           syncConfig.getSynchronizedDocument(namespace, documentId);
 

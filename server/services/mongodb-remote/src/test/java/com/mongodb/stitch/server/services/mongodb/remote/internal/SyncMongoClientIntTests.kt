@@ -15,6 +15,11 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.sync.ProxyRemoteMethods
 import com.mongodb.stitch.core.testutils.sync.ProxySyncMethods
@@ -69,16 +74,28 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
             sync.syncOne(id)
         }
 
-        override fun insertOneAndSync(document: Document): RemoteInsertOneResult {
+        override fun insertOneAndSync(document: Document): SyncInsertOneResult {
             return sync.insertOneAndSync(document)
         }
 
-        override fun updateOne(filter: Bson, update: Bson): RemoteUpdateResult {
-            return sync.updateOne(filter, update)
+        override fun insertManyAndSync(documents: List<Document>): SyncInsertManyResult {
+            return sync.insertManyAndSync(documents)
         }
 
-        override fun deleteOne(filter: Bson): RemoteDeleteResult {
+        override fun updateOne(filter: Bson, update: Bson, updateOptions: SyncUpdateOptions): SyncUpdateResult {
+            return sync.updateOne(filter, update, updateOptions)
+        }
+
+        override fun updateMany(filter: Bson, update: Bson, updateOptions: SyncUpdateOptions): SyncUpdateResult {
+            return sync.updateMany(filter, update, updateOptions)
+        }
+
+        override fun deleteOne(filter: Bson): SyncDeleteResult {
             return sync.deleteOne(filter)
+        }
+
+        override fun deleteMany(filter: Bson): SyncDeleteResult {
+            return sync.deleteMany(filter)
         }
 
         override fun getSyncedIds(): Set<BsonValue> {
@@ -99,6 +116,14 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
 
         override fun getPausedDocumentIds(): Set<BsonValue> {
             return sync.pausedDocumentIds
+        }
+
+        override fun count(filter: Bson): Long {
+            return sync.count(filter)
+        }
+
+        override fun aggregate(pipeline: List<Bson>): Iterable<Document?> {
+            return sync.aggregate(pipeline)
         }
     }
 
@@ -310,6 +335,26 @@ class SyncMongoClientIntTests : BaseStitchServerIntTest(), SyncIntTestRunner {
     @Test
     override fun testResumeSyncForDocumentResumesSync() {
         testProxy.testResumeSyncForDocumentResumesSync()
+    }
+
+    @Test
+    override fun testReadsBeforeAndAfterSync() {
+        testProxy.testReadsBeforeAndAfterSync()
+    }
+
+    @Test
+    override fun testInsertManyNoConflicts() {
+        testProxy.testInsertManyNoConflicts()
+    }
+
+    @Test
+    override fun testUpdateManyNoConflicts() {
+        testProxy.testUpdateManyNoConflicts()
+    }
+
+    @Test
+    override fun testDeleteManyNoConflicts() {
+        testProxy.testDeleteManyNoConflicts()
     }
 
     /**

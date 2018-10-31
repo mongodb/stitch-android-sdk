@@ -17,7 +17,6 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.client.model.CountOptions;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
@@ -125,8 +124,7 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
 
   @Override
   public long count(final Bson filter, final SyncCountOptions options) {
-    CountOptions countOptions = new CountOptions().limit(options.getLimit());
-    return this.dataSynchronizer.count(this.namespace, filter, countOptions);
+    return syncOperations.count(filter, options).execute(service);
   }
 
   @Override
@@ -173,22 +171,22 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   }
 
   @Override
-  public SyncInsertOneResult insertOneAndSync(DocumentT document) {
+  public SyncInsertOneResult insertOneAndSync(final DocumentT document) {
     return syncOperations.insertOneAndSync(document).execute(service);
   }
 
   @Override
-  public SyncInsertManyResult insertManyAndSync(List<DocumentT> documents) {
+  public SyncInsertManyResult insertManyAndSync(final List<DocumentT> documents) {
     return syncOperations.insertManyAndSync(documents).execute(service);
   }
 
   @Override
-  public SyncDeleteResult deleteOne(Bson filter) {
+  public SyncDeleteResult deleteOne(final Bson filter) {
     return syncOperations.deleteOne(filter).execute(service);
   }
 
   @Override
-  public SyncDeleteResult deleteMany(Bson filter) {
+  public SyncDeleteResult deleteMany(final Bson filter) {
     return syncOperations.deleteMany(filter).execute(service);
   }
 
