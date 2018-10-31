@@ -26,9 +26,11 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonInt64
 import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.BsonValue
+import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
@@ -44,9 +46,9 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import java.io.Closeable
 import java.lang.Exception
+import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import java.util.Random
 
 class SyncUnitTestHarness : Closeable {
     companion object {
@@ -222,6 +224,30 @@ class SyncUnitTestHarness : Closeable {
             expectedEvent: ChangeEvent<BsonDocument>? = null
         ): ChangeEventListener<BsonDocument> {
             return Mockito.spy(TestChangeEventListener(expectedEvent, emitEventSemaphore))
+        }
+
+        private fun withNewSyncVersion(document: BsonDocument): BsonDocument {
+            val newDocument = document.clone()
+            newDocument["__stitch_sync_version"] = freshSyncVersionDoc()
+
+            return newDocument
+        }
+
+        private fun withNewUnsupportedSyncVersion(document: BsonDocument): BsonDocument {
+            val newDocument = document.clone()
+            val badVersion = freshSyncVersionDoc()
+            badVersion.remove("spv")
+            badVersion.append("spv", BsonInt32(2))
+
+            newDocument["__stitch_sync_version"] = badVersion
+
+            return newDocument
+        }
+
+        private fun freshSyncVersionDoc(): BsonDocument {
+            return BsonDocument("spv", BsonInt32(1))
+                .append("id", BsonString(UUID.randomUUID().toString()))
+                .append("v", BsonInt64(0L))
         }
     }
 
@@ -399,7 +425,8 @@ class SyncUnitTestHarness : Closeable {
 
         override fun queueConsumableRemoteInsertEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalInsert(namespace, testDocument, true)),
+                mapOf(testDocument to ChangeEvent.changeEventForLocalInsert(
+                    namespace, withNewSyncVersion(testDocument), true)),
                 mapOf())
         }
 
