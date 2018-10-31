@@ -30,7 +30,6 @@ import org.bson.BsonInt64
 import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.BsonValue
-import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
@@ -229,17 +228,6 @@ class SyncUnitTestHarness : Closeable {
         private fun withNewSyncVersion(document: BsonDocument): BsonDocument {
             val newDocument = document.clone()
             newDocument["__stitch_sync_version"] = freshSyncVersionDoc()
-
-            return newDocument
-        }
-
-        private fun withNewUnsupportedSyncVersion(document: BsonDocument): BsonDocument {
-            val newDocument = document.clone()
-            val badVersion = freshSyncVersionDoc()
-            badVersion.remove("spv")
-            badVersion.append("spv", BsonInt32(2))
-
-            newDocument["__stitch_sync_version"] = badVersion
 
             return newDocument
         }
