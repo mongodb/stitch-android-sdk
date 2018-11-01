@@ -136,7 +136,7 @@ interface DataSynchronizerTestContext : Closeable {
     fun queueConsumableRemoteInsertEvent()
 
     enum class TestVersionState {
-        NONE, SAME, NEXT
+        NONE, PREVIOUS, SAME, NEXT
     }
 
     /**

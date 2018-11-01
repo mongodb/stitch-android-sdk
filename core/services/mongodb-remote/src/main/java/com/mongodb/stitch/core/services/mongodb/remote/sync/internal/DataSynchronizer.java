@@ -858,7 +858,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         final ChangeEvent<BsonDocument> unprocessedRemoteEvent =
                 instanceChangeStreamListener.getUnprocessedEventForDocumentId(
                         nsConfig.getNamespace(),
-                        new BsonDocument("_id", docConfig.getDocumentId()));
+                        docConfig.getDocumentId());
+//                         new BsonDocument("_id", docConfig.getDocumentId()));
 
         if (unprocessedRemoteEvent != null) {
           final DocumentVersionInfo unprocessedEventVersion;

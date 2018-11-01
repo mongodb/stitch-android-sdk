@@ -1099,6 +1099,7 @@ class DataSynchronizerUnitTests {
         // this time, add a version to the local doc
         ctx.insertTestDocument()
         ctx.doSyncPass()
+        ctx.dataSynchronizer.swapSyncDirection(true)
         // update the doc locally and queue a fake update remotely.
         // neither of these will have versions.
         ctx.updateTestDocument()
@@ -1115,6 +1116,41 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         assertEquals(BsonDocument("_id", ctx.testDocumentId).append("count", BsonInt32(2)),
+            ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateLocalVersionHigher() {
+        val ctx = harness.freshTestContext()
+
+        // insert a new document and sync it to the remote.
+        // this time, add a version to the local doc
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+        // update the doc locally and queue a fake update remotely.
+        // neither of these will have versions.
+        ctx.addVersionInfoToTestDocument()
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+            DataSynchronizerTestContext.TestVersionState.NEXT,
+            pseudoUpdatedDocument)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        // sync, creating a conflict. because remote has an empty version,
+        // there will be a conflict on the next L2R pass that we will resolve
+        // with remote.
+        ctx.doSyncPass()
+
+        ctx.updateTestDocument()
+
+        ctx.queueConsumableRemoteUpdateEvent(
+            DataSynchronizerTestContext.TestVersionState.PREVIOUS,
+            pseudoUpdatedDocument.append("oh", BsonString("joy")))
+
+        ctx.doSyncPass()
+
+        assertEquals(withoutSyncVersion(pseudoUpdatedDocument),
             ctx.findTestDocumentFromLocalCollection())
     }
 

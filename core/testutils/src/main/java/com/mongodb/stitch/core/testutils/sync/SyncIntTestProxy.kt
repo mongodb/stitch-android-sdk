@@ -515,46 +515,48 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
     @Test
     fun testRemoteDeletesLocalNoConflict() {
-        testSyncInBothDirections {
-            val coll = syncTestRunner.syncMethods()
-            val remoteColl = syncTestRunner.remoteMethods()
+        (0..50).forEach {
+            testSyncInBothDirections {
+                val coll = syncTestRunner.syncMethods()
+                val remoteColl = syncTestRunner.remoteMethods()
 
-            // insert a new document remotely
-            val docToInsert = Document("hello", "world")
-            remoteColl.insertOne(docToInsert)
+                // insert a new document remotely
+                val docToInsert = Document("hello", "world")
+                remoteColl.insertOne(docToInsert)
 
-            // find the document we just inserted
-            val doc = remoteColl.find(docToInsert).first()!!
-            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
-            val doc1Filter = Document("_id", doc1Id)
+                // find the document we just inserted
+                val doc = remoteColl.find(docToInsert).first()!!
+                val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+                val doc1Filter = Document("_id", doc1Id)
 
-            // configure Sync with a conflict handler that fails this test
-            // in the event of conflict. sync the document, and sync.
-            coll.configure(failingConflictHandler, null, null)
-            coll.syncOne(doc1Id)
-            streamAndSync()
-            assertEquals(coll.getSyncedIds().size, 1)
+                // configure Sync with a conflict handler that fails this test
+                // in the event of conflict. sync the document, and sync.
+                coll.configure(failingConflictHandler, null, null)
+                coll.syncOne(doc1Id)
+                streamAndSync()
+                assertEquals(coll.getSyncedIds().size, 1)
 
-            // do a remote delete. wait for the event to be stored. sync.
-            val sem = watchForEvents(syncTestRunner.namespace)
-            remoteColl.deleteOne(doc1Filter)
-            sem.acquire()
-            streamAndSync()
+                // do a remote delete. wait for the event to be stored. sync.
+                val sem = watchForEvents(syncTestRunner.namespace)
+                remoteColl.deleteOne(doc1Filter)
+                sem.acquire()
+                streamAndSync()
 
-            // assert that the remote deletion is reflected locally
-            Assert.assertNull(remoteColl.find(doc1Filter).firstOrNull())
-            Assert.assertNull(coll.findOneById(doc1Id))
+                // assert that the remote deletion is reflected locally
+                Assert.assertNull(remoteColl.find(doc1Filter).firstOrNull())
+                Assert.assertNull(coll.findOneById(doc1Id))
 
-            // sync. this should not re-sync the document
-            streamAndSync()
+                // sync. this should not re-sync the document
+                streamAndSync()
 
-            // insert the document again. sync.
-            remoteColl.insertOne(doc)
-            streamAndSync()
+                // insert the document again. sync.
+                remoteColl.insertOne(doc)
+                streamAndSync()
 
-            // assert that the remote insertion is NOT reflected locally
-            assertEquals(doc, remoteColl.find(doc1Filter).first())
-            Assert.assertNull(coll.findOneById(doc1Id))
+                // assert that the remote insertion is NOT reflected locally
+                assertEquals(doc, remoteColl.find(doc1Filter).first())
+                Assert.assertNull(coll.findOneById(doc1Id))
+            }
         }
     }
 

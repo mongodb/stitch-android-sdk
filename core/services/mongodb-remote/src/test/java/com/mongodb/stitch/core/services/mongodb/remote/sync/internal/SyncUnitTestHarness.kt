@@ -430,6 +430,9 @@ class SyncUnitTestHarness : Closeable {
                 when (versionState) {
                     DataSynchronizerTestContext.TestVersionState.NONE ->
                         fakeUpdateDoc.remove("__stitch_sync_version")
+                    DataSynchronizerTestContext.TestVersionState.PREVIOUS ->
+                        fakeUpdateDoc["__stitch_sync_version"] =
+                            documentVersionInfo.versionDoc?.append("v", BsonInt64(documentVersionInfo.version.versionCounter - 1))
                     DataSynchronizerTestContext.TestVersionState.SAME ->
                         fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.versionDoc
                     DataSynchronizerTestContext.TestVersionState.NEXT ->

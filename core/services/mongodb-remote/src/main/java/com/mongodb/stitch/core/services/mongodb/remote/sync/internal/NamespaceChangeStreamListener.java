@@ -227,6 +227,7 @@ public class NamespaceChangeStreamListener {
             nsConfig.getNamespace(), event.getData().getOperationType(), event.getData().getId()));
         nsLock.writeLock().lockInterruptibly();
         try {
+          System.out.println(event.getData().getDocumentKey());
           events.put(event.getData().getDocumentKey(), event.getData());
         } finally {
           nsLock.writeLock().unlock();
