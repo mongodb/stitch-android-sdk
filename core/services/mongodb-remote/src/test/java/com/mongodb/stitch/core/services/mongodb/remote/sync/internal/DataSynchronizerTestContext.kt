@@ -14,6 +14,9 @@ import org.bson.Document
 import java.io.Closeable
 import java.lang.Exception
 
+/**
+ * Set fake version state to be included on updates.
+ */
 enum class TestVersionState {
     NONE, PREVIOUS, SAME, NEXT, NEW
 }
@@ -140,7 +143,8 @@ interface DataSynchronizerTestContext : Closeable {
     fun queueConsumableRemoteUpdateEvent(
         id: BsonValue = testDocumentId,
         document: BsonDocument = testDocument,
-        versionState: TestVersionState = TestVersionState.NEXT)
+        versionState: TestVersionState = TestVersionState.NEXT
+    )
 
     /**
      * Queue a pseudo-remote delete event to be consumed during R2L.

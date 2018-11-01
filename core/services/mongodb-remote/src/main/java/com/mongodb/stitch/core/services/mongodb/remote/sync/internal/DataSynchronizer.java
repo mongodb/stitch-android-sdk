@@ -860,7 +860,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // ii. Check if the internal remote change stream listener has an unprocessed event for
         //     this document.
         final ChangeEvent<BsonDocument> unprocessedRemoteEvent =
-                getUnprocessedEventForDocumentId(
+                instanceChangeStreamListener.getUnprocessedEventForDocumentId(
                         nsConfig.getNamespace(),
                         docConfig.getDocumentId());
 
@@ -947,7 +947,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
             // 2. REPLACE
             case REPLACE: {
-              System.out.println("REPLACE HIT");
               if (localDoc == null) {
                 final IllegalStateException illegalStateException = new IllegalStateException(
                         "expected document to exist for local replace change event: %s");
@@ -1466,11 +1465,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(final MongoNamespace namespace) {
     return instanceChangeStreamListener.getEventsForNamespace(namespace);
-  }
-
-  ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(final MongoNamespace namespace,
-                                                             final BsonValue id) {
-    return instanceChangeStreamListener.getUnprocessedEventForDocumentId(namespace, id);
   }
 
   // ----- CRUD operations -----
