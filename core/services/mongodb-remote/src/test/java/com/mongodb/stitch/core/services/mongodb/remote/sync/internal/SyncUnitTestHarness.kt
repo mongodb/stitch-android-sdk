@@ -385,6 +385,12 @@ class SyncUnitTestHarness : Closeable {
                 bsonDocumentCodec)
         }
 
+        override fun resetAndReconfigure() {
+            configureNewChangeEventListener()
+            configureNewConflictHandler()
+            configureNewErrorListener()
+        }
+
         override fun waitForEvents(amount: Int) {
             waitLock.lock()
             changeEventListener.totalEventsToAccumulate = amount
@@ -472,7 +478,7 @@ class SyncUnitTestHarness : Closeable {
 
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
                 mapOf(fakeUpdateDoc to ChangeEvent.changeEventForLocalUpdate(
-                    namespace, testDocumentId, null, fakeUpdateDoc, false)),
+                    namespace, id, null, fakeUpdateDoc, false)),
                 mapOf())
         }
 
@@ -498,7 +504,7 @@ class SyncUnitTestHarness : Closeable {
             // TODO: this may be rendered unnecessary with STITCH-1972
             val doc = dataSynchronizer.find(
                 namespace,
-                BsonDocument("_id", testDocumentId)).first()
+                BsonDocument("_id", testDocumentId)).firstOrNull()
             return if (withSyncVersion) doc else withoutSyncVersion(doc)
         }
 

@@ -227,8 +227,7 @@ public class NamespaceChangeStreamListener {
             nsConfig.getNamespace(), event.getData().getOperationType(), event.getData().getId()));
         nsLock.writeLock().lockInterruptibly();
         try {
-          System.out.println(event.getData().getDocumentKey());
-          events.put(event.getData().getDocumentKey(), event.getData());
+          events.put(event.getData().getDocumentKey().get("_id"), event.getData());
         } finally {
           nsLock.writeLock().unlock();
         }
@@ -309,23 +308,6 @@ public class NamespaceChangeStreamListener {
     try {
       this.events.remove(documentId);
       return event;
-    } finally {
-      nsLock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * If there is an unprocessed change event for a particular document ID, fetch it from the
-   * change stream listener, and remove it. By reading the event here, we are assuming it will be
-   * processed by the consumer.
-   */
-  void requeueProcessedEventForDocumentId(
-      @Nonnull final BsonValue documentId,
-      @Nonnull ChangeEvent<BsonDocument> processedChangeEvent
-  ) {
-    nsLock.writeLock().lock();
-    try {
-      this.events.put(processedChangeEvent.getDocumentKey(), processedChangeEvent);
     } finally {
       nsLock.writeLock().unlock();
     }

@@ -434,7 +434,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
         // i. Find the corresponding local document config.
         final CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
+            nsConfig.getSynchronizedDocument(eventEntry.getValue().getDocumentKey().get("_id"));
 
         if (docConfig == null || docConfig.isPaused()) {
           // Not interested in this event.
@@ -650,7 +650,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //    the event. The absence of a version is effectively a version, and the pending write will
     //    set a version on the next L2R pass if it’s not a delete.
     if (!lastKnownLocalVersionInfo.hasVersion() && !currentRemoteVersionInfo.hasVersion()) {
-      // This update event needs to be processed on the next pass.
       logger.info(String.format(
           Locale.US,
           "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
@@ -666,7 +665,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //    with no version indicates a document that may have been committed by another client not
     //    adhering to the mobile sync protocol.
     if (!lastKnownLocalVersionInfo.hasVersion() || !currentRemoteVersionInfo.hasVersion()) {
-      // This update event needs to be processed on the next pass.
       logger.info(String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote or local have an "
@@ -862,10 +860,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // ii. Check if the internal remote change stream listener has an unprocessed event for
         //     this document.
         final ChangeEvent<BsonDocument> unprocessedRemoteEvent =
-                instanceChangeStreamListener.getUnprocessedEventForDocumentId(
+                getUnprocessedEventForDocumentId(
                         nsConfig.getNamespace(),
                         docConfig.getDocumentId());
-//                         new BsonDocument("_id", docConfig.getDocumentId()));
 
         if (unprocessedRemoteEvent != null) {
           final DocumentVersionInfo unprocessedEventVersion;
@@ -950,6 +947,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
             // 2. REPLACE
             case REPLACE: {
+              System.out.println("REPLACE HIT");
               if (localDoc == null) {
                 final IllegalStateException illegalStateException = new IllegalStateException(
                         "expected document to exist for local replace change event: %s");
@@ -1169,18 +1167,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           // v. Otherwise, invoke the collection-level conflict handler with the local change event
           //    and the remote change event (synthesized by doing a lookup of the document or
           //    sourced from the listener)
-          ChangeEvent<BsonDocument> remoteChangeEvent = unprocessedRemoteEvent;
-          if (remoteChangeEvent == null) {
-            if (!remoteDocumentFetched) {
-              remoteChangeEvent =
-                  getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
-            } else {
-              remoteChangeEvent =
-                  getSynthesizedRemoteChangeEventForDocument(
-                      remoteColl.getNamespace(),
-                      docConfig.getDocumentId(),
-                      remoteDocument);
-            }
+          final ChangeEvent<BsonDocument> remoteChangeEvent;
+          if (!remoteDocumentFetched) {
+            remoteChangeEvent =
+                getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
+          } else {
+            remoteChangeEvent =
+                getSynthesizedRemoteChangeEventForDocument(
+                    remoteColl.getNamespace(),
+                    docConfig.getDocumentId(),
+                    remoteDocument);
           }
           resolveConflict(
                   nsConfig.getNamespace(),
@@ -1470,6 +1466,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(final MongoNamespace namespace) {
     return instanceChangeStreamListener.getEventsForNamespace(namespace);
+  }
+
+  ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(final MongoNamespace namespace,
+                                                             final BsonValue id) {
+    return instanceChangeStreamListener.getUnprocessedEventForDocumentId(namespace, id);
   }
 
   // ----- CRUD operations -----

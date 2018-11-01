@@ -66,11 +66,16 @@ class DataSynchronizerUnitTests {
                 ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
             else ChangeEvent.changeEventForLocalInsert(ctx.namespace, expectedDocument, true)
 
-            val expectedChangeEvents = if (shouldWaitForError) emptyArray<ChangeEvent<BsonDocument>>() else arrayOf(expectedChangeEvent)
+//            val expectedChangeEvents = if (shouldWaitForError) {
+//                emptyArray<ChangeEvent<BsonDocument>>()
+//            } else {
+//                arrayOf(ChangeEvent.changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId, ChangeEvent.UpdateDescription(
+//                    BsonDocument("count", BsonInt32(3)), listOf()
+//                ), BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId), true), expectedChangeEvent)
+//            }
 
             ctx.verifyChangeEventListenerCalledForActiveDoc(
-                if (shouldWaitForError) 0 else 1,
-                *expectedChangeEvents)
+                if (shouldWaitForError) 0 else 1)
             ctx.verifyConflictHandlerCalledForActiveDoc(times = 1)
             ctx.verifyErrorListenerCalledForActiveDoc(times = if (shouldWaitForError) 1 else 0,
                 error = if (shouldWaitForError) ctx.exceptionToThrowDuringConflict else null)
@@ -270,9 +275,7 @@ class DataSynchronizerUnitTests {
         val ctx = harness.freshTestContext()
         val expectedDocument = BsonDocument("_id", ctx.testDocumentId).append("count", BsonInt32(3))
         setupPendingReplace(ctx, expectedDocument)
-
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-
         ctx.doSyncPass()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
@@ -294,6 +297,7 @@ class DataSynchronizerUnitTests {
             shouldConflictBeResolvedByRemote = false,
             expectedDocument = expectedDoc)
 
+        ctx.resetAndReconfigure()
         // do a sync pass, addressing the conflict
         ctx.doSyncPass()
         ctx.waitForEvents()
@@ -302,9 +306,9 @@ class DataSynchronizerUnitTests {
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
             ChangeEvent.changeEventForLocalInsert(
-                ctx.namespace, expectedDoc, false
+                ctx.namespace, expectedDoc, true
             ))
-        ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
+        ctx.verifyConflictHandlerCalledForActiveDoc(times = 1)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
 
         assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
@@ -1333,8 +1337,9 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents(1)
         ctx.doSyncPass()
         ctx.waitForEvents(1)
-        ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1, expectedChangeEvent =
-        ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            1,
+            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
 
         // update the document and wait for the local update event
         ctx.updateTestDocument()
@@ -1472,7 +1477,7 @@ class DataSynchronizerUnitTests {
         // neither of these will have versions.
         ctx.addVersionInfoToTestDocument()
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
+        val pseudoUpdatedDocument = ctx.testDocument.append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
             DataSynchronizerTestContext.TestVersionState.NEXT,
             pseudoUpdatedDocument)
@@ -1484,6 +1489,7 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         ctx.updateTestDocument()
+        ctx.addVersionInfoToTestDocument()
 
         ctx.queueConsumableRemoteUpdateEvent(
             DataSynchronizerTestContext.TestVersionState.PREVIOUS,
@@ -1491,7 +1497,11 @@ class DataSynchronizerUnitTests {
 
         ctx.doSyncPass()
 
-        assertEquals(withoutSyncVersion(pseudoUpdatedDocument),
+        // the update should not have gone through
+        assertEquals(
+            BsonDocument("count", BsonInt32(2))
+                .append("hello", BsonString("dolly"))
+                .append("_id", ctx.testDocumentId),
             ctx.findTestDocumentFromLocalCollection())
     }
 

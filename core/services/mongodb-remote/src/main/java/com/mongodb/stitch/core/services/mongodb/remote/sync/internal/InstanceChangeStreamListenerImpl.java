@@ -241,24 +241,4 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
 
     return streamer.getUnprocessedEventForDocumentId(documentId);
   }
-
-  public void requeueProcessedEventForDocumentId(
-      final MongoNamespace namespace,
-      final BsonValue documentId,
-      final ChangeEvent<BsonDocument> processedChangeEvent
-  ) {
-    this.instanceLock.readLock().lock();
-    final NamespaceChangeStreamListener streamer;
-    try {
-      streamer = nsStreamers.get(namespace);
-    } finally {
-      this.instanceLock.readLock().unlock();
-    }
-
-    if (streamer == null) {
-      return;
-    }
-
-    streamer.requeueProcessedEventForDocumentId(documentId, processedChangeEvent);
-  }
 }

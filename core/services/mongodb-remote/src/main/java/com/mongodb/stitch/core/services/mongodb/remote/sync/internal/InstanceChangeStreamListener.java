@@ -100,14 +100,4 @@ interface InstanceChangeStreamListener {
   @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
           final MongoNamespace namespace,
           final BsonValue documentId);
-
-  /**
-   * If there is an unprocessed change event for a particular document ID, fetch it from the
-   * appropriate namespace change stream listener, and remove it. By reading the event here, we are
-   * assuming it will be processed by the consumer.
-   */
-  void requeueProcessedEventForDocumentId(
-      final MongoNamespace namespace,
-      final BsonValue documentId,
-      final ChangeEvent<BsonDocument> processedChangeEvent);
 }

@@ -56,6 +56,8 @@ interface DataSynchronizerTestContext : Closeable {
      */
     fun reconfigure()
 
+    fun resetAndReconfigure()
+
     /**
      * Wait for an error to be emitted.
      */
