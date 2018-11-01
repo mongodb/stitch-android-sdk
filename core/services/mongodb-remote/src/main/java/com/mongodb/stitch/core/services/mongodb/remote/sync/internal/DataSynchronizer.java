@@ -21,16 +21,22 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Chan
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalReplace;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalUpdate;
 
+import com.mongodb.Block;
+import com.mongodb.Function;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.CountOptions;
 import com.mongodb.client.model.FindOneAndReplaceOptions;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.ReturnDocument;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+import com.mongodb.lang.NonNull;
 import com.mongodb.stitch.core.StitchServiceErrorCode;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
@@ -49,10 +55,10 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -71,6 +77,7 @@ import org.bson.Document;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.conversions.Bson;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
@@ -83,7 +90,6 @@ import org.bson.diagnostics.Loggers;
 // TODO: Threading model okay?
 // TODO: implement unwatch
 // TODO: filter out and forbid usage of version ids outside of here
-// TODO: findOneById with filter
 // TODO: Test delete/delete insert/insert update/update etc...
 // TODO: StitchReachabilityMonitor for when Stitch goes down and we can gracefully fail and give
 // you local only results.
@@ -394,7 +400,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * state of said documents. Utilizes change streams to get "recent" updates to documents of
    * interest. Documents that are being synchronized from the first time will be fetched via a
    * full document lookup. Documents that have gone stale will be updated via change events or
-   * latest documents from the remote. Any conflicts that occur will be resolved locally and
+   * latest documents with the remote. Any conflicts that occur will be resolved locally and
    * later relayed remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
    */
   private void syncRemoteToLocal() {
@@ -1045,7 +1051,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         String.format(
                                 Locale.US,
                                 "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
-                                     + "updating: %s",
+                                        + "updating: %s",
                                 logicalT,
                                 nsConfig.getNamespace(),
                                 docConfig.getDocumentId(),
@@ -1352,8 +1358,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       // Update the document locally which will keep the pending writes but with
       // a new version next time around.
-      @SuppressWarnings("unchecked")
-      final BsonDocument docForStorage =
+      @SuppressWarnings("unchecked") final BsonDocument docForStorage =
           BsonUtils.documentToBsonDocument(
               resolvedDocument,
               syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
@@ -1459,7 +1464,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   public void removeWatcher(final MongoNamespace namespace,
-                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                          final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
     instanceChangeStreamListener.removeWatcher(namespace, watcher);
   }
 
@@ -1547,6 +1552,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId
   ) {
     syncConfig.removeSynchronizedDocument(namespace, documentId);
+    getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
     triggerListeningToNamespace(namespace);
   }
 
@@ -1557,10 +1563,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *
    * This method allows you to resume sync for a document.
    *
-   * @param namespace namespace for the document
+   * @param namespace  namespace for the document
    * @param documentId the id of the document to resume syncing
    * @return true if successfully resumed, false if the document
-   *         could not be found or there was an error resuming
+   * could not be found or there was an error resuming
    */
   boolean resumeSyncForDocument(
       final MongoNamespace namespace,
@@ -1582,6 +1588,45 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return !config.isPaused();
   }
 
+  /**
+   * Counts the number of documents in the collection.
+   *
+   * @return the number of documents in the collection
+   */
+  long count(final MongoNamespace namespace) {
+    return count(namespace, new BsonDocument());
+  }
+
+  /**
+   * Counts the number of documents in the collection according to the given options.
+   *
+   * @param filter the query filter
+   * @return the number of documents in the collection
+   */
+  long count(final MongoNamespace namespace, final Bson filter) {
+    return count(namespace, filter, new CountOptions());
+  }
+
+  /**
+   * Counts the number of documents in the collection according to the given options.
+   *
+   * @param filter  the query filter
+   * @param options the options describing the count
+   * @return the number of documents in the collection
+   */
+  long count(final MongoNamespace namespace, final Bson filter, final CountOptions options) {
+    return getLocalCollection(namespace).countDocuments(filter, options);
+  }
+
+  Collection<BsonDocument> find(
+      final MongoNamespace namespace,
+      final BsonDocument filter
+  ) {
+    return getLocalCollection(namespace)
+        .find(filter)
+        .into(new ArrayList<>());
+  }
+
   public <T> Collection<T> find(
       final MongoNamespace namespace,
       final BsonDocument filter,
@@ -1591,14 +1636,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Class<T> resultClass,
       final CodecRegistry codecRegistry
   ) {
-    // TODO: lock down ids
-    final Set<BsonValue> syncedIds = getSynchronizedDocumentIds(namespace);
-    final BsonDocument finalFilter = new BsonDocument("$and", new BsonArray(Arrays.asList(
-        new BsonDocument("_id", new BsonDocument("$in", new BsonArray(new ArrayList<>(syncedIds)))),
-        filter
-    )));
     return getLocalCollection(namespace, resultClass, codecRegistry)
-        .find(finalFilter)
+        .find(filter)
         .limit(limit)
         .projection(projection)
         .sort(sort)
@@ -1606,29 +1645,30 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   /**
-   * Finds a single synchronized document by the given _id. If the document is not being
-   * synchronized or has not yet been found remotely, null will be returned.
+   * Aggregates documents according to the specified aggregation pipeline.
    *
-   * @param namespace     the namespace to search for the document in.
-   * @param documentId    the _id of the document.
-   * @param resultClass   the {@link Class} that represents this document in the collection.
-   * @param codecRegistry the {@link CodecRegistry} that contains a codec for resultClass.
-   * @param <T>           the type of the document in the collection.
-   * @return the synchronized document if it exists; null otherwise.
+   * @param pipeline the aggregation pipeline
+   * @return an iterable containing the result of the aggregation operation
    */
-  public <T> T findOneById(
+  AggregateIterable<BsonDocument> aggregate(
       final MongoNamespace namespace,
-      final BsonValue documentId,
-      final Class<T> resultClass,
-      final CodecRegistry codecRegistry
-  ) {
-    // TODO: lock down id
-    if (!syncConfig.isDocumentSynchronized(namespace, documentId)) {
-      return null;
-    }
+      final List<? extends Bson> pipeline) {
+    return aggregate(namespace, pipeline, BsonDocument.class);
+  }
 
-    final BsonDocument filter = new BsonDocument("_id", documentId);
-    return getLocalCollection(namespace, resultClass, codecRegistry).find(filter).first();
+  /**
+   * Aggregates documents according to the specified aggregation pipeline.
+   *
+   * @param pipeline    the aggregation pipeline
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return an iterable containing the result of the aggregation operation
+   */
+  <ResultT> AggregateIterable<ResultT> aggregate(
+      final MongoNamespace namespace,
+      final List<? extends Bson> pipeline,
+      final Class<ResultT> resultClass) {
+    return getLocalCollection(namespace).aggregate(pipeline, resultClass);
   }
 
   /**
@@ -1638,71 +1678,229 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace the namespace to put the document in.
    * @param document  the document to insert.
    */
-  public void insertOneAndSync(
-      final MongoNamespace namespace,
-      final BsonDocument document
-  ) {
+  void insertOneAndSync(final MongoNamespace namespace, final BsonDocument document) {
     getLocalCollection(namespace).insertOne(document);
-    final ChangeEvent<BsonDocument> event =
-        changeEventForLocalInsert(namespace, document, true);
+    final BsonValue documentId = BsonUtils.getDocumentId(document);
+    final ChangeEvent<BsonDocument> event = changeEventForLocalInsert(namespace, document, true);
     final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
         namespace,
-        BsonUtils.getDocumentId(document)
+        documentId
     );
     config.setSomePendingWrites(logicalT, event);
-    final BsonValue documentId = BsonUtils.getDocumentId(document);
     triggerListeningToNamespace(namespace);
     emitEvent(documentId, event);
   }
 
   /**
-   * Updates a single synchronized document by its given id with the given update specifiers.
-   * No update will occur if the _id is not being synchronized.
+   * Inserts one or more documents.
    *
-   * @param namespace  the namespace where the document lives.
-   * @param documentId the _id of the document.
-   * @param update     the update modifiers.
-   * @return the result of the update.
+   * @param documents the documents to insert
    */
-  public UpdateResult updateOneById(
+  void insertManyAndSync(final MongoNamespace namespace,
+                         final List<BsonDocument> documents) {
+    getLocalCollection(namespace).insertMany(documents);
+    for (final BsonDocument document : documents) {
+      final BsonValue documentId = BsonUtils.getDocumentId(document);
+      final ChangeEvent<BsonDocument> event = changeEventForLocalInsert(namespace, document, true);
+      final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
+          namespace,
+          documentId
+      );
+      config.setSomePendingWrites(logicalT, event);
+      emitEvent(documentId, event);
+    }
+    triggerListeningToNamespace(namespace);
+  }
+
+  /**
+   * Update a single document in the collection according to the specified arguments.
+   *
+   * @param filter a document describing the query filter, which may not be null.
+   * @param update a document describing the update, which may not be null. The update to
+   *               apply must include only update operators.
+   * @return the result of the update one operation
+   */
+  UpdateResult updateOne(final MongoNamespace namespace, final Bson filter, final Bson update) {
+    return updateOne(namespace, filter, update, new UpdateOptions());
+  }
+
+  /**
+   * Update a single document in the collection according to the specified arguments.
+   *
+   * @param filter        a document describing the query filter, which may not be null.
+   * @param update        a document describing the update, which may not be null. The update to
+   *                      apply must include only update operators.
+   * @param updateOptions the options to apply to the update operation
+   * @return the result of the update one operation
+   */
+  UpdateResult updateOne(
       final MongoNamespace namespace,
-      final BsonValue documentId,
-      final BsonDocument update
-  ) {
-    // TODO: lock down id
-    final CoreDocumentSynchronizationConfig config =
-        syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
+      final Bson filter,
+      final Bson update,
+      final UpdateOptions updateOptions) {
+    // read the local collection
+    final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+
+    // fetch the document prior to updating
+    final BsonDocument documentBeforeUpdate = getLocalCollection(namespace).find(filter).first();
+
+    // if there was no document prior and this is not an upsert,
+    // do not acknowledge the update
+    if (!updateOptions.isUpsert() && documentBeforeUpdate == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
-    // TODO: STITCH-1958
-    final BsonDocument documentBeforeUpdate =
-        getLocalCollection(namespace).find(getDocumentIdFilter(documentId)).first();
+    // find and update the single document, returning the document post-update
+    final BsonDocument documentAfterUpdate = localCollection.findOneAndUpdate(
+        filter,
+        update,
+        new FindOneAndUpdateOptions()
+            .collation(updateOptions.getCollation())
+            .upsert(updateOptions.isUpsert())
+            .bypassDocumentValidation(updateOptions.getBypassDocumentValidation())
+            .arrayFilters(updateOptions.getArrayFilters())
+            .returnDocument(ReturnDocument.AFTER));
 
-    final BsonDocument result = getLocalCollection(namespace)
-        .findOneAndUpdate(
-            getDocumentIdFilter(documentId),
-            update,
-            new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
-
-    if (result == null) {
+    // if the document was deleted between our earlier check and now, it will not have
+    // been updated. do not acknowledge the update
+    if (documentAfterUpdate == null) {
       return UpdateResult.acknowledged(0, 0L, null);
     }
 
-    final ChangeEvent<BsonDocument> event =
-        changeEventForLocalUpdate(
-            namespace,
-            documentId,
-            ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, result),
-            result,
-            true);
+    final ChangeEvent<BsonDocument> event;
+    final CoreDocumentSynchronizationConfig config;
+    final BsonValue documentId = BsonUtils.getDocumentId(documentAfterUpdate);
 
-    config.setSomePendingWrites(
-        logicalT,
-        event);
+    // if there was no document prior and this was an upsert,
+    // treat this as an insert.
+    // else this is an update
+    if (documentBeforeUpdate == null && updateOptions.isUpsert()) {
+      config = syncConfig.addSynchronizedDocument(namespace, documentId);
+      triggerListeningToNamespace(namespace);
+      event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
+    } else {
+      config = syncConfig.getSynchronizedDocument(namespace, documentId);
+      event = changeEventForLocalUpdate(
+          namespace,
+          BsonUtils.getDocumentId(documentAfterUpdate),
+          ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, documentAfterUpdate),
+          documentAfterUpdate,
+          true);
+    }
+
+    config.setSomePendingWrites(logicalT, event);
     emitEvent(documentId, event);
-    return UpdateResult.acknowledged(1, 1L, null);
+    return UpdateResult.acknowledged(1, 1L, updateOptions.isUpsert() ? documentId : null);
+  }
+
+  /**
+   * Update all documents in the collection according to the specified arguments.
+   *
+   * @param filter a document describing the query filter, which may not be null.
+   * @param update a document describing the update, which may not be null. The update to
+   *               apply must include only update operators.
+   * @return the result of the update many operation
+   */
+  UpdateResult updateMany(final MongoNamespace namespace,
+                          final Bson filter,
+                          final Bson update) {
+    return updateMany(namespace, filter, update, new UpdateOptions());
+  }
+
+  /**
+   * Update all documents in the collection according to the specified arguments.
+   *
+   * @param filter        a document describing the query filter, which may not be null.
+   * @param update        a document describing the update, which may not be null. The update to
+   *                      apply must include only update operators.
+   * @param updateOptions the options to apply to the update operation
+   * @return the result of the update many operation
+   */
+  UpdateResult updateMany(
+      final MongoNamespace namespace,
+      final Bson filter,
+      final Bson update,
+      final UpdateOptions updateOptions) {
+    // fetch all of the documents that this filter will match
+    final Map<BsonValue, BsonDocument> idToBeforeDocumentMap = new HashMap<>();
+    final BsonArray ids = new BsonArray();
+    this.getLocalCollection(namespace)
+        .find(filter)
+        .forEach(new Block<BsonDocument>() {
+          @Override
+          public void apply(@NonNull final BsonDocument bsonDocument) {
+            final BsonValue documentId = BsonUtils.getDocumentId(bsonDocument);
+            ids.add(documentId);
+            idToBeforeDocumentMap.put(documentId, bsonDocument);
+          }
+        });
+
+    // use the matched ids from prior to create a new filter.
+    // this will prevent any race conditions if documents were
+    // inserted between the prior find
+    Bson updatedFilter = updateOptions.isUpsert()
+        ? filter : new BsonDocument("_id", new BsonDocument("$in", ids));
+
+    // do the bulk write
+    final UpdateResult result = this.getLocalCollection(namespace)
+        .updateMany(updatedFilter, update, updateOptions);
+
+    // if this was an upsert, create the post-update filter using
+    // the upserted id.
+    if (result.getUpsertedId() != null) {
+      updatedFilter = getDocumentIdFilter(result.getUpsertedId());
+    }
+
+    // iterate over the after-update docs using the updated filter
+    this.getLocalCollection(namespace).find(updatedFilter).forEach(new Block<BsonDocument>() {
+      @Override
+      public void apply(@NonNull final BsonDocument afterDocument) {
+        // get the id of the after-update document, and fetch the before-update
+        // document from the map we created from our pre-update `find`
+        final BsonValue documentId = BsonUtils.getDocumentId(afterDocument);
+        final BsonDocument beforeDocument = idToBeforeDocumentMap.get(documentId);
+
+        // if there was no before-update document and this was not an upsert,
+        // a document that meets the filter criteria must have been
+        // inserted or upserted asynchronously between this find and the update.
+        if (beforeDocument == null && !updateOptions.isUpsert()) {
+          return;
+        }
+
+        // because we are looking up a bulk write, we may have queried documents
+        // that match the updated state, but were not actually modified.
+        // if the document before the update is the same as the updated doc,
+        // assume it was not modified and take no further action
+        if (afterDocument.equals(beforeDocument)) {
+          return;
+        }
+
+        final CoreDocumentSynchronizationConfig config;
+        final ChangeEvent<BsonDocument> event;
+
+        // if there was no earlier document and this was an upsert,
+        // treat the upsert as an insert, as far as sync is concerned
+        // else treat it as a standard update
+        if (beforeDocument == null && updateOptions.isUpsert()) {
+          config = syncConfig.addSynchronizedDocument(namespace, documentId);
+          triggerListeningToNamespace(namespace);
+          event = changeEventForLocalInsert(namespace, afterDocument, true);
+        } else {
+          config = syncConfig.getSynchronizedDocument(namespace, documentId);
+          event = changeEventForLocalUpdate(
+              namespace,
+              documentId,
+              ChangeEvent.UpdateDescription.diff(beforeDocument, afterDocument),
+              afterDocument,
+              true);
+        }
+
+        config.setSomePendingWrites(logicalT, event);
+        emitEvent(documentId, event);
+      }
+    });
+
+    return result;
   }
 
   /**
@@ -1783,18 +1981,24 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   /**
-   * Deletes a single synchronized document by its given id. No deletion will occur if the _id is
-   * not being synchronized.
+   * Removes at most one document from the collection that matches the given filter.  If no
+   * documents match, the collection is not
+   * modified.
    *
-   * @param namespace  the namespace where the document lives.
-   * @param documentId the _id of the document.
-   * @return the result of the deletion.
+   * @param filter the query filter to apply the the delete operation
+   * @return the result of the remove one operation
    */
-  public DeleteResult deleteOneById(
-      final MongoNamespace namespace,
-      final BsonValue documentId
-  ) {
-    // TODO: lock down id
+  DeleteResult deleteOne(final MongoNamespace namespace, final Bson filter) {
+    final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+    final BsonDocument docToDelete = localCollection
+        .find(filter)
+        .first();
+
+    if (docToDelete == null) {
+      return DeleteResult.acknowledged(0);
+    }
+
+    final BsonValue documentId = BsonUtils.getDocumentId(docToDelete);
     final CoreDocumentSynchronizationConfig config =
         syncConfig.getSynchronizedDocument(namespace, documentId);
 
@@ -1802,10 +2006,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return DeleteResult.acknowledged(0);
     }
 
-    final DeleteResult result = getLocalCollection(namespace)
-        .deleteOne(getDocumentIdFilter(documentId));
-    final ChangeEvent<BsonDocument> event =
-        changeEventForLocalDelete(namespace, documentId, true);
+    final DeleteResult result = getLocalCollection(namespace).deleteOne(filter);
+    final ChangeEvent<BsonDocument> event = changeEventForLocalDelete(namespace, documentId, true);
 
     // this block is to trigger coalescence for a delete after insert
     if (config.getLastUncommittedChangeEvent() != null
@@ -1815,9 +2017,58 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return result;
     }
 
-    config.setSomePendingWrites(
-        logicalT, event);
+    config.setSomePendingWrites(logicalT, event);
     emitEvent(documentId, event);
+    return result;
+  }
+
+  /**
+   * Removes all documents from the collection that match the given query filter.  If no documents
+   * match, the collection is not modified.
+   *
+   * @param filter the query filter to apply the the delete operation
+   * @return the result of the remove many operation
+   */
+  DeleteResult deleteMany(final MongoNamespace namespace,
+                          final Bson filter) {
+    final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+    final Set<BsonValue> idsToDelete =
+        localCollection
+            .find(filter)
+            .map(new Function<BsonDocument, BsonValue>() {
+              @Override
+              @NonNull
+              public BsonValue apply(@NonNull final BsonDocument bsonDocument) {
+                return BsonUtils.getDocumentId(bsonDocument);
+              }
+            }).into(new HashSet<>());
+
+    final DeleteResult result = getLocalCollection(namespace).deleteMany(filter);
+
+    for (final BsonValue documentId : idsToDelete) {
+      final CoreDocumentSynchronizationConfig config =
+          syncConfig.getSynchronizedDocument(namespace, documentId);
+
+      if (config == null) {
+        continue;
+      }
+
+      final ChangeEvent<BsonDocument> event =
+          changeEventForLocalDelete(namespace, documentId, true);
+
+      // this block is to trigger coalescence for a delete after insert
+      if (config.getLastUncommittedChangeEvent() != null
+          && config.getLastUncommittedChangeEvent().getOperationType()
+          == ChangeEvent.OperationType.INSERT) {
+        desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+        return result;
+      }
+
+      config.setSomePendingWrites(
+          logicalT, event);
+      emitEvent(documentId, event);
+    }
+
     return result;
   }
 
@@ -2041,7 +2292,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   private Set<BsonValue> getDocumentIds(final Set<BsonDocument> documents) {
     final Set<BsonValue> ids = new HashSet<>();
-    for (final BsonDocument document: documents) {
+    for (final BsonDocument document : documents) {
       ids.add(document.get("_id"));
     }
     return ids;
@@ -2060,13 +2311,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   /**
    * Adds and returns a document with a new version to the given document.
    *
-   * @param document the document to attach a new version to.
+   * @param document   the document to attach a new version to.
    * @param newVersion the version to attach to the document
    * @return a document with a new version to the given document.
    */
   private static BsonDocument withNewVersion(
-          final BsonDocument document,
-          final BsonDocument newVersion
+      final BsonDocument document,
+      final BsonDocument newVersion
   ) {
     final BsonDocument newDocument = BsonUtils.copyOfDocument(document);
     newDocument.put(DOCUMENT_VERSION_FIELD, newVersion);

@@ -22,18 +22,24 @@ import android.support.annotation.Nullable;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.services.mongodb.remote.Sync;
+import com.mongodb.stitch.android.services.mongodb.remote.SyncAggregateIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.SyncFindIterable;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
@@ -90,6 +96,37 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
+  public Task<Long> count() {
+    return this.count(new BsonDocument());
+  }
+
+  @Override
+  public Task<Long> count(final Bson filter) {
+    return this.count(filter, new SyncCountOptions());
+  }
+
+  @Override
+  public Task<Long> count(final Bson filter, final SyncCountOptions options) {
+    return this.dispatcher.dispatchTask(new Callable<Long>() {
+      @Override
+      public Long call() throws Exception {
+        return proxy.count(filter, options);
+      }
+    });
+  }
+
+  @Override
+  public SyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
+    return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline), dispatcher);
+  }
+
+  @Override
+  public <ResultT> SyncAggregateIterable<ResultT> aggregate(final List<? extends Bson> pipeline,
+                                                            final Class<ResultT> resultClass) {
+    return new SyncAggregateIterableImpl<>(this.proxy.aggregate(pipeline, resultClass), dispatcher);
+  }
+
+  @Override
   public SyncFindIterable<DocumentT> find() {
     return new SyncFindIterableImpl<>(proxy.find(), dispatcher);
   }
@@ -111,52 +148,79 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<DocumentT> findOneById(final BsonValue documentId) {
-    return this.dispatcher.dispatchTask(new Callable<DocumentT>() {
+  public Task<SyncInsertOneResult> insertOneAndSync(final DocumentT document) {
+    return this.dispatcher.dispatchTask(new Callable<SyncInsertOneResult>() {
       @Override
-      public DocumentT call() throws Exception {
-        return proxy.findOneById(documentId);
-      }
-    });
-  }
-
-  @Override
-  public <ResultT> Task<ResultT> findOneById(final BsonValue documentId,
-                                             final Class<ResultT> resultClass) {
-    return this.dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() throws Exception {
-        return proxy.findOneById(documentId, resultClass);
-      }
-    });
-  }
-
-  @Override
-  public Task<RemoteDeleteResult> deleteOneById(final BsonValue documentId) {
-    return this.dispatcher.dispatchTask(new Callable<RemoteDeleteResult>() {
-      @Override
-      public RemoteDeleteResult call() throws Exception {
-        return proxy.deleteOneById(documentId);
-      }
-    });
-  }
-
-  @Override
-  public Task<RemoteInsertOneResult> insertOneAndSync(final DocumentT document) {
-    return this.dispatcher.dispatchTask(new Callable<RemoteInsertOneResult>() {
-      @Override
-      public RemoteInsertOneResult call() throws Exception {
+      public SyncInsertOneResult call() throws Exception {
         return proxy.insertOneAndSync(document);
       }
     });
   }
 
   @Override
-  public Task<RemoteUpdateResult> updateOneById(final BsonValue documentId, final Bson update) {
-    return this.dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
+  public Task<SyncInsertManyResult> insertManyAndSync(final List<DocumentT> documents) {
+    return this.dispatcher.dispatchTask(new Callable<SyncInsertManyResult>() {
       @Override
-      public RemoteUpdateResult call() throws Exception {
-        return proxy.updateOneById(documentId, update);
+      public SyncInsertManyResult call() throws Exception {
+        return proxy.insertManyAndSync(documents);
+      }
+    });
+  }
+
+  @Override
+  public Task<SyncUpdateResult> updateOne(final Bson filter, final Bson update) {
+    return this.updateOne(filter, update, new SyncUpdateOptions());
+  }
+
+  @Override
+  public Task<SyncUpdateResult> updateOne(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
+  ) {
+    return this.dispatcher.dispatchTask(new Callable<SyncUpdateResult>() {
+      @Override
+      public SyncUpdateResult call() throws Exception {
+        return proxy.updateOne(filter, update, updateOptions);
+      }
+    });
+  }
+
+  @Override
+  public Task<SyncUpdateResult> updateMany(final Bson filter, final Bson update) {
+    return this.updateMany(filter, update, new SyncUpdateOptions());
+  }
+
+  @Override
+  public Task<SyncUpdateResult> updateMany(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions
+  ) {
+    return this.dispatcher.dispatchTask(new Callable<SyncUpdateResult>() {
+      @Override
+      public SyncUpdateResult call() throws Exception {
+        return proxy.updateMany(filter, update, updateOptions);
+      }
+    });
+  }
+
+  @Override
+  public Task<SyncDeleteResult> deleteOne(final Bson filter) {
+    return this.dispatcher.dispatchTask(new Callable<SyncDeleteResult>() {
+      @Override
+      public SyncDeleteResult call() throws Exception {
+        return proxy.deleteOne(filter);
+      }
+    });
+  }
+
+  @Override
+  public Task<SyncDeleteResult> deleteMany(final Bson filter) {
+    return this.dispatcher.dispatchTask(new Callable<SyncDeleteResult>() {
+      @Override
+      public SyncDeleteResult call() throws Exception {
+        return proxy.deleteMany(filter);
       }
     });
   }

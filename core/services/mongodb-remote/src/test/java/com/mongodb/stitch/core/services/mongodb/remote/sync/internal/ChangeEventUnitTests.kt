@@ -342,7 +342,7 @@ class ChangeEventUnitTests {
         assertEquals(removedFields, updateDoc["\$unset"]?.asDocument()?.entries?.map { it.key })
     }
 
-    fun testDiff(
+    private fun testDiff(
         collection: MongoCollection<BsonDocument>,
         beforeDocument: BsonDocument,
         expectedUpdateDocument: BsonDocument,

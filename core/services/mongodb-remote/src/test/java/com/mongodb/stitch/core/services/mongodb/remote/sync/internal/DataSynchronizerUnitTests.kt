@@ -1,5 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
+import com.mongodb.client.model.CountOptions
+import com.mongodb.client.model.UpdateOptions
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
@@ -9,10 +11,14 @@ import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedM
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
+import org.bson.Document
+import org.bson.codecs.BsonDocumentCodec
+import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,15 +59,18 @@ class DataSynchronizerUnitTests {
             if (shouldWaitForError) {
                 ctx.waitForError()
             } else {
-                ctx.waitForEvent()
+                ctx.waitForEvents()
             }
 
             val expectedChangeEvent = if (shouldConflictBeResolvedByRemote)
                 ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
             else ChangeEvent.changeEventForLocalInsert(ctx.namespace, expectedDocument, true)
+
+            val expectedChangeEvents = if (shouldWaitForError) emptyArray<ChangeEvent<BsonDocument>>() else arrayOf(expectedChangeEvent)
+
             ctx.verifyChangeEventListenerCalledForActiveDoc(
-                times = if (shouldWaitForError) 0 else 1,
-                expectedChangeEvent = if (shouldWaitForError) null else expectedChangeEvent)
+                if (shouldWaitForError) 0 else 1,
+                *expectedChangeEvents)
             ctx.verifyConflictHandlerCalledForActiveDoc(times = 1)
             ctx.verifyErrorListenerCalledForActiveDoc(times = if (shouldWaitForError) 1 else 0,
                 error = if (shouldWaitForError) ctx.exceptionToThrowDuringConflict else null)
@@ -120,18 +129,18 @@ class DataSynchronizerUnitTests {
 
         // insert the doc, wait, sync, and assert that the expected change events are emitted
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(
+            1,
+            ChangeEvent.changeEventForLocalInsert(
                 ctx.namespace,
                 ctx.testDocument,
                 true))
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(
+            1,
+            ChangeEvent.changeEventForLocalInsert(
                 ctx.namespace,
                 ctx.testDocument,
                 false))
@@ -162,10 +171,10 @@ class DataSynchronizerUnitTests {
         // sync and assert that the conflict handler was called,
         // accepting the remote delete, nullifying the document
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
+            1,
+            ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
         ctx.verifyConflictHandlerCalledForActiveDoc(
             times = 1,
             expectedLocalConflictEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
@@ -183,10 +192,10 @@ class DataSynchronizerUnitTests {
         // assert that the local doc has been inserted
         ctx.shouldConflictBeResolvedByRemote = false
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+            1,
+            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
         ctx.verifyConflictHandlerCalledForActiveDoc(
             times = 1,
             expectedLocalConflictEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
@@ -239,7 +248,7 @@ class DataSynchronizerUnitTests {
 
         // insert the document, prepare for an error
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // sync, verifying that the expected exceptionToThrow was emitted, pausing the document
         ctx.doSyncPass()
@@ -265,10 +274,10 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
 
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(
+            1,
+            ChangeEvent.changeEventForLocalInsert(
                 ctx.namespace, expectedDocument, false))
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
@@ -287,12 +296,12 @@ class DataSynchronizerUnitTests {
 
         // do a sync pass, addressing the conflict
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         // verify that a change event has been emitted. the conflict will have been handled
         // in setupPendingReplace
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(
+            1,
+            ChangeEvent.changeEventForLocalInsert(
                 ctx.namespace, expectedDoc, false
             ))
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
@@ -359,15 +368,15 @@ class DataSynchronizerUnitTests {
 
         // insert, sync the doc, update, and verify that the change event was emitted
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.doSyncPass()
-        ctx.waitForEvent()
-        ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+        ctx.waitForEvents()
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1,
+            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
         ctx.updateTestDocument()
-        ctx.waitForEvent()
-        ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalUpdate(
+        ctx.waitForEvents()
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1,
+            ChangeEvent.changeEventForLocalUpdate(
                 ctx.namespace,
                 ctx.testDocumentId,
                 ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
@@ -379,8 +388,8 @@ class DataSynchronizerUnitTests {
         // was of the correct doc, and that no conflicts or errors occured
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         ctx.doSyncPass()
-        ctx.waitForEvent()
-        ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1, expectedChangeEvent = ChangeEvent.changeEventForLocalUpdate(
+        ctx.waitForEvents()
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
             ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
@@ -425,23 +434,21 @@ class DataSynchronizerUnitTests {
         // 1: Update -> Conflict -> Delete (remote wins)
         // insert a new document, and sync.
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.doSyncPass()
 
         // update the document and wait for the local update event
         ctx.updateTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
-        ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1,
-            expectedChangeEvent = expectedLocalEvent)
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedLocalEvent)
 
         // create conflict here by claiming there is no remote doc to update
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
 
         // do a sync pass, addressing the conflict
         ctx.doSyncPass()
-        ctx.waitForEvent()
-
+        ctx.waitForEvents(1)
         // verify that a change event has been emitted, a conflict has been handled,
         // and no errors were emitted
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1)
@@ -465,27 +472,28 @@ class DataSynchronizerUnitTests {
 
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.doSyncPass()
-        ctx.waitForEvent()
-        ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1, expectedChangeEvent =
-        ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+        ctx.waitForEvents()
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            1,
+            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
 
         // update the document and wait for the local update event
         ctx.updateTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // do a sync pass, addressing the conflict. let local win
         ctx.shouldConflictBeResolvedByRemote = false
 
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // verify that a change event has been emitted, a conflict has been handled,
         // and no errors were emitted
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            times = 1,
-            expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, docAfterUpdate, true))
+            1,
+            ChangeEvent.changeEventForLocalInsert(ctx.namespace, docAfterUpdate, true))
         ctx.verifyConflictHandlerCalledForActiveDoc(1, expectedLocalEvent, expectedRemoteEvent)
         ctx.verifyErrorListenerCalledForActiveDoc(0)
 
@@ -510,16 +518,16 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
 
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1, ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
         ctx.doSyncPass()
 
         // update the reset doc
         ctx.updateTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // prepare an exceptionToThrow to be thrown, and sync
         ctx.exceptionToThrowDuringConflict = Exception("bad")
@@ -564,7 +572,7 @@ class DataSynchronizerUnitTests {
     @Test
     fun testFailedUpdate() {
         val ctx = harness.freshTestContext()
-            // set up expectations and insert
+        // set up expectations and insert
         val docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
         val expectedEvent = ChangeEvent.changeEventForLocalUpdate(
             ctx.namespace,
@@ -575,13 +583,13 @@ class DataSynchronizerUnitTests {
         )
         ctx.insertTestDocument()
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // update the inserted doc, and prepare our exceptionToThrow
         ctx.updateTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
-        ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1, expectedChangeEvent = expectedEvent)
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedEvent)
         val expectedException = StitchServiceException("bad", StitchServiceErrorCode.UNKNOWN)
         ctx.mockUpdateException(expectedException)
 
@@ -624,15 +632,15 @@ class DataSynchronizerUnitTests {
         // insert a new document. assert that the correct change events
         // have been reflected w/ and w/o pending writes
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
 
         // delete the document and wait
         ctx.deleteTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // verify a delete event with pending writes is called
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalDelete(
@@ -644,7 +652,7 @@ class DataSynchronizerUnitTests {
         // sync. verify the correct doc was deleted and that a change event
         // with no pending writes was emitted
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).deleteOne(docCaptor.capture())
         assertEquals(ctx.testDocument["_id"], docCaptor.value["_id"])
@@ -669,10 +677,10 @@ class DataSynchronizerUnitTests {
 
         ctx.insertTestDocument()
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.deleteTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedLocalEvent)
 
@@ -682,7 +690,7 @@ class DataSynchronizerUnitTests {
         ctx.queueConsumableRemoteUpdateEvent()
 
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalReplace(
             ctx.namespace,
@@ -709,10 +717,10 @@ class DataSynchronizerUnitTests {
 
         ctx.insertTestDocument()
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.deleteTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedLocalEvent)
 
@@ -721,7 +729,7 @@ class DataSynchronizerUnitTests {
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.shouldConflictBeResolvedByRemote = false
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalDelete(
             ctx.namespace,
@@ -749,14 +757,14 @@ class DataSynchronizerUnitTests {
         )
 
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.doSyncPass()
 
         ctx.deleteTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedChangeEvent = expectedEvent)
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedEvent)
         val expectedException = StitchServiceException("bad", StitchServiceErrorCode.UNKNOWN)
         ctx.mockDeleteException(expectedException)
 
@@ -776,6 +784,65 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
+    fun testCount() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        val doc1 = BsonDocument("hello", BsonString("world"))
+        val doc2 = BsonDocument("goodbye", BsonString("computer"))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+
+        assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        assertEquals(1, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument(), CountOptions().limit(1)))
+
+        assertEquals(1, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument("_id", doc1["_id"])))
+
+        ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+    }
+
+    @Test
+    fun testAggregate() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        val doc1 = BsonDocument("hello", BsonString("world")).append("a", BsonString("b"))
+        val doc2 = BsonDocument("hello", BsonString("computer")).append("a", BsonString("b"))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+
+        val iterable = ctx.dataSynchronizer.aggregate(ctx.namespace,
+                listOf(
+                    BsonDocument(
+                        "\$project",
+                        BsonDocument("_id", BsonInt32(0))
+                            .append("a", BsonInt32(0))
+                    ),
+                    BsonDocument(
+                        "\$match",
+                        BsonDocument("hello", BsonString("computer"))
+                    )))
+
+        assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+        assertEquals(1, iterable.count())
+
+        val actualDoc = iterable.first()!!
+
+        assertNull(actualDoc["a"])
+        assertNull(actualDoc["_id"])
+        assertEquals(BsonString("computer"), actualDoc["hello"])
+    }
+
+    @Test
     fun testInsertOneAndSync() {
         val ctx = harness.freshTestContext()
 
@@ -786,7 +853,7 @@ class DataSynchronizerUnitTests {
         ctx.deleteTestDocument()
 
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedEvent)
 
@@ -794,7 +861,49 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testUpdateOneById() {
+    fun testInsertManyAndSync() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        val doc1 = BsonDocument("hello", BsonString("world"))
+        val doc2 = BsonDocument("goodbye", BsonString("computer"))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
+        val expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
+
+        ctx.waitForEvents(amount = 2)
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(2, expectedEvent1, expectedEvent2)
+
+        assertEquals(
+            doc1,
+            ctx.dataSynchronizer.find(
+                ctx.namespace,
+                BsonDocument("_id", doc1["_id"]),
+                0,
+                null,
+                null,
+                BsonDocument::class.java,
+                CodecRegistries.fromCodecs(BsonDocumentCodec())
+            ).firstOrNull())
+        assertEquals(
+            doc2,
+            ctx.dataSynchronizer.find(
+                ctx.namespace,
+                BsonDocument("_id", doc2["_id"]),
+                0,
+                null,
+                null,
+                BsonDocument::class.java,
+                CodecRegistries.fromCodecs(BsonDocumentCodec())
+            ).firstOrNull())
+    }
+
+    @Test
+    fun testUpdateOne() {
         val ctx = harness.freshTestContext()
         val expectedDocumentAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
         // assert this doc does not exist
@@ -812,12 +921,12 @@ class DataSynchronizerUnitTests {
 
         // insert the initial document
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1)
 
         // do the actual update
         updateResult = ctx.updateTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // assert the UpdateResult is non-zero
         assertEquals(1, updateResult.matchedCount)
@@ -834,7 +943,215 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testDeleteOneById() {
+    fun testUpsertOne() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        val doc1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+
+        val result = ctx.dataSynchronizer.updateOne(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
+            UpdateOptions().upsert(true))
+
+        assertEquals(1, result.matchedCount)
+        assertEquals(1, result.modifiedCount)
+        assertNotNull(result.upsertedId)
+
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace,
+            doc1.append("_id", result.upsertedId), true)
+
+        ctx.waitForEvents(amount = 1)
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            1,
+            expectedEvent1)
+
+        assertEquals(
+            doc1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+
+        // assert that the stream was opened
+        ctx.verifyWatchFunctionCalled(1, expectedArgs =
+        Document(mapOf(
+            "database" to ctx.namespace.databaseName,
+            "collection" to ctx.namespace.collectionName,
+            "ids" to setOf(result.upsertedId)
+        )))
+
+        ctx.dataSynchronizer.updateMany(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))))
+
+        ctx.waitForEvents(amount = 2)
+
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip"))
+            .append("count", BsonInt32(2)).append("_id", doc1["_id"])
+
+        assertEquals(
+            expectedDocAfterUpdate1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+    }
+
+    @Test
+    fun testUpdateMany() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        val doc1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+        val doc2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+        val doc3 = BsonDocument("name", BsonString("timothy")).append("count", BsonInt32(1))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2, doc3))
+
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
+        val expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
+        val expectedEvent3 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc3, true)
+
+        ctx.waitForEvents(amount = 3)
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            3,
+            expectedEvent1,
+            expectedEvent2,
+            expectedEvent3)
+
+        val result = ctx.dataSynchronizer.updateMany(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
+            UpdateOptions().upsert(true)) // ensure there wasn't an unnecessary insert
+
+        ctx.findTestDocumentFromLocalCollection()
+        assertEquals(2, result.modifiedCount)
+        assertEquals(2, result.matchedCount)
+        assertNull(result.upsertedId)
+
+        ctx.waitForEvents(amount = 2)
+
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc1["_id"])
+        val expectedDocAfterUpdate2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc2["_id"])
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            5,
+            expectedEvent1,
+            expectedEvent2,
+            expectedEvent3,
+            ChangeEvent.changeEventForLocalUpdate(
+                ctx.namespace,
+                doc1["_id"],
+                ChangeEvent.UpdateDescription(
+                    BsonDocument("count", BsonInt32(2)),
+                    listOf()
+                ),
+                expectedDocAfterUpdate1,
+                true),
+            ChangeEvent.changeEventForLocalUpdate(
+                ctx.namespace,
+                doc2["_id"],
+                ChangeEvent.UpdateDescription(
+                    BsonDocument("count", BsonInt32(2)),
+                    listOf()
+                ),
+                expectedDocAfterUpdate2,
+                true))
+
+        assertEquals(
+            expectedDocAfterUpdate1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+        assertEquals(
+            expectedDocAfterUpdate2,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc2["_id"])).first())
+        assertEquals(
+            doc3,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc3["_id"])).first())
+    }
+
+    @Test
+    fun testUpsertMany() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        val doc1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2))
+
+        var result = ctx.dataSynchronizer.updateMany(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
+            UpdateOptions().upsert(true))
+
+        assertEquals(0, result.matchedCount)
+        assertEquals(0, result.modifiedCount)
+        assertNotNull(result.upsertedId)
+
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(
+            ctx.namespace,
+            doc1.append("_id", result.upsertedId), true)
+
+        ctx.waitForEvents(amount = 1)
+
+        ctx.verifyChangeEventListenerCalledForActiveDoc(
+            1,
+            expectedEvent1)
+
+        assertEquals(
+            doc1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", result.upsertedId)).first())
+
+        // assert that the stream was opened
+        ctx.verifyWatchFunctionCalled(1, expectedArgs =
+        Document(mapOf(
+            "database" to ctx.namespace.databaseName,
+            "collection" to ctx.namespace.collectionName,
+            "ids" to setOf(result.upsertedId)
+        )))
+
+        ctx.doSyncPass()
+
+        ctx.queueConsumableRemoteUpdateEvent(
+            id = result.upsertedId!!,
+            pseudoUpdatedDocument = BsonDocument(
+                "name",
+                BsonString("philip")
+            ).append("count", BsonInt32(3)).append("_id", result.upsertedId))
+        ctx.doSyncPass()
+        assertEquals(
+            BsonDocument("name", BsonString("philip")).append("count", BsonInt32(3)).append("_id", result.upsertedId),
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", result.upsertedId)).first())
+
+        val doc2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
+
+        ctx.dataSynchronizer.insertOneAndSync(ctx.namespace, doc2)
+
+        result = ctx.dataSynchronizer.updateMany(
+            ctx.namespace,
+            BsonDocument("name", BsonString("philip")),
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(3))),
+            UpdateOptions().upsert(true))
+
+        assertEquals(2, result.matchedCount)
+        assertEquals(1, result.modifiedCount)
+        assertNull(result.upsertedId)
+
+        // there should only be 2 events instead of 3 since only 1 document was modified
+        ctx.waitForEvents(amount = 2)
+
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(3)).append("_id", doc1["_id"])
+
+        assertEquals(
+            expectedDocAfterUpdate1,
+            ctx.dataSynchronizer.find(ctx.namespace, BsonDocument("_id", doc1["_id"])).first())
+
+        assertTrue(ctx.dataSynchronizer.areAllStreamsOpen())
+    }
+
+    @Test
+    fun testDeleteOne() {
         val ctx = harness.freshTestContext()
 
         // 0: Pre-checks
@@ -852,7 +1169,7 @@ class DataSynchronizerUnitTests {
         // 1: Insert -> Delete -> Coalescence
         // insert the initial document
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1)
 
         // do the actual delete
@@ -872,7 +1189,7 @@ class DataSynchronizerUnitTests {
 
         // do the actual delete
         deleteResult = ctx.deleteTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         // assert the UpdateResult is non-zero
         assertEquals(1, deleteResult.deletedCount)
@@ -883,6 +1200,30 @@ class DataSynchronizerUnitTests {
             ))
         // assert that the updated document equals what we've expected
         assertNull(ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testDeleteMany() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        var result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+        assertEquals(0, result.deletedCount)
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        val doc1 = BsonDocument("hello", BsonString("world"))
+        val doc2 = BsonDocument("goodbye", BsonString("computer"))
+
+        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+
+        assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+
+        result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        assertEquals(2, result.deletedCount)
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
+        assertNull(ctx.dataSynchronizer.find(ctx.namespace, BsonDocument()).firstOrNull())
     }
 
     @Test
@@ -902,7 +1243,7 @@ class DataSynchronizerUnitTests {
         ctx.deleteTestDocument()
 
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(
             ctx.namespace, ctx.testDocument, true))
@@ -955,19 +1296,19 @@ class DataSynchronizerUnitTests {
         // 1: Update -> Conflict -> Delete (remote wins)
         // insert a new document, and sync.
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents(1)
         ctx.doSyncPass()
 
         // update the document and wait for the local update event
         ctx.updateTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents(1)
 
         // create conflict here by claiming there is no remote doc to update
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
 
         // do a sync pass, addressing the conflict
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents(1)
         val captor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock).insertOne(captor.capture())
         val versionDoc =
@@ -989,21 +1330,21 @@ class DataSynchronizerUnitTests {
 
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
         ctx.insertTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents(1)
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents(1)
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1, expectedChangeEvent =
         ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
 
         // update the document and wait for the local update event
         ctx.updateTestDocument()
-        ctx.waitForEvent()
+        ctx.waitForEvents(1)
 
         // do a sync pass, addressing the conflict. let local win
         ctx.shouldConflictBeResolvedByRemote = false
 
         ctx.doSyncPass()
-        ctx.waitForEvent()
+        ctx.waitForEvents(1)
 
         val insertOneCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock).insertOne(insertOneCaptor.capture())
