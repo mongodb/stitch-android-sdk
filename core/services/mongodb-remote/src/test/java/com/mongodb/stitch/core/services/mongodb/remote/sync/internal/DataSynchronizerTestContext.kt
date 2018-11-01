@@ -88,7 +88,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Attempt to find the contextual test document locally.
      */
-    fun findTestDocumentFromLocalCollection(): BsonDocument?
+    fun findTestDocumentFromLocalCollection(withSyncVersion: Boolean = false): BsonDocument?
 
     /**
      * Verify the changeEventListener was called for the test document.

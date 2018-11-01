@@ -443,14 +443,14 @@ class SyncUnitTestHarness : Closeable {
                     true)), mapOf())
         }
 
-        override fun findTestDocumentFromLocalCollection(): BsonDocument? {
+        override fun findTestDocumentFromLocalCollection(withSyncVersion: Boolean): BsonDocument? {
             // TODO: this may be rendered unnecessary with STITCH-1972
-            return withoutSyncVersion(
-                dataSynchronizer.findOneById(
-                    namespace,
-                    testDocumentId,
-                    BsonDocument::class.java,
-                    CodecRegistries.fromCodecs(bsonDocumentCodec)))
+            val doc = dataSynchronizer.findOneById(
+                namespace,
+                testDocumentId,
+                BsonDocument::class.java,
+                CodecRegistries.fromCodecs(bsonDocumentCodec))
+            return if (withSyncVersion) withoutSyncVersion(doc) else doc
         }
 
         override fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>?) {

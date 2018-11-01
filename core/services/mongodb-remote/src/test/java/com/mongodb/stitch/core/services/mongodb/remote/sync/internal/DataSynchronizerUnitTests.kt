@@ -1044,16 +1044,30 @@ class DataSynchronizerUnitTests {
 
         ctx.insertTestDocument()
 
+        ctx.updateTestDocument()
+
         ctx.queueConsumableRemoteUpdateEvent()
 
         ctx.doSyncPass()
-
+        println(ctx.findTestDocumentFromLocalCollection())
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
     }
 
     @Test
     fun testRemoteUpdateLocalOrRemoteEmptyVersion() {
+        val ctx = harness.freshTestContext()
 
+        ctx.insertTestDocument()
+
+        ctx.doSyncPass()
+
+        ctx.updateTestDocument()
+
+        ctx.queueConsumableRemoteUpdateEvent()
+
+        ctx.doSyncPass()
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
     }
 
     @Test
