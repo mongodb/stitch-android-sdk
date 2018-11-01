@@ -603,9 +603,11 @@ class SyncUnitTestHarness : Closeable {
         return namespaceChangeStreamListener to nsConfigMock
     }
 
-    internal fun <T> createCoreSyncWithContext(context: DataSynchronizerTestContext,
-                                               resultClass: Class<T>,
-                                               codec: Codec<T>? = null):
+    internal fun <T> createCoreSyncWithContext(
+        context: DataSynchronizerTestContext,
+        resultClass: Class<T>,
+        codec: Codec<T>? = null
+    ):
         Pair<CoreSync<T>, SyncOperations<T>> {
         val syncOperations = Mockito.spy(SyncOperations(
             context.namespace,

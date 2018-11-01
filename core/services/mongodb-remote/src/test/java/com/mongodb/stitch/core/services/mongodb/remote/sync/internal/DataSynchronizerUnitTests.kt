@@ -10,14 +10,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTes
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
-import org.bson.BsonReader
 import org.bson.BsonString
-import org.bson.BsonWriter
 import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
-import org.bson.codecs.Codec
-import org.bson.codecs.DecoderContext
-import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
 

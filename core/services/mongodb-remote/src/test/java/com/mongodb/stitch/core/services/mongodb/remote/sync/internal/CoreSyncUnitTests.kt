@@ -38,7 +38,7 @@ class CoreSyncUnitTests {
             val author: String
         )
 
-        class CustomCodecConsideredHarmfulCodec: Codec<CustomCodecConsideredHarmful> {
+        class CustomCodecConsideredHarmfulCodec : Codec<CustomCodecConsideredHarmful> {
             override fun getEncoderClass(): Class<CustomCodecConsideredHarmful> {
                 return CustomCodecConsideredHarmful::class.java
             }
