@@ -91,6 +91,12 @@ interface DataSynchronizerTestContext : Closeable {
     fun findTestDocumentFromLocalCollection(withSyncVersion: Boolean = false): BsonDocument?
 
     /**
+     * Add the existing version info from the local cache to the test document.
+     * May be null.
+     */
+    fun addVersionInfoToTestDocument()
+
+    /**
      * Verify the changeEventListener was called for the test document.
      */
     fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>? = null)
@@ -129,10 +135,16 @@ interface DataSynchronizerTestContext : Closeable {
      */
     fun queueConsumableRemoteInsertEvent()
 
+    enum class TestVersionState {
+        NONE, SAME, NEXT
+    }
+
     /**
      * Queue a pseudo-remote update event to be consumed during R2L.
      */
-    fun queueConsumableRemoteUpdateEvent()
+    fun queueConsumableRemoteUpdateEvent(
+        versionState: TestVersionState = TestVersionState.SAME,
+        pseudoUpdatedDocument: BsonDocument = testDocument)
 
     /**
      * Queue a pseudo-remote delete event to be consumed during R2L.

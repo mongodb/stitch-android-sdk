@@ -644,6 +644,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //    the event. The absence of a version is effectively a version, and the pending write will
     //    set a version on the next L2R pass if it’s not a delete.
     if (!lastKnownLocalVersionInfo.hasVersion() && !currentRemoteVersionInfo.hasVersion()) {
+      // This update event needs to be processed on the next pass.
       logger.info(String.format(
           Locale.US,
           "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
@@ -659,9 +660,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //    with no version indicates a document that may have been committed by another client not
     //    adhering to the mobile sync protocol.
     if (!lastKnownLocalVersionInfo.hasVersion() || !currentRemoteVersionInfo.hasVersion()) {
+      // This update event needs to be processed on the next pass.
       logger.info(String.format(
               Locale.US,
-              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote or local have an "
                       + "empty version but a write is pending; waiting for next L2R pass",
               logicalT,
               nsConfig.getNamespace(),
@@ -676,7 +678,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (localVersion.instanceId.equals(remoteVersion.instanceId)) {
       // a. If the GUIDs are the same, compare the version counter of the remote change event with
       //    the version counter of the local document
-      if (localVersion.versionCounter <= remoteVersion.versionCounter) {
+      if (remoteVersion.versionCounter <= localVersion.versionCounter) {
         // i. drop the event if the version counter of the remote event less than or equal to the
         // version counter of the local document
         logger.info(String.format(
@@ -856,7 +858,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         final ChangeEvent<BsonDocument> unprocessedRemoteEvent =
                 instanceChangeStreamListener.getUnprocessedEventForDocumentId(
                         nsConfig.getNamespace(),
-                        docConfig.getDocumentId());
+                        new BsonDocument("_id", docConfig.getDocumentId()));
 
         if (unprocessedRemoteEvent != null) {
           final DocumentVersionInfo unprocessedEventVersion;
@@ -1160,18 +1162,19 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           // v. Otherwise, invoke the collection-level conflict handler with the local change event
           //    and the remote change event (synthesized by doing a lookup of the document or
           //    sourced from the listener)
-          final ChangeEvent<BsonDocument> remoteChangeEvent;
-          if (!remoteDocumentFetched) {
-            remoteChangeEvent =
-                getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
-          } else {
-            remoteChangeEvent =
-                getSynthesizedRemoteChangeEventForDocument(
-                    remoteColl.getNamespace(),
-                    docConfig.getDocumentId(),
-                    remoteDocument);
+          ChangeEvent<BsonDocument> remoteChangeEvent = unprocessedRemoteEvent;
+          if (remoteChangeEvent == null) {
+            if (!remoteDocumentFetched) {
+              remoteChangeEvent =
+                  getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
+            } else {
+              remoteChangeEvent =
+                  getSynthesizedRemoteChangeEventForDocument(
+                      remoteColl.getNamespace(),
+                      docConfig.getDocumentId(),
+                      remoteDocument);
+            }
           }
-
           resolveConflict(
                   nsConfig.getNamespace(),
                   docConfig,

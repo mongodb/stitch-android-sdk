@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
@@ -307,6 +308,23 @@ public class NamespaceChangeStreamListener {
     try {
       this.events.remove(documentId);
       return event;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * If there is an unprocessed change event for a particular document ID, fetch it from the
+   * change stream listener, and remove it. By reading the event here, we are assuming it will be
+   * processed by the consumer.
+   */
+  void requeueProcessedEventForDocumentId(
+      @Nonnull final BsonValue documentId,
+      @Nonnull ChangeEvent<BsonDocument> processedChangeEvent
+  ) {
+    nsLock.writeLock().lock();
+    try {
+      this.events.put(processedChangeEvent.getDocumentKey(), processedChangeEvent);
     } finally {
       nsLock.writeLock().unlock();
     }
