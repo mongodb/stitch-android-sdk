@@ -142,13 +142,6 @@ public final class BsonUtils extends RuntimeException {
     return document.get("_id");
   }
 
-  public static BsonValue getDocumentId(
-          final BsonDocument document,
-          final BsonValue defaultValue
-  ) {
-    return document.get("_id", null);
-  }
-
   /**
    * Returns a copy of the given document.
    * @param document the document to copy.
@@ -158,37 +151,6 @@ public final class BsonUtils extends RuntimeException {
     final BsonDocument newDocument = new BsonDocument();
     for (final Map.Entry<String, BsonValue> kv : document.entrySet()) {
       newDocument.put(kv.getKey(), kv.getValue());
-    }
-    return newDocument;
-  }
-
-  /**
-   * Merges a subdocument into another document's subdocument and returns the result.
-   * @param key the key to look for the subdocument at.
-   * @param on the document to merge with.
-   * @param toAppend the subdocument to merge in.
-   * @return a subdocument into another document's subdocument and returns the result.
-   */
-  public static BsonDocument mergeSubdocumentAtKey(
-      final String key,
-      final BsonDocument on,
-      final BsonDocument toAppend
-  ) {
-
-    final BsonDocument newDocument = copyOfDocument(on);
-    boolean found = false;
-    for (final Map.Entry<String, BsonValue> kv : newDocument.entrySet()) {
-      if (!kv.getKey().equals(key)) {
-        continue;
-      }
-      found = true;
-      final BsonDocument valueAtKey = kv.getValue().asDocument();
-      for (final Map.Entry<String, BsonValue> kvToAppend : toAppend.entrySet()) {
-        valueAtKey.put(kvToAppend.getKey(), kvToAppend.getValue());
-      }
-    }
-    if (!found) {
-      newDocument.put(key, toAppend);
     }
     return newDocument;
   }

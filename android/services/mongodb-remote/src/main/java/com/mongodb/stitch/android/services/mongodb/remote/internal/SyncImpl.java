@@ -148,21 +148,21 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<SyncInsertOneResult> insertOneAndSync(final DocumentT document) {
+  public Task<SyncInsertOneResult> insertOne(final DocumentT document) {
     return this.dispatcher.dispatchTask(new Callable<SyncInsertOneResult>() {
       @Override
       public SyncInsertOneResult call() throws Exception {
-        return proxy.insertOneAndSync(document);
+        return proxy.insertOne(document);
       }
     });
   }
 
   @Override
-  public Task<SyncInsertManyResult> insertManyAndSync(final List<DocumentT> documents) {
+  public Task<SyncInsertManyResult> insertMany(final List<DocumentT> documents) {
     return this.dispatcher.dispatchTask(new Callable<SyncInsertManyResult>() {
       @Override
       public SyncInsertManyResult call() throws Exception {
-        return proxy.insertManyAndSync(documents);
+        return proxy.insertMany(documents);
       }
     });
   }

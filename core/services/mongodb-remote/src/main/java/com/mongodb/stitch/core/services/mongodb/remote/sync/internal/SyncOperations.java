@@ -144,7 +144,7 @@ public class SyncOperations<DocumentT> {
         updateOptions);
   }
 
-  public InsertOneAndSyncOperation insertOneAndSync(final DocumentT document) {
+  public InsertOneOperation insertOne(final DocumentT document) {
     notNull("document", document);
     final DocumentT docToInsert;
     if (getCodec(codecRegistry, documentClass) instanceof CollectibleCodec) {
@@ -155,13 +155,13 @@ public class SyncOperations<DocumentT> {
       docToInsert = document;
     }
 
-    return new InsertOneAndSyncOperation(
+    return new InsertOneOperation(
         namespace,
         documentToBsonDocument(docToInsert, codecRegistry),
         dataSynchronizer);
   }
 
-  InsertManyAndSyncOperation insertManyAndSync(final List<DocumentT> documents) {
+  InsertManyOperation insertMany(final List<DocumentT> documents) {
     final List<BsonDocument> bsonDocuments = new ArrayList<>();
     for (final DocumentT document : documents) {
       if (getCodec(codecRegistry, documentClass) instanceof CollectibleCodec) {
@@ -177,7 +177,7 @@ public class SyncOperations<DocumentT> {
       }
     }
 
-    return new InsertManyAndSyncOperation(
+    return new InsertManyOperation(
         namespace,
         bsonDocuments,
         dataSynchronizer);

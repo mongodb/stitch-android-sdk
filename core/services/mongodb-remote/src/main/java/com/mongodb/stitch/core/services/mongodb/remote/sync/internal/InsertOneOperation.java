@@ -20,39 +20,29 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
 
 import javax.annotation.Nullable;
-
 import org.bson.BsonDocument;
-import org.bson.BsonValue;
 
-class InsertManyAndSyncOperation implements Operation<SyncInsertManyResult> {
+class InsertOneOperation implements Operation<SyncInsertOneResult> {
 
   private final MongoNamespace namespace;
-  private final List<BsonDocument> documents;
+  private final BsonDocument document;
   private final DataSynchronizer dataSynchronizer;
 
-  InsertManyAndSyncOperation(
+  InsertOneOperation(
       final MongoNamespace namespace,
-      final List<BsonDocument> documents,
+      final BsonDocument document,
       final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
-    this.documents = documents;
+    this.document = document;
     this.dataSynchronizer = dataSynchronizer;
   }
 
-  public SyncInsertManyResult execute(@Nullable final CoreStitchServiceClient service) {
-    this.dataSynchronizer.insertManyAndSync(namespace, documents);
-    final Map<Long, BsonValue> indexToId = new HashMap<>();
-    for (int i = 0; i < this.documents.size(); i++) {
-      indexToId.put((long)i, BsonUtils.getDocumentId(this.documents.get(i)));
-    }
-    return new SyncInsertManyResult(indexToId);
+  public SyncInsertOneResult execute(@Nullable final CoreStitchServiceClient service) {
+    this.dataSynchronizer.insertOne(namespace, document);
+    return new SyncInsertOneResult(BsonUtils.getDocumentId(document));
   }
 }

@@ -84,12 +84,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             return Tasks.await(sync.aggregate(pipeline).into(mutableListOf<Document>()))
         }
 
-        override fun insertOneAndSync(document: Document): SyncInsertOneResult {
-            return Tasks.await(sync.insertOneAndSync(document))
+        override fun insertOne(document: Document): SyncInsertOneResult {
+            return Tasks.await(sync.insertOne(document))
         }
 
-        override fun insertManyAndSync(documents: List<Document>): SyncInsertManyResult {
-            return Tasks.await(sync.insertManyAndSync(documents))
+        override fun insertMany(documents: List<Document>): SyncInsertManyResult {
+            return Tasks.await(sync.insertMany(documents))
         }
 
         override fun updateOne(filter: Bson, update: Bson, updateOptions: SyncUpdateOptions): SyncUpdateResult {

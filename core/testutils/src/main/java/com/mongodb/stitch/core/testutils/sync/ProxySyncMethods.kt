@@ -48,9 +48,9 @@ interface ProxySyncMethods {
         updateOptions: SyncUpdateOptions = SyncUpdateOptions()
     ): SyncUpdateResult
 
-    fun insertOneAndSync(document: Document): SyncInsertOneResult
+    fun insertOne(document: Document): SyncInsertOneResult
 
-    fun insertManyAndSync(documents: List<Document>): SyncInsertManyResult
+    fun insertMany(documents: List<Document>): SyncInsertManyResult
 
     fun deleteOne(filter: Bson): SyncDeleteResult
 

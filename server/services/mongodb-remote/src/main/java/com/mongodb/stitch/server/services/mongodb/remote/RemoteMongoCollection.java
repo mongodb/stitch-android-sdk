@@ -239,11 +239,4 @@ public interface RemoteMongoCollection<DocumentT> {
       final Bson filter,
       final Bson update,
       final RemoteUpdateOptions updateOptions);
-
-  /**
-   * A set of synchronization related operations at the collection level.
-   *
-   * @return set of sync operations for this collection
-   */
-  Sync<DocumentT> sync();
 }

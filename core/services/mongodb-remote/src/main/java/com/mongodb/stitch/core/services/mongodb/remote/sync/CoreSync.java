@@ -187,7 +187,7 @@ public interface CoreSync<DocumentT> {
    * @param document the document to insert
    * @return the result of the insert one operation
    */
-  SyncInsertOneResult insertOneAndSync(final DocumentT document);
+  SyncInsertOneResult insertOne(final DocumentT document);
 
   /**
    * Inserts one or more documents. Syncs the newly inserted documents against the remote.
@@ -195,7 +195,7 @@ public interface CoreSync<DocumentT> {
    * @param documents the documents to insert
    * @return the result of the insert many operation
    */
-  SyncInsertManyResult insertManyAndSync(final List<DocumentT> documents);
+  SyncInsertManyResult insertMany(final List<DocumentT> documents);
 
   /**
    * Removes at most one document from the collection that has been synchronized with the remote

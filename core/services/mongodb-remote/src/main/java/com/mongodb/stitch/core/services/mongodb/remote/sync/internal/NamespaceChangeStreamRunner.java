@@ -55,7 +55,7 @@ class NamespaceChangeStreamRunner implements Runnable {
       if (!isOpen) {
         try {
           isOpen = listener.openStream();
-        } catch (final MongoInterruptedException ex) {
+        } catch (final MongoInterruptedException | InterruptedException ex) {
           logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", ex);
           return;
         } catch (final Throwable t) {

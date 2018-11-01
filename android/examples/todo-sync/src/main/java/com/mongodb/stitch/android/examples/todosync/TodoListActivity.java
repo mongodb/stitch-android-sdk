@@ -214,7 +214,7 @@ public class TodoListActivity extends AppCompatActivity {
           Toast.makeText(TodoListActivity.this, "Logged in", Toast.LENGTH_SHORT).show();
 
           if (lists.sync().getSyncedIds().isEmpty()) {
-            lists.sync().insertOneAndSync(new Document("_id", userId));
+            lists.sync().insertOne(new Document("_id", userId));
           }
         })
         .addOnFailureListener(e -> {
@@ -346,7 +346,7 @@ public class TodoListActivity extends AppCompatActivity {
 
   private void addTodoItem(final String task) {
     final TodoItem newItem = new TodoItem(new ObjectId(), userId, task, false, null);
-    items.sync().insertOneAndSync(newItem)
+    items.sync().insertOne(newItem)
         .addOnSuccessListener(result -> {
           todoAdapter.updateOrAddItem(newItem);
           touchList();
