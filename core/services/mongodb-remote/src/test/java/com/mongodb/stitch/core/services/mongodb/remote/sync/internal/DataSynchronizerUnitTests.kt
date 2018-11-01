@@ -10,9 +10,14 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTes
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonReader
 import org.bson.BsonString
+import org.bson.BsonWriter
 import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
+import org.bson.codecs.Codec
+import org.bson.codecs.DecoderContext
+import org.bson.codecs.EncoderContext
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
 
@@ -960,7 +965,8 @@ class DataSynchronizerUnitTests {
         assertEquals(1, result.modifiedCount)
         assertNotNull(result.upsertedId)
 
-        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1.append("_id", result.upsertedId), true)
+        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace,
+            doc1.append("_id", result.upsertedId), true)
 
         ctx.waitForEvents(amount = 1)
 
@@ -987,7 +993,8 @@ class DataSynchronizerUnitTests {
 
         ctx.waitForEvents(amount = 2)
 
-        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(2)).append("_id", doc1["_id"])
+        val expectedDocAfterUpdate1 = BsonDocument("name", BsonString("philip"))
+            .append("count", BsonInt32(2)).append("_id", doc1["_id"])
 
         assertEquals(
             expectedDocAfterUpdate1,
@@ -1021,7 +1028,8 @@ class DataSynchronizerUnitTests {
         val result = ctx.dataSynchronizer.updateMany(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
-            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))))
+            BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
+            UpdateOptions().upsert(true)) // ensure there wasn't an unnecessary insert
 
         ctx.findTestDocumentFromLocalCollection()
         assertEquals(2, result.modifiedCount)

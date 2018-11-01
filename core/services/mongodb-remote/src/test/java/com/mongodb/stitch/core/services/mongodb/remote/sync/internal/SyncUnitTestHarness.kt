@@ -31,6 +31,8 @@ import org.bson.BsonString
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
+import org.bson.codecs.Codec
+import org.bson.codecs.DocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
 import org.junit.Assert
@@ -601,15 +603,18 @@ class SyncUnitTestHarness : Closeable {
         return namespaceChangeStreamListener to nsConfigMock
     }
 
-    internal fun createCoreSyncWithContext(context: DataSynchronizerTestContext): Pair<CoreSync<BsonDocument>, SyncOperations<BsonDocument>> {
+    internal fun <T> createCoreSyncWithContext(context: DataSynchronizerTestContext,
+                                               resultClass: Class<T>,
+                                               codec: Codec<T>? = null):
+        Pair<CoreSync<T>, SyncOperations<T>> {
         val syncOperations = Mockito.spy(SyncOperations(
             context.namespace,
-            BsonDocument::class.java,
+            resultClass,
             context.dataSynchronizer,
-            CodecRegistries.fromCodecs(BsonDocumentCodec())))
+            CodecRegistries.fromCodecs(codec ?: BsonDocumentCodec(), DocumentCodec())))
         val coreSync = CoreSyncImpl(
             context.namespace,
-            BsonDocument::class.java,
+            resultClass,
             context.dataSynchronizer,
             (context as DataSynchronizerTestContextImpl).service,
             syncOperations)

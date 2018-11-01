@@ -400,7 +400,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * state of said documents. Utilizes change streams to get "recent" updates to documents of
    * interest. Documents that are being synchronized from the first time will be fetched via a
    * full document lookup. Documents that have gone stale will be updated via change events or
-   * latest documents from the remote. Any conflicts that occur will be resolved locally and
+   * latest documents with the remote. Any conflicts that occur will be resolved locally and
    * later relayed remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
    */
   private void syncRemoteToLocal() {

@@ -77,7 +77,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         }
 
         override fun count(filter: Bson): Long {
-            return Tasks.await(sync.count())
+            return Tasks.await(sync.count(filter))
         }
 
         override fun aggregate(pipeline: List<Bson>): Iterable<Document?> {

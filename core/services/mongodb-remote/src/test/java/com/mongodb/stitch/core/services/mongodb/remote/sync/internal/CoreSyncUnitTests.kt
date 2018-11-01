@@ -10,7 +10,13 @@ import org.bson.BsonArray
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonReader
 import org.bson.BsonString
+import org.bson.BsonWriter
+import org.bson.Document
+import org.bson.codecs.Codec
+import org.bson.codecs.DecoderContext
+import org.bson.codecs.EncoderContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,6 +32,44 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
 class CoreSyncUnitTests {
+    companion object {
+        data class CustomCodecConsideredHarmful(
+            val consideredHarmful: Boolean,
+            val author: String
+        )
+
+        class CustomCodecConsideredHarmfulCodec: Codec<CustomCodecConsideredHarmful> {
+            override fun getEncoderClass(): Class<CustomCodecConsideredHarmful> {
+                return CustomCodecConsideredHarmful::class.java
+            }
+
+            override fun encode(
+                writer: BsonWriter?,
+                value: CustomCodecConsideredHarmful?,
+                encoderContext: EncoderContext?
+            ) {
+                if (value != null && writer != null) {
+                    writer.writeStartDocument()
+                    writer.writeName("consideredHarmful")
+                    writer.writeBoolean(value.consideredHarmful)
+                    writer.writeName("author")
+                    writer.writeString(value.author)
+                    writer.writeEndDocument()
+                }
+            }
+
+            override fun decode(
+                reader: BsonReader?,
+                decoderContext: DecoderContext?
+            ): CustomCodecConsideredHarmful? {
+                return if (reader == null)
+                    null
+                else {
+                    CustomCodecConsideredHarmful(reader.readBoolean(), reader.readString())
+                }
+            }
+        }
+    }
     private val harness = SyncUnitTestHarness()
 
     @After
@@ -38,7 +82,7 @@ class CoreSyncUnitTests {
     @Test
     fun testSyncOne() {
         val ctx = harness.freshTestContext()
-        val (coreSync, _) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, _) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
         // assert that calling syncOne on coreSync proxies the appropriate call
         // to the data synchronizer. assert that the appropriate document is being synchronized
         coreSync.syncOne(ctx.testDocumentId)
@@ -54,7 +98,7 @@ class CoreSyncUnitTests {
     @Test
     fun testSyncMany() {
         val ctx = harness.freshTestContext()
-        val (coreSync, _) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, _) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         // assert that calling syncMany on coreSync proxies the appropriate call to the data
         // synchronizer for each document being sync'd
@@ -67,7 +111,7 @@ class CoreSyncUnitTests {
     @Test
     fun testCount() {
         val ctx = harness.freshTestContext()
-        val (coreSync, _) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, _) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         val doc1 = BsonDocument("a", BsonString("b"))
         val doc2 = BsonDocument("c", BsonString("d"))
@@ -85,7 +129,7 @@ class CoreSyncUnitTests {
     @Test
     fun testFind() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         var findIterable = coreSync.find()
 
@@ -144,7 +188,7 @@ class CoreSyncUnitTests {
     @Test
     fun testAggregate() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         val doc1 = BsonDocument("a", BsonString("b")).append("c", BsonString("d"))
         val doc2 = BsonDocument("a", BsonString("b")).append("c", BsonString("d"))
@@ -182,7 +226,7 @@ class CoreSyncUnitTests {
     @Test
     fun testUpdateOne() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         var result = coreSync.updateOne(ctx.testDocumentFilter,
             ctx.updateDocument,
@@ -209,7 +253,7 @@ class CoreSyncUnitTests {
     @Test
     fun testUpdateMany() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         val doc1 = BsonDocument("a", BsonString("b"))
         val doc2 = BsonDocument("c", BsonString("d"))
@@ -244,7 +288,7 @@ class CoreSyncUnitTests {
     @Test
     fun testInsertOneAndSync() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         assertEquals(
             ctx.testDocumentId,
@@ -266,9 +310,30 @@ class CoreSyncUnitTests {
     }
 
     @Test
+    fun testInsertOneAndSyncCustomCodec() {
+        val ctx = harness.freshTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(
+            ctx, CustomCodecConsideredHarmful::class.java, CustomCodecConsideredHarmfulCodec())
+
+        val doc1 = CustomCodecConsideredHarmful(true, "Edsger Dijkstra")
+
+        val result = coreSync.insertOneAndSync(doc1)
+
+        val actualDoc1 = coreSync.find(Document(mapOf("consideredHarmful" to true)), BsonDocument::class.java).first()
+
+        assertEquals(actualDoc1!!["_id"], result.insertedId)
+
+        verify(syncOperations, times(1)).insertOneAndSync(
+            eq(doc1))
+
+        verify(ctx.dataSynchronizer, times(1)).insertOneAndSync(
+            eq(ctx.namespace), eq(actualDoc1))
+    }
+
+    @Test
     fun testInsertManyAndSync() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         val doc1 = BsonDocument("a", BsonString("b"))
         val doc2 = BsonDocument("c", BsonString("d"))
@@ -294,9 +359,33 @@ class CoreSyncUnitTests {
     }
 
     @Test
+    fun testInsertManyAndSyncCustomCodec() {
+        val ctx = harness.freshTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(
+            ctx, CustomCodecConsideredHarmful::class.java, CustomCodecConsideredHarmfulCodec())
+
+        val doc1 = CustomCodecConsideredHarmful(true, "Edsger Dijkstra")
+        val doc2 = CustomCodecConsideredHarmful(false, "Eric A. Meyer")
+
+        val result = coreSync.insertManyAndSync(listOf(doc1, doc2))
+
+        val actualDoc1 = coreSync.find(Document(mapOf("consideredHarmful" to true)), BsonDocument::class.java).first()
+        val actualDoc2 = coreSync.find(Document(mapOf("consideredHarmful" to false)), BsonDocument::class.java).first()
+
+        assertEquals(actualDoc1!!["_id"], result.insertedIds[0])
+        assertEquals(actualDoc2!!["_id"], result.insertedIds[1])
+
+        verify(syncOperations, times(1)).insertManyAndSync(
+            eq(listOf(doc1, doc2)))
+
+        verify(ctx.dataSynchronizer, times(1)).insertManyAndSync(
+            eq(ctx.namespace), eq(listOf(actualDoc1, actualDoc2)))
+    }
+
+    @Test
     fun testDeleteOne() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         var deleteResult = coreSync.deleteOne(ctx.testDocumentFilter)
 
@@ -318,7 +407,7 @@ class CoreSyncUnitTests {
     @Test
     fun testDeleteMany() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx)
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         val doc1 = BsonDocument("a", BsonString("b"))
         val doc2 = BsonDocument("c", BsonString("d"))

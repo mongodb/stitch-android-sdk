@@ -96,14 +96,14 @@ public interface CoreSync<DocumentT> {
   boolean resumeSyncForDocument(final BsonValue documentId);
 
   /**
-   * Counts the number of documents in the collection that have been synchronized from the remote.
+   * Counts the number of documents in the collection that have been synchronized with the remote.
    *
    * @return the number of documents in the collection
    */
   long count();
 
   /**
-   * Counts the number of documents in the collection that have been synchronized from the remote
+   * Counts the number of documents in the collection that have been synchronized with the remote
    * according to the given options.
    *
    * @param filter the query filter
@@ -112,7 +112,7 @@ public interface CoreSync<DocumentT> {
   long count(final Bson filter);
 
   /**
-   * Counts the number of documents in the collection that have been synchronized from the remote
+   * Counts the number of documents in the collection that have been synchronized with the remote
    * according to the given options.
    *
    * @param filter  the query filter
@@ -122,14 +122,14 @@ public interface CoreSync<DocumentT> {
   long count(final Bson filter, final SyncCountOptions options);
 
   /**
-   * Finds all documents in the collection that have been synchronized from the remote.
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @return the find iterable interface
    */
   CoreSyncFindIterable<DocumentT> find();
 
   /**
-   * Finds all documents in the collection that have been synchronized from the remote.
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @param resultClass the class to decode each document into
    * @param <ResultT>   the target document type of the iterable.
@@ -138,7 +138,7 @@ public interface CoreSync<DocumentT> {
   <ResultT> CoreSyncFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
   /**
-   * Finds all documents in the collection that have been synchronized from the remote.
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @param filter the query filter
    * @return the find iterable interface
@@ -146,7 +146,7 @@ public interface CoreSync<DocumentT> {
   CoreSyncFindIterable<DocumentT> find(final Bson filter);
 
   /**
-   * Finds all documents in the collection that have been synchronized from the remote.
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @param filter      the query filter
    * @param resultClass the class to decode each document into
@@ -159,7 +159,7 @@ public interface CoreSync<DocumentT> {
 
 
   /**
-   * Aggregates documents that have been synchronized from the remote
+   * Aggregates documents that have been synchronized with the remote
    * according to the specified aggregation pipeline.
    *
    * @param pipeline the aggregation pipeline
@@ -168,7 +168,7 @@ public interface CoreSync<DocumentT> {
   CoreSyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline);
 
   /**
-   * Aggregates documents that have been synchronized from the remote
+   * Aggregates documents that have been synchronized with the remote
    * according to the specified aggregation pipeline.
    *
    * @param pipeline    the aggregation pipeline
@@ -198,7 +198,7 @@ public interface CoreSync<DocumentT> {
   SyncInsertManyResult insertManyAndSync(final List<DocumentT> documents);
 
   /**
-   * Removes at most one document from the collection that has been synchronized from the remote
+   * Removes at most one document from the collection that has been synchronized with the remote
    * that matches the given filter.  If no documents match, the collection is not
    * modified.
    *
@@ -208,7 +208,7 @@ public interface CoreSync<DocumentT> {
   SyncDeleteResult deleteOne(final Bson filter);
 
   /**
-   * Removes all documents from the collection that have been synchronized from the remote
+   * Removes all documents from the collection that have been synchronized with the remote
    * that match the given query filter.  If no documents match, the collection is not modified.
    *
    * @param filter the query filter to apply the the delete operation
@@ -217,8 +217,9 @@ public interface CoreSync<DocumentT> {
   SyncDeleteResult deleteMany(final Bson filter);
 
   /**
-   * Update a single document in the collection that have been synchronized from the remote
-   * according to the specified arguments.
+   * Update a single document in the collection that have been synchronized with the remote
+   * according to the specified arguments. If the update results in an upsert,
+   * the newly upserted document will automatically become synchronized.
    *
    * @param filter a document describing the query filter, which may not be null.
    * @param update a document describing the update, which may not be null. The update to
@@ -228,8 +229,9 @@ public interface CoreSync<DocumentT> {
   SyncUpdateResult updateOne(final Bson filter, final Bson update);
 
   /**
-   * Update a single document in the collection that has been synchronized from the remote
-   * according to the specified arguments.
+   * Update a single document in the collection that has been synchronized with the remote
+   * according to the specified arguments. If the update results in an upsert,
+   * the newly upserted document will automatically become synchronized.
    *
    * @param filter        a document describing the query filter, which may not be null.
    * @param update        a document describing the update, which may not be null. The update to
@@ -243,8 +245,9 @@ public interface CoreSync<DocumentT> {
       final SyncUpdateOptions updateOptions);
 
   /**
-   * Update all documents in the collection that have been synchronized from the remote
-   * according to the specified arguments.
+   * Update all documents in the collection that have been synchronized with the remote
+   * according to the specified arguments. If the update results in an upsert,
+   * the newly upserted document will automatically become synchronized.
    *
    * @param filter a document describing the query filter, which may not be null.
    * @param update a document describing the update, which may not be null. The update to
@@ -254,8 +257,9 @@ public interface CoreSync<DocumentT> {
   SyncUpdateResult updateMany(final Bson filter, final Bson update);
 
   /**
-   * Update all documents in the collection that have been synchronized from the remote
-   * according to the specified arguments.
+   * Update all documents in the collection that have been synchronized with the remote
+   * according to the specified arguments. If the update results in an upsert,
+   * the newly upserted document will automatically become synchronized.
    *
    * @param filter        a document describing the query filter, which may not be null.
    * @param update        a document describing the update, which may not be null. The update to
