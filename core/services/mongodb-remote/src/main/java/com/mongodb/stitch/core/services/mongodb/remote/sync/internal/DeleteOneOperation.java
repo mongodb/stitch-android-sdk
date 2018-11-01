@@ -17,32 +17,31 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
 
 import javax.annotation.Nullable;
-import org.bson.BsonDocument;
+import org.bson.conversions.Bson;
 
-class InsertOneAndSyncOperation implements Operation<SyncInsertOneResult> {
-
+class DeleteOneOperation implements Operation<SyncDeleteResult> {
   private final MongoNamespace namespace;
-  private final BsonDocument document;
+  private final Bson filter;
   private final DataSynchronizer dataSynchronizer;
 
-  InsertOneAndSyncOperation(
+  DeleteOneOperation(
       final MongoNamespace namespace,
-      final BsonDocument document,
+      final Bson filter,
       final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
-    this.document = document;
+    this.filter = filter;
     this.dataSynchronizer = dataSynchronizer;
   }
 
-  public SyncInsertOneResult execute(@Nullable final CoreStitchServiceClient service) {
-    this.dataSynchronizer.insertOneAndSync(namespace, document);
-    return new SyncInsertOneResult(BsonUtils.getDocumentId(document));
+  public SyncDeleteResult execute(@Nullable final CoreStitchServiceClient service) {
+    final DeleteResult localResult = this.dataSynchronizer.deleteOne(namespace, filter);
+    return new SyncDeleteResult(localResult.getDeletedCount());
   }
 }

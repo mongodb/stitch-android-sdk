@@ -17,36 +17,32 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
 
-import javax.annotation.Nonnull;
-import org.bson.BsonValue;
+import javax.annotation.Nullable;
 
-class FindOneByIdOperation<T> implements Operation<T> {
+import org.bson.conversions.Bson;
 
+class DeleteManyOperation implements Operation<SyncDeleteResult> {
   private final MongoNamespace namespace;
-  private final BsonValue documentId;
-  private final Class<T> resultClass;
+  private final Bson filter;
   private final DataSynchronizer dataSynchronizer;
 
-  FindOneByIdOperation(
+  DeleteManyOperation(
       final MongoNamespace namespace,
-      final BsonValue documentId,
-      final Class<T> resultClass,
+      final Bson filter,
       final DataSynchronizer dataSynchronizer
   ) {
     this.namespace = namespace;
-    this.documentId = documentId;
-    this.resultClass = resultClass;
+    this.filter = filter;
     this.dataSynchronizer = dataSynchronizer;
   }
 
-  public T execute(@Nonnull final CoreStitchServiceClient service) {
-    return this.dataSynchronizer.findOneById(
-      namespace,
-      documentId,
-      resultClass,
-      service.getCodecRegistry());
+  public SyncDeleteResult execute(@Nullable final CoreStitchServiceClient service) {
+    final DeleteResult localResult = this.dataSynchronizer.deleteMany(namespace, filter);
+    return new SyncDeleteResult(localResult.getDeletedCount());
   }
 }

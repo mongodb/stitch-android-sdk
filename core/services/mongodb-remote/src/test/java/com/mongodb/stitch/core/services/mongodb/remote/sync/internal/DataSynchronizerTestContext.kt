@@ -10,6 +10,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
 import org.bson.BsonDocument
 import org.bson.BsonValue
+import org.bson.Document
 import java.io.Closeable
 import java.lang.Exception
 
@@ -25,6 +26,7 @@ interface DataSynchronizerTestContext : Closeable {
     val namespace: MongoNamespace
     val testDocument: BsonDocument
     val testDocumentId: BsonValue
+    val testDocumentFilter: BsonDocument
     var updateDocument: BsonDocument
 
     val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument>
@@ -62,7 +64,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Wait for an event to be emitted.
      */
-    fun waitForEvent()
+    fun waitForEvents(amount: Int = 1)
 
     /**
      * Reconfigure dataSynchronizer. Insert the contextual test document.
@@ -93,7 +95,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Verify the changeEventListener was called for the test document.
      */
-    fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>? = null)
+    fun verifyChangeEventListenerCalledForActiveDoc(times: Int, vararg expectedChangeEvents: ChangeEvent<BsonDocument> = arrayOf())
 
     /**
      * Verify the errorListener was called for the test document.
@@ -112,7 +114,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Verify the stream function was called.
      */
-    fun verifyWatchFunctionCalled(times: Int, expectedArgs: List<Any>)
+    fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document)
 
     /**
      * Verify dataSynchronizer.start() has been called.
@@ -132,7 +134,10 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Queue a pseudo-remote update event to be consumed during R2L.
      */
-    fun queueConsumableRemoteUpdateEvent()
+    fun queueConsumableRemoteUpdateEvent(
+        id: BsonValue = testDocumentId,
+        document: BsonDocument = testDocument
+    )
 
     /**
      * Queue a pseudo-remote delete event to be consumed during R2L.

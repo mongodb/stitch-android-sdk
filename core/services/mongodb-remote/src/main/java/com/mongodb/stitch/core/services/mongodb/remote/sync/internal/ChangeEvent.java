@@ -28,6 +28,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
@@ -195,8 +197,8 @@ public final class ChangeEvent<DocumentT> {
      * @return a description of the updated fields and removed keys between
      *         the documents
      */
-    private static UpdateDescription diff(final BsonDocument beforeDocument,
-                                          final BsonDocument afterDocument,
+    private static UpdateDescription diff(final @Nonnull BsonDocument beforeDocument,
+                                          final @Nonnull BsonDocument afterDocument,
                                           final @Nullable String onKey,
                                           final BsonDocument updatedFields,
                                           final List<String> removedFields) {
@@ -245,7 +247,7 @@ public final class ChangeEvent<DocumentT> {
         // it is a new key with a new value.
         // updatedFields will included keys that must
         // be newly created.
-        final String actualKey = onKey == null ? key : String.format("%s.%s", onKey, key);;
+        final String actualKey = onKey == null ? key : String.format("%s.%s", onKey, key);
         if (!beforeDocument.containsKey(key)) {
           updatedFields.put(actualKey, newValue);
         }
@@ -266,8 +268,12 @@ public final class ChangeEvent<DocumentT> {
      * @return a description of the updated fields and removed keys between
      *         the documents
      */
-    static UpdateDescription diff(final BsonDocument beforeDocument,
-                                  final BsonDocument afterDocument) {
+    static UpdateDescription diff(@Nullable final BsonDocument beforeDocument,
+                                  @Nullable final BsonDocument afterDocument) {
+      if (beforeDocument == null || afterDocument == null) {
+        return new UpdateDescription(new BsonDocument(), new ArrayList<>());
+      }
+
       return UpdateDescription.diff(
           beforeDocument,
           afterDocument,

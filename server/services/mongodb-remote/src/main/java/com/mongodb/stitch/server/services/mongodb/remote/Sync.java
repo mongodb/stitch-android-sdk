@@ -16,13 +16,17 @@
 
 package com.mongodb.stitch.server.services.mongodb.remote;
 
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
 
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -103,14 +107,40 @@ public interface Sync<DocumentT> {
   boolean resumeSyncForDocument(@Nonnull final BsonValue documentId);
 
   /**
-   * Finds all documents in the collection.
+   * Counts the number of documents in the collection that have been synchronized with the remote.
+   *
+   * @return the number of documents in the collection
+   */
+  long count();
+
+  /**
+   * Counts the number of documents in the collection that have been synchronized with the remote
+   * according to the given options.
+   *
+   * @param filter the query filter
+   * @return the number of documents in the collection
+   */
+  long count(final Bson filter);
+
+  /**
+   * Counts the number of documents in the collection that have been synchronized with the remote
+   * according to the given options.
+   *
+   * @param filter  the query filter
+   * @param options the options describing the count
+   * @return the number of documents in the collection
+   */
+  long count(final Bson filter, final SyncCountOptions options);
+
+  /**
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @return the find iterable interface
    */
   SyncFindIterable<DocumentT> find();
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @param resultClass the class to decode each document into
    * @param <ResultT>   the target document type of the iterable.
@@ -119,7 +149,7 @@ public interface Sync<DocumentT> {
   <ResultT> SyncFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @param filter the query filter
    * @return the find iterable interface
@@ -127,59 +157,131 @@ public interface Sync<DocumentT> {
   SyncFindIterable<DocumentT> find(final Bson filter);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that have been synchronized with the remote.
    *
    * @param filter      the query filter
    * @param resultClass the class to decode each document into
    * @param <ResultT>   the target document type of the iterable.
    * @return the find iterable interface
    */
-  <ResultT> SyncFindIterable<ResultT> find(final Bson filter, final Class<ResultT> resultClass);
+  <ResultT> SyncFindIterable<ResultT> find(
+      final Bson filter,
+      final Class<ResultT> resultClass);
+
 
   /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
+   * Aggregates documents that have been synchronized with the remote
+   * according to the specified aggregation pipeline.
    *
-   * @param documentId the _id of the document to search for.
-   * @return a task containing the document if found locally or remotely.
+   * @param pipeline the aggregation pipeline
+   * @return an iterable containing the result of the aggregation operation
    */
-  DocumentT findOneById(final BsonValue documentId);
+  SyncAggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline);
 
   /**
-   * Finds a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
+   * Aggregates documents that have been synchronized with the remote
+   * according to the specified aggregation pipeline.
    *
-   * @param documentId the _id of the document to search for.
+   * @param pipeline    the aggregation pipeline
    * @param resultClass the class to decode each document into
    * @param <ResultT>   the target document type of the iterable.
-   * @return a task containing the document if found locally or remotely.
+   * @return an iterable containing the result of the aggregation operation
    */
-  <ResultT> ResultT findOneById(final BsonValue documentId, final Class<ResultT> resultClass);
+  <ResultT> SyncAggregateIterable<ResultT> aggregate(
+      final List<? extends Bson> pipeline,
+      final Class<ResultT> resultClass);
 
   /**
-   * Updates a document by the given id. It is first searched for in the local synchronized cache
-   * and if not found and there is internet connectivity, it is searched for remotely.
+   * Inserts the provided document. If the document is missing an identifier, one will be
+   * generated. Begin syncing the document against the remote.
    *
-   * @param documentId the _id of the document to search for.
-   * @param update the update specifier.
-   * @return a task containing the result of the local or remote update.
+   * @param document the document to insert
+   * @return the result of the insert one operation
    */
-  RemoteUpdateResult updateOneById(final BsonValue documentId, final Bson update);
+  SyncInsertOneResult insertOneAndSync(final DocumentT document);
 
   /**
-   * Inserts a single document and begins to synchronize it.
+   * Inserts one or more documents. If the documents are missing an identifier, they will be
+   * generated. Begin syncing the documents against the remote.
    *
-   * @param document the document to insert and synchronize.
-   * @return the result of the insertion.
+   * @param documents the documents to insert
+   * @return the result of the insert many operation
    */
-  RemoteInsertOneResult insertOneAndSync(final DocumentT document);
+  SyncInsertManyResult insertManyAndSync(final List<DocumentT> documents);
 
   /**
-   * Deletes a single document by the given id. It is first searched for in the local synchronized
-   * cache and if not found and there is internet connectivity, it is searched for remotely.
+   * Removes at most one document from the collection that has been synchronized with the remote
+   * and matches the given filter.  If no documents match, the collection is not
+   * modified.
    *
-   * @param documentId the _id of the document to search for.
-   * @return a task containing the result of the local or remote update.
+   * @param filter the query filter to apply the the delete operation
+   * @return the result of the remove one operation
    */
-  RemoteDeleteResult deleteOneById(final BsonValue documentId);
+  SyncDeleteResult deleteOne(final Bson filter);
+
+  /**
+   * Removes all documents from the collection that have been synchronized with the remote
+   * and match the given query filter.  If no documents
+   * match, the collection is not modified.
+   *
+   * @param filter the query filter to apply the the delete operation
+   * @return the result of the remove many operation
+   */
+  SyncDeleteResult deleteMany(final Bson filter);
+
+  /**
+   * Update a single document in the collection that has been synchronized with the remote
+   * according to the specified arguments. If the update results in an upsert, the newly upserted
+   * document will automatically become synchronized.
+   *
+   * @param filter a document describing the query filter, which may not be null.
+   * @param update a document describing the update, which may not be null. The update to
+   *               apply must include only update operators.
+   * @return the result of the update one operation
+   */
+  SyncUpdateResult updateOne(final Bson filter, final Bson update);
+
+  /**
+   * Update a single document that has been synchronized with the remote
+   * in the collection according to the specified arguments. If the update results in an upsert,
+   * the newly upserted document will automatically become synchronized.
+   *
+   * @param filter        a document describing the query filter, which may not be null.
+   * @param update        a document describing the update, which may not be null. The update to
+   *                      apply must include only update operators.
+   * @param updateOptions the options to apply to the update operation
+   * @return the result of the update one operation
+   */
+  SyncUpdateResult updateOne(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions);
+
+  /**
+   * Update all documents in the collection that have been synchronized with the remote
+   * according to the specified arguments. If the update results in an upsert,
+   * the newly upserted document will automatically become synchronized.
+   *
+   * @param filter a document describing the query filter, which may not be null.
+   * @param update a document describing the update, which may not be null. The update to
+   *               apply must include only update operators.
+   * @return the result of the update many operation
+   */
+  SyncUpdateResult updateMany(final Bson filter, final Bson update);
+
+  /**
+   * Update all documents in the collection that have been synchronized with the remote
+   * according to the specified arguments. If the update results in an upsert,
+   * the newly upserted document will automatically become synchronized.
+   *
+   * @param filter        a document describing the query filter, which may not be null.
+   * @param update        a document describing the update, which may not be null. The update to
+   *                     apply must include only update operators.
+   * @param updateOptions the options to apply to the update operation
+   * @return the result of the update many operation
+   */
+  SyncUpdateResult updateMany(
+      final Bson filter,
+      final Bson update,
+      final SyncUpdateOptions updateOptions);
 }

@@ -29,7 +29,10 @@ import org.bson.BsonInt32
 import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.BsonValue
+import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
+import org.bson.codecs.Codec
+import org.bson.codecs.DocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
 import org.junit.Assert
@@ -44,9 +47,11 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import java.io.Closeable
 import java.lang.Exception
+import java.util.Collections
+import java.util.Random
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import java.util.Random
+import java.util.concurrent.locks.ReentrantLock
 
 class SyncUnitTestHarness : Closeable {
     companion object {
@@ -130,21 +135,7 @@ class SyncUnitTestHarness : Closeable {
             }
         }
 
-        private open class TestChangeEventListener(
-            private val expectedEvent: ChangeEvent<BsonDocument>?,
-            private val emitEventSemaphore: Semaphore?
-        ) : ChangeEventListener<BsonDocument> {
-            override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>?) {
-                try {
-                    if (expectedEvent != null) {
-                        compareEvents(expectedEvent, actualEvent!!)
-                        Assert.assertEquals(expectedEvent.id, documentId)
-                    }
-                } finally {
-                    emitEventSemaphore?.release()
-                }
-            }
-        }
+        val waitLock = ReentrantLock()
 
         fun newDoc(key: String = "hello", value: BsonValue = BsonString("world")): BsonDocument {
             return BsonDocument("_id", BsonObjectId()).append(key, value)
@@ -220,13 +211,37 @@ class SyncUnitTestHarness : Closeable {
         private fun newChangeEventListener(
             emitEventSemaphore: Semaphore? = null,
             expectedEvent: ChangeEvent<BsonDocument>? = null
-        ): ChangeEventListener<BsonDocument> {
-            return Mockito.spy(TestChangeEventListener(expectedEvent, emitEventSemaphore))
+        ): DataSynchronizerTestContextImpl.TestChangeEventListener {
+            return Mockito.spy(DataSynchronizerTestContextImpl.TestChangeEventListener(expectedEvent, emitEventSemaphore))
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     private class DataSynchronizerTestContextImpl(shouldPreconfigure: Boolean = true) : DataSynchronizerTestContext {
+        open class TestChangeEventListener(
+            private val expectedEvent: ChangeEvent<BsonDocument>?,
+            var emitEventSemaphore: Semaphore?
+        ) : ChangeEventListener<BsonDocument> {
+            val eventAccumulator = mutableListOf<ChangeEvent<BsonDocument>>()
+            var totalEventsToAccumulate = 0
+
+            override fun onEvent(documentId: BsonValue?, actualEvent: ChangeEvent<BsonDocument>?) {
+                waitLock.lock()
+                try {
+                    eventAccumulator.add(actualEvent!!)
+                    if (expectedEvent != null) {
+                        compareEvents(expectedEvent, actualEvent)
+                        Assert.assertEquals(expectedEvent.id, documentId)
+                    }
+                } finally {
+                    if (eventAccumulator.size >= totalEventsToAccumulate) {
+                        emitEventSemaphore?.release()
+                    }
+                    waitLock.unlock()
+                }
+            }
+        }
+
         override val collectionMock: CoreRemoteMongoCollectionImpl<BsonDocument> =
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
@@ -234,6 +249,7 @@ class SyncUnitTestHarness : Closeable {
         private val streamMock = Stream(TestEventStream(this), ChangeEvent.changeEventCoder)
         override val testDocument = newDoc("count", BsonInt32(1))
         override val testDocumentId: BsonObjectId by lazy { testDocument["_id"] as BsonObjectId }
+        override val testDocumentFilter by lazy { BsonDocument("_id", testDocumentId) }
         override var updateDocument: BsonDocument = BsonDocument("\$inc", BsonDocument("count", BsonInt32(1)))
         private val bsonDocumentCodec = BsonDocumentCodec()
 
@@ -354,8 +370,16 @@ class SyncUnitTestHarness : Closeable {
                 bsonDocumentCodec)
         }
 
-        override fun waitForEvent() {
-            assertTrue(eventSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
+        override fun waitForEvents(amount: Int) {
+            waitLock.lock()
+            changeEventListener.totalEventsToAccumulate = amount
+            if (changeEventListener.totalEventsToAccumulate > changeEventListener.eventAccumulator.size) {
+                // means sem has been called and we need to wait for more events
+                eventSemaphore = Semaphore(0)
+                changeEventListener.emitEventSemaphore = eventSemaphore
+            }
+            waitLock.unlock()
+            assertTrue(changeEventListener.emitEventSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
         }
 
         override fun waitForError() {
@@ -378,7 +402,11 @@ class SyncUnitTestHarness : Closeable {
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            return dataSynchronizer.updateOneById(namespace, testDocumentId, updateDocument)
+            return dataSynchronizer.updateOne(
+                namespace,
+                BsonDocument("_id", testDocumentId),
+                updateDocument
+            )
         }
 
         override fun deleteTestDocument(): DeleteResult {
@@ -386,7 +414,7 @@ class SyncUnitTestHarness : Closeable {
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            return dataSynchronizer.deleteOneById(namespace, testDocumentId)
+            return dataSynchronizer.deleteOne(namespace, BsonDocument("_id", testDocumentId))
         }
 
         override fun doSyncPass() {
@@ -403,10 +431,13 @@ class SyncUnitTestHarness : Closeable {
                 mapOf())
         }
 
-        override fun queueConsumableRemoteUpdateEvent() {
+        override fun queueConsumableRemoteUpdateEvent(
+            id: BsonValue,
+            document: BsonDocument
+        ) {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalUpdate(
-                    namespace, testDocumentId, null, testDocument, false)),
+                mapOf(document to ChangeEvent.changeEventForLocalUpdate(
+                    namespace, id, null, document, false)),
                 mapOf())
         }
 
@@ -431,21 +462,31 @@ class SyncUnitTestHarness : Closeable {
         override fun findTestDocumentFromLocalCollection(): BsonDocument? {
             // TODO: this may be rendered unnecessary with STITCH-1972
             return withoutSyncVersion(
-                dataSynchronizer.findOneById(
+                dataSynchronizer.find(
                     namespace,
-                    testDocumentId,
+                    BsonDocument("_id", testDocumentId),
+                    10,
+                    null,
+                    null,
                     BsonDocument::class.java,
-                    CodecRegistries.fromCodecs(bsonDocumentCodec)))
+                    CodecRegistries.fromCodecs(bsonDocumentCodec)).firstOrNull())
         }
 
-        override fun verifyChangeEventListenerCalledForActiveDoc(times: Int, expectedChangeEvent: ChangeEvent<BsonDocument>?) {
+        override fun verifyChangeEventListenerCalledForActiveDoc(
+            times: Int,
+            vararg expectedChangeEvents: ChangeEvent<BsonDocument>
+        ) {
             val changeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
             Mockito.verify(changeEventListener, times(times)).onEvent(
-                eq(testDocumentId),
+                any(),
                 changeEventArgumentCaptor.capture() as ChangeEvent<BsonDocument>?)
 
-            if (expectedChangeEvent != null) {
-                compareEvents(expectedChangeEvent, changeEventArgumentCaptor.value as ChangeEvent<BsonDocument>)
+            if (expectedChangeEvents.isNotEmpty()) {
+                changeEventArgumentCaptor.allValues.forEachIndexed { i, actualChangeEvent ->
+                    compareEvents(
+                        expectedChangeEvents[i],
+                        actualChangeEvent as ChangeEvent<BsonDocument>)
+                }
             }
         }
 
@@ -475,8 +516,9 @@ class SyncUnitTestHarness : Closeable {
             }
         }
 
-        override fun verifyWatchFunctionCalled(times: Int, expectedArgs: List<Any>) {
-            Mockito.verify(service, times(times)).streamFunction(eq("watch"), eq(expectedArgs), eq(ChangeEvent.changeEventCoder))
+        override fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document) {
+            Mockito.verify(service, times(times)).streamFunction(
+                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ChangeEvent.changeEventCoder))
         }
 
         override fun verifyStartCalled(times: Int) {
@@ -561,15 +603,20 @@ class SyncUnitTestHarness : Closeable {
         return namespaceChangeStreamListener to nsConfigMock
     }
 
-    internal fun createCoreSyncWithContext(context: DataSynchronizerTestContext): Pair<CoreSync<BsonDocument>, SyncOperations<BsonDocument>> {
+    internal fun <T> createCoreSyncWithContext(
+        context: DataSynchronizerTestContext,
+        resultClass: Class<T>,
+        codec: Codec<T>? = null
+    ):
+        Pair<CoreSync<T>, SyncOperations<T>> {
         val syncOperations = Mockito.spy(SyncOperations(
             context.namespace,
-            BsonDocument::class.java,
+            resultClass,
             context.dataSynchronizer,
-            CodecRegistries.fromCodecs(BsonDocumentCodec())))
+            CodecRegistries.fromCodecs(codec ?: BsonDocumentCodec(), DocumentCodec())))
         val coreSync = CoreSyncImpl(
             context.namespace,
-            BsonDocument::class.java,
+            resultClass,
             context.dataSynchronizer,
             (context as DataSynchronizerTestContextImpl).service,
             syncOperations)

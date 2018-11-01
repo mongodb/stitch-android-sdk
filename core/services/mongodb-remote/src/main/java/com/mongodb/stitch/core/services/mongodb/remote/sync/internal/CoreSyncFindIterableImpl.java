@@ -98,7 +98,7 @@ public class CoreSyncFindIterableImpl<DocumentT, ResultT>
   @Override
   public ResultT first() {
     final Iterator<ResultT> iter = getOperations()
-        .findFirst(filter, geResultClass(), findOptions)
+        .findFirst(filter, getResultClass(), findOptions)
         .execute(getService())
         .iterator();
     return iter.hasNext() ? iter.next() : null;
@@ -106,6 +106,6 @@ public class CoreSyncFindIterableImpl<DocumentT, ResultT>
 
   @Override
   Operation<Collection<ResultT>> asOperation() {
-    return getOperations().find(filter, geResultClass(), findOptions);
+    return getOperations().find(filter, getResultClass(), findOptions);
   }
 }

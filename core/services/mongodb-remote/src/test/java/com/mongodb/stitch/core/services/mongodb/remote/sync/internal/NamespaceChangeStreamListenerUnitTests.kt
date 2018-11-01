@@ -3,6 +3,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonObjectId
+import org.bson.Document
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,7 +13,6 @@ import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import java.util.Collections
 
 class NamespaceChangeStreamListenerUnitTests {
     private val harness = SyncUnitTestHarness()
@@ -47,7 +47,7 @@ class NamespaceChangeStreamListenerUnitTests {
         // set the nsConfig to stale
         `when`(nsConfigMock.synchronizedDocumentIds).thenReturn(setOf(BsonObjectId()))
         assertTrue(namespaceChangeStreamListener.openStream())
-        val expectedArgs = Collections.singletonList(mapOf(
+        val expectedArgs = Document(mapOf(
             "database" to ctx.namespace.databaseName,
             "collection" to ctx.namespace.collectionName,
             "ids" to nsConfigMock.synchronizedDocumentIds

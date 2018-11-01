@@ -14,29 +14,34 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.services.mongodb.remote.internal;
+package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncAggregateIterable;
+
 import java.util.Collection;
 import java.util.List;
+
 import org.bson.conversions.Bson;
 
-class CoreRemoteAggregateIterableImpl<DocumentT, ResultT>
-    extends CoreRemoteMongoIterableImpl<DocumentT, ResultT>
-    implements CoreRemoteAggregateIterable<ResultT> {
+class CoreSyncAggregateIterableImpl<DocumentT, ResultT>
+    extends CoreSyncMongoIterableImpl<SyncOperations<DocumentT>, ResultT>
+    implements CoreSyncAggregateIterable<ResultT> {
 
   private final List<? extends Bson> pipeline;
 
-  CoreRemoteAggregateIterableImpl(
+  CoreSyncAggregateIterableImpl(
       final List<? extends Bson> pipeline,
       final Class<ResultT> resultClass,
       final CoreStitchServiceClient service,
-      final Operations<DocumentT> operations
+      final SyncOperations<DocumentT> operations
   ) {
     super(service, resultClass, operations);
     this.pipeline = pipeline;
   }
 
+  @Override
   Operation<Collection<ResultT>> asOperation() {
     return getOperations().aggregate(pipeline, getResultClass());
   }

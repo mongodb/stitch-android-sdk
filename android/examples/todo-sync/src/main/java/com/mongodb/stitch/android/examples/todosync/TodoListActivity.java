@@ -39,9 +39,9 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
 import com.mongodb.stitch.core.auth.providers.serverapikey.ServerApiKeyCredential;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent;
 
 import java.util.ArrayList;
@@ -53,7 +53,6 @@ import java.util.Set;
 
 import org.bson.BsonObjectId;
 import org.bson.BsonRegularExpression;
-import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistries;
@@ -127,7 +126,7 @@ public class TodoListActivity extends AppCompatActivity {
               updateDoc.append("$unset", new Document(TodoItem.Fields.DONE_DATE, ""));
             }
 
-            items.sync().updateOneById(new BsonObjectId(itemId), updateDoc);
+            items.sync().updateOne(new Document("_id", itemId), updateDoc);
           }
 
           @Override
@@ -357,8 +356,8 @@ public class TodoListActivity extends AppCompatActivity {
 
   private void updateTodoItemTask(final ObjectId itemId, final String newTask) {
     final BsonObjectId docId = new BsonObjectId(itemId);
-    items.sync().updateOneById(
-        docId,
+    items.sync().updateOne(
+        new Document("_id", docId),
         new Document("$set", new Document(TodoItem.Fields.TASK, newTask)))
         .addOnSuccessListener(result -> {
           items.sync().find(new Document("_id", docId)).first()
@@ -374,11 +373,11 @@ public class TodoListActivity extends AppCompatActivity {
   }
 
   private void clearCheckedTodoItems() {
-    final List<Task<RemoteDeleteResult>> tasks = new ArrayList<>();
+    final List<Task<SyncDeleteResult>> tasks = new ArrayList<>();
     getItems().addOnSuccessListener(todoItems -> {
       for (final TodoItem item : todoItems) {
         if (item.isChecked()) {
-          tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
+          tasks.add(items.sync().deleteOne(new Document("_id", item.getId())));
         }
       }
       Tasks.whenAllComplete(tasks)
@@ -387,10 +386,10 @@ public class TodoListActivity extends AppCompatActivity {
   }
 
   private void clearAllTodoItems() {
-    final List<Task<RemoteDeleteResult>> tasks = new ArrayList<>();
+    final List<Task<SyncDeleteResult>> tasks = new ArrayList<>();
     getItems().addOnSuccessListener(todoItems -> {
       for (final TodoItem item : todoItems) {
-        tasks.add(items.sync().deleteOneById(new BsonObjectId(item.getId())));
+        tasks.add(items.sync().deleteOne(new Document("_id", item.getId())));
       }
       Tasks.whenAllComplete(tasks)
           .addOnCompleteListener(task -> todoAdapter.clearItems());
@@ -398,6 +397,6 @@ public class TodoListActivity extends AppCompatActivity {
   }
 
   private void touchList() {
-    lists.sync().updateOneById(new BsonString(userId), new Document("$inc", new Document("i", 1)));
+    lists.sync().updateOne(new Document("_id", userId), new Document("$inc", new Document("i", 1)));
   }
 }
