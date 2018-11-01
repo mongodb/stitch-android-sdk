@@ -14,6 +14,9 @@ import org.bson.Document
 import java.io.Closeable
 import java.lang.Exception
 
+enum class TestVersionState {
+    NONE, PREVIOUS, SAME, NEXT, NEW
+}
 /**
  * Testing context to test a data synchronizer.
  *
@@ -56,8 +59,6 @@ interface DataSynchronizerTestContext : Closeable {
      */
     fun reconfigure()
 
-    fun resetAndReconfigure()
-
     /**
      * Wait for an error to be emitted.
      */
@@ -92,13 +93,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * Attempt to find the contextual test document locally.
      */
-    fun findTestDocumentFromLocalCollection(withSyncVersion: Boolean = false): BsonDocument?
-
-    /**
-     * Add the existing version info from the local cache to the test document.
-     * May be null.
-     */
-    fun addVersionInfoToTestDocument()
+    fun findTestDocumentFromLocalCollection(): BsonDocument?
 
     /**
      * Verify the changeEventListener was called for the test document.
@@ -139,18 +134,13 @@ interface DataSynchronizerTestContext : Closeable {
      */
     fun queueConsumableRemoteInsertEvent()
 
-    enum class TestVersionState {
-        NONE, PREVIOUS, SAME, NEXT
-    }
-
     /**
      * Queue a pseudo-remote update event to be consumed during R2L.
      */
     fun queueConsumableRemoteUpdateEvent(
-        versionState: TestVersionState = TestVersionState.SAME,
-        pseudoUpdatedDocument: BsonDocument = testDocument,
-        id: BsonValue = testDocumentId
-    )
+        id: BsonValue = testDocumentId,
+        document: BsonDocument = testDocument,
+        versionState: TestVersionState = TestVersionState.NEXT)
 
     /**
      * Queue a pseudo-remote delete event to be consumed during R2L.

@@ -48,7 +48,6 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import java.io.Closeable
 import java.lang.Exception
-import java.util.*
 import java.util.Collections
 import java.util.Random
 import java.util.concurrent.Semaphore
@@ -216,19 +215,6 @@ class SyncUnitTestHarness : Closeable {
         ): DataSynchronizerTestContextImpl.TestChangeEventListener {
             return Mockito.spy(DataSynchronizerTestContextImpl.TestChangeEventListener(expectedEvent, emitEventSemaphore))
         }
-
-        private fun withNewSyncVersion(document: BsonDocument): BsonDocument {
-            val newDocument = document.clone()
-            newDocument["__stitch_sync_version"] = freshSyncVersionDoc()
-
-            return newDocument
-        }
-
-        private fun freshSyncVersionDoc(): BsonDocument {
-            return BsonDocument("spv", BsonInt32(1))
-                .append("id", BsonString(UUID.randomUUID().toString()))
-                .append("v", BsonInt64(0L))
-        }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -385,12 +371,6 @@ class SyncUnitTestHarness : Closeable {
                 bsonDocumentCodec)
         }
 
-        override fun resetAndReconfigure() {
-            configureNewChangeEventListener()
-            configureNewConflictHandler()
-            configureNewErrorListener()
-        }
-
         override fun waitForEvents(amount: Int) {
             waitLock.lock()
             changeEventListener.totalEventsToAccumulate = amount
@@ -448,36 +428,41 @@ class SyncUnitTestHarness : Closeable {
 
         override fun queueConsumableRemoteInsertEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalInsert(
-                    namespace, withNewSyncVersion(testDocument), true)),
+                mapOf(testDocument to ChangeEvent.changeEventForLocalInsert(namespace, testDocument, true)),
                 mapOf())
         }
 
+        fun getVersionForTestDocument(): BsonDocument? {
+            return dataSynchronizer.getSynchronizedDocuments(namespace)
+                .find { it.documentId == testDocumentId }?.lastKnownRemoteVersion
+        }
+
         override fun queueConsumableRemoteUpdateEvent(
-            versionState: DataSynchronizerTestContext.TestVersionState,
-            pseudoUpdatedDocument: BsonDocument,
-            id: BsonValue
+            id: BsonValue,
+            document: BsonDocument,
+            versionState: TestVersionState
         ) {
-            val fakeUpdateDoc = pseudoUpdatedDocument.clone()
-            val cachedVersion = fakeUpdateDoc["__stitch_sync_version"]
+            val fakeUpdateDoc = document.clone()
+            val cachedVersion = fakeUpdateDoc["__stitch_sync_version"] ?: getVersionForTestDocument()
 
             if (cachedVersion != null) {
                 val documentVersionInfo = DocumentVersionInfo.fromVersionDoc(cachedVersion.asDocument())
                 when (versionState) {
-                    DataSynchronizerTestContext.TestVersionState.NONE ->
+                    TestVersionState.NONE ->
                         fakeUpdateDoc.remove("__stitch_sync_version")
-                    DataSynchronizerTestContext.TestVersionState.PREVIOUS ->
+                    TestVersionState.PREVIOUS ->
                         fakeUpdateDoc["__stitch_sync_version"] =
                             documentVersionInfo.versionDoc?.append("v", BsonInt64(documentVersionInfo.version.versionCounter - 1))
-                    DataSynchronizerTestContext.TestVersionState.SAME ->
+                    TestVersionState.SAME ->
                         fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.versionDoc
-                    DataSynchronizerTestContext.TestVersionState.NEXT ->
+                    TestVersionState.NEXT ->
                         fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.nextVersion
+                    TestVersionState.NEW ->
+                        fakeUpdateDoc["__stitch_sync_version"] = DocumentVersionInfo.getFreshVersionDocument()
                 }
             }
-
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(fakeUpdateDoc to ChangeEvent.changeEventForLocalUpdate(
+                mapOf(document to ChangeEvent.changeEventForLocalUpdate(
                     namespace, id, null, fakeUpdateDoc, false)),
                 mapOf())
         }
@@ -500,24 +485,17 @@ class SyncUnitTestHarness : Closeable {
                     true)), mapOf())
         }
 
-        override fun findTestDocumentFromLocalCollection(withSyncVersion: Boolean): BsonDocument? {
+        override fun findTestDocumentFromLocalCollection(): BsonDocument? {
             // TODO: this may be rendered unnecessary with STITCH-1972
-            val doc = dataSynchronizer.find(
-                namespace,
-                BsonDocument("_id", testDocumentId)).firstOrNull()
-            return if (withSyncVersion) doc else withoutSyncVersion(doc)
-        }
-
-        fun getVersionForTestDocument(): BsonDocument? {
-            return dataSynchronizer.getSynchronizedDocuments(namespace)
-                .find { it.documentId == testDocumentId }?.lastKnownRemoteVersion
-        }
-
-        override fun addVersionInfoToTestDocument() {
-            val cached = getVersionForTestDocument()
-            if (cached != null) {
-                this.testDocument.append("__stitch_sync_version", cached)
-            }
+            return withoutSyncVersion(
+                dataSynchronizer.find(
+                    namespace,
+                    BsonDocument("_id", testDocumentId),
+                    10,
+                    null,
+                    null,
+                    BsonDocument::class.java,
+                    CodecRegistries.fromCodecs(bsonDocumentCodec)).firstOrNull())
         }
 
         override fun verifyChangeEventListenerCalledForActiveDoc(
