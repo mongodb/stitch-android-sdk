@@ -1437,7 +1437,7 @@ class DataSynchronizerUnitTests {
             TestVersionState.SAME)
 
         ctx.shouldConflictBeResolvedByRemote = false
-        // sync, creating a conflict. because remote has an empty version,
+        // sync, creating a conflict. because remote and local have equal versions,
         // there will be a conflict on the next L2R pass that we will resolve
         // with remote.
         ctx.doSyncPass()
@@ -1456,7 +1456,6 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         // update the doc locally and queue a fake update remotely.
         // neither of these will have versions.
-//        ctx.addVersionInfoToTestDocument()
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
@@ -1465,9 +1464,8 @@ class DataSynchronizerUnitTests {
             TestVersionState.NEXT)
 
         ctx.shouldConflictBeResolvedByRemote = true
-        // sync, creating a conflict. because remote has an empty version,
-        // there will be a conflict on the next L2R pass that we will resolve
-        // with remote.
+        // sync, creating a conflict. because local version has a higher version,
+        // the update will not have gone through
         ctx.doSyncPass()
 
         ctx.updateTestDocument()
@@ -1506,11 +1504,12 @@ class DataSynchronizerUnitTests {
             TestVersionState.NEXT)
 
         ctx.shouldConflictBeResolvedByRemote = true
-        // sync, creating a conflict. because remote has an empty version,
+        // sync, creating a conflict. because remote has a higher version,
         // there will be a conflict on the next L2R pass that we will resolve
         // with remote.
         ctx.doSyncPass()
 
+        // the update will go through
         assertEquals(withoutSyncVersion(pseudoUpdatedDocument),
             ctx.findTestDocumentFromLocalCollection())
     }
@@ -1537,7 +1536,7 @@ class DataSynchronizerUnitTests {
         // sync, creating a conflict. because remote has an empty version,
         // there will be a conflict on the next L2R pass that we will resolve
         // with remote. however, this will be resolved as a delete event due
-        // to the different guids
+        // to the different guids and lack of a (mocked) remote document
         ctx.doSyncPass()
 
         assertNull(ctx.findTestDocumentFromLocalCollection())
@@ -1569,7 +1568,7 @@ class DataSynchronizerUnitTests {
         // sync, creating a conflict. because remote has an empty version,
         // there will be a conflict on the next L2R pass that we will resolve
         // with remote. however, this will be resolved as a REPLACE since
-        // now we also have a new version doc with the new guid
+        // now we also have a new (mocked) doc with the new guid
         ctx.doSyncPass()
 
         assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
