@@ -63,6 +63,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -86,13 +87,6 @@ import org.bson.diagnostics.Loggers;
  * and a remote MongoDB (via Stitch). It also expose CRUD operations to interact with synchronized
  * documents.
  */
-// TODO: Logging into a different user can produce odd results based on rules.
-// TODO: Threading model okay?
-// TODO: implement unwatch
-// TODO: filter out and forbid usage of version ids outside of here
-// TODO: Test delete/delete insert/insert update/update etc...
-// TODO: StitchReachabilityMonitor for when Stitch goes down and we can gracefully fail and give
-// you local only results.
 public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
@@ -138,8 +132,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.listenersLock = new ReentrantLock();
     this.eventDispatcher = eventDispatcher;
 
-    // TODO: add back after SERVER-35421
-    // final MongoDatabase configDb = localClient.getDatabase("sync_config");
     this.configDb =
         localClient.getDatabase("sync_config" + instanceKey)
             .withCodecRegistry(CodecRegistries.fromRegistries(
@@ -177,6 +169,70 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (this.networkMonitor != null) {
       this.networkMonitor.addNetworkStateListener(this);
     }
+
+    final Semaphore recoveryStarted = new Semaphore(0);
+    new Thread(() -> recover(recoveryStarted)).start();
+    try {
+      // Wait to return after the thread has confirmed it has started.
+      recoveryStarted.acquire();
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  /**
+   * Recovers the state of synchronization in case a system failure happened. The goal is to revert
+   * to a known, good state.
+   */
+  private void recover(final Semaphore recoveryStarted) {
+    final List<NamespaceSynchronizationConfig> nsConfigs = new ArrayList<>();
+    for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
+      nsConfigs.add(this.syncConfig.getNamespaceConfig(ns));
+    }
+    for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
+      nsConfig.getLock().writeLock().lock();
+    }
+    recoveryStarted.release();
+    try {
+      for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
+        recoverNamespace(nsConfig);
+      }
+    } finally {
+      for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
+        nsConfig.getLock().writeLock().unlock();
+      }
+    }
+  }
+
+  /**
+   * Recovers the state of synchronization for a namespace in case a system failure happened.
+   * The goal is to revert the namespace to a known, good state.
+   */
+  private void recoverNamespace(final NamespaceSynchronizationConfig nsConfig) {
+    final MongoCollection<BsonDocument> undoCollection =
+        getUndoCollection(nsConfig.getNamespace());
+    final MongoCollection<BsonDocument> localCollection =
+        getLocalCollection(nsConfig.getNamespace());
+    final List<BsonDocument> undoDocs =
+        undoCollection.find().into(new ArrayList<>());
+
+    // Replace local docs with undo docs. Presence of an undo doc implies we had a system failure
+    // during a write. This covers updates and deletes.
+    for (final BsonDocument undoDoc : undoDocs) {
+      final BsonValue documentId = BsonUtils.getDocumentId(undoDoc);
+      final BsonDocument filter = getDocumentIdFilter(documentId);
+      localCollection.findOneAndReplace(
+          filter, undoDoc, new FindOneAndReplaceOptions().upsert(true));
+      undoCollection.deleteOne(filter);
+    }
+
+    // Find local documents for which there are no document configs and delete them. This covers
+    // inserts, upserts, and desync deletes.
+    localCollection.deleteMany(new BsonDocument(
+        "_id",
+        new BsonDocument(
+            "$nin",
+            new BsonArray(new ArrayList<>(getSynchronizedDocumentIds(nsConfig.getNamespace()))))));
   }
 
   @Override
@@ -213,7 +269,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   public <T> void configure(@Nonnull final MongoNamespace namespace,
-                            @Nonnull final ConflictHandler<T> conflictHandler,
+                            @Nullable final ConflictHandler<T> conflictHandler,
                             @Nullable final ChangeEventListener<T> changeEventListener,
                             @Nullable final ErrorListener errorListener,
                             @Nonnull final Codec<T> codec) {
@@ -411,95 +467,99 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     // 2. Run remote to local (R2L) sync routine
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
-      final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
-          getEventsForNamespace(nsConfig.getNamespace());
+      nsConfig.getLock().writeLock().lock();
+      try {
+        final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
+            getEventsForNamespace(nsConfig.getNamespace());
 
-      final Set<BsonValue> unseenIds = nsConfig.getStaleDocumentIds();
-      final Set<BsonDocument> latestDocumentsFromStale =
-          getLatestDocumentsForStaleFromRemote(nsConfig, unseenIds);
-      final Map<BsonValue, BsonDocument> latestDocumentMap = new HashMap<>();
+        final Set<BsonValue> unseenIds = nsConfig.getStaleDocumentIds();
+        final Set<BsonDocument> latestDocumentsFromStale =
+            getLatestDocumentsForStaleFromRemote(nsConfig, unseenIds);
+        final Map<BsonValue, BsonDocument> latestDocumentMap = new HashMap<>();
 
-      for (final BsonDocument latestDocument : latestDocumentsFromStale) {
-        latestDocumentMap.put(latestDocument.get("_id"), latestDocument);
-      }
-
-      // a. For each unprocessed change event
-      for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry :
-          remoteChangeEvents.entrySet()) {
-        logger.info(String.format(
-            Locale.US,
-            "t='%d': syncRemoteToLocal consuming event of type: %s",
-            logicalT,
-            eventEntry.getValue().getOperationType()));
-
-        // i. Find the corresponding local document config.
-        final CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(
-                BsonUtils.getDocumentId(eventEntry.getValue().getDocumentKey()));
-
-        if (docConfig == null || docConfig.isPaused()) {
-          // Not interested in this event.
-          continue;
+        for (final BsonDocument latestDocument : latestDocumentsFromStale) {
+          latestDocumentMap.put(latestDocument.get("_id"), latestDocument);
         }
 
-        unseenIds.remove(docConfig.getDocumentId());
-        latestDocumentMap.remove(docConfig.getDocumentId());
-        syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue());
-      }
+        // a. For each unprocessed change event
+        for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry :
+            remoteChangeEvents.entrySet()) {
+          logger.info(String.format(
+              Locale.US,
+              "t='%d': syncRemoteToLocal consuming event of type: %s",
+              logicalT,
+              eventEntry.getValue().getOperationType()));
 
-      // For synchronized documents that had no unprocessed change event, but were marked as stale,
-      // synthesize a remote replace event to replace the local stale document with the latest
-      // remote copy.
-      for (final BsonValue docId : unseenIds) {
-        final CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(docId);
-        if (docConfig == null || docConfig.isPaused()) {
-          // means we aren't actually synchronizing on this remote doc
-          continue;
+          // i. Find the corresponding local document config.
+          final CoreDocumentSynchronizationConfig docConfig =
+              nsConfig.getSynchronizedDocument(
+                  BsonUtils.getDocumentId(eventEntry.getValue().getDocumentKey()));
+
+          if (docConfig == null || docConfig.isPaused()) {
+            // Not interested in this event.
+            continue;
+          }
+
+          unseenIds.remove(docConfig.getDocumentId());
+          latestDocumentMap.remove(docConfig.getDocumentId());
+          syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue());
         }
 
-        if (latestDocumentMap.containsKey(docId)) {
+        // For synchronized documents that had no unprocessed change event, but were marked as
+        // stale, synthesize a remote replace event to replace the local stale document with the
+        // latest remote copy.
+        for (final BsonValue docId : unseenIds) {
+          final CoreDocumentSynchronizationConfig docConfig =
+              nsConfig.getSynchronizedDocument(docId);
+          if (docConfig == null || docConfig.isPaused()) {
+            // means we aren't actually synchronizing on this remote doc
+            continue;
+          }
+
+          if (latestDocumentMap.containsKey(docId)) {
+            syncRemoteChangeEventToLocal(
+                nsConfig,
+                docConfig,
+                changeEventForLocalReplace(
+                    nsConfig.getNamespace(),
+                    docId,
+                    latestDocumentMap.get(docId),
+                    false
+                ));
+
+            docConfig.setStale(false);
+          }
+        }
+
+        // For synchronized documents that had no unprocessed change event, and did not have a
+        // latest version when stale documents were queried, synthesize a remote delete event to
+        // delete the local document.
+        unseenIds.removeAll(latestDocumentMap.keySet());
+        for (final BsonValue unseenId : unseenIds) {
+          final CoreDocumentSynchronizationConfig docConfig =
+              nsConfig.getSynchronizedDocument(unseenId);
+          if (docConfig == null
+              || docConfig.getLastKnownRemoteVersion() == null
+              || docConfig.isPaused()) {
+            // means we aren't actually synchronizing on this remote doc
+            continue;
+          }
+
           syncRemoteChangeEventToLocal(
               nsConfig,
               docConfig,
-              changeEventForLocalReplace(
+              changeEventForLocalDelete(
                   nsConfig.getNamespace(),
-                  docId,
-                  latestDocumentMap.get(docId),
-                  false
+                  unseenId,
+                  docConfig.hasUncommittedWrites()
               ));
 
           docConfig.setStale(false);
         }
-      }
-
-      // For synchronized documents that had no unprocessed change event, and did not have a latest
-      // version when stale documents were queried, synthesize a remote delete event to delete
-      // the local document.
-      unseenIds.removeAll(latestDocumentMap.keySet());
-      for (final BsonValue unseenId : unseenIds) {
-        final CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(unseenId);
-        if (docConfig == null
-            || docConfig.getLastKnownRemoteVersion() == null
-            || docConfig.isPaused()) {
-          // means we aren't actually synchronizing on this remote doc
-          continue;
-        }
-
-        syncRemoteChangeEventToLocal(
-            nsConfig,
-            docConfig,
-            changeEventForLocalDelete(
-                nsConfig.getNamespace(),
-                unseenId,
-                docConfig.hasUncommittedWrites()
-            ));
-
-        docConfig.setStale(false);
+      } finally {
+        nsConfig.getLock().writeLock().unlock();
       }
     }
-
 
     logger.info(String.format(
         Locale.US,
@@ -814,375 +874,381 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // 1. Run local to remote (L2R) sync routine
     // Search for modifications in each namespace.
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
-      final CoreRemoteMongoCollection<BsonDocument> remoteColl =
-          getRemoteCollection(nsConfig.getNamespace());
+      nsConfig.getLock().writeLock().lock();
+      try {
+        final CoreRemoteMongoCollection<BsonDocument> remoteColl =
+            getRemoteCollection(nsConfig.getNamespace());
 
-      // a. For each document that has local writes pending
-      for (final CoreDocumentSynchronizationConfig docConfig : nsConfig) {
-        if (!docConfig.hasUncommittedWrites() || docConfig.isPaused()) {
-          continue;
-        }
-        if (docConfig.getLastResolution() == logicalT) {
+        // a. For each document that has local writes pending
+        for (final CoreDocumentSynchronizationConfig docConfig : nsConfig) {
+          if (!docConfig.hasUncommittedWrites() || docConfig.isPaused()) {
+            continue;
+          }
+          if (docConfig.getLastResolution() == logicalT) {
+            logger.info(String.format(
+                Locale.US,
+                "t='%d': syncLocalToRemote ns=%s documentId=%s has writes from current logicalT; "
+                    + "waiting until next pass",
+                logicalT,
+                nsConfig.getNamespace(),
+                docConfig.getDocumentId()));
+            continue;
+          }
+
+          // i. Retrieve the change event for this local document in the local config metadata
+          final ChangeEvent<BsonDocument> localChangeEvent =
+              docConfig.getLastUncommittedChangeEvent();
           logger.info(String.format(
               Locale.US,
-              "t='%d': syncLocalToRemote ns=%s documentId=%s has writes from current logicalT; "
-                  + "waiting until next pass",
+              "t='%d': syncLocalToRemote ns=%s documentId=%s processing operation='%s'",
               logicalT,
               nsConfig.getNamespace(),
-              docConfig.getDocumentId()));
-          continue;
-        }
+              docConfig.getDocumentId(),
+              localChangeEvent.getOperationType().toString()));
 
-        // i. Retrieve the change event for this local document in the local config metadata
-        final ChangeEvent<BsonDocument> localChangeEvent =
-            docConfig.getLastUncommittedChangeEvent();
-        logger.info(String.format(
-            Locale.US,
-            "t='%d': syncLocalToRemote ns=%s documentId=%s processing operation='%s'",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId(),
-            localChangeEvent.getOperationType().toString()));
+          final BsonDocument localDoc = localChangeEvent.getFullDocument();
+          final BsonDocument docFilter = getDocumentIdFilter(docConfig.getDocumentId());
 
-        final BsonDocument localDoc = localChangeEvent.getFullDocument();
-        final BsonDocument docFilter = getDocumentIdFilter(docConfig.getDocumentId());
+          boolean isConflicted = false;
 
-        boolean isConflicted = false;
+          // This is here as an optimization in case an op requires we look up the remote document
+          // in advance and we only want to do this once.
+          BsonDocument remoteDocument = null;
+          boolean remoteDocumentFetched = false;
 
-        // This is here as an optimization in case an op requires we look up the remote document
-        // in advance and we only want to do this once.
-        BsonDocument remoteDocument = null;
-        boolean remoteDocumentFetched = false;
+          final DocumentVersionInfo localVersionInfo =
+              DocumentVersionInfo.getLocalVersionInfo(docConfig);
+          final BsonDocument nextVersion;
 
-        final DocumentVersionInfo localVersionInfo =
-            DocumentVersionInfo.getLocalVersionInfo(docConfig);
-        final BsonDocument nextVersion;
+          // ii. Check if the internal remote change stream listener has an unprocessed event for
+          //     this document.
+          final ChangeEvent<BsonDocument> unprocessedRemoteEvent =
+              instanceChangeStreamListener.getUnprocessedEventForDocumentId(
+                  nsConfig.getNamespace(),
+                  docConfig.getDocumentId());
 
-        // ii. Check if the internal remote change stream listener has an unprocessed event for
-        //     this document.
-        final ChangeEvent<BsonDocument> unprocessedRemoteEvent =
-                instanceChangeStreamListener.getUnprocessedEventForDocumentId(
+          if (unprocessedRemoteEvent != null) {
+            final DocumentVersionInfo unprocessedEventVersion;
+            try {
+              unprocessedEventVersion = DocumentVersionInfo
+                  .getRemoteVersionInfo(unprocessedRemoteEvent.getFullDocument());
+            } catch (final Exception e) {
+              desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+              emitError(docConfig,
+                  String.format(
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s got a remote "
+                          + "document that could not have its version info parsed "
+                          + "; dropping the event, and desyncing the document",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId()));
+              return;
+            }
+
+            // 1. If it does and the version info is different, record that a conflict has occurred.
+            //    Difference is determined if either the GUID is different or the version counter is
+            //    greater than the local version counter.
+            if (!docConfig.hasCommittedVersion(unprocessedEventVersion)) {
+              isConflicted = true;
+              logger.info(String.format(
+                  Locale.US,
+                  "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
+                      + "unprocessed change event for document; raising conflict",
+                  logicalT,
+                  nsConfig.getNamespace(),
+                  docConfig.getDocumentId()));
+            }
+
+            // 2. Otherwise, the unprocessed event can be safely dropped and ignored in future R2L
+            //    passes. Continue on to checking the operation type.
+          }
+
+          if (!isConflicted) {
+            // iii. Check the operation type
+            switch (localChangeEvent.getOperationType()) {
+              // 1. INSERT
+              case INSERT: {
+                nextVersion = DocumentVersionInfo.getFreshVersionDocument();
+
+                // It's possible that we may insert after a delete happened and we didn't get a
+                // notification for it. There's nothing we can do about this.
+
+                // a. Insert document into remote database
+                try {
+                  remoteColl.insertOne(
+                      withNewVersion(localChangeEvent.getFullDocument(), nextVersion));
+                } catch (final StitchServiceException ex) {
+                  // b. If an error happens:
+
+                  // i. That is not a duplicate key exception, report an error to the error
+                  // listener.
+                  if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
+                      || !ex.getMessage().contains("E11000")) {
+                    this.emitError(docConfig, String.format(
+                        Locale.US,
+                        "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
+                        logicalT,
                         nsConfig.getNamespace(),
-                        docConfig.getDocumentId());
+                        docConfig.getDocumentId(),
+                        ex), ex);
+                    continue;
+                  }
 
-        if (unprocessedRemoteEvent != null) {
-          final DocumentVersionInfo unprocessedEventVersion;
-          try {
-            unprocessedEventVersion = DocumentVersionInfo
-                .getRemoteVersionInfo(unprocessedRemoteEvent.getFullDocument());
-          } catch (final Exception e) {
-            desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
-            emitError(docConfig,
-                String.format(
-                    Locale.US,
-                    "t='%d': syncLocalToRemote ns=%s documentId=%s got a remote "
-                        + "document that could not have its version info parsed "
-                        + "; dropping the event, and desyncing the document",
-                    logicalT,
-                    nsConfig.getNamespace(),
-                    docConfig.getDocumentId()));
-            return;
-          }
+                  // ii. Otherwise record that a conflict has occurred.
+                  logger.info(String.format(
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s duplicate key exception on "
+                          + "insert; raising conflict",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId()));
+                  isConflicted = true;
+                }
+                break;
+              }
 
-          // 1. If it does and the version info is different, record that a conflict has occurred.
-          //    Difference is determined if either the GUID is different or the version counter is
-          //    greater than the local version counter.
-          if (!docConfig.hasCommittedVersion(unprocessedEventVersion)) {
-            isConflicted = true;
-            logger.info(String.format(
-                    Locale.US,
-                    "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
-                            + "unprocessed change event for document; raising conflict",
-                    logicalT,
-                    nsConfig.getNamespace(),
-                    docConfig.getDocumentId()));
-          }
 
-          // 2. Otherwise, the unprocessed event can be safely dropped and ignored in future R2L
-          //    passes. Continue on to checking the operation type.
-        }
+              // 2. REPLACE
+              case REPLACE: {
+                if (localDoc == null) {
+                  final IllegalStateException illegalStateException = new IllegalStateException(
+                      "expected document to exist for local replace change event: %s");
 
-        if (!isConflicted) {
-          // iii. Check the operation type
-          switch (localChangeEvent.getOperationType()) {
-            // 1. INSERT
-            case INSERT: {
-              nextVersion = DocumentVersionInfo.getFreshVersionDocument();
+                  emitError(
+                      docConfig,
+                      illegalStateException.getMessage(),
+                      illegalStateException
+                  );
+                  continue;
+                }
+                nextVersion = localVersionInfo.getNextVersion();
+                final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
 
-              // It's possible that we may insert after a delete happened and we didn't get a
-              // notification for it. There's nothing we can do about this.
-
-              // a. Insert document into remote database
-              try {
-                remoteColl.insertOne(
-                        withNewVersion(localChangeEvent.getFullDocument(), nextVersion));
-              } catch (final StitchServiceException ex) {
-                // b. If an error happens:
-
-                // i. That is not a duplicate key exception, report an error to the error listener.
-                if (ex.getErrorCode() != StitchServiceErrorCode.MONGODB_ERROR
-                        || !ex.getMessage().contains("E11000")) {
-                  this.emitError(docConfig, String.format(
+                // a. Update the document in the remote database using a query for the _id and the
+                //    version with an update containing the replacement document with the version
+                //    counter incremented by 1.
+                final RemoteUpdateResult result;
+                try {
+                  result = remoteColl.updateOne(
+                      localVersionInfo.getFilter(),
+                      nextDoc);
+                } catch (final StitchServiceException ex) {
+                  // b. If an error happens, report an error to the error listener.
+                  this.emitError(
+                      docConfig,
+                      String.format(
                           Locale.US,
-                          "t='%d': syncLocalToRemote ns=%s documentId=%s exception inserting: %s",
+                          "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
+                              + "replacing: %s",
                           logicalT,
                           nsConfig.getNamespace(),
                           docConfig.getDocumentId(),
-                          ex), ex);
+                          ex),
+                      ex
+                  );
                   continue;
                 }
-
-                // ii. Otherwise record that a conflict has occurred.
-                logger.info(String.format(
-                        Locale.US,
-                        "t='%d': syncLocalToRemote ns=%s documentId=%s duplicate key exception on "
-                                + "insert; raising conflict",
-                        logicalT,
-                        nsConfig.getNamespace(),
-                        docConfig.getDocumentId()));
-                isConflicted = true;
-              }
-              break;
-            }
-
-
-            // 2. REPLACE
-            case REPLACE: {
-              if (localDoc == null) {
-                final IllegalStateException illegalStateException = new IllegalStateException(
-                        "expected document to exist for local replace change event: %s");
-
-                emitError(
-                        docConfig,
-                        illegalStateException.getMessage(),
-                        illegalStateException
-                );
-                continue;
-              }
-              nextVersion = localVersionInfo.getNextVersion();
-              final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
-
-              // a. Update the document in the remote database using a query for the _id and the
-              //    version with an update containing the replacement document with the version
-              //    counter incremented by 1.
-              final RemoteUpdateResult result;
-              try {
-                result = remoteColl.updateOne(
-                        localVersionInfo.getFilter(),
-                        nextDoc);
-              } catch (final StitchServiceException ex) {
-                // b. If an error happens, report an error to the error listener.
-                this.emitError(
-                        docConfig,
-                        String.format(
-                                Locale.US,
-                                "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
-                                        + "replacing: %s",
-                                logicalT,
-                                nsConfig.getNamespace(),
-                                docConfig.getDocumentId(),
-                                ex),
-                        ex
-                );
-                continue;
-              }
-              // c. If no documents are matched, record that a conflict has occurred.
-              if (result.getMatchedCount() == 0) {
-                isConflicted = true;
-                logger.info(String.format(
-                        Locale.US,
-                        "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
-                                + "replaced document or document deleted; raising conflict",
-                        logicalT,
-                        nsConfig.getNamespace(),
-                        docConfig.getDocumentId()));
-              }
-              break;
-            }
-
-            // 3. UPDATE
-            case UPDATE: {
-              if (localDoc == null) {
-                final IllegalStateException illegalStateException = new IllegalStateException(
-                        "expected document to exist for local update change event");
-                emitError(
-                        docConfig,
-                        illegalStateException.getMessage(),
-                        illegalStateException
-                );
-                continue;
-              }
-              nextVersion = localVersionInfo.getNextVersion();
-              final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
-
-              // a. Update the document in the remote database using a query for the _id and the
-              //    version with an update containing the replacement document with the version
-              //    counter incremented by 1.
-              final BsonDocument translatedUpdate = new BsonDocument();
-              if (!localChangeEvent.getUpdateDescription().getUpdatedFields().isEmpty()) {
-                final BsonDocument sets = new BsonDocument();
-                for (final Map.Entry<String, BsonValue> fieldValue :
-                        localChangeEvent.getUpdateDescription().getUpdatedFields().entrySet()) {
-                  sets.put(fieldValue.getKey(), fieldValue.getValue());
-                }
-                sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
-                translatedUpdate.put("$set", sets);
-              }
-              if (!localChangeEvent.getUpdateDescription().getRemovedFields().isEmpty()) {
-                final BsonDocument unsets = new BsonDocument();
-                for (final String field :
-                        localChangeEvent.getUpdateDescription().getRemovedFields()) {
-                  unsets.put(field, BsonBoolean.TRUE);
-                }
-                translatedUpdate.put("$unset", unsets);
-              }
-
-              final RemoteUpdateResult result;
-              try {
-                result = remoteColl.updateOne(
-                        localVersionInfo.getFilter(),
-                    translatedUpdate.isEmpty() ? nextDoc : translatedUpdate);
-              } catch (final StitchServiceException ex) {
-                // b. If an error happens, report an error to the error listener.
-                emitError(
-                        docConfig,
-                        String.format(
-                                Locale.US,
-                                "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
-                                        + "updating: %s",
-                                logicalT,
-                                nsConfig.getNamespace(),
-                                docConfig.getDocumentId(),
-                                ex),
-                        ex
-                );
-                continue;
-              }
-              if (result.getMatchedCount() == 0) {
                 // c. If no documents are matched, record that a conflict has occurred.
-                isConflicted = true;
-                logger.info(String.format(
-                        Locale.US,
-                        "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
-                                + "updated document or document deleted; raising conflict",
-                        logicalT,
-                        nsConfig.getNamespace(),
-                        docConfig.getDocumentId()));
-              }
-              break;
-            }
-
-            case DELETE: {
-              nextVersion = null;
-              final RemoteDeleteResult result;
-              // a. Delete the document in the remote database using a query for the _id and the
-              //    version.
-              try {
-                result = remoteColl.deleteOne(localVersionInfo.getFilter());
-              } catch (final StitchServiceException ex) {
-                // b. If an error happens, report an error to the error listener.
-                emitError(
-                        docConfig,
-                        String.format(
-                                Locale.US,
-                                "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
-                                        + " deleting: %s",
-                                logicalT,
-                                nsConfig.getNamespace(),
-                                docConfig.getDocumentId(),
-                                ex),
-                        ex
-                );
-                continue;
-              }
-              // c. If no documents are matched, record that a conflict has occurred.
-              if (result.getDeletedCount() == 0) {
-                remoteDocument = remoteColl.find(docFilter).first();
-                remoteDocumentFetched = true;
-                if (remoteDocument != null) {
+                if (result.getMatchedCount() == 0) {
                   isConflicted = true;
                   logger.info(String.format(
-                          Locale.US,
-                          "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
-                                  + "removed document; raising conflict",
-                          logicalT,
-                          nsConfig.getNamespace(),
-                          docConfig.getDocumentId()));
-                } else {
-                  // d. Desynchronize the document if there is no conflict, or if fetching a remote
-                  //    document after the conflict is raised returns no remote document.
-                  desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
+                          + "replaced document or document deleted; raising conflict",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId()));
                 }
-              } else {
-                desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                break;
               }
-              break;
-            }
 
-            default:
-              emitError(
+              // 3. UPDATE
+              case UPDATE: {
+                if (localDoc == null) {
+                  final IllegalStateException illegalStateException = new IllegalStateException(
+                      "expected document to exist for local update change event");
+                  emitError(
+                      docConfig,
+                      illegalStateException.getMessage(),
+                      illegalStateException
+                  );
+                  continue;
+                }
+                nextVersion = localVersionInfo.getNextVersion();
+                final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
+
+                // a. Update the document in the remote database using a query for the _id and the
+                //    version with an update containing the replacement document with the version
+                //    counter incremented by 1.
+                final BsonDocument translatedUpdate = new BsonDocument();
+                if (!localChangeEvent.getUpdateDescription().getUpdatedFields().isEmpty()) {
+                  final BsonDocument sets = new BsonDocument();
+                  for (final Map.Entry<String, BsonValue> fieldValue :
+                      localChangeEvent.getUpdateDescription().getUpdatedFields().entrySet()) {
+                    sets.put(fieldValue.getKey(), fieldValue.getValue());
+                  }
+                  sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
+                  translatedUpdate.put("$set", sets);
+                }
+                if (!localChangeEvent.getUpdateDescription().getRemovedFields().isEmpty()) {
+                  final BsonDocument unsets = new BsonDocument();
+                  for (final String field :
+                      localChangeEvent.getUpdateDescription().getRemovedFields()) {
+                    unsets.put(field, BsonBoolean.TRUE);
+                  }
+                  translatedUpdate.put("$unset", unsets);
+                }
+
+                final RemoteUpdateResult result;
+                try {
+                  result = remoteColl.updateOne(
+                      localVersionInfo.getFilter(),
+                      translatedUpdate.isEmpty() ? nextDoc : translatedUpdate);
+                } catch (final StitchServiceException ex) {
+                  // b. If an error happens, report an error to the error listener.
+                  emitError(
                       docConfig,
                       String.format(
-                              Locale.US,
-                              "t='%d': syncLocalToRemote ns=%s documentId=%s unknown operation "
-                                      + "type occurred on the document: %s; dropping the event",
-                              logicalT,
-                              nsConfig.getNamespace(),
-                              docConfig.getDocumentId(),
-                              localChangeEvent.getOperationType().toString())
-              );
-              continue;
-          }
-        } else {
-          nextVersion = null;
-        }
+                          Locale.US,
+                          "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
+                              + "updating: %s",
+                          logicalT,
+                          nsConfig.getNamespace(),
+                          docConfig.getDocumentId(),
+                          ex),
+                      ex
+                  );
+                  continue;
+                }
+                if (result.getMatchedCount() == 0) {
+                  // c. If no documents are matched, record that a conflict has occurred.
+                  isConflicted = true;
+                  logger.info(String.format(
+                      Locale.US,
+                      "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
+                          + "updated document or document deleted; raising conflict",
+                      logicalT,
+                      nsConfig.getNamespace(),
+                      docConfig.getDocumentId()));
+                }
+                break;
+              }
 
+              case DELETE: {
+                nextVersion = null;
+                final RemoteDeleteResult result;
+                // a. Delete the document in the remote database using a query for the _id and the
+                //    version.
+                try {
+                  result = remoteColl.deleteOne(localVersionInfo.getFilter());
+                } catch (final StitchServiceException ex) {
+                  // b. If an error happens, report an error to the error listener.
+                  emitError(
+                      docConfig,
+                      String.format(
+                          Locale.US,
+                          "t='%d': syncLocalToRemote ns=%s documentId=%s exception "
+                              + " deleting: %s",
+                          logicalT,
+                          nsConfig.getNamespace(),
+                          docConfig.getDocumentId(),
+                          ex),
+                      ex
+                  );
+                  continue;
+                }
+                // c. If no documents are matched, record that a conflict has occurred.
+                if (result.getDeletedCount() == 0) {
+                  remoteDocument = remoteColl.find(docFilter).first();
+                  remoteDocumentFetched = true;
+                  if (remoteDocument != null) {
+                    isConflicted = true;
+                    logger.info(String.format(
+                        Locale.US,
+                        "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
+                            + "removed document; raising conflict",
+                        logicalT,
+                        nsConfig.getNamespace(),
+                        docConfig.getDocumentId()));
+                  } else {
+                    // d. Desynchronize the document if there is no conflict, or if fetching a
+                    // remote document after the conflict is raised returns no remote document.
+                    desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                  }
+                } else {
+                  desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                }
+                break;
+              }
 
-        logger.info(String.format(
-            Locale.US,
-            "t='%d': syncLocalToRemote ns=%s documentId=%s conflict=%s",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId(),
-            isConflicted));
-
-        if (!isConflicted) {
-          // iv. If no conflict has occurred, move on to the remote to local sync routine.
-
-          // TODO(STITCH-1972): This event may contain old version info. We should be filtering out
-          // the version anyway from local and remote events.
-          final ChangeEvent<BsonDocument> committedEvent =
-                  docConfig.getLastUncommittedChangeEvent();
-          emitEvent(docConfig.getDocumentId(), new ChangeEvent<>(
-                  committedEvent.getId(),
-                  committedEvent.getOperationType(),
-                  committedEvent.getFullDocument(),
-                  committedEvent.getNamespace(),
-                  committedEvent.getDocumentKey(),
-                  committedEvent.getUpdateDescription(),
-                  false));
-
-          docConfig.setPendingWritesComplete(nextVersion);
-        } else {
-          // v. Otherwise, invoke the collection-level conflict handler with the local change event
-          //    and the remote change event (synthesized by doing a lookup of the document or
-          //    sourced from the listener)
-          final ChangeEvent<BsonDocument> remoteChangeEvent;
-          if (!remoteDocumentFetched) {
-            remoteChangeEvent =
-                getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
+              default:
+                emitError(
+                    docConfig,
+                    String.format(
+                        Locale.US,
+                        "t='%d': syncLocalToRemote ns=%s documentId=%s unknown operation "
+                            + "type occurred on the document: %s; dropping the event",
+                        logicalT,
+                        nsConfig.getNamespace(),
+                        docConfig.getDocumentId(),
+                        localChangeEvent.getOperationType().toString())
+                );
+                continue;
+            }
           } else {
-            remoteChangeEvent =
-                getSynthesizedRemoteChangeEventForDocument(
-                    remoteColl.getNamespace(),
-                    docConfig.getDocumentId(),
-                    remoteDocument);
+            nextVersion = null;
           }
-          resolveConflict(
-                  nsConfig.getNamespace(),
-                  docConfig,
-                  remoteChangeEvent);
+
+
+          logger.info(String.format(
+              Locale.US,
+              "t='%d': syncLocalToRemote ns=%s documentId=%s conflict=%s",
+              logicalT,
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId(),
+              isConflicted));
+
+          if (!isConflicted) {
+            // iv. If no conflict has occurred, move on to the remote to local sync routine.
+
+            // TODO(STITCH-1972): This event may contain old version info. We should be filtering
+            // out the version anyway from local and remote events.
+            final ChangeEvent<BsonDocument> committedEvent =
+                docConfig.getLastUncommittedChangeEvent();
+            emitEvent(docConfig.getDocumentId(), new ChangeEvent<>(
+                committedEvent.getId(),
+                committedEvent.getOperationType(),
+                committedEvent.getFullDocument(),
+                committedEvent.getNamespace(),
+                committedEvent.getDocumentKey(),
+                committedEvent.getUpdateDescription(),
+                false));
+
+            docConfig.setPendingWritesComplete(nextVersion);
+          } else {
+            // v. Otherwise, invoke the collection-level conflict handler with the local change
+            // event and the remote change event (synthesized by doing a lookup of the document or
+            // sourced from the listener)
+            final ChangeEvent<BsonDocument> remoteChangeEvent;
+            if (!remoteDocumentFetched) {
+              remoteChangeEvent =
+                  getSynthesizedRemoteChangeEventForDocument(remoteColl, docConfig.getDocumentId());
+            } else {
+              remoteChangeEvent =
+                  getSynthesizedRemoteChangeEventForDocument(
+                      remoteColl.getNamespace(),
+                      docConfig.getDocumentId(),
+                      remoteDocument);
+            }
+            resolveConflict(
+                nsConfig.getNamespace(),
+                docConfig,
+                remoteChangeEvent);
+          }
         }
+      } finally {
+        nsConfig.getLock().writeLock().unlock();
       }
     }
 
@@ -1210,12 +1276,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       } else {
         dispatchException = ex;
       }
-      this.eventDispatcher.dispatch(new Callable<Object>() {
-        @Override
-        public Object call() {
-          errorListener.onError(docConfig.getDocumentId(), dispatchException);
-          return null;
-        }
+      this.eventDispatcher.dispatch(() -> {
+        errorListener.onError(docConfig.getDocumentId(), dispatchException);
+        return null;
       });
     }
 
@@ -1547,8 +1610,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    syncConfig.removeSynchronizedDocument(namespace, documentId);
-    getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      syncConfig.removeSynchronizedDocument(namespace, documentId);
+      getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+    } finally {
+      lock.unlock();
+    }
     triggerListeningToNamespace(namespace);
   }
 
@@ -1611,16 +1681,30 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the number of documents in the collection
    */
   long count(final MongoNamespace namespace, final Bson filter, final CountOptions options) {
-    return getLocalCollection(namespace).countDocuments(filter, options);
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      return getLocalCollection(namespace).countDocuments(filter, options);
+    } finally {
+      lock.unlock();
+    }
   }
 
   Collection<BsonDocument> find(
       final MongoNamespace namespace,
       final BsonDocument filter
   ) {
-    return getLocalCollection(namespace)
-        .find(filter)
-        .into(new ArrayList<>());
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      return getLocalCollection(namespace)
+          .find(filter)
+          .into(new ArrayList<>());
+    } finally {
+      lock.unlock();
+    }
   }
 
   public <T> Collection<T> find(
@@ -1632,12 +1716,19 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Class<T> resultClass,
       final CodecRegistry codecRegistry
   ) {
-    return getLocalCollection(namespace, resultClass, codecRegistry)
-        .find(filter)
-        .limit(limit)
-        .projection(projection)
-        .sort(sort)
-        .into(new ArrayList<T>());
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      return getLocalCollection(namespace, resultClass, codecRegistry)
+          .find(filter)
+          .limit(limit)
+          .projection(projection)
+          .sort(sort)
+          .into(new ArrayList<>());
+    } finally {
+      lock.unlock();
+    }
   }
 
   /**
@@ -1664,7 +1755,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final List<? extends Bson> pipeline,
       final Class<ResultT> resultClass) {
-    return getLocalCollection(namespace).aggregate(pipeline, resultClass);
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      return getLocalCollection(namespace).aggregate(pipeline, resultClass);
+    } finally {
+      lock.unlock();
+    }
   }
 
   /**
@@ -1674,15 +1772,24 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace the namespace to put the document in.
    * @param document  the document to insert.
    */
-  void insertOneAndSync(final MongoNamespace namespace, final BsonDocument document) {
-    getLocalCollection(namespace).insertOne(document);
-    final BsonValue documentId = BsonUtils.getDocumentId(document);
-    final ChangeEvent<BsonDocument> event = changeEventForLocalInsert(namespace, document, true);
-    final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
-        namespace,
-        documentId
-    );
-    config.setSomePendingWrites(logicalT, event);
+  void insertOne(final MongoNamespace namespace, final BsonDocument document) {
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    final ChangeEvent<BsonDocument> event;
+    final BsonValue documentId;
+    try {
+      getLocalCollection(namespace).insertOne(document);
+      documentId = BsonUtils.getDocumentId(document);
+      event = changeEventForLocalInsert(namespace, document, true);
+      final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
+          namespace,
+          documentId
+      );
+      config.setSomePendingWrites(logicalT, event);
+    } finally {
+      lock.unlock();
+    }
     triggerListeningToNamespace(namespace);
     emitEvent(documentId, event);
   }
@@ -1692,20 +1799,32 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *
    * @param documents the documents to insert
    */
-  void insertManyAndSync(final MongoNamespace namespace,
+  void insertMany(final MongoNamespace namespace,
                          final List<BsonDocument> documents) {
-    getLocalCollection(namespace).insertMany(documents);
-    for (final BsonDocument document : documents) {
-      final BsonValue documentId = BsonUtils.getDocumentId(document);
-      final ChangeEvent<BsonDocument> event = changeEventForLocalInsert(namespace, document, true);
-      final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
-          namespace,
-          documentId
-      );
-      config.setSomePendingWrites(logicalT, event);
-      emitEvent(documentId, event);
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    final List<ChangeEvent<BsonDocument>> eventsToEmit = new ArrayList<>();
+    try {
+      getLocalCollection(namespace).insertMany(documents);
+      for (final BsonDocument document : documents) {
+        final BsonValue documentId = BsonUtils.getDocumentId(document);
+        final ChangeEvent<BsonDocument> event =
+            changeEventForLocalInsert(namespace, document, true);
+        final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
+            namespace,
+            documentId
+        );
+        config.setSomePendingWrites(logicalT, event);
+        eventsToEmit.add(event);
+      }
+    } finally {
+      lock.unlock();
     }
     triggerListeningToNamespace(namespace);
+    for (final ChangeEvent<BsonDocument> event : eventsToEmit) {
+      emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
+    }
   }
 
   /**
@@ -1734,57 +1853,84 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Bson filter,
       final Bson update,
       final UpdateOptions updateOptions) {
-    // read the local collection
-    final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
-
-    // fetch the document prior to updating
-    final BsonDocument documentBeforeUpdate = getLocalCollection(namespace).find(filter).first();
-
-    // if there was no document prior and this is not an upsert,
-    // do not acknowledge the update
-    if (!updateOptions.isUpsert() && documentBeforeUpdate == null) {
-      return UpdateResult.acknowledged(0, 0L, null);
-    }
-
-    // find and update the single document, returning the document post-update
-    final BsonDocument documentAfterUpdate = localCollection.findOneAndUpdate(
-        filter,
-        update,
-        new FindOneAndUpdateOptions()
-            .collation(updateOptions.getCollation())
-            .upsert(updateOptions.isUpsert())
-            .bypassDocumentValidation(updateOptions.getBypassDocumentValidation())
-            .arrayFilters(updateOptions.getArrayFilters())
-            .returnDocument(ReturnDocument.AFTER));
-
-    // if the document was deleted between our earlier check and now, it will not have
-    // been updated. do not acknowledge the update
-    if (documentAfterUpdate == null) {
-      return UpdateResult.acknowledged(0, 0L, null);
-    }
-
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    final BsonValue documentId;
     final ChangeEvent<BsonDocument> event;
-    final CoreDocumentSynchronizationConfig config;
-    final BsonValue documentId = BsonUtils.getDocumentId(documentAfterUpdate);
+    final boolean triggerNamespace;
+    try {
+      // read the local collection
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
 
-    // if there was no document prior and this was an upsert,
-    // treat this as an insert.
-    // else this is an update
-    if (documentBeforeUpdate == null && updateOptions.isUpsert()) {
-      config = syncConfig.addSynchronizedDocument(namespace, documentId);
-      triggerListeningToNamespace(namespace);
-      event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
-    } else {
-      config = syncConfig.getSynchronizedDocument(namespace, documentId);
-      event = changeEventForLocalUpdate(
-          namespace,
-          BsonUtils.getDocumentId(documentAfterUpdate),
-          ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, documentAfterUpdate),
-          documentAfterUpdate,
-          true);
+      // fetch the document prior to updating
+      final BsonDocument documentBeforeUpdate = localCollection.find(filter).first();
+
+      // if there was no document prior and this is not an upsert,
+      // do not acknowledge the update
+      if (!updateOptions.isUpsert() && documentBeforeUpdate == null) {
+        return UpdateResult.acknowledged(0, 0L, null);
+      }
+
+      if (documentBeforeUpdate != null) {
+        undoCollection.insertOne(documentBeforeUpdate);
+      }
+
+      // find and update the single document, returning the document post-update
+      final BsonDocument documentAfterUpdate = localCollection.findOneAndUpdate(
+          filter,
+          update,
+          new FindOneAndUpdateOptions()
+              .collation(updateOptions.getCollation())
+              .upsert(updateOptions.isUpsert())
+              .bypassDocumentValidation(updateOptions.getBypassDocumentValidation())
+              .arrayFilters(updateOptions.getArrayFilters())
+              .returnDocument(ReturnDocument.AFTER));
+
+      // if the document was deleted between our earlier check and now, it will not have
+      // been updated. do not acknowledge the update
+      if (documentAfterUpdate == null) {
+        if (documentBeforeUpdate != null) {
+          undoCollection
+              .deleteOne(getDocumentIdFilter(BsonUtils.getDocumentId(documentBeforeUpdate)));
+        }
+        return UpdateResult.acknowledged(0, 0L, null);
+      }
+
+      final CoreDocumentSynchronizationConfig config;
+      documentId = BsonUtils.getDocumentId(documentAfterUpdate);
+
+      // if there was no document prior and this was an upsert,
+      // treat this as an insert.
+      // else this is an update
+      if (documentBeforeUpdate == null && updateOptions.isUpsert()) {
+        triggerNamespace = true;
+        config = syncConfig.addSynchronizedDocument(namespace, documentId);
+        event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
+      } else {
+        triggerNamespace = false;
+        config = syncConfig.getSynchronizedDocument(namespace, documentId);
+        event = changeEventForLocalUpdate(
+            namespace,
+            BsonUtils.getDocumentId(documentAfterUpdate),
+            ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, documentAfterUpdate),
+            documentAfterUpdate,
+            true);
+      }
+
+      config.setSomePendingWrites(logicalT, event);
+
+      if (documentBeforeUpdate != null) {
+        undoCollection
+            .deleteOne(getDocumentIdFilter(BsonUtils.getDocumentId(documentBeforeUpdate)));
+      }
+    } finally {
+      lock.unlock();
     }
-
-    config.setSomePendingWrites(logicalT, event);
+    if (triggerNamespace) {
+      triggerListeningToNamespace(namespace);
+    }
     emitEvent(documentId, event);
     return UpdateResult.acknowledged(1, 1L, updateOptions.isUpsert() ? documentId : null);
   }
@@ -1817,85 +1963,97 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Bson filter,
       final Bson update,
       final UpdateOptions updateOptions) {
-    // fetch all of the documents that this filter will match
-    final Map<BsonValue, BsonDocument> idToBeforeDocumentMap = new HashMap<>();
-    final BsonArray ids = new BsonArray();
-    this.getLocalCollection(namespace)
-        .find(filter)
-        .forEach(new Block<BsonDocument>() {
-          @Override
-          public void apply(@NonNull final BsonDocument bsonDocument) {
+    final List<ChangeEvent<BsonDocument>> eventsToEmit = new ArrayList<>();
+    final UpdateResult result;
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      // fetch all of the documents that this filter will match
+      final Map<BsonValue, BsonDocument> idToBeforeDocumentMap = new HashMap<>();
+      final BsonArray ids = new BsonArray();
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      localCollection
+          .find(filter)
+          .forEach((Block<BsonDocument>) bsonDocument -> {
             final BsonValue documentId = BsonUtils.getDocumentId(bsonDocument);
             ids.add(documentId);
             idToBeforeDocumentMap.put(documentId, bsonDocument);
-          }
-        });
+            undoCollection.insertOne(bsonDocument);
+          });
 
-    // use the matched ids from prior to create a new filter.
-    // this will prevent any race conditions if documents were
-    // inserted between the prior find
-    Bson updatedFilter = updateOptions.isUpsert()
-        ? filter : new BsonDocument("_id", new BsonDocument("$in", ids));
+      // use the matched ids from prior to create a new filter.
+      // this will prevent any race conditions if documents were
+      // inserted between the prior find
+      Bson updatedFilter = updateOptions.isUpsert()
+          ? filter : new BsonDocument("_id", new BsonDocument("$in", ids));
 
-    // do the bulk write
-    final UpdateResult result = this.getLocalCollection(namespace)
-        .updateMany(updatedFilter, update, updateOptions);
+      // do the bulk write
+      result = localCollection.updateMany(updatedFilter, update, updateOptions);
 
-    // if this was an upsert, create the post-update filter using
-    // the upserted id.
-    if (result.getUpsertedId() != null) {
-      updatedFilter = getDocumentIdFilter(result.getUpsertedId());
-    }
-
-    // iterate over the after-update docs using the updated filter
-    this.getLocalCollection(namespace).find(updatedFilter).forEach(new Block<BsonDocument>() {
-      @Override
-      public void apply(@NonNull final BsonDocument afterDocument) {
-        // get the id of the after-update document, and fetch the before-update
-        // document from the map we created from our pre-update `find`
-        final BsonValue documentId = BsonUtils.getDocumentId(afterDocument);
-        final BsonDocument beforeDocument = idToBeforeDocumentMap.get(documentId);
-
-        // if there was no before-update document and this was not an upsert,
-        // a document that meets the filter criteria must have been
-        // inserted or upserted asynchronously between this find and the update.
-        if (beforeDocument == null && !updateOptions.isUpsert()) {
-          return;
-        }
-
-        // because we are looking up a bulk write, we may have queried documents
-        // that match the updated state, but were not actually modified.
-        // if the document before the update is the same as the updated doc,
-        // assume it was not modified and take no further action
-        if (afterDocument.equals(beforeDocument)) {
-          return;
-        }
-
-        final CoreDocumentSynchronizationConfig config;
-        final ChangeEvent<BsonDocument> event;
-
-        // if there was no earlier document and this was an upsert,
-        // treat the upsert as an insert, as far as sync is concerned
-        // else treat it as a standard update
-        if (beforeDocument == null && updateOptions.isUpsert()) {
-          config = syncConfig.addSynchronizedDocument(namespace, documentId);
-          triggerListeningToNamespace(namespace);
-          event = changeEventForLocalInsert(namespace, afterDocument, true);
-        } else {
-          config = syncConfig.getSynchronizedDocument(namespace, documentId);
-          event = changeEventForLocalUpdate(
-              namespace,
-              documentId,
-              ChangeEvent.UpdateDescription.diff(beforeDocument, afterDocument),
-              afterDocument,
-              true);
-        }
-
-        config.setSomePendingWrites(logicalT, event);
-        emitEvent(documentId, event);
+      // if this was an upsert, create the post-update filter using
+      // the upserted id.
+      if (result.getUpsertedId() != null) {
+        updatedFilter = getDocumentIdFilter(result.getUpsertedId());
       }
-    });
 
+      // iterate over the after-update docs using the updated filter
+      localCollection.find(updatedFilter).forEach(
+          (Block<BsonDocument>) afterDocument -> {
+            // get the id of the after-update document, and fetch the before-update
+            // document from the map we created from our pre-update `find`
+            final BsonValue documentId = BsonUtils.getDocumentId(afterDocument);
+            final BsonDocument beforeDocument = idToBeforeDocumentMap.get(documentId);
+
+            // if there was no before-update document and this was not an upsert,
+            // a document that meets the filter criteria must have been
+            // inserted or upserted asynchronously between this find and the update.
+            if (beforeDocument == null && !updateOptions.isUpsert()) {
+              return;
+            }
+
+            // because we are looking up a bulk write, we may have queried documents
+            // that match the updated state, but were not actually modified.
+            // if the document before the update is the same as the updated doc,
+            // assume it was not modified and take no further action
+            if (afterDocument.equals(beforeDocument)) {
+              undoCollection.deleteOne(getDocumentIdFilter(documentId));
+              return;
+            }
+
+            final CoreDocumentSynchronizationConfig config;
+            final ChangeEvent<BsonDocument> event;
+
+            // if there was no earlier document and this was an upsert,
+            // treat the upsert as an insert, as far as sync is concerned
+            // else treat it as a standard update
+            if (beforeDocument == null && updateOptions.isUpsert()) {
+              config = syncConfig.addSynchronizedDocument(namespace, documentId);
+              event = changeEventForLocalInsert(namespace, afterDocument, true);
+            } else {
+              config = syncConfig.getSynchronizedDocument(namespace, documentId);
+              event = changeEventForLocalUpdate(
+                  namespace,
+                  documentId,
+                  ChangeEvent.UpdateDescription.diff(beforeDocument, afterDocument),
+                  afterDocument,
+                  true);
+            }
+
+            config.setSomePendingWrites(logicalT, event);
+            undoCollection.deleteOne(getDocumentIdFilter(documentId));
+            eventsToEmit.add(event);
+          });
+    } finally {
+      lock.unlock();
+    }
+    if (result.getUpsertedId() != null) {
+      triggerListeningToNamespace(namespace);
+    }
+    for (final ChangeEvent<BsonDocument> event : eventsToEmit) {
+      emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
+    }
     return result;
   }
 
@@ -1914,35 +2072,51 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonDocument atVersion,
       final ChangeEvent<BsonDocument> remoteEvent
   ) {
-    // TODO: lock down id
-    final CoreDocumentSynchronizationConfig config =
-        syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
-      return;
-    }
-
-    final BsonDocument documentAfterUpdate = getLocalCollection(namespace)
-        .findOneAndReplace(
-            getDocumentIdFilter(documentId),
-            document,
-            new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
-
     final ChangeEvent<BsonDocument> event;
-    if (remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE) {
-      event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
-    } else {
-      event = changeEventForLocalUpdate(
-          namespace,
-          documentId,
-          ChangeEvent.UpdateDescription.diff(remoteEvent.getFullDocument(), documentAfterUpdate),
-          document,
-          true);
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      final CoreDocumentSynchronizationConfig config =
+          syncConfig.getSynchronizedDocument(namespace, documentId);
+      if (config == null) {
+        return;
+      }
+
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentBeforeUpdate = localCollection
+          .find(getDocumentIdFilter(documentId)).first();
+      if (documentBeforeUpdate != null) {
+        undoCollection.insertOne(documentBeforeUpdate);
+      }
+      final BsonDocument documentAfterUpdate = localCollection
+          .findOneAndReplace(
+              getDocumentIdFilter(documentId),
+              document,
+              new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
+
+      if (remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE) {
+        event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
+      } else {
+        event = changeEventForLocalUpdate(
+            namespace,
+            documentId,
+            ChangeEvent.UpdateDescription.diff(remoteEvent.getFullDocument(), documentAfterUpdate),
+            document,
+            true);
+      }
+      config.setSomePendingWrites(
+          logicalT,
+          atVersion,
+          event);
+      if (documentBeforeUpdate != null) {
+        undoCollection.deleteOne(getDocumentIdFilter(documentId));
+      }
+    } finally {
+      lock.unlock();
     }
-    config.setSomePendingWrites(
-        logicalT,
-        atVersion,
-        event);
-    emitEvent(documentId, event);
+    emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
   }
 
   /**
@@ -1959,21 +2133,39 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonDocument document,
       final BsonDocument atVersion
   ) {
-    // TODO: lock down id
-    final CoreDocumentSynchronizationConfig config =
-        syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
-      return;
+    final ChangeEvent<BsonDocument> event;
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      final CoreDocumentSynchronizationConfig config =
+          syncConfig.getSynchronizedDocument(namespace, documentId);
+      if (config == null) {
+        return;
+      }
+
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentBeforeUpdate = localCollection
+          .find(getDocumentIdFilter(documentId)).first();
+      if (documentBeforeUpdate != null) {
+        undoCollection.insertOne(documentBeforeUpdate);
+      }
+      localCollection
+          .findOneAndReplace(
+              getDocumentIdFilter(documentId),
+              document,
+              new FindOneAndReplaceOptions().upsert(true));
+      config.setPendingWritesComplete(atVersion);
+      if (documentBeforeUpdate != null) {
+        undoCollection.deleteOne(getDocumentIdFilter(documentId));
+      }
+
+      event = changeEventForLocalReplace(namespace, documentId, document, false);
+    } finally {
+      lock.unlock();
     }
-
-    getLocalCollection(namespace)
-        .findOneAndReplace(
-            getDocumentIdFilter(documentId),
-            document,
-            new FindOneAndReplaceOptions().upsert(true));
-    config.setPendingWritesComplete(atVersion);
-
-    emitEvent(documentId, changeEventForLocalReplace(namespace, documentId, document, false));
+    emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
   }
 
   /**
@@ -1985,36 +2177,50 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the result of the remove one operation
    */
   DeleteResult deleteOne(final MongoNamespace namespace, final Bson filter) {
-    final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
-    final BsonDocument docToDelete = localCollection
-        .find(filter)
-        .first();
+    final ChangeEvent<BsonDocument> event;
+    final DeleteResult result;
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final BsonDocument docToDelete = localCollection
+          .find(filter)
+          .first();
 
-    if (docToDelete == null) {
-      return DeleteResult.acknowledged(0);
+      if (docToDelete == null) {
+        return DeleteResult.acknowledged(0);
+      }
+
+      final BsonValue documentId = BsonUtils.getDocumentId(docToDelete);
+      final CoreDocumentSynchronizationConfig config =
+          syncConfig.getSynchronizedDocument(namespace, documentId);
+
+      if (config == null) {
+        return DeleteResult.acknowledged(0);
+      }
+
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      undoCollection.insertOne(docToDelete);
+
+      result = localCollection.deleteOne(filter);
+      event = changeEventForLocalDelete(namespace, documentId, true);
+
+      // this block is to trigger coalescence for a delete after insert
+      if (config.getLastUncommittedChangeEvent() != null
+          && config.getLastUncommittedChangeEvent().getOperationType()
+          == ChangeEvent.OperationType.INSERT) {
+        desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+        undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
+        return result;
+      }
+
+      config.setSomePendingWrites(logicalT, event);
+      undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
+    } finally {
+      lock.unlock();
     }
-
-    final BsonValue documentId = BsonUtils.getDocumentId(docToDelete);
-    final CoreDocumentSynchronizationConfig config =
-        syncConfig.getSynchronizedDocument(namespace, documentId);
-
-    if (config == null) {
-      return DeleteResult.acknowledged(0);
-    }
-
-    final DeleteResult result = getLocalCollection(namespace).deleteOne(filter);
-    final ChangeEvent<BsonDocument> event = changeEventForLocalDelete(namespace, documentId, true);
-
-    // this block is to trigger coalescence for a delete after insert
-    if (config.getLastUncommittedChangeEvent() != null
-        && config.getLastUncommittedChangeEvent().getOperationType()
-        == ChangeEvent.OperationType.INSERT) {
-      desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
-      return result;
-    }
-
-    config.setSomePendingWrites(logicalT, event);
-    emitEvent(documentId, event);
+    emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
     return result;
   }
 
@@ -2027,44 +2233,59 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   DeleteResult deleteMany(final MongoNamespace namespace,
                           final Bson filter) {
-    final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
-    final Set<BsonValue> idsToDelete =
-        localCollection
-            .find(filter)
-            .map(new Function<BsonDocument, BsonValue>() {
-              @Override
-              @NonNull
-              public BsonValue apply(@NonNull final BsonDocument bsonDocument) {
-                return BsonUtils.getDocumentId(bsonDocument);
-              }
-            }).into(new HashSet<>());
+    final List<ChangeEvent<BsonDocument>> eventsToEmit = new ArrayList<>();
+    final DeleteResult result;
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final Set<BsonValue> idsToDelete =
+          localCollection
+              .find(filter)
+              .map(new Function<BsonDocument, BsonValue>() {
+                @Override
+                @NonNull
+                public BsonValue apply(@NonNull final BsonDocument bsonDocument) {
+                  undoCollection.insertOne(bsonDocument);
+                  return BsonUtils.getDocumentId(bsonDocument);
+                }
+              }).into(new HashSet<>());
 
-    final DeleteResult result = getLocalCollection(namespace).deleteMany(filter);
+      result = localCollection.deleteMany(filter);
 
-    for (final BsonValue documentId : idsToDelete) {
-      final CoreDocumentSynchronizationConfig config =
-          syncConfig.getSynchronizedDocument(namespace, documentId);
+      for (final BsonValue documentId : idsToDelete) {
+        final CoreDocumentSynchronizationConfig config =
+            syncConfig.getSynchronizedDocument(namespace, documentId);
 
-      if (config == null) {
-        continue;
+        if (config == null) {
+          continue;
+        }
+
+        final ChangeEvent<BsonDocument> event =
+            changeEventForLocalDelete(namespace, documentId, true);
+
+        // this block is to trigger coalescence for a delete after insert
+        if (config.getLastUncommittedChangeEvent() != null
+            && config.getLastUncommittedChangeEvent().getOperationType()
+            == ChangeEvent.OperationType.INSERT) {
+          desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+          undoCollection.deleteOne(getDocumentIdFilter(documentId));
+          return result;
+        }
+
+        config.setSomePendingWrites(
+            logicalT, event);
+        undoCollection.deleteOne(getDocumentIdFilter(documentId));
+        eventsToEmit.add(event);
       }
-
-      final ChangeEvent<BsonDocument> event =
-          changeEventForLocalDelete(namespace, documentId, true);
-
-      // this block is to trigger coalescence for a delete after insert
-      if (config.getLastUncommittedChangeEvent() != null
-          && config.getLastUncommittedChangeEvent().getOperationType()
-          == ChangeEvent.OperationType.INSERT) {
-        desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
-        return result;
-      }
-
-      config.setSomePendingWrites(
-          logicalT, event);
-      emitEvent(documentId, event);
+    } finally {
+      lock.unlock();
     }
-
+    for (final ChangeEvent<BsonDocument> event : eventsToEmit) {
+      emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
+    }
     return result;
   }
 
@@ -2080,19 +2301,35 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId,
       final BsonDocument atVersion
   ) {
-    // TODO: lock down id
-    final CoreDocumentSynchronizationConfig config =
-        syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
-      return;
-    }
+    final ChangeEvent<BsonDocument> event;
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      final CoreDocumentSynchronizationConfig config =
+          syncConfig.getSynchronizedDocument(namespace, documentId);
+      if (config == null) {
+        return;
+      }
 
-    getLocalCollection(namespace)
-        .deleteOne(getDocumentIdFilter(documentId));
-    final ChangeEvent<BsonDocument> event =
-        changeEventForLocalDelete(namespace, documentId, true);
-    config.setSomePendingWrites(
-        logicalT, atVersion, event);
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentToDelete = localCollection
+          .find(getDocumentIdFilter(documentId)).first();
+      if (documentToDelete != null) {
+        undoCollection.insertOne(documentToDelete);
+      }
+      localCollection
+          .deleteOne(getDocumentIdFilter(documentId));
+      event = changeEventForLocalDelete(namespace, documentId, true);
+      config.setSomePendingWrites(
+          logicalT, atVersion, event);
+      if (documentToDelete != null) {
+        undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
+      }
+    } finally {
+      lock.unlock();
+    }
     emitEvent(documentId, event);
   }
 
@@ -2107,14 +2344,30 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    // TODO: lock down id
-    final CoreDocumentSynchronizationConfig config =
-        syncConfig.getSynchronizedDocument(namespace, documentId);
-    if (config == null) {
-      return;
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      final CoreDocumentSynchronizationConfig config =
+          syncConfig.getSynchronizedDocument(namespace, documentId);
+      if (config == null) {
+        return;
+      }
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentToDelete = localCollection
+          .find(getDocumentIdFilter(documentId)).first();
+      if (documentToDelete == null) {
+        desyncDocumentFromRemote(namespace, documentId);
+        return;
+      }
+      undoCollection.insertOne(documentToDelete);
+      localCollection.deleteOne(getDocumentIdFilter(documentId));
+      desyncDocumentFromRemote(namespace, documentId);
+      undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
+    } finally {
+      lock.unlock();
     }
-    getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
-    desyncDocumentFromRemote(namespace, documentId);
     emitEvent(documentId, changeEventForLocalDelete(namespace, documentId, false));
   }
 
@@ -2209,6 +2462,21 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   // ----- Utilities -----
 
   /**
+   * Returns the undo collection representing the given namespace for recording documents that
+   * may need to be reverted after a system failure.
+   *
+   * @param namespace the namespace referring to the undo collection.
+   * @return the undo collection representing the given namespace for recording documents that
+   * may need to be reverted after a system failure.
+   */
+  private MongoCollection<BsonDocument> getUndoCollection(final MongoNamespace namespace) {
+    return localClient
+        .getDatabase(String.format("sync_undo_%s", namespace.getDatabaseName()))
+        .getCollection(namespace.getCollectionName(), BsonDocument.class)
+        .withCodecRegistry(MongoClientSettings.getDefaultCodecRegistry());
+  }
+
+  /**
    * Returns the local collection representing the given namespace.
    *
    * @param namespace   the namespace referring to the local collection.
@@ -2283,15 +2551,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     return this.getRemoteCollection(nsConfig.getNamespace()).find(
         new Document("$or", ids)
-    ).into(new HashSet<BsonDocument>());
-  }
-
-  private Set<BsonValue> getDocumentIds(final Set<BsonDocument> documents) {
-    final Set<BsonValue> ids = new HashSet<>();
-    for (final BsonDocument document : documents) {
-      ids.add(document.get("_id"));
-    }
-    return ids;
+    ).into(new HashSet<>());
   }
 
   /**

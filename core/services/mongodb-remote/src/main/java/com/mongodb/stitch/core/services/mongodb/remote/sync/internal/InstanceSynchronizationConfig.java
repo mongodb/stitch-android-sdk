@@ -226,7 +226,12 @@ class InstanceSynchronizationConfig
    * @return the set of synchronized documents _ids in a namespace.
    */
   public Set<BsonValue> getSynchronizedDocumentIds(final MongoNamespace namespace) {
-    return getNamespaceConfig(namespace).getSynchronizedDocumentIds();
+    try {
+      return getNamespaceConfig(namespace).getSynchronizedDocumentIds();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new HashSet<>();
+    }
   }
 
   @Override

@@ -171,7 +171,7 @@ public class NamespaceChangeStreamListener {
    * Open the event stream
    * @return true if successfully opened, false if not
    */
-  boolean openStream() {
+  boolean openStream() throws InterruptedException {
     logger.info("stream START");
     if (!networkMonitor.isConnected()) {
       logger.info("stream END - Network disconnected");

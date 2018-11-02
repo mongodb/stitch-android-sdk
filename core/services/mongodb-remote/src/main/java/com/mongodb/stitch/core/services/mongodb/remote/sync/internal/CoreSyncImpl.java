@@ -171,13 +171,13 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   }
 
   @Override
-  public SyncInsertOneResult insertOneAndSync(final DocumentT document) {
-    return syncOperations.insertOneAndSync(document).execute(service);
+  public SyncInsertOneResult insertOne(final DocumentT document) {
+    return syncOperations.insertOne(document).execute(service);
   }
 
   @Override
-  public SyncInsertManyResult insertManyAndSync(final List<DocumentT> documents) {
-    return syncOperations.insertManyAndSync(documents).execute(service);
+  public SyncInsertManyResult insertMany(final List<DocumentT> documents) {
+    return syncOperations.insertMany(documents).execute(service);
   }
 
   @Override

@@ -198,7 +198,7 @@ public interface Sync<DocumentT> {
    * @param document the document to insert
    * @return the result of the insert one operation
    */
-  Task<SyncInsertOneResult> insertOneAndSync(final DocumentT document);
+  Task<SyncInsertOneResult> insertOne(final DocumentT document);
 
   /**
    * Inserts one or more documents. If the documents are missing an identifier, they will be
@@ -207,7 +207,7 @@ public interface Sync<DocumentT> {
    * @param documents the documents to insert
    * @return the result of the insert many operation
    */
-  Task<SyncInsertManyResult> insertManyAndSync(final List<DocumentT> documents);
+  Task<SyncInsertManyResult> insertMany(final List<DocumentT> documents);
 
   /**
    * Removes at most one document that has been synchronized with the remote

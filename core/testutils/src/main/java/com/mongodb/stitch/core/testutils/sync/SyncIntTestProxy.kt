@@ -99,10 +99,10 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             expectedDocument["foo"] = 1
             assertEquals(expectedDocument, syncOperations.find(documentIdFilter(doc1Id)).firstOrNull())
 
-            // 2. insertOneAndSync should work offline and then sync the document when online.
+            // 2. insertOne should work offline and then sync the document when online.
             goOffline()
             val doc3 = Document("so", "syncy")
-            val insResult = syncOperations.insertOneAndSync(doc3)
+            val insResult = syncOperations.insertOne(doc3)
             Assert.assertEquals(
                 doc3,
                 withoutSyncVersion(syncOperations.find(documentIdFilter(insResult.insertedId)).firstOrNull()!!))
@@ -407,7 +407,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // insert and sync the new document locally
             val docToInsert = Document("hello", "world")
             coll.configure(failingConflictHandler, null, null)
-            val insertResult = coll.insertOneAndSync(docToInsert)
+            val insertResult = coll.insertOne(docToInsert)
 
             // find the local document we just inserted
             val doc = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
@@ -444,7 +444,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // insert and sync the new document locally
             val docToInsert = Document("hello", "world")
             coll.configure(failingConflictHandler, null, null)
-            val insertResult = coll.insertOneAndSync(docToInsert)
+            val insertResult = coll.insertOne(docToInsert)
 
             // find the document we just inserted
             val doc = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
@@ -485,7 +485,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // insert and sync the new document locally. sync.
             val docToInsert = Document("hello", "world")
             coll.configure(failingConflictHandler, null, null)
-            val insertResult = coll.insertOneAndSync(docToInsert)
+            val insertResult = coll.insertOne(docToInsert)
             streamAndSync()
 
             // assert the sync'd document is found locally and remotely
@@ -499,7 +499,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // delete the doc locally, then re-insert it.
             // assert the document is still the same locally and remotely
             assertEquals(1, coll.deleteOne(doc1Filter).deletedCount)
-            coll.insertOneAndSync(doc)
+            coll.insertOne(doc)
             assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
             assertEquals(expectedDocument, withoutSyncVersion(coll.find(doc1Filter).first()!!))
 
@@ -833,7 +833,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // configure Sync to fail this test if there is a conflict.
             val docToInsert = Document("hello", "world")
             coll.configure(failingConflictHandler, null, null)
-            val doc1Id = coll.insertOneAndSync(docToInsert).insertedId
+            val doc1Id = coll.insertOne(docToInsert).insertedId
 
             // assert the document exists locally. desync it.
             assertEquals(docToInsert, withoutSyncVersion(coll.find(documentIdFilter(doc1Id)).first()!!))
@@ -860,7 +860,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
                 Document("friend", "welcome")
             }, null, null)
-            val doc1Id = coll.insertOneAndSync(docToInsert).insertedId
+            val doc1Id = coll.insertOne(docToInsert).insertedId
             val doc1Filter = Document("_id", doc1Id)
 
             // sync. assert that the resolution is reflected locally,
@@ -886,7 +886,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
         // insert a document locally
         val docToInsert = Document("hello", "world")
-        val insertedId = coll.insertOneAndSync(docToInsert).insertedId
+        val insertedId = coll.insertOne(docToInsert).insertedId
 
         var hasConflictHandlerBeenInvoked = false
         var hasChangeEventListenerBeenInvoked = false
@@ -931,7 +931,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             val docToInsert = Document("hello", "world")
 
             coll.configure(failingConflictHandler, null, null)
-            val insertResult = coll.insertOneAndSync(docToInsert)
+            val insertResult = coll.insertOne(docToInsert)
 
             val doc = coll.find(documentIdFilter(insertResult.insertedId)).first()
             val doc1Id = BsonObjectId(doc?.getObjectId("_id"))
@@ -976,7 +976,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // the remote document after a local delete and local insert, but before a sync pass,
             // should have the same version as the previous document
             assertEquals(1, coll.deleteOne(doc1Filter).deletedCount)
-            coll.insertOneAndSync(doc!!)
+            coll.insertOne(doc!!)
 
             val thirdRemoteDocBeforeSyncPass = remoteColl.find(doc1Filter).first()!!
             assertEquals(expectedDocument, withoutSyncVersion(thirdRemoteDocBeforeSyncPass))
@@ -1001,7 +1001,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // since the change events are not coalesced
             assertEquals(1, coll.deleteOne(doc1Filter).deletedCount)
             streamAndSync()
-            coll.insertOneAndSync(doc)
+            coll.insertOne(doc)
             streamAndSync()
 
             val fourthRemoteDoc = remoteColl.find(doc1Filter).first()!!
@@ -1289,7 +1289,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
             // insert an initial doc
             val testDoc = Document("hello", "world")
-            val result = testSync.insertOneAndSync(testDoc)
+            val result = testSync.insertOne(testDoc)
 
             // do a sync pass, synchronizing the doc
             streamAndSync()
@@ -1399,7 +1399,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc2 = Document("hello", "friend")
         val doc3 = Document("hello", "goodbye")
 
-        val insertResult = coll.insertManyAndSync(listOf(doc1, doc2, doc3))
+        val insertResult = coll.insertMany(listOf(doc1, doc2, doc3))
         assertEquals(3, insertResult.insertedIds.size)
 
         assertEquals(3, coll.count())
@@ -1457,7 +1457,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc2 = Document("hello", "friend")
         val doc3 = Document("hello", "goodbye")
 
-        val insertResult = coll.insertManyAndSync(listOf(doc1, doc2, doc3))
+        val insertResult = coll.insertMany(listOf(doc1, doc2, doc3))
         assertEquals(3, insertResult.insertedIds.size)
 
         streamAndSync()
@@ -1501,7 +1501,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc2 = Document("hello", "friend")
         val doc3 = Document("hello", "goodbye")
 
-        val insertResult = coll.insertManyAndSync(listOf(doc1, doc2, doc3))
+        val insertResult = coll.insertMany(listOf(doc1, doc2, doc3))
         assertEquals(3, insertResult.insertedIds.size)
 
         assertEquals(3, coll.count())

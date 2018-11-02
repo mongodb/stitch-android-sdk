@@ -116,7 +116,7 @@ class CoreSyncUnitTests {
         val doc1 = BsonDocument("a", BsonString("b"))
         val doc2 = BsonDocument("c", BsonString("d"))
 
-        coreSync.insertManyAndSync(listOf(doc1, doc2))
+        coreSync.insertMany(listOf(doc1, doc2))
 
         assertEquals(2, coreSync.count())
         assertEquals(1, coreSync.count(BsonDocument("_id", doc1["_id"])))
@@ -196,7 +196,7 @@ class CoreSyncUnitTests {
         val doc4 = BsonDocument("a", BsonString("b")).append("c", BsonString("d"))
         val doc5 = BsonDocument("e", BsonString("f")).append("g", BsonString("h"))
 
-        coreSync.insertManyAndSync(listOf(doc1, doc2, doc3, doc4, doc5))
+        coreSync.insertMany(listOf(doc1, doc2, doc3, doc4, doc5))
 
         val pipeline = listOf(
             BsonDocument(
@@ -259,7 +259,7 @@ class CoreSyncUnitTests {
         val doc2 = BsonDocument("c", BsonString("d"))
         val doc3 = BsonDocument("a", BsonString("r"))
 
-        val insertResult = coreSync.insertManyAndSync(listOf(doc1, doc2, doc3))
+        val insertResult = coreSync.insertMany(listOf(doc1, doc2, doc3))
 
         assertEquals(3, insertResult.insertedIds.size)
 
@@ -286,80 +286,80 @@ class CoreSyncUnitTests {
     }
 
     @Test
-    fun testInsertOneAndSync() {
+    fun testInsertOne() {
         val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         assertEquals(
             ctx.testDocumentId,
-            coreSync.insertOneAndSync(ctx.testDocument).insertedId)
+            coreSync.insertOne(ctx.testDocument).insertedId)
 
         try {
-            coreSync.insertOneAndSync(ctx.testDocument)
+            coreSync.insertOne(ctx.testDocument)
             fail("should have received duplicate key error index")
         } catch (e: MongoWriteException) {
             assertTrue(e.message?.contains("E11000") ?: false)
             assertNotNull(e)
         }
 
-        verify(syncOperations, times(2)).insertOneAndSync(
+        verify(syncOperations, times(2)).insertOne(
             eq(ctx.testDocument))
 
-        verify(ctx.dataSynchronizer, times(2)).insertOneAndSync(
+        verify(ctx.dataSynchronizer, times(2)).insertOne(
             eq(ctx.namespace), eq(ctx.testDocument))
     }
 
     @Test
-    fun testInsertOneAndSyncCustomCodec() {
+    fun testInsertOneCustomCodec() {
         val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(
             ctx, CustomCodecConsideredHarmful::class.java, CustomCodecConsideredHarmfulCodec())
 
         val doc1 = CustomCodecConsideredHarmful(true, "Edsger Dijkstra")
 
-        val result = coreSync.insertOneAndSync(doc1)
+        val result = coreSync.insertOne(doc1)
 
         val actualDoc1 = coreSync.find(Document(mapOf("consideredHarmful" to true)), BsonDocument::class.java).first()
 
         assertEquals(actualDoc1!!["_id"], result.insertedId)
 
-        verify(syncOperations, times(1)).insertOneAndSync(
+        verify(syncOperations, times(1)).insertOne(
             eq(doc1))
 
-        verify(ctx.dataSynchronizer, times(1)).insertOneAndSync(
+        verify(ctx.dataSynchronizer, times(1)).insertOne(
             eq(ctx.namespace), eq(actualDoc1))
     }
 
     @Test
-    fun testInsertManyAndSync() {
+    fun testInsertMany() {
         val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         val doc1 = BsonDocument("a", BsonString("b"))
         val doc2 = BsonDocument("c", BsonString("d"))
 
-        val result = coreSync.insertManyAndSync(listOf(doc1, doc2))
+        val result = coreSync.insertMany(listOf(doc1, doc2))
 
         assertEquals(doc1["_id"], result.insertedIds[0])
         assertEquals(doc2["_id"], result.insertedIds[1])
 
         try {
-            coreSync.insertManyAndSync(listOf(doc1, doc2))
+            coreSync.insertMany(listOf(doc1, doc2))
             fail("should have received duplicate key error index")
         } catch (e: MongoBulkWriteException) {
             assertNotNull(e.writeErrors[0])
             assertTrue(e.writeErrors[0].message.contains("E11000"))
         }
 
-        verify(syncOperations, times(2)).insertManyAndSync(
+        verify(syncOperations, times(2)).insertMany(
             eq(listOf(doc1, doc2)))
 
-        verify(ctx.dataSynchronizer, times(2)).insertManyAndSync(
+        verify(ctx.dataSynchronizer, times(2)).insertMany(
             eq(ctx.namespace), eq(listOf(doc1, doc2)))
     }
 
     @Test
-    fun testInsertManyAndSyncCustomCodec() {
+    fun testInsertManyCustomCodec() {
         val ctx = harness.freshTestContext()
         val (coreSync, syncOperations) = harness.createCoreSyncWithContext(
             ctx, CustomCodecConsideredHarmful::class.java, CustomCodecConsideredHarmfulCodec())
@@ -367,7 +367,7 @@ class CoreSyncUnitTests {
         val doc1 = CustomCodecConsideredHarmful(true, "Edsger Dijkstra")
         val doc2 = CustomCodecConsideredHarmful(false, "Eric A. Meyer")
 
-        val result = coreSync.insertManyAndSync(listOf(doc1, doc2))
+        val result = coreSync.insertMany(listOf(doc1, doc2))
 
         val actualDoc1 = coreSync.find(Document(mapOf("consideredHarmful" to true)), BsonDocument::class.java).first()
         val actualDoc2 = coreSync.find(Document(mapOf("consideredHarmful" to false)), BsonDocument::class.java).first()
@@ -375,10 +375,10 @@ class CoreSyncUnitTests {
         assertEquals(actualDoc1!!["_id"], result.insertedIds[0])
         assertEquals(actualDoc2!!["_id"], result.insertedIds[1])
 
-        verify(syncOperations, times(1)).insertManyAndSync(
+        verify(syncOperations, times(1)).insertMany(
             eq(listOf(doc1, doc2)))
 
-        verify(ctx.dataSynchronizer, times(1)).insertManyAndSync(
+        verify(ctx.dataSynchronizer, times(1)).insertMany(
             eq(ctx.namespace), eq(listOf(actualDoc1, actualDoc2)))
     }
 
@@ -416,7 +416,7 @@ class CoreSyncUnitTests {
         var deleteResult = coreSync.deleteMany(BsonDocument())
         assertEquals(0, deleteResult.deletedCount)
 
-        val result = coreSync.insertManyAndSync(listOf(doc1, doc2, doc3))
+        val result = coreSync.insertMany(listOf(doc1, doc2, doc3))
 
         assertEquals(3, coreSync.count())
         deleteResult = coreSync.deleteMany(BsonDocument("_id", BsonDocument("\$in", BsonArray(result.insertedIds.map {

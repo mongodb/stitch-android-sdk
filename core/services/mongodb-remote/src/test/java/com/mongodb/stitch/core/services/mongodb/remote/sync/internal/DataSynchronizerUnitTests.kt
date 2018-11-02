@@ -784,7 +784,7 @@ class DataSynchronizerUnitTests {
         val doc1 = BsonDocument("hello", BsonString("world"))
         val doc2 = BsonDocument("goodbye", BsonString("computer"))
 
-        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+        ctx.dataSynchronizer.insertMany(ctx.namespace, listOf(doc1, doc2))
 
         assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
 
@@ -808,7 +808,7 @@ class DataSynchronizerUnitTests {
         val doc1 = BsonDocument("hello", BsonString("world")).append("a", BsonString("b"))
         val doc2 = BsonDocument("hello", BsonString("computer")).append("a", BsonString("b"))
 
-        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+        ctx.dataSynchronizer.insertMany(ctx.namespace, listOf(doc1, doc2))
 
         val iterable = ctx.dataSynchronizer.aggregate(ctx.namespace,
                 listOf(
@@ -833,7 +833,7 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testInsertOneAndSync() {
+    fun testInsertOne() {
         val ctx = harness.freshTestContext()
 
         ctx.insertTestDocument()
@@ -851,7 +851,7 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testInsertManyAndSync() {
+    fun testInsertMany() {
         val ctx = harness.freshTestContext()
 
         ctx.reconfigure()
@@ -859,7 +859,7 @@ class DataSynchronizerUnitTests {
         val doc1 = BsonDocument("hello", BsonString("world"))
         val doc2 = BsonDocument("goodbye", BsonString("computer"))
 
-        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+        ctx.dataSynchronizer.insertMany(ctx.namespace, listOf(doc1, doc2))
 
         val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
         val expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
@@ -996,7 +996,7 @@ class DataSynchronizerUnitTests {
         val doc2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
         val doc3 = BsonDocument("name", BsonString("timothy")).append("count", BsonInt32(1))
 
-        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2, doc3))
+        ctx.dataSynchronizer.insertMany(ctx.namespace, listOf(doc1, doc2, doc3))
 
         val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
         val expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
@@ -1116,7 +1116,7 @@ class DataSynchronizerUnitTests {
 
         val doc2 = BsonDocument("name", BsonString("philip")).append("count", BsonInt32(1))
 
-        ctx.dataSynchronizer.insertOneAndSync(ctx.namespace, doc2)
+        ctx.dataSynchronizer.insertOne(ctx.namespace, doc2)
 
         result = ctx.dataSynchronizer.updateMany(
             ctx.namespace,
@@ -1205,7 +1205,7 @@ class DataSynchronizerUnitTests {
         val doc1 = BsonDocument("hello", BsonString("world"))
         val doc2 = BsonDocument("goodbye", BsonString("computer"))
 
-        ctx.dataSynchronizer.insertManyAndSync(ctx.namespace, listOf(doc1, doc2))
+        ctx.dataSynchronizer.insertMany(ctx.namespace, listOf(doc1, doc2))
 
         assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
 

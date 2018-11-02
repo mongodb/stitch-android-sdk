@@ -37,7 +37,9 @@ import org.bson.codecs.DocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
 import org.junit.Assert
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
@@ -396,7 +398,7 @@ class SyncUnitTestHarness : Closeable {
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            dataSynchronizer.insertOneAndSync(namespace, testDocument)
+            dataSynchronizer.insertOne(namespace, testDocument)
         }
 
         override fun updateTestDocument(): UpdateResult {
@@ -513,10 +515,21 @@ class SyncUnitTestHarness : Closeable {
                 changeEventArgumentCaptor.capture() as ChangeEvent<BsonDocument>?)
 
             if (expectedChangeEvents.isNotEmpty()) {
-                changeEventArgumentCaptor.allValues.forEachIndexed { i, actualChangeEvent ->
-                    compareEvents(
-                        expectedChangeEvents[i],
-                        actualChangeEvent as ChangeEvent<BsonDocument>)
+                assertEquals(times, expectedChangeEvents.size)
+                val capturedEvents = mutableMapOf<BsonValue, MutableList<ChangeEvent<BsonDocument>>>()
+                changeEventArgumentCaptor.allValues.forEach { actualChangeEvent ->
+                    val capturedId = actualChangeEvent.documentKey["_id"] as BsonValue
+                    if (!capturedEvents.containsKey(capturedId)) {
+                        capturedEvents[capturedId] = mutableListOf()
+                    }
+                    capturedEvents[capturedId]!!.add(actualChangeEvent as ChangeEvent<BsonDocument>)
+                }
+                expectedChangeEvents.forEach {
+                    val capturedEventsForId = capturedEvents[it.documentKey["_id"] as BsonValue]
+                    if (capturedEventsForId == null || capturedEventsForId.size == 0) {
+                        fail("expected to capture event for " + it.documentKey["_id"].toString())
+                    }
+                    compareEvents(it, capturedEventsForId!!.removeAt(0))
                 }
             }
         }

@@ -199,8 +199,8 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  public Set<BsonValue> getSynchronizedDocumentIds() {
-    nsLock.readLock().lock();
+  public Set<BsonValue> getSynchronizedDocumentIds() throws InterruptedException {
+    nsLock.readLock().lockInterruptibly();
     try {
       return new HashSet<>(syncedDocuments.keySet());
     } finally {
@@ -297,8 +297,8 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  void setStale(final boolean stale) {
-    nsLock.writeLock().lock();
+  void setStale(final boolean stale) throws InterruptedException {
+    nsLock.writeLock().lockInterruptibly();
     try {
       docsColl.updateMany(
           getNsFilter(getNamespace()),
@@ -337,6 +337,10 @@ class NamespaceSynchronizationConfig
     } finally {
       nsLock.readLock().unlock();
     }
+  }
+
+  ReadWriteLock getLock() {
+    return nsLock;
   }
 
   static NamespaceSynchronizationConfig fromBsonDocument(final BsonDocument document) {

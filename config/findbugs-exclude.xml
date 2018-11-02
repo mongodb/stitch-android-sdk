@@ -9,4 +9,8 @@
     <Match>
         <Source name="~.*\.kt"/>
     </Match>
+    <Match>
+        <Class name="com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer" />
+        <Bug pattern="SC_START_IN_CTOR" />
+    </Match>
 </FindBugsFilter>
