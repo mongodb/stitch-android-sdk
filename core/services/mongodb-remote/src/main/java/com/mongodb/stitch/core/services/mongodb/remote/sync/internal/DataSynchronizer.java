@@ -73,6 +73,7 @@ import javax.annotation.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
+import org.bson.BsonInt32;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.Codec;
@@ -1200,7 +1201,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             nextVersion = null;
           }
 
-
           logger.info(String.format(
               Locale.US,
               "t='%d': syncLocalToRemote ns=%s documentId=%s conflict=%s",
@@ -1212,8 +1212,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           if (!isConflicted) {
             // iv. If no conflict has occurred, move on to the remote to local sync routine.
 
-            // TODO(STITCH-1972): This event may contain old version info. We should be filtering
-            // out the version anyway from local and remote events.
+            // since we strip version information from documents before setting pending writes, we
+            // don't have to worry about a stale document version in the event here.
             final ChangeEvent<BsonDocument> committedEvent =
                 docConfig.getLastUncommittedChangeEvent();
             emitEvent(docConfig.getDocumentId(), new ChangeEvent<>(
@@ -1773,7 +1773,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param document  the document to insert.
    */
   void insertOne(final MongoNamespace namespace, final BsonDocument document) {
-    final Lock lock =
+    // Remove forbidden fields from the document before inserting it into the local collection.
+  sanitizeDocument(document);
+  final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
     final ChangeEvent<BsonDocument> event;
@@ -1790,6 +1792,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } finally {
       lock.unlock();
     }
+
     triggerListeningToNamespace(namespace);
     emitEvent(documentId, event);
   }
@@ -1801,6 +1804,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   void insertMany(final MongoNamespace namespace,
                          final List<BsonDocument> documents) {
+    // Remove forbidden fields from the documents before inserting them into the local collection.
+    for (final BsonDocument document : documents) {
+      sanitizeDocument(document);
+    }
+
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1900,6 +1908,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       final CoreDocumentSynchronizationConfig config;
       documentId = BsonUtils.getDocumentId(documentAfterUpdate);
+
+      // Ensure that the update didn't add any forbidden fields to the document, and remove them if
+      // it did.
+      sanitizeCachedDocument(localCollection, documentAfterUpdate, documentId);
 
       // if there was no document prior and this was an upsert,
       // treat this as an insert.
@@ -2013,6 +2025,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               return;
             }
 
+            // Ensure that the update didn't add any forbidden fields to the document, and remove them
+            // if it did.
+            sanitizeCachedDocument(localCollection, afterDocument, documentId);
+
             // because we are looking up a bulk write, we may have queried documents
             // that match the updated state, but were not actually modified.
             // if the document before the update is the same as the updated doc,
@@ -2090,6 +2106,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (documentBeforeUpdate != null) {
         undoCollection.insertOne(documentBeforeUpdate);
       }
+
+      // Remove forbidden fields from the resolved document before it will updated/upserted in the
+      // local collection.
+      sanitizeDocument(document);
+
       final BsonDocument documentAfterUpdate = localCollection
           .findOneAndReplace(
               getDocumentIdFilter(documentId),
@@ -2102,7 +2123,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         event = changeEventForLocalUpdate(
             namespace,
             documentId,
-            ChangeEvent.UpdateDescription.diff(remoteEvent.getFullDocument(), documentAfterUpdate),
+            ChangeEvent.UpdateDescription.diff(
+                    withoutForbiddenFields(remoteEvent.getFullDocument()),
+                    documentAfterUpdate),
             document,
             true);
       }
@@ -2125,12 +2148,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *
    * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
-   * @param document   the replacement document.
+   * @param remoteDocument   the replacement document.
    */
   private void replaceOrUpsertOneFromRemote(
       final MongoNamespace namespace,
       final BsonValue documentId,
-      final BsonDocument document,
+      final BsonDocument remoteDocument,
       final BsonDocument atVersion
   ) {
     final ChangeEvent<BsonDocument> event;
@@ -2151,17 +2174,24 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (documentBeforeUpdate != null) {
         undoCollection.insertOne(documentBeforeUpdate);
       }
+
+      // Since we are accepting the remote document as the resolution to the conflict, it may contain
+      // version information. Clone the document and remove forbidden fields from it before storing
+      // it in the collection.
+      final BsonDocument docForStorage = remoteDocument.clone();
+      sanitizeDocument(docForStorage);
+
       localCollection
           .findOneAndReplace(
               getDocumentIdFilter(documentId),
-              document,
+              docForStorage,
               new FindOneAndReplaceOptions().upsert(true));
       config.setPendingWritesComplete(atVersion);
       if (documentBeforeUpdate != null) {
         undoCollection.deleteOne(getDocumentIdFilter(documentId));
       }
 
-      event = changeEventForLocalReplace(namespace, documentId, document, false);
+      event = changeEventForLocalReplace(namespace, documentId, docForStorage, false);
     } finally {
       lock.unlock();
     }
@@ -2562,6 +2592,66 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   private static BsonDocument getDocumentIdFilter(final BsonValue documentId) {
     return new BsonDocument("_id", documentId);
+  }
+
+  /**
+   * Returns a clone of the given document, but without forbidden fields (currently just the
+   * document version field).
+   *
+   * @param document The document from which to create a clone without forbidden fields.
+   * @return a clone of the given document without forbidden fields
+   */
+  static BsonDocument withoutForbiddenFields(final BsonDocument document) {
+    if (document == null) return null;
+
+    final BsonDocument filteredDoc = document.clone();
+    filteredDoc.remove(DOCUMENT_VERSION_FIELD);
+    return filteredDoc;
+  }
+
+  // (TODO) NOTE FOR REVIEWER: the reason I chose to make these functions mutate their args rather
+  // than return a result is because I wanted to avoid the performance hit of cloning a document,
+  // and we are going to be running these functions on a relatively large number of documents
+
+  /**
+   * Given a local collection, a document fetched from that collection, and its _id, ensure that
+   * the document does not contain forbidden fields (currently just the document version field),
+   * and remove them from the document and the local collection. NOTE: The document argument
+   * may be mutated to remove forbidden fields.
+   *
+   * @param localCollection the local MongoCollection<BsonDocument> from which the document was
+   *                        fetched
+   * @param document the document fetched from the local collection. this argument may be mutated
+   * @param documentId the _id of the fetched document (taken as an arg so that if the caller
+   *                   already knows the _id, the document need not be traversed to find it)
+   */
+  private static void sanitizeCachedDocument(
+          final MongoCollection<BsonDocument> localCollection,
+          final BsonDocument document,
+          final BsonValue documentId
+  ) {
+    if (document == null) return;
+    if (document.containsKey(DOCUMENT_VERSION_FIELD)) {
+      document.remove(DOCUMENT_VERSION_FIELD);
+
+      final BsonDocument removeVersionUpdate =
+              new BsonDocument("$unset",
+                      new BsonDocument(DOCUMENT_VERSION_FIELD, new BsonInt32(1))
+              );
+
+      localCollection.findOneAndUpdate(getDocumentIdFilter(documentId), removeVersionUpdate);
+    }
+  }
+
+  /**
+   * Given a BSON document, remove any forbidden fields. NOTE: the document argument may be
+   * mutated to remove the forbidden fields.
+   *
+   * @param document the document from which to remove forbidden fields
+   */
+  private static void sanitizeDocument(final BsonDocument document) {
+    if (document == null) return;
+    document.remove(DOCUMENT_VERSION_FIELD);
   }
 
   /**
