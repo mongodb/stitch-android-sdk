@@ -1301,9 +1301,6 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents(1)
         val captor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock).insertOne(captor.capture())
-        val versionDoc =
-            DocumentVersionInfo.fromVersionDoc(captor.value["__stitch_sync_version"]!!.asDocument())
-        println(versionDoc)
 
         // verify that a conflict has been handled
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 1)
@@ -1427,7 +1424,7 @@ class DataSynchronizerUnitTests {
         ctx.insertTestDocument()
         ctx.doSyncPass()
         // update the doc locally and queue a fake update remotely.
-        // neither of these will have versions.
+        // local and remote will have equal versions
         ctx.updateTestDocument()
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
@@ -1455,7 +1452,7 @@ class DataSynchronizerUnitTests {
         ctx.insertTestDocument()
         ctx.doSyncPass()
         // update the doc locally and queue a fake update remotely.
-        // neither of these will have versions.
+        // the local version will be higher than the remote version
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
@@ -1494,7 +1491,7 @@ class DataSynchronizerUnitTests {
         ctx.insertTestDocument()
         ctx.doSyncPass()
         // update the doc locally and queue a fake update remotely.
-        // neither of these will have versions.
+        // the remote doc will have a higher version than the local
         ctx.updateTestDocument()
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
@@ -1551,7 +1548,7 @@ class DataSynchronizerUnitTests {
         ctx.insertTestDocument()
         ctx.doSyncPass()
         // update the doc locally and queue a fake update remotely.
-        // neither of these will have versions.
+        // these docs will contain different GUIDs for their versions
         ctx.updateTestDocument()
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
@@ -1562,6 +1559,10 @@ class DataSynchronizerUnitTests {
 
         ctx.shouldConflictBeResolvedByRemote = true
 
+        // The remote event is stale (but has a document with a new version GUID),
+        // but the remote collection itself no longer has the document,
+        // so the conflict is using the latest remote document
+        // which doesn't exist to resolve the conflict
         val findMock = mock(CoreRemoteFindIterableImpl::class.java)
         `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
         `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)

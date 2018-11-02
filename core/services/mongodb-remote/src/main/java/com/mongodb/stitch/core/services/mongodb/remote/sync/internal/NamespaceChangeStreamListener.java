@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
+import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.common.OperationResult;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
@@ -226,7 +227,7 @@ public class NamespaceChangeStreamListener {
             nsConfig.getNamespace(), event.getData().getOperationType(), event.getData().getId()));
         nsLock.writeLock().lockInterruptibly();
         try {
-          events.put(event.getData().getDocumentKey().get("_id"), event.getData());
+          events.put(BsonUtils.getDocumentId(event.getData().getDocumentKey()), event.getData());
         } finally {
           nsLock.writeLock().unlock();
         }

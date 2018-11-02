@@ -434,7 +434,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
         // i. Find the corresponding local document config.
         final CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(eventEntry.getValue().getDocumentKey().get("_id"));
+            nsConfig.getSynchronizedDocument(BsonUtils.getDocumentId(eventEntry.getValue().getDocumentKey()));
 
         if (docConfig == null || docConfig.isPaused()) {
           // Not interested in this event.

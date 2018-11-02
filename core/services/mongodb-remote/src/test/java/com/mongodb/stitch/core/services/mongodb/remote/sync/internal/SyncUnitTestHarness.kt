@@ -48,6 +48,7 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import java.io.Closeable
 import java.lang.Exception
+import java.lang.IllegalStateException
 import java.util.Collections
 import java.util.Random
 import java.util.concurrent.Semaphore
@@ -450,9 +451,13 @@ class SyncUnitTestHarness : Closeable {
                 when (versionState) {
                     TestVersionState.NONE ->
                         fakeUpdateDoc.remove("__stitch_sync_version")
-                    TestVersionState.PREVIOUS ->
+                    TestVersionState.PREVIOUS -> {
+                        if (documentVersionInfo.version.versionCounter <= 0) {
+                            throw IllegalStateException("Version cannot be less than zero")
+                        }
                         fakeUpdateDoc["__stitch_sync_version"] =
                             documentVersionInfo.versionDoc?.append("v", BsonInt64(documentVersionInfo.version.versionCounter - 1))
+                    }
                     TestVersionState.SAME ->
                         fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.versionDoc
                     TestVersionState.NEXT ->
