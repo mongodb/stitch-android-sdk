@@ -269,7 +269,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   public <T> void configure(@Nonnull final MongoNamespace namespace,
-                            final ConflictHandler<T> conflictHandler,
+                            @Nullable final ConflictHandler<T> conflictHandler,
                             @Nullable final ChangeEventListener<T> changeEventListener,
                             @Nullable final ErrorListener errorListener,
                             @Nonnull final Codec<T> codec) {
@@ -1777,9 +1777,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
     final ChangeEvent<BsonDocument> event;
+    final BsonValue documentId;
     try {
       getLocalCollection(namespace).insertOne(document);
-      final BsonValue documentId = BsonUtils.getDocumentId(document);
+      documentId = BsonUtils.getDocumentId(document);
       event = changeEventForLocalInsert(namespace, document, true);
       final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
           namespace,
@@ -1790,7 +1791,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       lock.unlock();
     }
     triggerListeningToNamespace(namespace);
-    emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
+    emitEvent(documentId, event);
   }
 
   /**
@@ -1861,9 +1862,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     try {
       // read the local collection
       final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
 
       // fetch the document prior to updating
-      final BsonDocument documentBeforeUpdate = getLocalCollection(namespace).find(filter).first();
+      final BsonDocument documentBeforeUpdate = localCollection.find(filter).first();
 
       // if there was no document prior and this is not an upsert,
       // do not acknowledge the update
@@ -1872,7 +1874,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       if (documentBeforeUpdate != null) {
-        getUndoCollection(namespace).insertOne(documentBeforeUpdate);
+        undoCollection.insertOne(documentBeforeUpdate);
       }
 
       // find and update the single document, returning the document post-update
@@ -1890,7 +1892,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       // been updated. do not acknowledge the update
       if (documentAfterUpdate == null) {
         if (documentBeforeUpdate != null) {
-          getUndoCollection(namespace)
+          undoCollection
               .deleteOne(getDocumentIdFilter(BsonUtils.getDocumentId(documentBeforeUpdate)));
         }
         return UpdateResult.acknowledged(0, 0L, null);
@@ -1920,7 +1922,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       config.setSomePendingWrites(logicalT, event);
 
       if (documentBeforeUpdate != null) {
-        getUndoCollection(namespace)
+        undoCollection
             .deleteOne(getDocumentIdFilter(BsonUtils.getDocumentId(documentBeforeUpdate)));
       }
     } finally {
@@ -1970,13 +1972,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       // fetch all of the documents that this filter will match
       final Map<BsonValue, BsonDocument> idToBeforeDocumentMap = new HashMap<>();
       final BsonArray ids = new BsonArray();
-      this.getLocalCollection(namespace)
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      localCollection
           .find(filter)
           .forEach((Block<BsonDocument>) bsonDocument -> {
             final BsonValue documentId = BsonUtils.getDocumentId(bsonDocument);
             ids.add(documentId);
             idToBeforeDocumentMap.put(documentId, bsonDocument);
-            getUndoCollection(namespace).insertOne(bsonDocument);
+            undoCollection.insertOne(bsonDocument);
           });
 
       // use the matched ids from prior to create a new filter.
@@ -1986,8 +1990,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           ? filter : new BsonDocument("_id", new BsonDocument("$in", ids));
 
       // do the bulk write
-      result = this.getLocalCollection(namespace)
-          .updateMany(updatedFilter, update, updateOptions);
+      result = localCollection.updateMany(updatedFilter, update, updateOptions);
 
       // if this was an upsert, create the post-update filter using
       // the upserted id.
@@ -1996,7 +1999,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       // iterate over the after-update docs using the updated filter
-      this.getLocalCollection(namespace).find(updatedFilter).forEach(
+      localCollection.find(updatedFilter).forEach(
           (Block<BsonDocument>) afterDocument -> {
             // get the id of the after-update document, and fetch the before-update
             // document from the map we created from our pre-update `find`
@@ -2015,7 +2018,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             // if the document before the update is the same as the updated doc,
             // assume it was not modified and take no further action
             if (afterDocument.equals(beforeDocument)) {
-              getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+              undoCollection.deleteOne(getDocumentIdFilter(documentId));
               return;
             }
 
@@ -2039,7 +2042,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             }
 
             config.setSomePendingWrites(logicalT, event);
-            getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+            undoCollection.deleteOne(getDocumentIdFilter(documentId));
             eventsToEmit.add(event);
           });
     } finally {
@@ -2080,12 +2083,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return;
       }
 
-      final BsonDocument documentBeforeUpdate = getLocalCollection(namespace)
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentBeforeUpdate = localCollection
           .find(getDocumentIdFilter(documentId)).first();
       if (documentBeforeUpdate != null) {
-        getUndoCollection(namespace).insertOne(documentBeforeUpdate);
+        undoCollection.insertOne(documentBeforeUpdate);
       }
-      final BsonDocument documentAfterUpdate = getLocalCollection(namespace)
+      final BsonDocument documentAfterUpdate = localCollection
           .findOneAndReplace(
               getDocumentIdFilter(documentId),
               document,
@@ -2106,7 +2111,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           atVersion,
           event);
       if (documentBeforeUpdate != null) {
-        getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+        undoCollection.deleteOne(getDocumentIdFilter(documentId));
       }
     } finally {
       lock.unlock();
@@ -2139,19 +2144,21 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return;
       }
 
-      final BsonDocument documentBeforeUpdate = getLocalCollection(namespace)
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentBeforeUpdate = localCollection
           .find(getDocumentIdFilter(documentId)).first();
       if (documentBeforeUpdate != null) {
-        getUndoCollection(namespace).insertOne(documentBeforeUpdate);
+        undoCollection.insertOne(documentBeforeUpdate);
       }
-      getLocalCollection(namespace)
+      localCollection
           .findOneAndReplace(
               getDocumentIdFilter(documentId),
               document,
               new FindOneAndReplaceOptions().upsert(true));
       config.setPendingWritesComplete(atVersion);
       if (documentBeforeUpdate != null) {
-        getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+        undoCollection.deleteOne(getDocumentIdFilter(documentId));
       }
 
       event = changeEventForLocalReplace(namespace, documentId, document, false);
@@ -2193,9 +2200,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return DeleteResult.acknowledged(0);
       }
 
-      getUndoCollection(namespace).insertOne(docToDelete);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      undoCollection.insertOne(docToDelete);
 
-      result = getLocalCollection(namespace).deleteOne(filter);
+      result = localCollection.deleteOne(filter);
       event = changeEventForLocalDelete(namespace, documentId, true);
 
       // this block is to trigger coalescence for a delete after insert
@@ -2203,12 +2211,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           && config.getLastUncommittedChangeEvent().getOperationType()
           == ChangeEvent.OperationType.INSERT) {
         desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
-        getUndoCollection(namespace).deleteOne(getDocumentIdFilter(config.getDocumentId()));
+        undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
         return result;
       }
 
       config.setSomePendingWrites(logicalT, event);
-      getUndoCollection(namespace).deleteOne(getDocumentIdFilter(config.getDocumentId()));
+      undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
     } finally {
       lock.unlock();
     }
@@ -2232,6 +2240,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     lock.lock();
     try {
       final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
       final Set<BsonValue> idsToDelete =
           localCollection
               .find(filter)
@@ -2239,12 +2248,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 @Override
                 @NonNull
                 public BsonValue apply(@NonNull final BsonDocument bsonDocument) {
-                  getUndoCollection(namespace).insertOne(bsonDocument);
+                  undoCollection.insertOne(bsonDocument);
                   return BsonUtils.getDocumentId(bsonDocument);
                 }
               }).into(new HashSet<>());
 
-      result = getLocalCollection(namespace).deleteMany(filter);
+      result = localCollection.deleteMany(filter);
 
       for (final BsonValue documentId : idsToDelete) {
         final CoreDocumentSynchronizationConfig config =
@@ -2262,13 +2271,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             && config.getLastUncommittedChangeEvent().getOperationType()
             == ChangeEvent.OperationType.INSERT) {
           desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
-          getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+          undoCollection.deleteOne(getDocumentIdFilter(documentId));
           return result;
         }
 
         config.setSomePendingWrites(
             logicalT, event);
-        getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+        undoCollection.deleteOne(getDocumentIdFilter(documentId));
         eventsToEmit.add(event);
       }
     } finally {
@@ -2303,18 +2312,20 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return;
       }
 
-      final BsonDocument documentToDelete = getLocalCollection(namespace)
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentToDelete = localCollection
           .find(getDocumentIdFilter(documentId)).first();
       if (documentToDelete != null) {
-        getUndoCollection(namespace).insertOne(documentToDelete);
+        undoCollection.insertOne(documentToDelete);
       }
-      getLocalCollection(namespace)
+      localCollection
           .deleteOne(getDocumentIdFilter(documentId));
       event = changeEventForLocalDelete(namespace, documentId, true);
       config.setSomePendingWrites(
           logicalT, atVersion, event);
       if (documentToDelete != null) {
-        getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentToDelete));
+        undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
       }
     } finally {
       lock.unlock();
@@ -2342,16 +2353,18 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (config == null) {
         return;
       }
-      final BsonDocument documentToDelete = getLocalCollection(namespace)
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+      final BsonDocument documentToDelete = localCollection
           .find(getDocumentIdFilter(documentId)).first();
       if (documentToDelete == null) {
         desyncDocumentFromRemote(namespace, documentId);
         return;
       }
-      getUndoCollection(namespace).insertOne(documentToDelete);
-      getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+      undoCollection.insertOne(documentToDelete);
+      localCollection.deleteOne(getDocumentIdFilter(documentId));
       desyncDocumentFromRemote(namespace, documentId);
-      getUndoCollection(namespace).deleteOne(getDocumentIdFilter(documentToDelete));
+      undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
     } finally {
       lock.unlock();
     }
