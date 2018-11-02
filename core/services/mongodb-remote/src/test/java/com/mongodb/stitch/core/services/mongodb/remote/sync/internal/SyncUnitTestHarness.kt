@@ -26,6 +26,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonInt64
 import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.BsonValue
@@ -47,6 +48,7 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import java.io.Closeable
 import java.lang.Exception
+import java.lang.IllegalStateException
 import java.util.Collections
 import java.util.Random
 import java.util.concurrent.Semaphore
@@ -431,13 +433,42 @@ class SyncUnitTestHarness : Closeable {
                 mapOf())
         }
 
+        fun getVersionForTestDocument(): BsonDocument? {
+            return dataSynchronizer.getSynchronizedDocuments(namespace)
+                .find { it.documentId == testDocumentId }?.lastKnownRemoteVersion
+        }
+
         override fun queueConsumableRemoteUpdateEvent(
             id: BsonValue,
-            document: BsonDocument
+            document: BsonDocument,
+            versionState: TestVersionState
         ) {
+            val fakeUpdateDoc = document.clone()
+            val cachedVersion = fakeUpdateDoc["__stitch_sync_version"] ?: getVersionForTestDocument()
+
+            if (cachedVersion != null) {
+                val documentVersionInfo = DocumentVersionInfo.fromVersionDoc(cachedVersion.asDocument())
+                when (versionState) {
+                    TestVersionState.NONE ->
+                        fakeUpdateDoc.remove("__stitch_sync_version")
+                    TestVersionState.PREVIOUS -> {
+                        if (documentVersionInfo.version.versionCounter <= 0) {
+                            throw IllegalStateException("Version cannot be less than zero")
+                        }
+                        fakeUpdateDoc["__stitch_sync_version"] =
+                            documentVersionInfo.versionDoc?.append("v", BsonInt64(documentVersionInfo.version.versionCounter - 1))
+                    }
+                    TestVersionState.SAME ->
+                        fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.versionDoc
+                    TestVersionState.NEXT ->
+                        fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.nextVersion
+                    TestVersionState.NEW ->
+                        fakeUpdateDoc["__stitch_sync_version"] = DocumentVersionInfo.getFreshVersionDocument()
+                }
+            }
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
                 mapOf(document to ChangeEvent.changeEventForLocalUpdate(
-                    namespace, id, null, document, false)),
+                    namespace, id, null, fakeUpdateDoc, false)),
                 mapOf())
         }
 

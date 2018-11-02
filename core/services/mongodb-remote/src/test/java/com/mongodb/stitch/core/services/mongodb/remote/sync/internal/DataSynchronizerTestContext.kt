@@ -15,6 +15,12 @@ import java.io.Closeable
 import java.lang.Exception
 
 /**
+ * Set fake version state to be included on updates.
+ */
+enum class TestVersionState {
+    NONE, PREVIOUS, SAME, NEXT, NEW
+}
+/**
  * Testing context to test a data synchronizer.
  *
  * Should be served fresh only by the [SyncUnitTestHarness].
@@ -136,7 +142,8 @@ interface DataSynchronizerTestContext : Closeable {
      */
     fun queueConsumableRemoteUpdateEvent(
         id: BsonValue = testDocumentId,
-        document: BsonDocument = testDocument
+        document: BsonDocument = testDocument,
+        versionState: TestVersionState = TestVersionState.NEXT
     )
 
     /**

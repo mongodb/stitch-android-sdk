@@ -434,7 +434,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
         // i. Find the corresponding local document config.
         final CoreDocumentSynchronizationConfig docConfig =
-            nsConfig.getSynchronizedDocument(eventEntry.getKey().asDocument().get("_id"));
+            nsConfig.getSynchronizedDocument(
+                BsonUtils.getDocumentId(eventEntry.getValue().getDocumentKey()));
 
         if (docConfig == null || docConfig.isPaused()) {
           // Not interested in this event.
@@ -667,7 +668,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (!lastKnownLocalVersionInfo.hasVersion() || !currentRemoteVersionInfo.hasVersion()) {
       logger.info(String.format(
               Locale.US,
-              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
+              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote or local have an "
                       + "empty version but a write is pending; waiting for next L2R pass",
               logicalT,
               nsConfig.getNamespace(),
@@ -682,7 +683,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (localVersion.instanceId.equals(remoteVersion.instanceId)) {
       // a. If the GUIDs are the same, compare the version counter of the remote change event with
       //    the version counter of the local document
-      if (localVersion.versionCounter <= remoteVersion.versionCounter) {
+      if (remoteVersion.versionCounter <= localVersion.versionCounter) {
         // i. drop the event if the version counter of the remote event less than or equal to the
         // version counter of the local document
         logger.info(String.format(
@@ -1177,7 +1178,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     docConfig.getDocumentId(),
                     remoteDocument);
           }
-
           resolveConflict(
                   nsConfig.getNamespace(),
                   docConfig,
