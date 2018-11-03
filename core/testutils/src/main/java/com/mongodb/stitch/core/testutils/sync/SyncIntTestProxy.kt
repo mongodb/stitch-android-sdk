@@ -22,6 +22,7 @@ import org.bson.Document
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -1534,6 +1535,121 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertEquals(0, coll.find(Document()).toList().size)
     }
 
+    @Test
+    fun testSyncVersionFieldNotEditable() {
+        testSyncInBothDirections {
+            val coll = syncTestRunner.syncMethods()
+            val remoteColl = syncTestRunner.remoteMethods()
+
+            // configure Sync to fail this test if there is a conflict.
+
+            // 0. insert with bad version
+            // insert and sync a new document locally with a bad version field, and make sure it
+            // doesn't exist after the insert
+            val badVersionDoc = Document("bad", "version")
+            val docToInsert = Document("hello", "world")
+                    .append("__stitch_sync_version", badVersionDoc)
+            coll.configure(failingConflictHandler, null, null)
+            val insertResult = coll.insertOne(docToInsert)
+            val localDocBeforeSync0 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            assertNoVersionFieldsInDoc(localDocBeforeSync0)
+
+            streamAndSync()
+
+            // assert the sync'd document is found locally and remotely, and that the version
+            // doesn't exist locally, and isn't the bad version doc remotely
+            val localDocAfterSync0 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            val docId = BsonObjectId(localDocAfterSync0.getObjectId("_id"))
+            val docFilter = Document("_id", docId)
+
+            val remoteDoc0 = remoteColl.find(docFilter).first()!!
+            val remoteVersion0 = versionOf(remoteDoc0)
+
+            val expectedDocument0 = Document(localDocAfterSync0)
+            assertEquals(expectedDocument0, withoutSyncVersion(remoteDoc0))
+            assertEquals(expectedDocument0, localDocAfterSync0)
+            assertNotEquals(badVersionDoc, remoteVersion0)
+            assertEquals(0, versionCounterOf(remoteDoc0))
+
+            // 1. $set bad version counter
+
+            // update the document, setting the version counter to 10, and a future version that
+            // we'll try to maliciously set but verify that before and after syncing, there is no
+            // version on the local doc, and that the version on the remote doc after syncing is
+            // correctly incremented by only one.
+            coll.updateOne(
+                    docFilter,
+                    Document("\$set",
+                            Document()
+                                    .append("__stitch_sync_version.v", 10)
+                                    .append("futureVersion", badVersionDoc)))
+
+            val localDocBeforeSync1 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            assertNoVersionFieldsInDoc(localDocBeforeSync1)
+            streamAndSync()
+
+            val localDocAfterSync1 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            val remoteDoc1 = remoteColl.find(docFilter).first()!!
+            val expectedDocument1 = Document(localDocAfterSync1)
+            assertEquals(expectedDocument1, withoutSyncVersion(remoteDoc1))
+            assertEquals(expectedDocument1, localDocAfterSync1)
+
+            // verify the version only got incremented once
+            assertEquals(1, versionCounterOf(remoteDoc1))
+
+            // 2. $rename bad version doc
+
+            // update the document, renaming our bad "futureVersion" field to
+            // "__stitch_sync_version", and assert that there is no version on the local doc, and
+            // that the version on the remote doc after syncing is correctly not incremented
+            coll.updateOne(
+                    docFilter,
+                    Document("\$rename", Document("futureVersion", "__stitch_sync_version")))
+
+            val localDocBeforeSync2 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            assertNoVersionFieldsInDoc(localDocBeforeSync2)
+            streamAndSync()
+
+            val localDocAfterSync2 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            val remoteDoc2 = remoteColl.find(docFilter).first()!!
+
+            // the expected doc is the doc without the futureVersion field (localDocAfterSync0)
+            assertEquals(localDocAfterSync0, withoutSyncVersion(remoteDoc2))
+            assertEquals(localDocAfterSync0, localDocAfterSync2)
+
+            // verify the version did get incremented
+            assertEquals(2, versionCounterOf(remoteDoc2))
+
+            streamAndSync()
+            val remoteDoc22 = remoteColl.find(docFilter).first()!!
+            assertEquals(2, versionCounterOf(remoteDoc22))
+
+
+            // 3. unset
+
+            // update the document, unsetting "__stitch_sync_version", and assert that there is no
+            // version on the local doc, and that the version on the remote doc after syncing
+            // is correctly not incremented because is basically a noop.
+            coll.updateOne(
+                    docFilter,
+                    Document("\$unset", Document("__stitch_sync_version", 1)))
+
+            val localDocBeforeSync3 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            assertNoVersionFieldsInDoc(localDocBeforeSync3)
+            streamAndSync()
+
+            val localDocAfterSync3 = coll.find(documentIdFilter(insertResult.insertedId)).first()!!
+            val remoteDoc3 = remoteColl.find(docFilter).first()!!
+
+            // the expected doc is the doc without the futureVersion field (localDocAfterSync0)
+            assertEquals(localDocAfterSync0, withoutSyncVersion(remoteDoc3))
+            assertEquals(localDocAfterSync0, localDocAfterSync3)
+
+            // verify the version did not get incremented, because this update was a noop
+            assertEquals(2, versionCounterOf(remoteDoc3))
+        }
+    }
+
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {
         println("watching for $n change event(s) ns=$namespace")
         val waitFor = AtomicInteger(n)
@@ -1655,7 +1771,9 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     private fun documentIdFilter(documentId: BsonValue) =
         BsonDocument("_id", documentId)
 
-    private val failingConflictHandler = ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+    private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: ChangeEvent<Document> ->
+        println("conflict local event: " + event1.fullDocument.toJson())
+        println("conflict remote event: " + event2.fullDocument.toJson())
         Assert.fail("did not expect a conflict")
         throw IllegalStateException("unreachable")
     }

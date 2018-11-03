@@ -493,7 +493,7 @@ class SyncUnitTestHarness : Closeable {
         }
 
         override fun findTestDocumentFromLocalCollection(): BsonDocument? {
-            dataSynchronizer.find(
+            return dataSynchronizer.find(
                 namespace,
                 BsonDocument("_id", testDocumentId),
                 10,

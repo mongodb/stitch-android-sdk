@@ -1083,29 +1083,38 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 //    version with an update containing the replacement document with the version
                 //    counter incremented by 1.
                 final BsonDocument translatedUpdate = new BsonDocument();
+                final BsonDocument sets = new BsonDocument();
+                final BsonDocument unsets = new BsonDocument();
                 if (!localChangeEvent.getUpdateDescription().getUpdatedFields().isEmpty()) {
-                  final BsonDocument sets = new BsonDocument();
                   for (final Map.Entry<String, BsonValue> fieldValue :
                       localChangeEvent.getUpdateDescription().getUpdatedFields().entrySet()) {
                     sets.put(fieldValue.getKey(), fieldValue.getValue());
                   }
-                  sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
-                  translatedUpdate.put("$set", sets);
                 }
                 if (!localChangeEvent.getUpdateDescription().getRemovedFields().isEmpty()) {
-                  final BsonDocument unsets = new BsonDocument();
                   for (final String field :
                       localChangeEvent.getUpdateDescription().getRemovedFields()) {
                     unsets.put(field, BsonBoolean.TRUE);
                   }
                   translatedUpdate.put("$unset", unsets);
                 }
+                if(!sets.isEmpty() || !unsets.isEmpty()) {
+                  // set the document version if any changes were made by this update
+                  sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
+                  translatedUpdate.put("$set", sets);
+                }
 
                 final RemoteUpdateResult result;
                 try {
+                  if (translatedUpdate.isEmpty()) {
+                    // if the translated update is empty, then this update is a noop, and we
+                    // shouldn't update because it would improperly update the version information.
+                    break;
+                  }
                   result = remoteColl.updateOne(
                       localVersionInfo.getFilter(),
-                      translatedUpdate.isEmpty() ? nextDoc : translatedUpdate);
+                      translatedUpdate
+                  );
                 } catch (final StitchServiceException ex) {
                   // b. If an error happens, report an error to the error listener.
                   emitError(
@@ -1774,10 +1783,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   void insertOne(final MongoNamespace namespace, final BsonDocument document) {
     // Remove forbidden fields from the document before inserting it into the local collection.
-  sanitizeDocument(document);
+    sanitizeDocument(document);
 
-  final Lock lock =
-        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
     final ChangeEvent<BsonDocument> event;
     final BsonValue documentId;
@@ -2025,8 +2033,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               return;
             }
 
-            // Ensure that the update didn't add any forbidden fields to the document, and remove them
-            // if it did.
+            // Ensure that the update didn't add any forbidden fields to the document, and remove
+            // them if it did.
             sanitizeCachedDocument(localCollection, afterDocument, documentId);
 
             // because we are looking up a bulk write, we may have queried documents
@@ -2175,9 +2183,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         undoCollection.insertOne(documentBeforeUpdate);
       }
 
-      // Since we are accepting the remote document as the resolution to the conflict, it may contain
-      // version information. Clone the document and remove forbidden fields from it before storing
-      // it in the collection.
+      // Since we are accepting the remote document as the resolution to the conflict, it may
+      // contain version information. Clone the document and remove forbidden fields from it before
+      // storing it in the collection.
       final BsonDocument docForStorage = remoteDocument.clone();
       sanitizeDocument(docForStorage);
 
@@ -2602,7 +2610,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return a clone of the given document without forbidden fields
    */
   static BsonDocument withoutForbiddenFields(final BsonDocument document) {
-    if (document == null) return null;
+    if (document == null) {
+      return null;
+    }
 
     final BsonDocument filteredDoc = document.clone();
     filteredDoc.remove(DOCUMENT_VERSION_FIELD);
@@ -2619,8 +2629,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * and remove them from the document and the local collection. NOTE: The document argument
    * may be mutated to remove forbidden fields.
    *
-   * @param localCollection the local MongoCollection<BsonDocument> from which the document was
-   *                        fetched
+   * @param localCollection the local MongoCollection from which the document was fetched
    * @param document the document fetched from the local collection. this argument may be mutated
    * @param documentId the _id of the fetched document (taken as an arg so that if the caller
    *                   already knows the _id, the document need not be traversed to find it)
@@ -2630,7 +2639,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           final BsonDocument document,
           final BsonValue documentId
   ) {
-    if (document == null) return;
+    if (document == null) {
+      return;
+    }
     if (document.containsKey(DOCUMENT_VERSION_FIELD)) {
       document.remove(DOCUMENT_VERSION_FIELD);
 
@@ -2650,7 +2661,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param document the document from which to remove forbidden fields
    */
   private static void sanitizeDocument(final BsonDocument document) {
-    if (document == null) return;
+    if (document == null) {
+      return;
+    }
     document.remove(DOCUMENT_VERSION_FIELD);
   }
 

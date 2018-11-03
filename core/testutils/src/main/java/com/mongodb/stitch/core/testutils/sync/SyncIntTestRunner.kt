@@ -147,4 +147,7 @@ interface SyncIntTestRunner {
 
     @Test
     fun testDeleteManyNoConflicts()
+
+    @Test
+    fun testSyncVersionFieldNotEditable()
 }
