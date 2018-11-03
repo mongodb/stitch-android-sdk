@@ -1775,6 +1775,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   void insertOne(final MongoNamespace namespace, final BsonDocument document) {
     // Remove forbidden fields from the document before inserting it into the local collection.
   sanitizeDocument(document);
+
   final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1792,7 +1793,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } finally {
       lock.unlock();
     }
-
     triggerListeningToNamespace(namespace);
     emitEvent(documentId, event);
   }
