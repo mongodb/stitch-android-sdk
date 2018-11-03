@@ -1098,7 +1098,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   }
                   translatedUpdate.put("$unset", unsets);
                 }
-                if(!sets.isEmpty() || !unsets.isEmpty()) {
+                if (!sets.isEmpty() || !unsets.isEmpty()) {
                   // set the document version if any changes were made by this update
                   sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
                   translatedUpdate.put("$set", sets);

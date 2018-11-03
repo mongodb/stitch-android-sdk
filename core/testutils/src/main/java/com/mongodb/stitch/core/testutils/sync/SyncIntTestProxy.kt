@@ -1620,11 +1620,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // verify the version did get incremented
             assertEquals(2, versionCounterOf(remoteDoc2))
 
-            streamAndSync()
-            val remoteDoc22 = remoteColl.find(docFilter).first()!!
-            assertEquals(2, versionCounterOf(remoteDoc22))
-
-
             // 3. unset
 
             // update the document, unsetting "__stitch_sync_version", and assert that there is no
