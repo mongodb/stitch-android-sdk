@@ -944,7 +944,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       logicalT,
                       nsConfig.getNamespace(),
                       docConfig.getDocumentId()));
-              return;
+              continue;
             }
 
             // 1. If it does and the version info is different, record that a conflict has occurred.
@@ -1076,41 +1076,56 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   );
                   continue;
                 }
-                nextVersion = localVersionInfo.getNextVersion();
-                final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
+
+                final ChangeEvent.UpdateDescription localUpdateDescription =
+                        localChangeEvent.getUpdateDescription();
+                if (localUpdateDescription.getRemovedFields().isEmpty()
+                        && localUpdateDescription.getUpdatedFields().isEmpty()) {
+                  // if the translated update is empty, then this update is a noop, and we
+                  // shouldn't update because it would improperly update the version information.
+                  logger.info(String.format(
+                          Locale.US,
+                          "t='%d': syncLocalToRemote ns=%s documentId=%s local change event "
+                                  + "update description is empty for UPDATE; dropping the event",
+                          logicalT,
+                          nsConfig.getNamespace(),
+                          docConfig.getDocumentId()));
+                  continue;
+                }
+
 
                 // a. Update the document in the remote database using a query for the _id and the
                 //    version with an update containing the replacement document with the version
                 //    counter incremented by 1.
+
+                // create an update document from the local change event's update description, and
+                // set the version of the new document to the next logical version
+                nextVersion = localVersionInfo.getNextVersion();
+
                 final BsonDocument translatedUpdate = new BsonDocument();
                 final BsonDocument sets = new BsonDocument();
                 final BsonDocument unsets = new BsonDocument();
-                if (!localChangeEvent.getUpdateDescription().getUpdatedFields().isEmpty()) {
+
+                if (!localUpdateDescription.getUpdatedFields().isEmpty()) {
                   for (final Map.Entry<String, BsonValue> fieldValue :
-                      localChangeEvent.getUpdateDescription().getUpdatedFields().entrySet()) {
+                      localUpdateDescription.getUpdatedFields().entrySet()) {
                     sets.put(fieldValue.getKey(), fieldValue.getValue());
                   }
                 }
-                if (!localChangeEvent.getUpdateDescription().getRemovedFields().isEmpty()) {
+
+                if (!localUpdateDescription.getRemovedFields().isEmpty()) {
                   for (final String field :
-                      localChangeEvent.getUpdateDescription().getRemovedFields()) {
+                      localUpdateDescription.getRemovedFields()) {
                     unsets.put(field, BsonBoolean.TRUE);
                   }
                   translatedUpdate.put("$unset", unsets);
                 }
-                if (!sets.isEmpty() || !unsets.isEmpty()) {
-                  // set the document version if any changes were made by this update
-                  sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
-                  translatedUpdate.put("$set", sets);
-                }
+
+                sets.put(DOCUMENT_VERSION_FIELD, nextVersion);
+                translatedUpdate.put("$set", sets);
 
                 final RemoteUpdateResult result;
                 try {
-                  if (translatedUpdate.isEmpty()) {
-                    // if the translated update is empty, then this update is a noop, and we
-                    // shouldn't update because it would improperly update the version information.
-                    break;
-                  }
                   result = remoteColl.updateOne(
                       localVersionInfo.getFilter(),
                       translatedUpdate
@@ -2618,10 +2633,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     filteredDoc.remove(DOCUMENT_VERSION_FIELD);
     return filteredDoc;
   }
-
-  // (TODO) NOTE FOR REVIEWER: the reason I chose to make these functions mutate their args rather
-  // than return a result is because I wanted to avoid the performance hit of cloning a document,
-  // and we are going to be running these functions on a relatively large number of documents
 
   /**
    * Given a local collection, a document fetched from that collection, and its _id, ensure that
