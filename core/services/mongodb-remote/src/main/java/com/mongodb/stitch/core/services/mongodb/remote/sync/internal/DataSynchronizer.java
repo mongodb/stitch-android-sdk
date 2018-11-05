@@ -2151,7 +2151,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             namespace,
             documentId,
             ChangeEvent.UpdateDescription.diff(
-                    withoutForbiddenFields(remoteEvent.getFullDocument()),
+                    sanitizeDocument(remoteEvent.getFullDocument()),
                     documentAfterUpdate),
             docForStorage,
             true);
@@ -2621,23 +2621,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   /**
-   * Returns a clone of the given document, but without forbidden fields (currently just the
-   * document version field).
-   *
-   * @param document The document from which to create a clone without forbidden fields.
-   * @return a clone of the given document without forbidden fields
-   */
-  static BsonDocument withoutForbiddenFields(final BsonDocument document) {
-    if (document == null) {
-      return null;
-    }
-
-    final BsonDocument filteredDoc = document.clone();
-    filteredDoc.remove(DOCUMENT_VERSION_FIELD);
-    return filteredDoc;
-  }
-
-  /**
    * Given a local collection, a document fetched from that collection, and its _id, ensure that
    * the document does not contain forbidden fields (currently just the document version field),
    * and remove them from the document and the local collection. If no changes are made, the
@@ -2659,8 +2642,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return null;
     }
     if (document.containsKey(DOCUMENT_VERSION_FIELD)) {
-      final BsonDocument clonedDoc = document.clone();
-      clonedDoc.remove(DOCUMENT_VERSION_FIELD);
+      final BsonDocument clonedDoc = sanitizeDocument(document);
 
       final BsonDocument removeVersionUpdate =
               new BsonDocument("$unset",
@@ -2683,7 +2665,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *
    * @return a BsonDocument without any forbidden fields.
    */
-  private static BsonDocument sanitizeDocument(final BsonDocument document) {
+  static BsonDocument sanitizeDocument(final BsonDocument document) {
     if (document == null) {
       return null;
     }
