@@ -387,13 +387,13 @@ class CoreDocumentSynchronizationConfig {
         break;
       case DELETE:
         switch (newestChangeEvent.getOperationType()) {
-          // Coalesce inserts to updates since we believe at some point a document existed remotely
-          // and that this insert should really be an update if we are still in an uncommitted
-          // state.
+          // Coalesce inserts to replaces since we believe at some point a document existed
+          // remotely and that this insert should really be an replace if we are still in an
+          // uncommitted state.
           case INSERT:
             return new ChangeEvent<>(
                 newestChangeEvent.getId(),
-                ChangeEvent.OperationType.UPDATE,
+                ChangeEvent.OperationType.REPLACE,
                 newestChangeEvent.getFullDocument(),
                 newestChangeEvent.getNamespace(),
                 newestChangeEvent.getDocumentKey(),

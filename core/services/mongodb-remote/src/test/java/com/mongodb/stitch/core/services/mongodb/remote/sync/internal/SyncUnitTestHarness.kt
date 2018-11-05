@@ -493,16 +493,14 @@ class SyncUnitTestHarness : Closeable {
         }
 
         override fun findTestDocumentFromLocalCollection(): BsonDocument? {
-            // TODO: this may be rendered unnecessary with STITCH-1972
-            return withoutSyncVersion(
-                dataSynchronizer.find(
-                    namespace,
-                    BsonDocument("_id", testDocumentId),
-                    10,
-                    null,
-                    null,
-                    BsonDocument::class.java,
-                    CodecRegistries.fromCodecs(bsonDocumentCodec)).firstOrNull())
+            return dataSynchronizer.find(
+                namespace,
+                BsonDocument("_id", testDocumentId),
+                10,
+                null,
+                null,
+                BsonDocument::class.java,
+                CodecRegistries.fromCodecs(bsonDocumentCodec)).firstOrNull()
         }
 
         override fun verifyChangeEventListenerCalledForActiveDoc(

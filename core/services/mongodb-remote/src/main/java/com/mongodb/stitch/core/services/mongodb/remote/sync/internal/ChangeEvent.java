@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
+import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeDocument;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
@@ -553,8 +554,9 @@ public final class ChangeEvent<DocumentT> {
     return new ChangeEvent<>(
         event.getId(),
         event.getOperationType(),
-        event.getFullDocument() == null ? null : codec
-            .decode(event.getFullDocument().asBsonReader(), DecoderContext.builder().build()),
+        event.getFullDocument() == null ? null : codec.decode(
+                sanitizeDocument(event.getFullDocument()).asBsonReader(),
+                DecoderContext.builder().build()),
         event.getNamespace(),
         event.getDocumentKey(),
         event.getUpdateDescription(),
