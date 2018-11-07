@@ -189,7 +189,6 @@ class CoreDocumentSynchronizationConfig {
       // unfreeze the document due to the local write
       setPaused(false);
       // and now the unfrozen document is now stale
-      // TODO: STITCH-1958 make sure the stream has started before this is set
       setStale(true);
     }
 

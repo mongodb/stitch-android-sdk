@@ -145,16 +145,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.instancesColl = configDb
         .getCollection("instances", InstanceSynchronizationConfig.class);
 
-    if (instancesColl.countDocuments() != 0) {
-      this.syncConfig = new InstanceSynchronizationConfig(
-          configDb,
-          instancesColl);
+    if (instancesColl.countDocuments() == 0) {
+      this.syncConfig = new InstanceSynchronizationConfig(configDb);
       instancesColl.insertOne(this.syncConfig);
     } else {
-      this.syncConfig = new InstanceSynchronizationConfig(
-          configDb,
-          instancesColl,
-          instancesColl.find().first());
+      if (instancesColl.find().first() == null) {
+        throw new IllegalStateException("expected to find instance configuration");
+      }
+      this.syncConfig = new InstanceSynchronizationConfig(configDb);
     }
     this.instanceChangeStreamListener = new InstanceChangeStreamListenerImpl(
         syncConfig,
@@ -252,10 +250,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     syncLock.lock();
     try {
       this.instanceChangeStreamListener.stop();
-      this.syncConfig = new InstanceSynchronizationConfig(
-          configDb,
-          instancesColl,
-          instancesColl.find().first());
+      if (instancesColl.find().first() == null) {
+        throw new IllegalStateException("expected to find instance configuration");
+      }
+      this.syncConfig = new InstanceSynchronizationConfig(configDb);
       this.instanceChangeStreamListener = new InstanceChangeStreamListenerImpl(
           syncConfig,
           service,

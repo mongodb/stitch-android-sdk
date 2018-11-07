@@ -35,12 +35,10 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonReader;
-import org.bson.BsonTimestamp;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
 import org.bson.codecs.BsonDocumentCodec;
@@ -52,17 +50,11 @@ class InstanceSynchronizationConfig
     implements Iterable<NamespaceSynchronizationConfig> {
 
   private final Map<MongoNamespace, NamespaceSynchronizationConfig> namespaces;
-  private final MongoCollection<InstanceSynchronizationConfig> instancesColl;
   private final MongoCollection<NamespaceSynchronizationConfig> namespacesColl;
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final ReadWriteLock instanceLock;
-  private BsonTimestamp lastRemoteClusterTime;
 
-  InstanceSynchronizationConfig(
-      final MongoDatabase configDb,
-      final MongoCollection<InstanceSynchronizationConfig> instancesColl
-  ) {
-    this.instancesColl = instancesColl;
+  InstanceSynchronizationConfig(final MongoDatabase configDb) {
     this.namespacesColl = configDb
         .getCollection("namespaces", NamespaceSynchronizationConfig.class);
     this.docsColl = configDb
@@ -95,26 +87,11 @@ class InstanceSynchronizationConfig
     });
   }
 
-  InstanceSynchronizationConfig(
-      final MongoDatabase configDb,
-      final MongoCollection<InstanceSynchronizationConfig> instancesColl,
-      @Nullable final InstanceSynchronizationConfig config
-  ) {
-    this(configDb, instancesColl);
-    if (config != null) {
-      this.lastRemoteClusterTime = config.lastRemoteClusterTime;
-    }
-  }
-
-  InstanceSynchronizationConfig(
-      final BsonTimestamp lastRemoteClusterTime
-  ) {
-    this.instancesColl = null;
+  InstanceSynchronizationConfig() {
     this.namespacesColl = null;
     this.docsColl = null;
     this.instanceLock = new ReentrantReadWriteLock();
     this.namespaces = new HashMap<>();
-    this.lastRemoteClusterTime = lastRemoteClusterTime;
   }
 
   public NamespaceSynchronizationConfig getNamespaceConfig(
@@ -146,13 +123,6 @@ class InstanceSynchronizationConfig
     }
   }
 
-  boolean isDocumentSynchronized(
-      final MongoNamespace namespace,
-      final BsonValue documentId
-  ) {
-    return getNamespaceConfig(namespace).isDocumentSynchronized(documentId);
-  }
-
   public CoreDocumentSynchronizationConfig getSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId
@@ -172,25 +142,6 @@ class InstanceSynchronizationConfig
       final BsonValue documentId
   ) {
     getNamespaceConfig(namespace).removeSynchronizedDocument(documentId);
-  }
-
-  public BsonTimestamp getLastRemoteClusterTime() {
-    instanceLock.readLock().lock();
-    try {
-      return lastRemoteClusterTime;
-    } finally {
-      instanceLock.readLock().unlock();
-    }
-  }
-
-  public void setLastRemoteClusterTime(final BsonTimestamp lastRemoteClusterTime) {
-    instanceLock.writeLock().lock();
-    try {
-      this.lastRemoteClusterTime = lastRemoteClusterTime;
-      instancesColl.replaceOne(new BsonDocument(), this);
-    } finally {
-      instanceLock.writeLock().unlock();
-    }
   }
 
   /**
@@ -249,9 +200,6 @@ class InstanceSynchronizationConfig
     try {
       final BsonDocument asDoc = new BsonDocument();
       asDoc.put(ConfigCodec.Fields.SCHEMA_VERSION_FIELD, new BsonInt32(1));
-      if (getLastRemoteClusterTime() != null) {
-        asDoc.put(ConfigCodec.Fields.LAST_REMOTE_CLUSTER_TIME_FIELD, getLastRemoteClusterTime());
-      }
       return asDoc;
     } finally {
       instanceLock.readLock().unlock();
@@ -271,15 +219,7 @@ class InstanceSynchronizationConfig
               CoreDocumentSynchronizationConfig.class.getSimpleName()));
     }
 
-    final BsonTimestamp lastRemoteClusterTime;
-    if (document.containsKey(ConfigCodec.Fields.LAST_REMOTE_CLUSTER_TIME_FIELD)) {
-      lastRemoteClusterTime =
-          document.getTimestamp(ConfigCodec.Fields.LAST_REMOTE_CLUSTER_TIME_FIELD);
-    } else {
-      lastRemoteClusterTime = null;
-    }
-
-    return new InstanceSynchronizationConfig(lastRemoteClusterTime);
+    return new InstanceSynchronizationConfig();
   }
 
   static final ConfigCodec configCodec = new ConfigCodec();
@@ -311,7 +251,6 @@ class InstanceSynchronizationConfig
 
     private static class Fields {
       static final String SCHEMA_VERSION_FIELD = "schema_version";
-      static final String LAST_REMOTE_CLUSTER_TIME_FIELD = "last_remote_cluster_time";
     }
   }
 }

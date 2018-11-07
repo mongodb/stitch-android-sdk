@@ -58,7 +58,6 @@ class NamespaceSynchronizationConfig
   private final MongoNamespace namespace;
   private final Map<BsonValue, CoreDocumentSynchronizationConfig> syncedDocuments;
   private final ReadWriteLock nsLock;
-  private BsonValue lastRemoteResumeToken;
 
   private NamespaceListenerConfig namespaceListenerConfig;
   private ConflictHandler conflictHandler;
@@ -72,7 +71,6 @@ class NamespaceSynchronizationConfig
     this.namespacesColl = namespacesColl;
     this.docsColl = docsColl;
     this.namespace = namespace;
-    this.lastRemoteResumeToken = null;
     this.syncedDocuments = new HashMap<>();
     this.nsLock = new ReentrantReadWriteLock();
 
@@ -101,7 +99,6 @@ class NamespaceSynchronizationConfig
     this.namespacesColl = namespacesColl;
     this.docsColl = docsColl;
     this.namespace = config.namespace;
-    this.lastRemoteResumeToken = config.lastRemoteResumeToken;
     this.syncedDocuments = new HashMap<>();
     this.nsLock = config.nsLock;
 
@@ -123,11 +120,9 @@ class NamespaceSynchronizationConfig
   }
 
   private NamespaceSynchronizationConfig(
-      final MongoNamespace namespace,
-      final BsonValue lastRemoteResumeToken
+      final MongoNamespace namespace
   ) {
     this.namespace = namespace;
-    this.lastRemoteResumeToken = lastRemoteResumeToken;
     this.namespacesColl = null;
     this.docsColl = null;
     this.syncedDocuments = null;
@@ -170,15 +165,6 @@ class NamespaceSynchronizationConfig
 
   NamespaceListenerConfig getNamespaceListenerConfig() {
     return namespaceListenerConfig;
-  }
-
-  public boolean isDocumentSynchronized(final BsonValue documentId) {
-    nsLock.readLock().lock();
-    try {
-      return syncedDocuments.containsKey(documentId);
-    } finally {
-      nsLock.readLock().unlock();
-    }
   }
 
   public CoreDocumentSynchronizationConfig getSynchronizedDocument(final BsonValue documentId) {
@@ -268,26 +254,6 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  public BsonValue getLastRemoteResumeToken() {
-    nsLock.readLock().lock();
-    try {
-      return lastRemoteResumeToken;
-    } finally {
-      nsLock.readLock().unlock();
-    }
-  }
-
-  public void setLastRemoteResumeToken(final BsonValue lastRemoteResumeToken) {
-    nsLock.writeLock().lock();
-    try {
-      this.lastRemoteResumeToken = lastRemoteResumeToken;
-      namespacesColl.replaceOne(
-          getNsFilter(getNamespace()), this);
-    } finally {
-      nsLock.writeLock().unlock();
-    }
-  }
-
   public ConflictHandler getConflictHandler() {
     nsLock.readLock().lock();
     try {
@@ -330,9 +296,6 @@ class NamespaceSynchronizationConfig
       final BsonDocument asDoc = new BsonDocument();
       asDoc.put(ConfigCodec.Fields.NAMESPACE_FIELD, new BsonString(getNamespace().toString()));
       asDoc.put(ConfigCodec.Fields.SCHEMA_VERSION_FIELD, new BsonInt32(1));
-      if (getLastRemoteResumeToken() != null) {
-        asDoc.put(ConfigCodec.Fields.LAST_REMOTE_RESUME_TOKEN_FIELD, lastRemoteResumeToken);
-      }
       return asDoc;
     } finally {
       nsLock.readLock().unlock();
@@ -357,16 +320,8 @@ class NamespaceSynchronizationConfig
               CoreDocumentSynchronizationConfig.class.getSimpleName()));
     }
 
-    final BsonValue lastRemoteResumeToken;
-    if (document.containsKey(ConfigCodec.Fields.LAST_REMOTE_RESUME_TOKEN_FIELD)) {
-      lastRemoteResumeToken = document.get(ConfigCodec.Fields.LAST_REMOTE_RESUME_TOKEN_FIELD);
-    } else {
-      lastRemoteResumeToken = null;
-    }
-
     return new NamespaceSynchronizationConfig(
-        new MongoNamespace(document.getString(ConfigCodec.Fields.NAMESPACE_FIELD).getValue()),
-        lastRemoteResumeToken);
+        new MongoNamespace(document.getString(ConfigCodec.Fields.NAMESPACE_FIELD).getValue()));
   }
 
   static final ConfigCodec configCodec = new ConfigCodec();
@@ -399,7 +354,6 @@ class NamespaceSynchronizationConfig
     static class Fields {
       static final String NAMESPACE_FIELD = "namespace";
       static final String SCHEMA_VERSION_FIELD = "schema_version";
-      static final String LAST_REMOTE_RESUME_TOKEN_FIELD = "last_remote_resume_token";
     }
   }
 }
