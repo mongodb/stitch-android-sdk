@@ -244,6 +244,8 @@ public interface RemoteMongoCollection<DocumentT> {
   /**
    * A set of synchronization related operations on this collection.
    *
+   * WARNING: This is a BETA feature and the API and on-device storage format
+   * is subject to change.
    * @return set of sync operations for this collection
    */
   Sync<DocumentT> sync();
