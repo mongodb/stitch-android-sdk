@@ -11,7 +11,7 @@ buildscript {
 
 dependencies {
     implementation project(':core:stitch-core-sdk')
-    api 'org.mongodb:mongodb-driver-sync:3.8.2'
+    api 'org.mongodb:mongodb-driver-sync:3.9.0'
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8
