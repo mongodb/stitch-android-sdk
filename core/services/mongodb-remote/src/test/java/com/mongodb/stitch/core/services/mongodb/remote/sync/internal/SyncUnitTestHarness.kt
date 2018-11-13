@@ -2,6 +2,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoCollection
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.StitchAppClientInfo
@@ -221,7 +222,10 @@ class SyncUnitTestHarness : Closeable {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private class DataSynchronizerTestContextImpl(shouldPreconfigure: Boolean = true) : DataSynchronizerTestContext {
+    private class DataSynchronizerTestContextImpl(
+            shouldPreconfigure: Boolean = true,
+            documentsToRecover: List<BsonDocument> = ArrayList()
+    ) : DataSynchronizerTestContext {
         open class TestChangeEventListener(
             private val expectedEvent: ChangeEvent<BsonDocument>?,
             var emitEventSemaphore: Semaphore?
@@ -286,6 +290,13 @@ class SyncUnitTestHarness : Closeable {
             private set
 
         override val namespace = newNamespace()
+
+        val undoCollection: MongoCollection<BsonDocument> by lazy {
+            localClient
+                    .getDatabase(String.format("sync_undo_%s", namespace.databaseName))
+                    .getCollection(namespace.collectionName, BsonDocument::class.java)
+        }
+
         val networkMonitor: TestNetworkMonitor = spy(TestNetworkMonitor())
         val authMonitor: TestAuthMonitor = spy(TestAuthMonitor())
 
@@ -315,16 +326,28 @@ class SyncUnitTestHarness : Closeable {
         private val remoteClient = Mockito.mock(CoreRemoteMongoClientImpl::class.java)
         private val instanceKey = "${Random().nextInt()}"
 
-        override val dataSynchronizer: DataSynchronizer =
+        override val dataSynchronizer: DataSynchronizer by lazy {
+            // Insert any documents that we want to be recovered by the recovery sequence.
+            if (!documentsToRecover.isEmpty()) {
+                for (doc in documentsToRecover) {
+                    insertDocumentIntoUndoCollection(doc)
+                }
+            }
+
+            // Insert an unsynced document into the local collection, that we will later verify
+            // is removed by the recovery sequence.
+            insertUnsyncedDocumentIntoLocalCollection()
+
             Mockito.spy(DataSynchronizer(
-                instanceKey,
-                service,
-                localClient,
-                remoteClient,
-                networkMonitor,
-                authMonitor,
-                ThreadDispatcher()
+                    instanceKey,
+                    service,
+                    localClient,
+                    remoteClient,
+                    networkMonitor,
+                    authMonitor,
+                    ThreadDispatcher()
             ))
+        }
 
         private var eventSemaphore: Semaphore? = null
         private var errorSemaphore: Semaphore? = null
@@ -401,16 +424,32 @@ class SyncUnitTestHarness : Closeable {
             dataSynchronizer.insertOne(namespace, testDocument)
         }
 
+        private fun insertDocumentIntoUndoCollection(document: BsonDocument) {
+            undoCollection.insertOne(document)
+        }
+
+        private fun insertUnsyncedDocumentIntoLocalCollection() {
+            localClient
+                    .getDatabase(namespace.databaseName)
+                    .getCollection(namespace.collectionName, BsonDocument::class.java)
+                    .insertOne(BsonDocument("this",  BsonString("is garbage")))
+        }
+
         override fun updateTestDocument(): UpdateResult {
             configureNewChangeEventListener()
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            return dataSynchronizer.updateOne(
+            val updateResult = dataSynchronizer.updateOne(
                 namespace,
                 BsonDocument("_id", testDocumentId),
                 updateDocument
             )
+
+            // verify that we didn't accidentally leak any documents that will be "recovered" later
+            verifyUndoCollectionEmpty()
+
+            return updateResult
         }
 
         override fun deleteTestDocument(): DeleteResult {
@@ -418,7 +457,13 @@ class SyncUnitTestHarness : Closeable {
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            return dataSynchronizer.deleteOne(namespace, BsonDocument("_id", testDocumentId))
+            val deleteResult =
+                    dataSynchronizer.deleteOne(namespace, BsonDocument("_id", testDocumentId))
+
+            // verify that we didn't accidentally leak any documents that will be "recovered" later
+            verifyUndoCollectionEmpty()
+
+            return deleteResult
         }
 
         override fun doSyncPass() {
@@ -427,6 +472,10 @@ class SyncUnitTestHarness : Closeable {
             configureNewConflictHandler()
 
             dataSynchronizer.doSyncPass()
+
+            // verify that the undo collection is empty after all conflict resolutions so that we
+            // know we're not leaking any documents will be unnecessarily "recovered" later
+            verifyUndoCollectionEmpty()
         }
 
         override fun queueConsumableRemoteInsertEvent() {
@@ -571,6 +620,11 @@ class SyncUnitTestHarness : Closeable {
             Mockito.verify(dataSynchronizer, times(times)).stop()
         }
 
+        override fun verifyUndoCollectionEmpty() {
+            print(undoCollection.find().firstOrNull().toString() + "\n")
+            Assert.assertEquals(0, undoCollection.countDocuments())
+        }
+
         override fun mockInsertException(exception: Exception) {
             `when`(collectionMock.insertOne(any())).thenThrow(exception)
         }
@@ -627,9 +681,12 @@ class SyncUnitTestHarness : Closeable {
         latestCtx?.dataSynchronizer?.close()
     }
 
-    internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
+    internal fun freshTestContext(
+            shouldPreconfigure: Boolean = true,
+            documentsToRecover: List<BsonDocument> = ArrayList()
+    ): DataSynchronizerTestContext {
         latestCtx?.dataSynchronizer?.close()
-        latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
+        latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure, documentsToRecover)
         return latestCtx!!
     }
 

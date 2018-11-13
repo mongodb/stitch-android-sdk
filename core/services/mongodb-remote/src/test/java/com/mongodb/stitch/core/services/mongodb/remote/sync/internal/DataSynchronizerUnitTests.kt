@@ -10,10 +10,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIt
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterableImpl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
-import org.bson.BsonDocument
-import org.bson.BsonInt32
-import org.bson.BsonString
-import org.bson.Document
+import org.bson.*
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.junit.After
@@ -32,6 +29,7 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import java.lang.Exception
+import java.util.*
 
 class DataSynchronizerUnitTests {
     companion object {
@@ -794,6 +792,9 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
 
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
     }
 
@@ -946,6 +947,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
             UpdateOptions().upsert(true))
 
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(1, result.matchedCount)
         assertEquals(1, result.modifiedCount)
         assertNotNull(result.upsertedId)
@@ -971,10 +975,13 @@ class DataSynchronizerUnitTests {
             "ids" to setOf(result.upsertedId)
         )))
 
-        ctx.dataSynchronizer.updateMany(
+        ctx.dataSynchronizer.updateOne(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
             BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))))
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         ctx.waitForEvents(amount = 2)
 
@@ -1015,6 +1022,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("name", BsonString("philip")),
             BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
             UpdateOptions().upsert(true)) // ensure there wasn't an unnecessary insert
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         ctx.findTestDocumentFromLocalCollection()
         assertEquals(2, result.modifiedCount)
@@ -1075,6 +1085,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
             UpdateOptions().upsert(true))
 
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(0, result.matchedCount)
         assertEquals(0, result.modifiedCount)
         assertNotNull(result.upsertedId)
@@ -1123,6 +1136,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("name", BsonString("philip")),
             BsonDocument("\$set", BsonDocument("count", BsonInt32(3))),
             UpdateOptions().upsert(true))
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         assertEquals(2, result.matchedCount)
         assertEquals(1, result.modifiedCount)
@@ -1199,6 +1215,10 @@ class DataSynchronizerUnitTests {
         ctx.reconfigure()
 
         var result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(0, result.deletedCount)
         assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
 
@@ -1210,6 +1230,9 @@ class DataSynchronizerUnitTests {
         assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
 
         result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         assertEquals(2, result.deletedCount)
         assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
@@ -1573,5 +1596,28 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testUndoLogicRecoverNamespace() {
+        val recoveredDocument = BsonDocument()
+                .append("_id", BsonObjectId())
+                .append("hello collection", BsonString("my old friend"))
+
+        val ctx = harness.freshTestContext(
+                true, Collections.singletonList(recoveredDocument)
+        )
+
+        // assert that the unsynchronized document got removed
+        assertNull(
+                ctx.dataSynchronizer.find(
+                        ctx.namespace,
+                        BsonDocument("this", BsonString("is garbage"))
+                ).firstOrNull()
+        )
+
+        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, recoveredDocument))
+
+        ctx.verifyUndoCollectionEmpty()
     }
 }

@@ -133,6 +133,11 @@ interface DataSynchronizerTestContext : Closeable {
     fun verifyStopCalled(times: Int)
 
     /**
+     * Verify that the undo collection of the data synchronizer is empty.
+     */
+    fun verifyUndoCollectionEmpty()
+
+    /**
      * Queue a pseudo-remote insert event to be consumed during R2L.
      */
     fun queueConsumableRemoteInsertEvent()
