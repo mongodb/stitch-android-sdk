@@ -488,6 +488,27 @@ class SyncUnitTestHarness : Closeable {
                 .find { it.documentId == testDocumentId }?.lastKnownRemoteVersion
         }
 
+        override fun getLocalCollection(): MongoCollection<BsonDocument> {
+            return localClient
+                    .getDatabase(namespace.databaseName)
+                    .getCollection(namespace.collectionName, BsonDocument::class.java)
+        }
+
+        override fun setPendingWritesForDocId(documentId: BsonValue, event: ChangeEvent<BsonDocument>) {
+            // use Reflection to get access to the private sync config so we can set pending writes
+            val scField = DataSynchronizer::class.java.getDeclaredField("syncConfig")
+            scField.isAccessible = true
+            val syncConfig = scField.get(dataSynchronizer) as InstanceSynchronizationConfig
+
+            val ltField = DataSynchronizer::class.java.getDeclaredField("logicalT")
+            ltField.isAccessible = true
+            val logicalT = ltField.get(dataSynchronizer) as Long
+
+            val docConfig = syncConfig.getSynchronizedDocument(namespace, documentId)
+
+            docConfig.setSomePendingWrites(logicalT, event)
+        }
+
         override fun queueConsumableRemoteUpdateEvent(
             id: BsonValue,
             document: BsonDocument,
@@ -620,7 +641,6 @@ class SyncUnitTestHarness : Closeable {
         }
 
         override fun verifyUndoCollectionEmpty() {
-            print(undoCollection.find().firstOrNull().toString() + "\n")
             Assert.assertEquals(0, undoCollection.countDocuments())
         }
 
@@ -691,7 +711,9 @@ class SyncUnitTestHarness : Closeable {
             undoDocuments: List<BsonDocument> = ArrayList()
     ): DataSynchronizerTestContext {
         // don't close the underlying synchronizer since that would release the local client.
-        // the local client will be released when a fresh test context is created.
+        // the local client will be released when a fresh test context is created. this may leak
+        // other resources since not all data synchronizers used will be closed, but that's okay
+        // since this is a test
         latestCtx = DataSynchronizerTestContextImpl(
                 true,
                 undoDocuments,

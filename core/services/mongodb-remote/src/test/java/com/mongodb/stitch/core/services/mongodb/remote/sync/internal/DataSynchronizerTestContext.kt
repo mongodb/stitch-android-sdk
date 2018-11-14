@@ -2,6 +2,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoCollection
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.internal.net.Event
@@ -94,6 +95,16 @@ interface DataSynchronizerTestContext : Closeable {
      * Reconfigure dataSynchronizer. Do a sync pass.
      */
     fun doSyncPass()
+
+    /**
+     * Returns an instance of the local synchronized collection.
+     */
+    fun getLocalCollection(): MongoCollection<BsonDocument>
+
+    /**
+     * Sets the pending writes for a particular synchronized document ID.
+     */
+    fun setPendingWritesForDocId(documentId: BsonValue, event: ChangeEvent<BsonDocument>)
 
     /**
      * Attempt to find the contextual test document locally.
