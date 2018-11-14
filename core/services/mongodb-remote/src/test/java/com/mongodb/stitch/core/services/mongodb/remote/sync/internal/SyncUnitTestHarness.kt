@@ -715,7 +715,6 @@ class SyncUnitTestHarness : Closeable {
 
         // perform a no-op write so that we wait for the recovery pass to complete. This works
         // since the recovery routine write-locks all namespaces until recovery is done.
-        val synchronizer = latestCtx!!.dataSynchronizer
         latestCtx!!.dataSynchronizer.updateOne(
                 latestCtx!!.namespace,
                 BsonDocument("_id", BsonString("nonexistent")),
