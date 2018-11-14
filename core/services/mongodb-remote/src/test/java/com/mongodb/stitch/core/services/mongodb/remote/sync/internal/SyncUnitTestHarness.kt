@@ -223,11 +223,11 @@ class SyncUnitTestHarness : Closeable {
 
     @Suppress("UNCHECKED_CAST")
     private class DataSynchronizerTestContextImpl(
-            shouldPreconfigure: Boolean = true,
-            undoDocuments: List<BsonDocument> = ArrayList(),
-            override val namespace: MongoNamespace = newNamespace(),
-            override val clientKey: String = ObjectId().toHexString(),
-            override val instanceKey: String = "${Random().nextInt()}"
+        shouldPreconfigure: Boolean = true,
+        undoDocuments: List<BsonDocument> = ArrayList(),
+        override val namespace: MongoNamespace = newNamespace(),
+        override val clientKey: String = ObjectId().toHexString(),
+        override val instanceKey: String = "${Random().nextInt()}"
     ) : DataSynchronizerTestContext {
         open class TestChangeEventListener(
             private val expectedEvent: ChangeEvent<BsonDocument>?,
@@ -333,10 +333,6 @@ class SyncUnitTestHarness : Closeable {
                 }
             }
 
-            // Insert an unsynced document into the local collection, that we will later verify
-            // is removed by the recovery sequence.
-            insertUnsyncedDocumentIntoLocalCollection()
-
             Mockito.spy(DataSynchronizer(
                     instanceKey,
                     service,
@@ -425,13 +421,6 @@ class SyncUnitTestHarness : Closeable {
 
         private fun insertDocumentIntoUndoCollection(document: BsonDocument) {
             undoCollection.insertOne(document)
-        }
-
-        private fun insertUnsyncedDocumentIntoLocalCollection() {
-            localClient
-                    .getDatabase(namespace.databaseName)
-                    .getCollection(namespace.collectionName, BsonDocument::class.java)
-                    .insertOne(BsonDocument("this",  BsonString("is garbage")))
         }
 
         override fun updateTestDocument(): UpdateResult {
@@ -712,8 +701,8 @@ class SyncUnitTestHarness : Closeable {
     }
 
     internal fun testContextFromExistingContext(
-            existingCtx: DataSynchronizerTestContext,
-            undoDocuments: List<BsonDocument> = ArrayList()
+        existingCtx: DataSynchronizerTestContext,
+        undoDocuments: List<BsonDocument> = ArrayList()
     ): DataSynchronizerTestContext {
         // don't close the underlying synchronizer yet since that would release the local client
         // needed for the next test context. We will close this data synchronizer when we make a

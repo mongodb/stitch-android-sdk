@@ -63,8 +63,8 @@ public class StitchUserProfileUnitTests {
     assertEquals(stitchUserProfileImpl.getGender(), gender);
     assertEquals(stitchUserProfileImpl.getBirthday(), birthday);
     assertEquals(stitchUserProfileImpl.getPictureUrl(), pictureUrl);
-    assertEquals(stitchUserProfileImpl.getMinAge(), Integer.valueOf(minAge));
-    assertEquals(stitchUserProfileImpl.getMaxAge(), Integer.valueOf(maxAge));
+    assertEquals(stitchUserProfileImpl.getMinAge(), minAge);
+    assertEquals(stitchUserProfileImpl.getMaxAge(), maxAge);
     assertEquals(stitchUserProfileImpl.getUserType(), UserType.NORMAL);
     assertEquals(stitchUserProfileImpl.getIdentities().size(), 1);
     assertEquals(stitchUserProfileImpl.getIdentities().get(0), anonIdentity);

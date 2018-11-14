@@ -235,11 +235,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // operation, but in that case, the findOneAndReplace or delete is a no-op since restoring
     // the document to the state of the change event would be the same as recovering the undo
     // document.
-    for (CoreDocumentSynchronizationConfig docConfig : nsConfig.getSynchronizedDocuments()) {
+    for (final CoreDocumentSynchronizationConfig docConfig : nsConfig.getSynchronizedDocuments()) {
       final BsonValue documentId = docConfig.getDocumentId();
       final BsonDocument filter = getDocumentIdFilter(documentId);
 
-      if(recoveredIds.contains(docConfig.getDocumentId())) {
+      if (recoveredIds.contains(docConfig.getDocumentId())) {
         final ChangeEvent<BsonDocument> pendingWrite = docConfig.getLastUncommittedChangeEvent();
         if (pendingWrite != null) {
           switch (pendingWrite.getOperationType()) {
@@ -255,14 +255,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             case DELETE:
               localCollection.deleteOne(filter);
               break;
-            case UNKNOWN:
-              throw new IllegalStateException(
-                      "there should not be a pending write with an unknown event type"
-              );
+            default:
               // TODO(question for review): should I throw IllegalStateException here? There should
               // never be pending writes with an unknown event type, but if someone was messing
               // with the config collection we might want to stop the synchronizer to prevent
               // further data corruption.
+              throw new IllegalStateException(
+                      "there should not be a pending write with an unknown event type"
+              );
           }
         }
       }
@@ -273,7 +273,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // these deletes or while carrying out the deletes, but after recovering the documents to
     // their desired state, that's okay because the next recovery pass will be effectively a no-op
     // up to this point.
-    for (BsonValue recoveredId : recoveredIds) {
+    for (final BsonValue recoveredId : recoveredIds) {
       undoCollection.deleteOne(getDocumentIdFilter(recoveredId));
     }
 
