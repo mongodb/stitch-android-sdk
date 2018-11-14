@@ -10,9 +10,14 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIt
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterableImpl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
-import org.bson.*
+import org.bson.BsonBoolean
+import org.bson.BsonDocument
+import org.bson.BsonInt32
+import org.bson.BsonObjectId
+import org.bson.BsonString
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
+import org.bson.Document
 import org.junit.After
 
 import org.junit.Assert.assertEquals
@@ -29,7 +34,7 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import java.lang.Exception
-import java.util.*
+import java.util.Collections
 
 class DataSynchronizerUnitTests {
     companion object {
