@@ -61,6 +61,11 @@ interface DataSynchronizerTestContext : Closeable {
     val dataSynchronizer: DataSynchronizer
 
     /**
+     * An instance of the local synchronized collection.
+     */
+    val localCollection: MongoCollection<BsonDocument>
+
+    /**
      * Reconfigure the dataSynchronizer.
      */
     fun reconfigure()
@@ -95,11 +100,6 @@ interface DataSynchronizerTestContext : Closeable {
      * Reconfigure dataSynchronizer. Do a sync pass.
      */
     fun doSyncPass()
-
-    /**
-     * Returns an instance of the local synchronized collection.
-     */
-    fun getLocalCollection(): MongoCollection<BsonDocument>
 
     /**
      * Sets the pending writes for a particular synchronized document ID.

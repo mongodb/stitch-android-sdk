@@ -292,6 +292,12 @@ class SyncUnitTestHarness : Closeable {
         var errorListener = newErrorListener()
             private set
 
+        override val localCollection: MongoCollection<BsonDocument> by lazy {
+            localClient
+                    .getDatabase(namespace.databaseName)
+                    .getCollection(namespace.collectionName, BsonDocument::class.java)
+        }
+
         val undoCollection: MongoCollection<BsonDocument> by lazy {
             localClient
                     .getDatabase(String.format("sync_undo_%s", namespace.databaseName))
@@ -329,7 +335,7 @@ class SyncUnitTestHarness : Closeable {
             // Insert any documents that we want to be recovered by the recovery sequence.
             if (!undoDocuments.isEmpty()) {
                 for (doc in undoDocuments) {
-                    insertDocumentIntoUndoCollection(doc)
+                    undoCollection.insertOne(doc)
                 }
             }
 
@@ -419,10 +425,6 @@ class SyncUnitTestHarness : Closeable {
             dataSynchronizer.insertOne(namespace, testDocument)
         }
 
-        private fun insertDocumentIntoUndoCollection(document: BsonDocument) {
-            undoCollection.insertOne(document)
-        }
-
         override fun updateTestDocument(): UpdateResult {
             configureNewChangeEventListener()
             configureNewErrorListener()
@@ -477,14 +479,8 @@ class SyncUnitTestHarness : Closeable {
                 .find { it.documentId == testDocumentId }?.lastKnownRemoteVersion
         }
 
-        override fun getLocalCollection(): MongoCollection<BsonDocument> {
-            return localClient
-                    .getDatabase(namespace.databaseName)
-                    .getCollection(namespace.collectionName, BsonDocument::class.java)
-        }
-
         override fun setPendingWritesForDocId(documentId: BsonValue, event: ChangeEvent<BsonDocument>) {
-            // use Reflection to get access to the private sync config so we can set pending writes
+            // use reflection to get access to the private sync config so we can set pending writes
             val scField = DataSynchronizer::class.java.getDeclaredField("syncConfig")
             scField.isAccessible = true
             val syncConfig = scField.get(dataSynchronizer) as InstanceSynchronizationConfig

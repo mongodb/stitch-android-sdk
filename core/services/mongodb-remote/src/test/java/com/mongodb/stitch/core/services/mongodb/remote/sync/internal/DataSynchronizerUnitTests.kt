@@ -1302,7 +1302,6 @@ class DataSynchronizerUnitTests {
         // queue another remote delete, one that should work
         // now that the document is no longer paused
         ctx.queueConsumableRemoteDeleteEvent()
-
         ctx.doSyncPass()
         assertNull(ctx.findTestDocumentFromLocalCollection())
     }
@@ -1617,7 +1616,7 @@ class DataSynchronizerUnitTests {
         origCtx.dataSynchronizer.stop()
 
         // simulate a failure case where an update started, but did not get pending writes set
-        origCtx.getLocalCollection()
+        origCtx.localCollection
                 .updateOne(
                         BsonDocument("_id", testDocumentId),
                         BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
@@ -1652,7 +1651,7 @@ class DataSynchronizerUnitTests {
 
         // simulate a failure case where an update started and got pending writes set, but the undo
         // document still exists
-        origCtx.getLocalCollection()
+        origCtx.localCollection
                 .updateOne(
                         BsonDocument("_id", testDocumentId),
                         BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
@@ -1698,7 +1697,7 @@ class DataSynchronizerUnitTests {
         origCtx.dataSynchronizer.stop()
 
         // simulate a failure case where a delete started, but did not get pending writes set
-        origCtx.getLocalCollection()
+        origCtx.localCollection
                 .deleteOne(
                         BsonDocument("_id", testDocumentId)
                 )
@@ -1732,7 +1731,7 @@ class DataSynchronizerUnitTests {
 
         // simulate a failure case where a delete started and got pending writes, but the undo
         // document still exists
-        origCtx.getLocalCollection()
+        origCtx.localCollection
                 .deleteOne(
                         BsonDocument("_id", testDocumentId)
                 )
@@ -1779,7 +1778,7 @@ class DataSynchronizerUnitTests {
 
         expectedTestDocument["count"] = BsonInt32(2)
 
-        origCtx.getLocalCollection()
+        origCtx.localCollection
                 .updateOne(
                         BsonDocument("_id", testDocumentId),
                         BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
@@ -1812,7 +1811,7 @@ class DataSynchronizerUnitTests {
 
         origCtx.dataSynchronizer.stop()
 
-        origCtx.getLocalCollection()
+        origCtx.localCollection
                 .updateOne(
                         BsonDocument("_id", testDocumentId),
                         BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
