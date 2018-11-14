@@ -224,7 +224,10 @@ class SyncUnitTestHarness : Closeable {
     @Suppress("UNCHECKED_CAST")
     private class DataSynchronizerTestContextImpl(
             shouldPreconfigure: Boolean = true,
-            documentsToRecover: List<BsonDocument> = ArrayList()
+            undoDocuments: List<BsonDocument> = ArrayList(),
+            override val namespace: MongoNamespace = newNamespace(),
+            override val clientKey: String = ObjectId().toHexString(),
+            override val instanceKey: String = "${Random().nextInt()}"
     ) : DataSynchronizerTestContext {
         open class TestChangeEventListener(
             private val expectedEvent: ChangeEvent<BsonDocument>?,
@@ -289,8 +292,6 @@ class SyncUnitTestHarness : Closeable {
         var errorListener = newErrorListener()
             private set
 
-        override val namespace = newNamespace()
-
         val undoCollection: MongoCollection<BsonDocument> by lazy {
             localClient
                     .getDatabase(String.format("sync_undo_%s", namespace.databaseName))
@@ -301,7 +302,6 @@ class SyncUnitTestHarness : Closeable {
         val authMonitor: TestAuthMonitor = spy(TestAuthMonitor())
 
         override val localClient: MongoClient by lazy {
-            val clientKey = ObjectId().toHexString()
             SyncMongoClientFactory.getClient(
                 StitchAppClientInfo(
                     clientKey,
@@ -324,12 +324,11 @@ class SyncUnitTestHarness : Closeable {
             service
         }
         private val remoteClient = Mockito.mock(CoreRemoteMongoClientImpl::class.java)
-        private val instanceKey = "${Random().nextInt()}"
 
         override val dataSynchronizer: DataSynchronizer by lazy {
             // Insert any documents that we want to be recovered by the recovery sequence.
-            if (!documentsToRecover.isEmpty()) {
-                for (doc in documentsToRecover) {
+            if (!undoDocuments.isEmpty()) {
+                for (doc in undoDocuments) {
                     insertDocumentIntoUndoCollection(doc)
                 }
             }
@@ -681,12 +680,25 @@ class SyncUnitTestHarness : Closeable {
         latestCtx?.dataSynchronizer?.close()
     }
 
-    internal fun freshTestContext(
-            shouldPreconfigure: Boolean = true,
-            documentsToRecover: List<BsonDocument> = ArrayList()
-    ): DataSynchronizerTestContext {
+    internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
         latestCtx?.dataSynchronizer?.close()
-        latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure, documentsToRecover)
+        latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
+        return latestCtx!!
+    }
+
+    internal fun testContextFromExistingContext(
+            existingCtx: DataSynchronizerTestContext,
+            undoDocuments: List<BsonDocument> = ArrayList()
+    ): DataSynchronizerTestContext {
+        // don't close the underlying synchronizer since that would release the local client.
+        // the local client will be released when a fresh test context is created.
+        latestCtx = DataSynchronizerTestContextImpl(
+                true,
+                undoDocuments,
+                existingCtx.namespace,
+                existingCtx.clientKey,
+                existingCtx.instanceKey
+        )
         return latestCtx!!
     }
 

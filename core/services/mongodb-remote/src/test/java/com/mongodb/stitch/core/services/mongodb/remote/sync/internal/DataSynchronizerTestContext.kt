@@ -30,6 +30,8 @@ enum class TestVersionState {
  */
 interface DataSynchronizerTestContext : Closeable {
     val namespace: MongoNamespace
+    val clientKey: String
+    val instanceKey: String
     val testDocument: BsonDocument
     val testDocumentId: BsonValue
     val testDocumentFilter: BsonDocument

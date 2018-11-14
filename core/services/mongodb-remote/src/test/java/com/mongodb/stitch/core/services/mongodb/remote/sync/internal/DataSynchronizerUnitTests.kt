@@ -1297,6 +1297,7 @@ class DataSynchronizerUnitTests {
         // queue another remote delete, one that should work
         // now that the document is no longer paused
         ctx.queueConsumableRemoteDeleteEvent()
+
         ctx.doSyncPass()
         assertNull(ctx.findTestDocumentFromLocalCollection())
     }
@@ -1604,20 +1605,44 @@ class DataSynchronizerUnitTests {
                 .append("_id", BsonObjectId())
                 .append("hello collection", BsonString("my old friend"))
 
-        val ctx = harness.freshTestContext(
-                true, Collections.singletonList(recoveredDocument)
+        val origCtx = harness.freshTestContext()
+
+        origCtx.insertTestDocument()
+        origCtx.doSyncPass()
+
+        val testDocumentId = origCtx.testDocumentId
+        val originalTestDocument = origCtx.testDocument
+
+        origCtx.dataSynchronizer.stop()
+
+        // simulate a failure case where an update was started, but never got committed
+        origCtx.localClient
+                .getDatabase(origCtx.namespace.databaseName)
+                .getCollection(origCtx.namespace.collectionName)
+                .updateOne(
+                        BsonDocument("_id", testDocumentId),
+                        BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
+                )
+
+        val ctx = harness.testContextFromExistingContext(
+                origCtx, Collections.singletonList(originalTestDocument)
         )
 
-        // assert that the unsynchronized document got removed
-        assertNull(
+        ctx.verifyUndoCollectionEmpty()
+
+        // assert that the uncommitted update got rolled back
+        assertEquals(originalTestDocument,
                 ctx.dataSynchronizer.find(
                         ctx.namespace,
-                        BsonDocument("this", BsonString("is garbage"))
+                        BsonDocument("_id", testDocumentId)
                 ).firstOrNull()
         )
 
-        assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, recoveredDocument))
-
-        ctx.verifyUndoCollectionEmpty()
+        // TODO: add cases for
+        //       - udpate started and committed, but undo document still exists
+        //       - delete started, did not get commmitted
+        //       - delete started and got committed, but undo document stil exists
+        //       - update started, but not committed, and a previously uncommitted update
+        //       - think of a few more
     }
 }

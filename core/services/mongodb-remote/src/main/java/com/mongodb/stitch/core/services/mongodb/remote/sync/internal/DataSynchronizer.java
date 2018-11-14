@@ -2377,7 +2377,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             == ChangeEvent.OperationType.INSERT) {
           desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
           undoCollection.deleteOne(getDocumentIdFilter(documentId));
-          return result;
+          continue;
         }
 
         config.setSomePendingWrites(
@@ -2469,7 +2469,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       undoCollection.insertOne(documentToDelete);
       localCollection.deleteOne(getDocumentIdFilter(documentId));
       desyncDocumentFromRemote(namespace, documentId);
-      undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
+      undoCollection.deleteOne(getDocumentIdFilter(documentId));
     } finally {
       lock.unlock();
     }
