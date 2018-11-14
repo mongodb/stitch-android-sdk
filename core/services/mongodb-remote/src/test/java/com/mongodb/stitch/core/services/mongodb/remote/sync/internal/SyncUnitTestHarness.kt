@@ -700,7 +700,12 @@ class SyncUnitTestHarness : Closeable {
         latestCtx?.dataSynchronizer?.close()
     }
 
+    private val unclosedDataSynchronizers: HashSet<DataSynchronizer?> = HashSet()
+
     internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
+        unclosedDataSynchronizers.forEach { it?.close() }
+        unclosedDataSynchronizers.clear()
+
         latestCtx?.dataSynchronizer?.close()
         latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
         return latestCtx!!
@@ -710,10 +715,11 @@ class SyncUnitTestHarness : Closeable {
             existingCtx: DataSynchronizerTestContext,
             undoDocuments: List<BsonDocument> = ArrayList()
     ): DataSynchronizerTestContext {
-        // don't close the underlying synchronizer since that would release the local client.
-        // the local client will be released when a fresh test context is created. this may leak
-        // other resources since not all data synchronizers used will be closed, but that's okay
-        // since this is a test
+        // don't close the underlying synchronizer yet since that would release the local client
+        // needed for the next test context. We will close this data synchronizer when we make a
+        // fresh test context
+        unclosedDataSynchronizers.add(latestCtx?.dataSynchronizer)
+
         latestCtx = DataSynchronizerTestContextImpl(
                 true,
                 undoDocuments,
@@ -721,6 +727,16 @@ class SyncUnitTestHarness : Closeable {
                 existingCtx.clientKey,
                 existingCtx.instanceKey
         )
+
+        // perform a no-op write so that we wait for the recovery pass to complete. This works
+        // since the recovery routine write-locks all namespaces until recovery is done.
+        val synchronizer = latestCtx!!.dataSynchronizer
+        latestCtx!!.dataSynchronizer.updateOne(
+                latestCtx!!.namespace,
+                BsonDocument("_id", BsonString("nonexistent")),
+                BsonDocument("\$set", BsonDocument("a", BsonInt32(1)))
+        )
+
         return latestCtx!!
     }
 
