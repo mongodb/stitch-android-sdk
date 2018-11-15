@@ -256,9 +256,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               localCollection.deleteOne(filter);
               break;
             default:
-              // TODO(question for review): should I throw IllegalStateException here? There should
-              // never be pending writes with an unknown event type, but if someone was messing
-              // with the config collection we might want to stop the synchronizer to prevent
+              // There should never be pending writes with an unknown event type, but if someone
+              // is messing with the config collection we want to stop the synchronizer to prevent
               // further data corruption.
               throw new IllegalStateException(
                       "there should not be a pending write with an unknown event type"
