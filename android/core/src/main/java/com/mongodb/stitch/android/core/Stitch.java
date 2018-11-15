@@ -17,6 +17,7 @@
 package com.mongodb.stitch.android.core;
 
 import android.content.Context;
+import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -229,7 +230,10 @@ public final class Stitch {
     if (builder.getNetworkMonitor() == null) {
       final ConnectivityManager connectivityManager
           = (ConnectivityManager) applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-      builder.withNetworkMonitor(new AndroidNetworkMonitor(connectivityManager));
+      final AndroidNetworkMonitor networkMonitor = new AndroidNetworkMonitor(connectivityManager);
+      applicationContext.registerReceiver(networkMonitor,
+          new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+      builder.withNetworkMonitor(networkMonitor);
     }
 
     final StitchAppClientImpl client = new StitchAppClientImpl(clientAppId, builder.build());
