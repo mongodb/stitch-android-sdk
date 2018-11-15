@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.android.core.internal.net;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
@@ -25,8 +28,7 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
-public class AndroidNetworkMonitor implements NetworkMonitor,
-    ConnectivityManager.OnNetworkActiveListener {
+public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkMonitor {
 
   private final ConnectivityManager connManager;
   private final Set<StateListener> listeners;
@@ -34,7 +36,6 @@ public class AndroidNetworkMonitor implements NetworkMonitor,
   public AndroidNetworkMonitor(final ConnectivityManager connManager) {
     this.connManager = connManager;
     this.listeners = new HashSet<>();
-    connManager.addDefaultNetworkActiveListener(this);
   }
 
   @Override
@@ -54,11 +55,10 @@ public class AndroidNetworkMonitor implements NetworkMonitor,
   }
 
   @Override
-  public synchronized void onNetworkActive() {
-    if (isConnected()) {
-      for (final StateListener listener : listeners) {
-        listener.onNetworkStateChanged();
-      }
+  public void onReceive(final Context context, final Intent intent) {
+    final Set<StateListener> listenersCopy = new HashSet<>(listeners);
+    for (final StateListener listener : listenersCopy) {
+      listener.onNetworkStateChanged();
     }
   }
 }
