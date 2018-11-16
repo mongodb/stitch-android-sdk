@@ -92,23 +92,15 @@ public class StitchUserProfileImpl implements StitchUserProfile {
   /**
    * Get the minimum age of this user; may be null.
    */
-  public Integer getMinAge() {
-    final String age = data.get(DataFields.MIN_AGE);
-    if (age == null) {
-      return null;
-    }
-    return Integer.parseInt(age);
+  public String getMinAge() {
+    return data.get(DataFields.MIN_AGE);
   }
 
   /**
    * Get the maximum age of this user; may be null.
    */
-  public Integer getMaxAge() {
-    final String age = data.get(DataFields.MAX_AGE);
-    if (age == null) {
-      return null;
-    }
-    return Integer.parseInt(age);
+  public String getMaxAge() {
+    return data.get(DataFields.MAX_AGE);
   }
 
   public List<? extends StitchUserIdentity> getIdentities() {

@@ -86,7 +86,7 @@ public interface StitchUserProfile {
    * @return the minmum age of the user.
    */
   @Nullable
-  Integer getMinAge();
+  String getMinAge();
 
   /**
    * Returns the maximum age of the user.
@@ -94,5 +94,5 @@ public interface StitchUserProfile {
    * @return the maximum age of the user.
    */
   @Nullable
-  Integer getMaxAge();
+  String getMaxAge();
 }

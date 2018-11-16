@@ -85,8 +85,8 @@ public class StoreAuthInfoUnitTests {
     final Document dataDoc = (Document) userProfileDoc.get("data");
     assertEquals(dataDoc.get("first_name"), mockProfile.getFirstName());
     assertEquals(dataDoc.get("last_name"), mockProfile.getLastName());
-    assertEquals(Integer.valueOf((String) dataDoc.get("min_age")), mockProfile.getMinAge());
-    assertEquals(Integer.valueOf((String) dataDoc.get("max_age")), mockProfile.getMaxAge());
+    assertEquals(dataDoc.get("min_age"), mockProfile.getMinAge());
+    assertEquals(dataDoc.get("max_age"), mockProfile.getMaxAge());
     assertEquals(dataDoc.get("birthday"), mockProfile.getBirthday());
     assertEquals(dataDoc.get("gender"), mockProfile.getGender());
     assertEquals(dataDoc.get("picture"), mockProfile.getPictureUrl());

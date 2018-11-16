@@ -2,6 +2,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoCollection
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.internal.net.Event
@@ -30,6 +31,8 @@ enum class TestVersionState {
  */
 interface DataSynchronizerTestContext : Closeable {
     val namespace: MongoNamespace
+    val clientKey: String
+    val instanceKey: String
     val testDocument: BsonDocument
     val testDocumentId: BsonValue
     val testDocumentFilter: BsonDocument
@@ -56,6 +59,11 @@ interface DataSynchronizerTestContext : Closeable {
      */
     var nextStreamEvent: Event
     val dataSynchronizer: DataSynchronizer
+
+    /**
+     * An instance of the local synchronized collection.
+     */
+    val localCollection: MongoCollection<BsonDocument>
 
     /**
      * Reconfigure the dataSynchronizer.
@@ -92,6 +100,11 @@ interface DataSynchronizerTestContext : Closeable {
      * Reconfigure dataSynchronizer. Do a sync pass.
      */
     fun doSyncPass()
+
+    /**
+     * Sets the pending writes for a particular synchronized document ID.
+     */
+    fun setPendingWritesForDocId(documentId: BsonValue, event: ChangeEvent<BsonDocument>)
 
     /**
      * Attempt to find the contextual test document locally.
@@ -131,6 +144,11 @@ interface DataSynchronizerTestContext : Closeable {
      * Verify dataSynchronizer.stop() has been called.
      */
     fun verifyStopCalled(times: Int)
+
+    /**
+     * Verify that the undo collection of the data synchronizer is empty.
+     */
+    fun verifyUndoCollectionEmpty()
 
     /**
      * Queue a pseudo-remote insert event to be consumed during R2L.

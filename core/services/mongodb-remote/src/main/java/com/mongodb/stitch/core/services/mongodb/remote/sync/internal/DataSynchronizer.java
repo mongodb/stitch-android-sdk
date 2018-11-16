@@ -205,7 +205,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   /**
    * Recovers the state of synchronization for a namespace in case a system failure happened.
-   * The goal is to revert the namespace to a known, good state.
+   * The goal is to revert the namespace to a known, good state. This method itself is resilient
+   * to failures, since it doesn't delete any documents from the undo collection until the
+   * collection is in the desired state with respect to those documents.
    */
   private void recoverNamespace(final NamespaceSynchronizationConfig nsConfig) {
     final MongoCollection<BsonDocument> undoCollection =
@@ -214,6 +216,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         getLocalCollection(nsConfig.getNamespace());
     final List<BsonDocument> undoDocs =
         undoCollection.find().into(new ArrayList<>());
+    final Set<BsonValue> recoveredIds = new HashSet<>();
 
     // Replace local docs with undo docs. Presence of an undo doc implies we had a system failure
     // during a write. This covers updates and deletes.
@@ -222,11 +225,61 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonDocument filter = getDocumentIdFilter(documentId);
       localCollection.findOneAndReplace(
           filter, undoDoc, new FindOneAndReplaceOptions().upsert(true));
-      undoCollection.deleteOne(filter);
+      recoveredIds.add(documentId);
+    }
+
+    // If we recovered a document, but its pending writes are set to do something else, then the
+    // failure occurred after the pending writes were set, but before the undo document was
+    // deleted. In this case, we should restore the document to the state that the pending
+    // write indicates. There is a possibility that the pending write is from before the failed
+    // operation, but in that case, the findOneAndReplace or delete is a no-op since restoring
+    // the document to the state of the change event would be the same as recovering the undo
+    // document.
+    for (final CoreDocumentSynchronizationConfig docConfig : nsConfig.getSynchronizedDocuments()) {
+      final BsonValue documentId = docConfig.getDocumentId();
+      final BsonDocument filter = getDocumentIdFilter(documentId);
+
+      if (recoveredIds.contains(docConfig.getDocumentId())) {
+        final ChangeEvent<BsonDocument> pendingWrite = docConfig.getLastUncommittedChangeEvent();
+        if (pendingWrite != null) {
+          switch (pendingWrite.getOperationType()) {
+            case INSERT:
+            case UPDATE:
+            case REPLACE:
+              localCollection.findOneAndReplace(
+                      filter,
+                      pendingWrite.getFullDocument(),
+                      new FindOneAndReplaceOptions().upsert(true)
+              );
+              break;
+            case DELETE:
+              localCollection.deleteOne(filter);
+              break;
+            default:
+              // There should never be pending writes with an unknown event type, but if someone
+              // is messing with the config collection we want to stop the synchronizer to prevent
+              // further data corruption.
+              throw new IllegalStateException(
+                      "there should not be a pending write with an unknown event type"
+              );
+          }
+        }
+      }
+    }
+
+    // Delete all of our undo documents. If we've reached this point, we've recovered the local
+    // collection to the state we want with respect to all of our undo documents. If we fail before
+    // these deletes or while carrying out the deletes, but after recovering the documents to
+    // their desired state, that's okay because the next recovery pass will be effectively a no-op
+    // up to this point.
+    for (final BsonValue recoveredId : recoveredIds) {
+      undoCollection.deleteOne(getDocumentIdFilter(recoveredId));
     }
 
     // Find local documents for which there are no document configs and delete them. This covers
-    // inserts, upserts, and desync deletes.
+    // inserts, upserts, and desync deletes. This will occur on any recovery pass regardless of
+    // the documents in the undo collection, so it's fine that we do this after deleting the undo
+    // documents.
     localCollection.deleteMany(new BsonDocument(
         "_id",
         new BsonDocument(
@@ -2326,7 +2379,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             == ChangeEvent.OperationType.INSERT) {
           desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
           undoCollection.deleteOne(getDocumentIdFilter(documentId));
-          return result;
+          continue;
         }
 
         config.setSomePendingWrites(
@@ -2418,7 +2471,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       undoCollection.insertOne(documentToDelete);
       localCollection.deleteOne(getDocumentIdFilter(documentId));
       desyncDocumentFromRemote(namespace, documentId);
-      undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
+      undoCollection.deleteOne(getDocumentIdFilter(documentId));
     } finally {
       lock.unlock();
     }

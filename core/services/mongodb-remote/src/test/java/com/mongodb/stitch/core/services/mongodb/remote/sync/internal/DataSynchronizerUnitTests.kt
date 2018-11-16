@@ -10,12 +10,14 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIt
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterableImpl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
+import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonInt32
+import org.bson.BsonObjectId
 import org.bson.BsonString
-import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
+import org.bson.Document
 import org.junit.After
 
 import org.junit.Assert.assertEquals
@@ -32,6 +34,7 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import java.lang.Exception
+import java.util.Collections
 
 class DataSynchronizerUnitTests {
     companion object {
@@ -794,6 +797,9 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
 
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
     }
 
@@ -946,6 +952,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))),
             UpdateOptions().upsert(true))
 
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(1, result.matchedCount)
         assertEquals(1, result.modifiedCount)
         assertNotNull(result.upsertedId)
@@ -971,10 +980,13 @@ class DataSynchronizerUnitTests {
             "ids" to setOf(result.upsertedId)
         )))
 
-        ctx.dataSynchronizer.updateMany(
+        ctx.dataSynchronizer.updateOne(
             ctx.namespace,
             BsonDocument("name", BsonString("philip")),
             BsonDocument("\$inc", BsonDocument("count", BsonInt32(1))))
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         ctx.waitForEvents(amount = 2)
 
@@ -1015,6 +1027,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("name", BsonString("philip")),
             BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
             UpdateOptions().upsert(true)) // ensure there wasn't an unnecessary insert
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         ctx.findTestDocumentFromLocalCollection()
         assertEquals(2, result.modifiedCount)
@@ -1075,6 +1090,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("\$set", BsonDocument("count", BsonInt32(2))),
             UpdateOptions().upsert(true))
 
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(0, result.matchedCount)
         assertEquals(0, result.modifiedCount)
         assertNotNull(result.upsertedId)
@@ -1123,6 +1141,9 @@ class DataSynchronizerUnitTests {
             BsonDocument("name", BsonString("philip")),
             BsonDocument("\$set", BsonDocument("count", BsonInt32(3))),
             UpdateOptions().upsert(true))
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         assertEquals(2, result.matchedCount)
         assertEquals(1, result.modifiedCount)
@@ -1199,6 +1220,10 @@ class DataSynchronizerUnitTests {
         ctx.reconfigure()
 
         var result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
+
         assertEquals(0, result.deletedCount)
         assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
 
@@ -1210,6 +1235,9 @@ class DataSynchronizerUnitTests {
         assertEquals(2, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
 
         result = ctx.dataSynchronizer.deleteMany(ctx.namespace, BsonDocument())
+
+        // verify that we didn't accidentally leak any documents that will be "recovered" later
+        ctx.verifyUndoCollectionEmpty()
 
         assertEquals(2, result.deletedCount)
         assertEquals(0, ctx.dataSynchronizer.count(ctx.namespace, BsonDocument()))
@@ -1573,5 +1601,242 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRecoverUpdateNoPendingWrite() {
+        val origCtx = harness.freshTestContext()
+
+        origCtx.insertTestDocument()
+        origCtx.doSyncPass()
+
+        val testDocumentId = origCtx.testDocumentId
+        val originalTestDocument = origCtx.testDocument
+
+        origCtx.dataSynchronizer.stop()
+
+        // simulate a failure case where an update started, but did not get pending writes set
+        origCtx.localCollection
+                .updateOne(
+                        BsonDocument("_id", testDocumentId),
+                        BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
+                )
+
+        val ctx = harness.testContextFromExistingContext(
+                origCtx, Collections.singletonList(originalTestDocument)
+        )
+
+        ctx.verifyUndoCollectionEmpty()
+
+        // assert that the update got rolled back
+        assertEquals(originalTestDocument,
+                ctx.dataSynchronizer.find(
+                        ctx.namespace,
+                        BsonDocument("_id", testDocumentId)
+                ).firstOrNull()
+        )
+    }
+
+    @Test
+    fun testRecoverUpdateWithPendingWrite() {
+        val origCtx = harness.freshTestContext()
+
+        origCtx.insertTestDocument()
+        origCtx.doSyncPass()
+
+        val testDocumentId = origCtx.testDocumentId
+        val originalTestDocument = origCtx.testDocument
+
+        origCtx.dataSynchronizer.stop()
+
+        // simulate a failure case where an update started and got pending writes set, but the undo
+        // document still exists
+        origCtx.localCollection
+                .updateOne(
+                        BsonDocument("_id", testDocumentId),
+                        BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
+                )
+
+        val expectedNewDocument = originalTestDocument.append("oops", BsonBoolean(true))
+
+        origCtx.setPendingWritesForDocId(
+                testDocumentId,
+                ChangeEvent.changeEventForLocalUpdate(
+                        origCtx.namespace,
+                        testDocumentId,
+                        ChangeEvent.UpdateDescription.diff(originalTestDocument, expectedNewDocument),
+                        expectedNewDocument,
+                        true
+                ))
+
+        val ctx = harness.testContextFromExistingContext(
+                origCtx, Collections.singletonList(originalTestDocument)
+        )
+
+        ctx.verifyUndoCollectionEmpty()
+
+        // assert that the update did not get rolled back, since we set pending writes
+        assertEquals(expectedNewDocument,
+                ctx.dataSynchronizer.find(
+                        ctx.namespace,
+                        BsonDocument("_id", testDocumentId)
+                ).firstOrNull()
+        )
+    }
+
+    @Test
+    fun testRecoverDeleteNoPendingWrite() {
+        val origCtx = harness.freshTestContext()
+
+        origCtx.insertTestDocument()
+        origCtx.doSyncPass()
+
+        val testDocumentId = origCtx.testDocumentId
+        val originalTestDocument = origCtx.testDocument
+
+        origCtx.dataSynchronizer.stop()
+
+        // simulate a failure case where a delete started, but did not get pending writes set
+        origCtx.localCollection
+                .deleteOne(
+                        BsonDocument("_id", testDocumentId)
+                )
+
+        val ctx = harness.testContextFromExistingContext(
+                origCtx, Collections.singletonList(originalTestDocument)
+        )
+
+        ctx.verifyUndoCollectionEmpty()
+
+        // assert that the delete got rolled back
+        assertEquals(originalTestDocument,
+                ctx.dataSynchronizer.find(
+                        ctx.namespace,
+                        BsonDocument("_id", testDocumentId)
+                ).firstOrNull()
+        )
+    }
+
+    @Test
+    fun testRecoverDeleteWithPendingWrite() {
+        val origCtx = harness.freshTestContext()
+
+        origCtx.insertTestDocument()
+        origCtx.doSyncPass()
+
+        val testDocumentId = origCtx.testDocumentId
+        val originalTestDocument = origCtx.testDocument
+
+        origCtx.dataSynchronizer.stop()
+
+        // simulate a failure case where a delete started and got pending writes, but the undo
+        // document still exists
+        origCtx.localCollection
+                .deleteOne(
+                        BsonDocument("_id", testDocumentId)
+                )
+
+        origCtx.setPendingWritesForDocId(
+                testDocumentId,
+                ChangeEvent.changeEventForLocalDelete(
+                        origCtx.namespace,
+                        testDocumentId,
+                        true
+                ))
+
+        val ctx = harness.testContextFromExistingContext(
+                origCtx, Collections.singletonList(originalTestDocument)
+        )
+
+        ctx.verifyUndoCollectionEmpty()
+
+        // assert that the delete did not get rolled back, since we already set pending writes
+        assertNull(
+                ctx.dataSynchronizer.find(
+                        ctx.namespace,
+                        BsonDocument("_id", testDocumentId)
+                ).firstOrNull()
+        )
+    }
+
+    @Test
+    fun testRecoverUpdateOldPendingWrite() {
+        val origCtx = harness.freshTestContext()
+
+        origCtx.insertTestDocument()
+        origCtx.doSyncPass()
+
+        val testDocumentId = origCtx.testDocumentId
+
+        origCtx.dataSynchronizer.stop()
+
+        // simulate a failure case where an update started, but did not get pending writes set, and
+        // a previous completed update event is pending but uncommitted
+        origCtx.updateTestDocument()
+
+        val expectedTestDocument = origCtx.testDocument.clone()
+
+        expectedTestDocument["count"] = BsonInt32(2)
+
+        origCtx.localCollection
+                .updateOne(
+                        BsonDocument("_id", testDocumentId),
+                        BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
+                )
+
+        val ctx = harness.testContextFromExistingContext(
+                origCtx, Collections.singletonList(expectedTestDocument)
+        )
+
+        ctx.verifyUndoCollectionEmpty()
+
+        // assert that the update got rolled back to the state of the previous completed update
+        // that had uncommitted pending writes
+        assertEquals(expectedTestDocument,
+                ctx.dataSynchronizer.find(
+                        ctx.namespace,
+                        BsonDocument("_id", testDocumentId)
+                ).firstOrNull()
+        )
+    }
+
+    @Test
+    fun testRecoverUnsychronizedDocument() {
+        val origCtx = harness.freshTestContext()
+
+        origCtx.insertTestDocument()
+        origCtx.doSyncPass()
+
+        val testDocumentId = origCtx.testDocumentId
+
+        origCtx.dataSynchronizer.stop()
+
+        origCtx.localCollection
+                .updateOne(
+                        BsonDocument("_id", testDocumentId),
+                        BsonDocument("\$set", BsonDocument("oops", BsonBoolean(true)))
+                )
+
+        // simulate a pathological case where a user tries to insert arbitrary documents into the
+        // undo collection
+        val fakeRecoveryDocumentId = BsonObjectId()
+        val fakeRecoveryDocument = BsonDocument()
+                .append("_id", fakeRecoveryDocumentId)
+                .append("hello collection", BsonString("my old friend"))
+
+        val ctx = harness.testContextFromExistingContext(
+                origCtx, Collections.singletonList(fakeRecoveryDocument)
+        )
+
+        ctx.verifyUndoCollectionEmpty()
+
+        // ensure that undo documents that represent unsynchronized documents don't exist in the
+        // local collection after a recovery pass
+        assertNull(
+                ctx.dataSynchronizer.find(
+                        ctx.namespace,
+                        BsonDocument("_id", fakeRecoveryDocumentId)
+                ).firstOrNull()
+        )
     }
 }
