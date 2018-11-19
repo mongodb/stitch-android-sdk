@@ -16,14 +16,12 @@
 
 package com.mongodb.stitch.core.internal.net;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.internal.common.IoUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 
 public class StitchAppRequestClient extends StitchRequestClient {
   private static final String BOOTSTRAP_ERROR_MESSAGE_INVALID_HOSTNAME =
@@ -52,21 +50,9 @@ public class StitchAppRequestClient extends StitchRequestClient {
    */
   @Override
   public Response doRequest(final StitchRequest stitchReq) {
-    if (appMetadata == null) {
-      init(clientAppId);
-    }
-    // init throws if no location is available, so this should be safe
+    initAppMetadata(clientAppId);
 
-    final Response response;
-    try {
-      response = transport.roundTrip(buildRequest(stitchReq, appMetadata.hostname));
-    } catch (Exception e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
-    }
-
-    inspectResponse(response);
-
-    return response;
+    return super.doRequest(stitchReq, appMetadata.hostname);
   }
 
   /**
@@ -74,24 +60,16 @@ public class StitchAppRequestClient extends StitchRequestClient {
    * of the underlying app. Throws a Stitch specific exception if the request fails.
    *
    * @param stitchReq the request to perform.
-   * @return a {@link EventStream} representing the result of the request.
+   * @return an {@link EventStream} that will provide response events.
    */
   @Override
   public EventStream doStreamRequest(final StitchRequest stitchReq) {
-    if (appMetadata == null) {
-      init(clientAppId);
-    }
-    // init throws if no location is available, so this should be safe
+    initAppMetadata(clientAppId);
 
-    try {
-      return transport.stream(buildRequest(stitchReq, appMetadata.hostname));
-    } catch (Exception e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
-    }
+    return super.doStreamRequest(stitchReq, appMetadata.hostname);
   }
 
-  private synchronized void init(final String clientAppId) {
-    // double-check, in case two threads hit this point simultaneously
+  private synchronized void initAppMetadata(final String clientAppId) {
     if (appMetadata != null) {
       return;
     }
@@ -102,79 +80,25 @@ public class StitchAppRequestClient extends StitchRequestClient {
         .withMethod(Method.GET)
         .withPath(routes.getServiceRoutes().getLocationRoute())
         .build();
-    final Request bootstrapRequest = buildRequest(bootstrapStitchRequest, baseUrl);
 
-    final Response response;
-    try {
-      response = transport.roundTrip(bootstrapRequest);
-    } catch (Exception e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
-    }
-
-    inspectResponse(response);
-
+    final Response response = super.doRequest(bootstrapStitchRequest, baseUrl);
     final AppMetadata responseMetadata;
     try {
       responseMetadata = StitchObjectMapper.getInstance()
           .readValue(IoUtils.readAllToString(response.getBody()), AppMetadata.class);
 
-    } catch (Exception e) {
+    } catch (IOException e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
 
-    if (responseMetadata != null && responseMetadata.hostname != null) {
+    if (responseMetadata != null && responseMetadata.hostname != null
+        && !"".equals(responseMetadata.hostname.trim())) {
       appMetadata = responseMetadata;
     } else {
       throw new StitchRequestException(
           String.format(BOOTSTRAP_ERROR_MESSAGE_INVALID_HOSTNAME,
               appMetadata == null ? "null" : appMetadata),
           StitchRequestErrorCode.BOOTSTRAP_ERROR);
-    }
-  }
-
-  @SuppressWarnings("unused") // Jackson uses reflection
-  static class AppMetadata {
-    String deploymentModel;
-    String location;
-    String hostname;
-
-    @JsonProperty("deployment_model")
-    public String getDeploymentModel() {
-      return deploymentModel;
-    }
-
-    public void setDeploymentModel(final String deploymentModel) {
-      this.deploymentModel = deploymentModel;
-    }
-
-    @JsonProperty("location")
-    public String getLocation() {
-      return location;
-    }
-
-    public void setLocation(final String location) {
-      this.location = location;
-    }
-
-    @JsonProperty("hostname")
-    public String getHostname() {
-      return hostname;
-    }
-
-    public void setHostname(final String hostname) {
-      this.hostname = hostname;
-    }
-
-    @Override
-    public String toString() {
-      final ByteArrayOutputStream out = new ByteArrayOutputStream();
-      try {
-        StitchObjectMapper.getInstance().writeValue(out, this);
-      } catch (Exception e) {
-        return "<json serialization error>";
-      }
-
-      return new String(out.toByteArray(), StandardCharsets.UTF_8);
     }
   }
 }

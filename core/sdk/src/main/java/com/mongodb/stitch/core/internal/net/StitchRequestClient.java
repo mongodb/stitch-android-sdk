@@ -56,9 +56,13 @@ public class StitchRequestClient {
    * @return a {@link Response} to the request.
    */
   public Response doRequest(final StitchRequest stitchReq) {
+    return doRequest(stitchReq, baseUrl);
+  }
+
+  Response doRequest(final StitchRequest stitchReq, final String url) {
     final Response response;
     try {
-      response = transport.roundTrip(buildRequest(stitchReq));
+      response = transport.roundTrip(buildRequest(stitchReq, url));
     } catch (Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
     }
@@ -68,16 +72,23 @@ public class StitchRequestClient {
     return response;
   }
 
+  /**
+   * Performs a streaming request against global Stitch app server. Throws a Stitch-specific
+   * exception if the request fails.
+   *
+   * @param stitchReq the request to perform.
+   * @return an {@link EventStream} that will provide response events.
+   */
   public EventStream doStreamRequest(final StitchRequest stitchReq) {
+    return doStreamRequest(stitchReq, baseUrl);
+  }
+
+  EventStream doStreamRequest(final StitchRequest stitchReq, final String url) {
     try {
-      return transport.stream(buildRequest(stitchReq));
+      return transport.stream(buildRequest(stitchReq, url));
     } catch (Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
     }
-  }
-
-  private Request buildRequest(final StitchRequest stitchReq) {
-    return buildRequest(stitchReq, baseUrl);
   }
 
   Request buildRequest(final StitchRequest stitchReq, final String url) {
