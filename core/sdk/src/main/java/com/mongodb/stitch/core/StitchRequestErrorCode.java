@@ -20,7 +20,8 @@ package com.mongodb.stitch.core;
 public enum StitchRequestErrorCode {
   TRANSPORT_ERROR("the request transport encountered an error communicating with Stitch"),
   DECODING_ERROR("an error occurred while decoding a response from Stitch"),
-  ENCODING_ERROR("an error occurred while encoding a request for Stitch");
+  ENCODING_ERROR("an error occurred while encoding a request for Stitch"),
+  BOOTSTRAP_ERROR("an error occurred retrieving application metadata from Stitch");
 
   private final String description;
 

@@ -21,9 +21,9 @@ import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.internal.common.StitchError;
 
 public class StitchRequestClient {
+  protected final String baseUrl;
+  protected final Transport transport;
 
-  private final String baseUrl;
-  private final Transport transport;
   private final Long defaultRequestTimeout;
 
   /**
@@ -41,17 +41,16 @@ public class StitchRequestClient {
     this.defaultRequestTimeout = defaultRequestTimeout;
   }
 
-  private static Response inspectResponse(final Response response) {
+  protected static void inspectResponse(final Response response) {
     if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-      return response;
+      return;
     }
 
     StitchError.handleRequestError(response);
-    return null;
   }
 
   /**
-   * Performs a request against Stitch app servers. Throws a Stitch specific exception
+   * Performs a request against global Stitch app server. Throws a Stitch specific exception
    * if the request fails.
    * @param stitchReq the request to perform.
    * @return a {@link Response} to the request.
@@ -64,7 +63,9 @@ public class StitchRequestClient {
       throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
     }
 
-    return inspectResponse(response);
+    inspectResponse(response);
+
+    return response;
   }
 
   public EventStream doStreamRequest(final StitchRequest stitchReq) {
@@ -76,9 +77,13 @@ public class StitchRequestClient {
   }
 
   private Request buildRequest(final StitchRequest stitchReq) {
+    return buildRequest(stitchReq, baseUrl);
+  }
+
+  Request buildRequest(final StitchRequest stitchReq, final String url) {
     return new Request.Builder()
         .withMethod(stitchReq.getMethod())
-        .withUrl(String.format("%s%s", baseUrl, stitchReq.getPath()))
+        .withUrl(String.format("%s%s", url, stitchReq.getPath()))
         .withTimeout(
                 stitchReq.getTimeout() == null ? defaultRequestTimeout : stitchReq.getTimeout())
         .withHeaders(stitchReq.getHeaders())

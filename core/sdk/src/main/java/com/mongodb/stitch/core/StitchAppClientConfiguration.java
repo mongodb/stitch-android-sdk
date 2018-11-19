@@ -124,7 +124,8 @@ public final class StitchAppClientConfiguration extends StitchClientConfiguratio
     }
 
     /**
-     * Sets the base URL of the Stitch server that the client will communicate with.
+     * Sets the base URL of the Stitch server that the client will communicate with to retrieve
+     * application metadata.
      *
      * @param baseUrl the base URL of the Stitch server that the client will communicate with.
      * @return the builder.

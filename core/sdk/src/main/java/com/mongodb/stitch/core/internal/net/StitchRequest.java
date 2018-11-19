@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.internal.net;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.bson.Document;
 
 public class StitchRequest {
@@ -44,7 +45,8 @@ public class StitchRequest {
       final Long timeout,
       final Map<String, String> headers,
       final byte[] body,
-      final Long startedAt) {
+      final Long startedAt
+  ) {
     this.method = method;
     this.path = path;
     this.timeout = timeout;
@@ -117,6 +119,7 @@ public class StitchRequest {
     return startedAt;
   }
 
+
   /**
    * A builder that can build {@link StitchRequest}s.
    */
@@ -128,6 +131,11 @@ public class StitchRequest {
     private byte[] body;
     private Long startedAt;
 
+    /**
+     * Constructs a new builder prepopulated from an existing request.
+     *
+     * @param request the request used to prepopulate the builder.
+     */
     Builder(final StitchRequest request) {
       method = request.method;
       path = request.path;
@@ -227,7 +235,7 @@ public class StitchRequest {
      * before the request is transformed into a plain HTTP request.
      *
      * @return the number of milliseconds that the underlying transport should spend on an HTTP
-     *         round trip before failing with an error.
+     * round trip before failing with an error.
      */
     public Long getTimeout() {
       return timeout;
@@ -270,12 +278,12 @@ public class StitchRequest {
         startedAt = System.currentTimeMillis() / 1000L;
       }
       return new StitchRequest(
-              method,
-              path,
-              timeout,
-              headers == null ? new HashMap<String, String>() : headers,
-              body,
-              startedAt
+          method,
+          path,
+          timeout,
+          headers == null ? new HashMap<>() : headers,
+          body,
+          startedAt
       );
     }
   }

@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.services.internal;
 
 import static com.mongodb.stitch.core.internal.net.StitchAppRoutes.RouteParts.APP_ROUTE;
 import static com.mongodb.stitch.core.services.internal.StitchServiceRoutes.RouteParts.FUNCTION_CALL_ROUTE;
+import static com.mongodb.stitch.core.services.internal.StitchServiceRoutes.RouteParts.LOCATION_ROUTE;
 
 public final class StitchServiceRoutes {
   private final String clientAppId;
@@ -30,7 +31,12 @@ public final class StitchServiceRoutes {
     return String.format(FUNCTION_CALL_ROUTE, clientAppId);
   }
 
+  public String getLocationRoute() {
+    return String.format(LOCATION_ROUTE, clientAppId);
+  }
+
   static class RouteParts {
     static final String FUNCTION_CALL_ROUTE = APP_ROUTE + "/functions/call";
+    static final String LOCATION_ROUTE = APP_ROUTE + "/location";
   }
 }

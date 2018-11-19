@@ -31,6 +31,18 @@ public class StitchRequestException extends StitchException {
   private final StitchRequestErrorCode errorCode;
 
   /**
+   * Constructs a request exception from an error code without an underlying exception.
+   *
+   * @param message a message describing the specific exception.
+   * @param errorCode the request error code associated with this exception.
+   */
+  public StitchRequestException(final String message,
+                                final StitchRequestErrorCode errorCode) {
+    super(message);
+    this.errorCode = errorCode;
+  }
+
+  /**
    * Constructs a request exception from the underlying exception and error code.
    *
    * @param underlyingException the underlying exception that caused this exception.
