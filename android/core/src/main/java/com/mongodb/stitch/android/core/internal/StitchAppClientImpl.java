@@ -34,13 +34,14 @@ import com.mongodb.stitch.core.internal.CoreStitchAppClient;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.net.StitchAppRequestClient;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
-import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
+
+import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
-import org.bson.codecs.Decoder;
-import org.bson.codecs.configuration.CodecRegistry;
 
 public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
 
@@ -74,8 +75,8 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
             new MainLooperDispatcher());
     this.routes = new StitchAppRoutes(this.info.getClientAppId());
     final StitchAppRequestClient requestClient =
-        new StitchAppRequestClient( clientAppId,
-                config.getBaseUrl(), config.getTransport(), config.getDefaultRequestTimeout());
+        new StitchAppRequestClient(clientAppId, config.getBaseUrl(), config.getTransport(),
+            config.getDefaultRequestTimeout());
     this.auth =
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), dispatcher, this.info);
