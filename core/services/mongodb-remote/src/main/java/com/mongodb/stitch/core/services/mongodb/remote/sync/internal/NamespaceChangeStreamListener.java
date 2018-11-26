@@ -108,12 +108,14 @@ public class NamespaceChangeStreamListener {
       }
 
       this.cancel();
-      runnerThread.interrupt();
-      try {
-        runnerThread.join();
-      } catch (final Exception e) {
-        e.printStackTrace();
-        return;
+      while (runnerThread.isAlive()) {
+        runnerThread.interrupt();
+        try {
+          runnerThread.join(1000);
+        } catch (final Exception e) {
+          e.printStackTrace();
+          return;
+        }
       }
       runnerThread = null;
     } catch (Exception e) {
