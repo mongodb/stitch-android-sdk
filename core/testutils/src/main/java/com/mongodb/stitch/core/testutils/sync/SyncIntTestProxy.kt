@@ -1839,12 +1839,12 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         BsonDocument("_id", documentId)
 
     private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: ChangeEvent<Document> ->
-        val localEventDescription = when(event1.operationType == ChangeEvent.OperationType.DELETE) {
+        val localEventDescription = when (event1.operationType == ChangeEvent.OperationType.DELETE) {
             true -> "delete"
             false -> event1.fullDocument.toJson()
         }
 
-        val remoteEventDescription = when(event2.operationType == ChangeEvent.OperationType.DELETE) {
+        val remoteEventDescription = when (event2.operationType == ChangeEvent.OperationType.DELETE) {
             true -> "delete"
             false -> event2.fullDocument.toJson()
         }
