@@ -362,6 +362,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         testProxy.testSyncVersionFieldNotEditable()
     }
 
+    @Test
+    override fun testConflictForEmptyVersionDocuments() {
+        testProxy.testConflictForEmptyVersionDocuments()
+    }
+
     /**
      * Get the uri for where mongodb is running locally.
      */
