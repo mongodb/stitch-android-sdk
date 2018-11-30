@@ -150,4 +150,7 @@ interface SyncIntTestRunner {
 
     @Test
     fun testSyncVersionFieldNotEditable()
+
+    @Test
+    fun testConflictForEmptyVersionDocuments()
 }

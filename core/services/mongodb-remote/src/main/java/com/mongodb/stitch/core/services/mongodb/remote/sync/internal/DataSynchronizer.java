@@ -759,21 +759,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final DocumentVersionInfo lastKnownLocalVersionInfo = DocumentVersionInfo
           .getLocalVersionInfo(docConfig);
 
-    // 1. If both the local document version and the remote change event version are empty, drop
-    //    the event. The absence of a version is effectively a version, and the pending write will
-    //    set a version on the next L2R pass if it’s not a delete.
-    if (!lastKnownLocalVersionInfo.hasVersion() && !currentRemoteVersionInfo.hasVersion()) {
-      logger.info(String.format(
-          Locale.US,
-          "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote and local have same "
-              + "empty version but a write is pending; waiting for next L2R pass",
-          logicalT,
-          nsConfig.getNamespace(),
-          docConfig.getDocumentId()));
-      return;
-    }
-
-    // 2. If either the local document version or the remote change event version are empty, raise
+    // 1. If either the local document version or the remote change event version are empty, raise
     //    a conflict. The absence of a version is effectively a version, and a remote change event
     //    with no version indicates a document that may have been committed by another client not
     //    adhering to the mobile sync protocol.
@@ -781,7 +767,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       logger.info(String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote or local have an "
-                      + "empty version but a write is pending; waiting for next L2R pass",
+                      + "empty version but a write is pending; raising conflict",
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId()));
@@ -789,7 +775,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    // 3. Check if the GUID of the two versions are the same.
+    // 2. Check if the GUID of the two versions are the same.
     final DocumentVersionInfo.Version localVersion = lastKnownLocalVersionInfo.getVersion();
     final DocumentVersionInfo.Version remoteVersion = currentRemoteVersionInfo.getVersion();
     if (localVersion.instanceId.equals(remoteVersion.instanceId)) {
@@ -1000,7 +986,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
             // 1. If it does and the version info is different, record that a conflict has occurred.
             //    Difference is determined if either the GUID is different or the version counter is
-            //    greater than the local version counter.
+            //    greater than the local version counter, or if both versions are empty.
             if (!docConfig.hasCommittedVersion(unprocessedEventVersion)) {
               isConflicted = true;
               logger.info(String.format(

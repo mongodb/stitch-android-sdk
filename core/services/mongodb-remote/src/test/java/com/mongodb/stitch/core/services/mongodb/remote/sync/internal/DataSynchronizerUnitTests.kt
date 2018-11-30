@@ -273,8 +273,14 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalInsert(
-                ctx.namespace, expectedDocument, false))
+            ChangeEvent.changeEventForLocalUpdate(
+                    ctx.namespace,
+                    ctx.testDocumentId,
+                    ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(3)), Collections.emptyList()),
+                    expectedDocument,
+                    false
+            )
+        )
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 0)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
     }
@@ -282,75 +288,68 @@ class DataSynchronizerUnitTests {
     @Test
     fun testConflictedReplace() {
         var ctx = harness.freshTestContext()
-        var expectedDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
+        var expectedLocalDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
 
         // 1: Replace -> Conflict -> Replace (local wins)
         setupPendingReplace(
             ctx,
             shouldConflictBeResolvedByRemote = false)
 
-        // do a sync pass, addressing the conflict
-        ctx.doSyncPass()
-        ctx.waitForEvents()
-        // verify that a change event has been emitted. the conflict will have been handled
-        // in setupPendingReplace
-        ctx.verifyChangeEventListenerCalledForActiveDoc(
-            1,
-            ChangeEvent.changeEventForLocalInsert(
-                ctx.namespace, expectedDoc, false
-            ))
+        ctx.verifyConflictHandlerCalledForActiveDoc(times = 1)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
+        assertEquals(expectedLocalDoc, ctx.findTestDocumentFromLocalCollection())
 
-        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
-
-        // 2: Replace -> Conflict -> Delete (remote wins)
+        // 2: Replace -> Conflict -> Replace (remote wins)
         ctx = harness.freshTestContext()
-        setupPendingReplace(ctx, shouldConflictBeResolvedByRemote = true)
+        val expectedRemoteDoc = BsonDocument("_id", ctx.testDocumentId).append("count", BsonInt32(1))
+        setupPendingReplace(
+            ctx,
+            shouldConflictBeResolvedByRemote = true)
 
         ctx.verifyConflictHandlerCalledForActiveDoc(times = 1)
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
-        assertNull(ctx.findTestDocumentFromLocalCollection())
+        assertEquals(expectedRemoteDoc, ctx.findTestDocumentFromLocalCollection())
 
         // 3: Replace -> Conflict -> Exception -> Freeze
         ctx = harness.freshTestContext()
-        expectedDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
+        expectedLocalDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
         ctx.exceptionToThrowDuringConflict = Exception("bad")
         // verify that, though the conflict handler was called, the exceptionToThrow was emitted
         // by the dataSynchronizer
         setupPendingReplace(ctx, shouldWaitForError = true)
-        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
+        assertEquals(expectedLocalDoc, ctx.findTestDocumentFromLocalCollection())
 
         // clear issues. open a path for a delete.
         // do another sync pass. the doc should remain the same as it is paused
         ctx.exceptionToThrowDuringConflict = null
         ctx.shouldConflictBeResolvedByRemote = false
         ctx.doSyncPass()
-        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
-        expectedDoc = BsonDocument("count", BsonInt32(5)).append("_id", ctx.testDocumentId)
+        assertEquals(expectedLocalDoc, ctx.findTestDocumentFromLocalCollection())
+        expectedLocalDoc = BsonDocument("count", BsonInt32(5)).append("_id", ctx.testDocumentId)
 
         // replace the doc locally (with an update), unfreezing it, and syncing it
         setupPendingReplace(ctx)
         ctx.doSyncPass()
-        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
+        assertEquals(expectedLocalDoc, ctx.findTestDocumentFromLocalCollection())
 
         // 4: Unknown -> Freeze
         ctx = harness.freshTestContext()
-        expectedDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
+        expectedLocalDoc = BsonDocument("count", BsonInt32(3)).append("_id", ctx.testDocumentId)
         ctx.queueConsumableRemoteUnknownEvent()
         setupPendingReplace(ctx)
 
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
-        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
+        assertEquals(expectedLocalDoc, ctx.findTestDocumentFromLocalCollection())
 
         // should be paused since the operation type was unknown
         ctx.queueConsumableRemoteUnknownEvent()
         ctx.doSyncPass()
-        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
+        assertEquals(expectedLocalDoc, ctx.findTestDocumentFromLocalCollection())
 
         ctx.queueConsumableRemoteDeleteEvent()
         ctx.doSyncPass()
-        assertEquals(expectedDoc, ctx.findTestDocumentFromLocalCollection())
+        assertEquals(expectedLocalDoc, ctx.findTestDocumentFromLocalCollection())
     }
 
     @Test

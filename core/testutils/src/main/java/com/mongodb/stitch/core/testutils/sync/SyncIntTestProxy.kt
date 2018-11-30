@@ -13,6 +13,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictR
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonElement
@@ -318,7 +319,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             remoteColl.insertOne(docToInsert)
 
             // find the document we just inserted
-            val doc = remoteColl.find(docToInsert).first()!!
+            var doc = remoteColl.find(docToInsert).first()!!
             val doc1Id = BsonObjectId(doc.getObjectId("_id"))
             val doc1Filter = Document("_id", doc1Id)
 
@@ -327,6 +328,14 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             coll.configure(failingConflictHandler, null, null)
             coll.syncOne(doc1Id)
             streamAndSync()
+
+            // update the document so it has a sync version (if we don't do this, then deleting
+            // the document will result in a conflict because a remote document with no version
+            // and a local document with no version are treated as documents with different
+            // versions)
+            coll.updateOne(doc1Filter, Document("\$set", Document("hello", "universe")))
+            streamAndSync()
+            doc = remoteColl.find(doc1Filter).first()!!
 
             // go offline to avoid processing events.
             // delete the document locally
@@ -1645,6 +1654,69 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         }
     }
 
+    @Test
+    fun testConflictForEmptyVersionDocuments() {
+        testSyncInBothDirections {
+            val coll = syncTestRunner.syncMethods()
+            val remoteColl = syncTestRunner.remoteMethods()
+
+            // insert a document remotely
+            val docToInsert = Document("hello", "world")
+            remoteColl.insertOne(docToInsert)
+
+            // find the document we just inserted
+            var doc = remoteColl.find(docToInsert).first()!!
+            val doc1Id = BsonObjectId(doc.getObjectId("_id"))
+            val doc1Filter = Document("_id", doc1Id)
+
+            // configure Sync to have local documents win conflicts
+            var conflictRaised = false
+            coll.configure(
+                    ConflictHandler { _, localEvent, _ ->
+                        conflictRaised = true
+                        localEvent.fullDocument
+                    }, null, null)
+            coll.syncOne(doc1Id)
+            streamAndSync()
+
+            // go offline to avoid processing events.
+            // delete the document locally
+            goOffline()
+            val result = coll.deleteOne(doc1Filter)
+            assertEquals(1, result.deletedCount)
+
+            // assert that the remote document remains
+            val expectedDocument = withoutSyncVersion(Document(doc))
+            assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
+            Assert.assertNull(coll.find(doc1Filter).firstOrNull())
+
+            // go online to begin the syncing process. When doing R2L first, a conflict should have
+            // occurred because both the local and remote instance of this document have no version
+            // information, meaning that the sync pass was forced to raise a conflict. our local
+            // delete should be synced to the remote, because we set up the conflict handler to
+            // have local always win. assert that this is reflected remotely and locally.
+            // When doing L2R first, no conflict will be raised since we didn't get a chance to
+            // fetch stale documents. this could result in the loss of events, but we are not
+            // making any guarantees about missing events if versions are not set until we
+            // always do R2L first
+            goOnline()
+            // do one sync pass to get the local delete to happen via conflict resolution
+            streamAndSync()
+            // do another sync pass to get the local delete resolution committed to the remote
+            streamAndSync()
+
+            // if we did R2L first, make sure that a conflict was raised
+            val l2rFirstField = DataSynchronizer::class.java.getDeclaredField("localToRemoteFirst")
+            l2rFirstField.isAccessible = true
+            if (!l2rFirstField.getBoolean(syncTestRunner.dataSynchronizer)) {
+                Assert.assertTrue(conflictRaised)
+            }
+
+            Assert.assertNull(coll.find(doc1Filter).firstOrNull())
+            Assert.assertNull(remoteColl.find(doc1Filter).firstOrNull())
+        }
+    }
+
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {
         println("watching for $n change event(s) ns=$namespace")
         val waitFor = AtomicInteger(n)
@@ -1767,8 +1839,18 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         BsonDocument("_id", documentId)
 
     private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: ChangeEvent<Document> ->
-        println("conflict local event: " + event1.fullDocument.toJson())
-        println("conflict remote event: " + event2.fullDocument.toJson())
+        val localEventDescription = when (event1.operationType == ChangeEvent.OperationType.DELETE) {
+            true -> "delete"
+            false -> event1.fullDocument.toJson()
+        }
+
+        val remoteEventDescription = when (event2.operationType == ChangeEvent.OperationType.DELETE) {
+            true -> "delete"
+            false -> event2.fullDocument.toJson()
+        }
+
+        println("conflict local event: $localEventDescription")
+        println("conflict remote event: $remoteEventDescription")
         Assert.fail("did not expect a conflict")
         throw IllegalStateException("unreachable")
     }
