@@ -16,6 +16,10 @@
 
 package com.mongodb.stitch.android.core.internal;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.Callable;
+
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
@@ -38,10 +42,6 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.Callable;
 
 public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
 

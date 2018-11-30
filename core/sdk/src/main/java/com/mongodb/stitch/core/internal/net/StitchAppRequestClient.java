@@ -29,7 +29,7 @@ public class StitchAppRequestClient extends StitchRequestClient {
 
   private final String clientAppId;
 
-  private AppMetadata appMetadata;
+  private APIAppMetadata appMetadata;
 
   public StitchAppRequestClient(
       final String clientAppId,
@@ -52,7 +52,7 @@ public class StitchAppRequestClient extends StitchRequestClient {
   public Response doRequest(final StitchRequest stitchReq) {
     initAppMetadata(clientAppId);
 
-    return super.doRequest(stitchReq, appMetadata.hostname);
+    return super.doRequest(stitchReq, getHostname());
   }
 
   /**
@@ -66,7 +66,11 @@ public class StitchAppRequestClient extends StitchRequestClient {
   public EventStream doStreamRequest(final StitchRequest stitchReq) {
     initAppMetadata(clientAppId);
 
-    return super.doStreamRequest(stitchReq, appMetadata.hostname);
+    return super.doStreamRequest(stitchReq, getHostname());
+  }
+
+  private synchronized String getHostname() {
+    return appMetadata.hostname;
   }
 
   private synchronized void initAppMetadata(final String clientAppId) {
@@ -82,10 +86,10 @@ public class StitchAppRequestClient extends StitchRequestClient {
         .build();
 
     final Response response = super.doRequest(bootstrapStitchRequest, baseUrl);
-    final AppMetadata responseMetadata;
+    final APIAppMetadata responseMetadata;
     try {
       responseMetadata = StitchObjectMapper.getInstance()
-          .readValue(IoUtils.readAllToString(response.getBody()), AppMetadata.class);
+          .readValue(IoUtils.readAllToString(response.getBody()), APIAppMetadata.class);
 
     } catch (IOException e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
