@@ -23,15 +23,15 @@ import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 
 import java.io.IOException;
 
-public class StitchAppRequestClient extends StitchRequestClient {
+public class StitchAppRequestClientImpl extends BaseStitchRequestClient {
   private static final String BOOTSTRAP_ERROR_MESSAGE_INVALID_HOSTNAME =
       "invalid hostname in metadata: %s";
 
   private final String clientAppId;
 
-  private APIAppMetadata appMetadata;
+  private ApiAppMetadata appMetadata;
 
-  public StitchAppRequestClient(
+  public StitchAppRequestClientImpl(
       final String clientAppId,
       final String baseUrl,
       final Transport transport,
@@ -52,7 +52,7 @@ public class StitchAppRequestClient extends StitchRequestClient {
   public Response doRequest(final StitchRequest stitchReq) {
     initAppMetadata(clientAppId);
 
-    return super.doRequest(stitchReq, getHostname());
+    return super.doRequestUrl(stitchReq, getHostname());
   }
 
   /**
@@ -66,7 +66,7 @@ public class StitchAppRequestClient extends StitchRequestClient {
   public EventStream doStreamRequest(final StitchRequest stitchReq) {
     initAppMetadata(clientAppId);
 
-    return super.doStreamRequest(stitchReq, getHostname());
+    return super.doStreamRequestUrl(stitchReq, getHostname());
   }
 
   private synchronized String getHostname() {
@@ -85,11 +85,11 @@ public class StitchAppRequestClient extends StitchRequestClient {
         .withPath(routes.getServiceRoutes().getLocationRoute())
         .build();
 
-    final Response response = super.doRequest(bootstrapStitchRequest, baseUrl);
-    final APIAppMetadata responseMetadata;
+    final Response response = super.doRequestUrl(bootstrapStitchRequest, baseUrl);
+    final ApiAppMetadata responseMetadata;
     try {
       responseMetadata = StitchObjectMapper.getInstance()
-          .readValue(IoUtils.readAllToString(response.getBody()), APIAppMetadata.class);
+          .readValue(IoUtils.readAllToString(response.getBody()), ApiAppMetadata.class);
 
     } catch (IOException e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);

@@ -2,10 +2,7 @@ package com.mongodb.stitch.core.admin
 
 import com.mongodb.stitch.core.auth.StitchCredential
 import com.mongodb.stitch.core.internal.common.MemoryStorage
-import com.mongodb.stitch.core.internal.net.Method
-import com.mongodb.stitch.core.internal.net.OkHttpTransport
-import com.mongodb.stitch.core.internal.net.StitchAuthRequest
-import com.mongodb.stitch.core.internal.net.StitchRequestClient
+import com.mongodb.stitch.core.internal.net.*
 
 class StitchAdminClient private constructor(
     private val adminAuth: StitchAdminAuth,
@@ -17,7 +14,7 @@ class StitchAdminClient private constructor(
         private const val defaultRequestTimeout = 60000L
 
         fun create(baseUrl: String = defaultServerUrl): StitchAdminClient {
-            val requestClient = StitchRequestClient(
+            val requestClient = StitchRequestClientImpl(
                     baseUrl, OkHttpTransport(), defaultRequestTimeout)
             val authRoutes = StitchAdminAuthRoutes()
 

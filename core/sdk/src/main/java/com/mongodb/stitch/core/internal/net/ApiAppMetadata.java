@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
  * application.
  */
 @SuppressWarnings("unused") // Jackson uses reflection
-public class APIAppMetadata {
+public class ApiAppMetadata {
   String deploymentModel;
   String location;
   String hostname;

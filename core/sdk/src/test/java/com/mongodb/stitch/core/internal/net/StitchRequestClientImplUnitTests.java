@@ -42,14 +42,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-public class StitchRequestClientUnitTests {
+public class StitchRequestClientImplUnitTests {
 
   @Test
   public void testDoRequest() throws Exception {
     final String domain = "http://domain.com";
     final Transport transport = Mockito.mock(Transport.class);
     final StitchRequestClient stitchRequestClient =
-        new StitchRequestClient(domain, transport, 1500L);
+        new StitchRequestClientImpl(domain, transport, 1500L);
 
     // A bad response should throw an exception
     doReturn(new Response(500)).when(transport).roundTrip(any());
@@ -142,7 +142,7 @@ public class StitchRequestClientUnitTests {
     final String domain = "http://domain.com";
     final Transport transport = Mockito.mock(Transport.class);
     final StitchRequestClient stitchRequestClient =
-        new StitchRequestClient(domain, transport, 1500L);
+        new StitchRequestClientImpl(domain, transport, 1500L);
 
     final String path = "/path";
     final Document document = new Document("my", 24);
@@ -240,7 +240,7 @@ public class StitchRequestClientUnitTests {
     final String domain = "http://domain.com";
     final Transport transport = Mockito.mock(Transport.class);
     final StitchRequestClient stitchRequestClient =
-        new StitchRequestClient(domain, transport, 1500L);
+        new StitchRequestClientImpl(domain, transport, 1500L);
 
     // A bad response should throw an exception
     doReturn(new Response(500)).when(transport).roundTrip(any());
@@ -281,7 +281,7 @@ public class StitchRequestClientUnitTests {
     final String domain = "http://domain.com";
     final Transport transport = Mockito.mock(Transport.class);
     final StitchRequestClient stitchRequestClient =
-        new StitchRequestClient(domain, transport, 1500L);
+        new StitchRequestClientImpl(domain, transport, 1500L);
 
     doThrow(new TimeoutException("whoops")).when(transport)
         .roundTrip(ArgumentMatchers.argThat(req -> req.getTimeout() == 3000L));
