@@ -2,7 +2,10 @@ package com.mongodb.stitch.core.admin
 
 import com.mongodb.stitch.core.auth.StitchCredential
 import com.mongodb.stitch.core.internal.common.MemoryStorage
-import com.mongodb.stitch.core.internal.net.*
+import com.mongodb.stitch.core.internal.net.Method
+import com.mongodb.stitch.core.internal.net.OkHttpTransport
+import com.mongodb.stitch.core.internal.net.StitchAuthRequest
+import com.mongodb.stitch.core.internal.net.StitchRequestClientImpl
 
 class StitchAdminClient private constructor(
     private val adminAuth: StitchAdminAuth,
