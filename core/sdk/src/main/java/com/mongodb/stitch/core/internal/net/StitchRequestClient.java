@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,77 +16,27 @@
 
 package com.mongodb.stitch.core.internal.net;
 
-import com.mongodb.stitch.core.StitchRequestErrorCode;
-import com.mongodb.stitch.core.StitchRequestException;
-import com.mongodb.stitch.core.internal.common.StitchError;
-
-public class StitchRequestClient {
-
-  private final String baseUrl;
-  private final Transport transport;
-  private final Long defaultRequestTimeout;
-
+public interface StitchRequestClient {
   /**
-   * Constructs a StitchRequestClient with the provided parameters.
-   * @param baseUrl the base URL of the Stitch server to which this client will make requests.
-   * @param transport the underlying {@link Transport} that this client will use to make requests.
-   * @param defaultRequestTimeout the number of milliseconds the client should wait for a response
-   *                              by default from the server before failing with an error.
-   */
-  public StitchRequestClient(final String baseUrl,
-                             final Transport transport,
-                             final Long defaultRequestTimeout) {
-    this.baseUrl = baseUrl;
-    this.transport = transport;
-    this.defaultRequestTimeout = defaultRequestTimeout;
-  }
-
-  private static Response inspectResponse(final Response response) {
-    if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-      return response;
-    }
-
-    StitchError.handleRequestError(response);
-    return null;
-  }
-
-  /**
-   * Performs a request against Stitch app servers. Throws a Stitch specific exception
+   * Performs a request against some Stitch server. Throws a Stitch specific exception
    * if the request fails.
    * @param stitchReq the request to perform.
    * @return a {@link Response} to the request.
    */
-  public Response doRequest(final StitchRequest stitchReq) {
-    final Response response;
-    try {
-      response = transport.roundTrip(buildRequest(stitchReq));
-    } catch (Exception e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
-    }
+  Response doRequest(final StitchRequest stitchReq);
 
-    return inspectResponse(response);
-  }
 
-  public EventStream doStreamRequest(final StitchRequest stitchReq) {
-    try {
-      return transport.stream(buildRequest(stitchReq));
-    } catch (Exception e) {
-      throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
-    }
-  }
+  /**
+   * Performs a streaming request against some Stitch server. Throws a Stitch-specific
+   * exception if the request fails.
+   *
+   * @param stitchReq the request to perform.
+   * @return an {@link EventStream} that will provide response events.
+   */
+  EventStream doStreamRequest(final StitchRequest stitchReq);
 
-  private Request buildRequest(final StitchRequest stitchReq) {
-    return new Request.Builder()
-        .withMethod(stitchReq.getMethod())
-        .withUrl(String.format("%s%s", baseUrl, stitchReq.getPath()))
-        .withTimeout(
-                stitchReq.getTimeout() == null ? defaultRequestTimeout : stitchReq.getTimeout())
-        .withHeaders(stitchReq.getHeaders())
-        .withBody(stitchReq.getBody())
-        .build();
-  }
-
-  public void close() {
-    transport.close();
-  }
+  /**
+   * Closes the underlying transport.
+   */
+  void close();
 }

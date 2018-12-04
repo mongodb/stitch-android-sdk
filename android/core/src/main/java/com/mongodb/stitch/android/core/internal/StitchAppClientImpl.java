@@ -32,12 +32,14 @@ import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.internal.CoreStitchAppClient;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
+import com.mongodb.stitch.core.internal.net.StitchAppRequestClientImpl;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
-import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
+
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
@@ -54,7 +56,7 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
    * Constructs an app client with the given configuration.
    *
    * @param clientAppId the client app id for the app.
-   * @param config the configuration to use for the app client.
+   * @param config      the configuration to use for the app client.
    */
   public StitchAppClientImpl(
       final String clientAppId,
@@ -72,9 +74,9 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
             this,
             new MainLooperDispatcher());
     this.routes = new StitchAppRoutes(this.info.getClientAppId());
-    final StitchRequestClient requestClient =
-        new StitchRequestClient(
-                config.getBaseUrl(), config.getTransport(), config.getDefaultRequestTimeout());
+    final StitchAppRequestClientImpl requestClient =
+        new StitchAppRequestClientImpl(clientAppId, config.getBaseUrl(), config.getTransport(),
+            config.getDefaultRequestTimeout());
     this.auth =
         new StitchAuthImpl(
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), dispatcher, this.info);
@@ -94,7 +96,8 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
 
   @Override
   public <T> T getServiceClient(
-      final NamedServiceClientFactory<T> factory, final String serviceName) {
+      final NamedServiceClientFactory<T> factory,
+      final String serviceName) {
     return factory.getClient(
         new CoreStitchServiceClientImpl(
             auth,
@@ -129,7 +132,9 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
   }
 
   @Override
-  public Task<Void> callFunction(final String name, final List<?> args) {
+  public Task<Void> callFunction(
+      final String name,
+      final List<?> args) {
     return dispatcher.dispatchTask(
         new Callable<Void>() {
           @Override
@@ -158,14 +163,16 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<?> args, final Class<ResultT> resultClass) {
+      final String name,
+      final List<?> args,
+      final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
-      new Callable<ResultT>() {
-        @Override
-        public ResultT call() {
-          return coreClient.callFunction(name, args, null, resultClass);
-        }
-      });
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return coreClient.callFunction(name, args, null, resultClass);
+          }
+        });
   }
 
   @Override
@@ -175,12 +182,12 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
       final Long requestTimeout,
       final Class<ResultT> resultClass) {
     return dispatcher.dispatchTask(
-      new Callable<ResultT>() {
-        @Override
-        public ResultT call() {
-          return coreClient.callFunction(name, args, requestTimeout, resultClass);
-        }
-      });
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return coreClient.callFunction(name, args, requestTimeout, resultClass);
+          }
+        });
   }
 
   @Override
@@ -191,12 +198,12 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
       final CodecRegistry codecRegistry
   ) {
     return dispatcher.dispatchTask(
-      new Callable<ResultT>() {
-        @Override
-        public ResultT call() {
-          return coreClient.callFunction(name, args, null, resultClass, codecRegistry);
-        }
-      });
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return coreClient.callFunction(name, args, null, resultClass, codecRegistry);
+          }
+        });
   }
 
   @Override
@@ -208,29 +215,31 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
       final CodecRegistry codecRegistry
   ) {
     return dispatcher.dispatchTask(
-      new Callable<ResultT>() {
-        @Override
-        public ResultT call() {
-          return coreClient.callFunction(
-              name,
-              args,
-              requestTimeout,
-              resultClass,
-              codecRegistry);
-        }
-      });
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return coreClient.callFunction(
+                name,
+                args,
+                requestTimeout,
+                resultClass,
+                codecRegistry);
+          }
+        });
   }
 
   @Override
   public <ResultT> Task<ResultT> callFunction(
-      final String name, final List<?> args, final Decoder<ResultT> resultDecoder) {
+      final String name,
+      final List<?> args,
+      final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
-      new Callable<ResultT>() {
-        @Override
-        public ResultT call() {
-          return coreClient.callFunction(name, args, null, resultDecoder);
-        }
-      });
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return coreClient.callFunction(name, args, null, resultDecoder);
+          }
+        });
   }
 
   @Override
@@ -240,12 +249,12 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
       final Long requestTimeout,
       final Decoder<ResultT> resultDecoder) {
     return dispatcher.dispatchTask(
-      new Callable<ResultT>() {
-        @Override
-        public ResultT call() {
-          return coreClient.callFunction(name, args, requestTimeout, resultDecoder);
-        }
-      });
+        new Callable<ResultT>() {
+          @Override
+          public ResultT call() {
+            return coreClient.callFunction(name, args, requestTimeout, resultDecoder);
+          }
+        });
   }
 
   @Override

@@ -46,7 +46,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         val jwt = Jwts.builder()
                 .setHeader(
                         mapOf(
-                                "alg" to "H   S256",
+                                "alg" to "HS256",
                                 "typ" to "JWT"
                         ))
                 .claim("stitch_meta",
