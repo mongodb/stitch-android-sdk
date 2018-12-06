@@ -313,20 +313,11 @@ public class TodoListActivity extends AppCompatActivity {
                 for (final TodoItem item : remoteItems) {
                   items.sync().syncOne(new BsonObjectId(item.getId()));
                 }
-                final List<TodoItem> filteredItems = new ArrayList<>(remoteItems.size());
-                for (final TodoItem remoteItem : remoteItems) {
-                  // Filter out uncommitted, deleted items
-                  if (syncedIds.contains(new BsonObjectId(remoteItem.getId()))) {
-                    if (localItems.containsKey(remoteItem.getId())) {
-                      // Local is correct, not remote
-                      filteredItems.add(localItems.get(remoteItem.getId()));
-                    }
-                    // exclude as deleted. wait for events if real changes happen
-                  } else {
-                    filteredItems.add(remoteItem);
-                  }
-                }
-                return filteredItems;
+
+                // this may visually override any uncommitted writes that happened locally, but
+                // when those specific items are updated or those writes are committed, the UI
+                // should update to the correct state.
+                return remoteItems;
               });
         });
   }
