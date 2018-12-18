@@ -113,9 +113,9 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.1.3'
     * This device must a system image built on an architecture supported by the
 ```libmongo``` library, e.g. x86_64
         * x86 images are unsupported
-	    * x86_64 images are available in the x86 tab.
-	* Current minimum OS version: 21
-        * Please consult the latest information from the [MonboDB Mobile Documentation](https://docs.mongodb.com/stitch/mongodb/mobile/getting-started/)
+        * x86_64 images are available in the x86 tab.
+    * Current minimum OS version: 21
+    * Please consult the latest information from the [MongoDB Mobile Documentation](https://docs.mongodb.com/stitch/mongodb/mobile/getting-started/)
 5. Name your device and hit finish.
 
 #### Using the SDK
