@@ -43,9 +43,9 @@ The general publishing flow can be followed using `major` as the bump type in `b
 
 * Before committing, the ```connectedDebugAndroidTest``` suite of integration tests must succeed.
 * The tests require the following setup:
-    # You must enable clear text traffic in the core Android application locally (**do not commit this change**)
+    * You must enable clear text traffic in the core Android application locally (**do not commit this change**)
         * In file *android/core/src/main/AndroidManifest.xml*, change the ```application``` XML tag as follows:
             ```<application android:usesCleartextTraffic="true">```
-    # You must run at least one ```mongod``` instance with replica sets initiated or a ```mongos``` instance with same locally on port 27000
-    # You must run the Stitch server locally using the Android-specific configuration:
+    * You must run at least one ```mongod``` instance with replica sets initiated or a ```mongos``` instance with same locally on port 27000
+    * You must run the Stitch server locally using the Android-specific configuration:
         ```--configFile ./etc/configs/test_config_sdk_base.json --configFile ./etc/configs/test_config_sdk_android.json```
