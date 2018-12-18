@@ -108,13 +108,14 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.1.3'
 
 1. In Android Studio, go to Tools, Android, AVD manager.
 2. Click Create Virtual Device.
-3. Select a device that should run your app.
+3. Select a device that should run your app (as of Android Studio 3.2, the default device will no longer work properly for this purpose).
 4. Select and download a recommended system image of your choice (the latest is fine).
     * This device must a system image built on an architecture supported by the
 ```libmongo``` library, e.g. x86_64
         * x86 images are unsupported
 	    * x86_64 images are available in the x86 tab.
 	* Current minimum OS version: 21
+        * Please consult the latest information from the [MonboDB Mobile Documentation](https://docs.mongodb.com/stitch/mongodb/mobile/getting-started/)
 5. Name your device and hit finish.
 
 #### Using the SDK
