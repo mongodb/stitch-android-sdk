@@ -432,22 +432,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   // ---- Core Synchronization Logic -----
 
-  private boolean localToRemoteFirst = false;
-
-  /**
-   * Swaps which sync direction comes first. Note: this should only be used for testing purposes.
-   *
-   * @param localToRemoteFirst whether or not L2R should go first.
-   */
-  public void swapSyncDirection(final boolean localToRemoteFirst) {
-    syncLock.lock();
-    try {
-      this.localToRemoteFirst = localToRemoteFirst;
-    } finally {
-      syncLock.unlock();
-    }
-  }
-
   /**
    * Performs a single synchronization pass in both the local and remote directions; the order
    * of which does not matter. If switching the order produces different results after one pass,
@@ -485,13 +469,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return false;
       }
 
-      if (localToRemoteFirst) {
-        syncLocalToRemote();
-        syncRemoteToLocal();
-      } else {
-        syncRemoteToLocal();
-        syncLocalToRemote();
-      }
+      syncRemoteToLocal();
+      syncLocalToRemote();
 
       logger.info(String.format(
           Locale.US,
