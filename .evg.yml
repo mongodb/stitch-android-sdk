@@ -325,7 +325,7 @@ tasks:
             export ANDROID_HOME=$SDK_HOME
             export ANDROID_SDK_ROOT=$SDK_HOME
             export ANDROID_SDK_HOME=$SDK_HOME
-            export ADB_INSTALL_TIMEOUT=20
+            export ADB_INSTALL_TIMEOUT=30
             cd stitch-java-sdk
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties

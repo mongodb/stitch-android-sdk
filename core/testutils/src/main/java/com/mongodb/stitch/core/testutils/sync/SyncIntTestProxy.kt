@@ -13,7 +13,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictR
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonElement
