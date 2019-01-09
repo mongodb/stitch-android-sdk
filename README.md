@@ -11,7 +11,7 @@ The official [MongoDB Stitch](https://stitch.mongodb.com/) SDK for Android/Java.
 - [Example Usage](#example-usage)
 
 ## Documentation
-* [API/Javadoc Documentation](https://s3.amazonaws.com/stitch-sdks/java/docs/4.1.4/index.html)
+* [API/Javadoc Documentation](https://docs.mongodb.com/stitch-sdks/java/4.1.4/index.html)
 * [MongoDB Stitch Documentation](https://docs.mongodb.com/stitch/)
 
 ## Discussion
