@@ -52,6 +52,33 @@ implementation 'org.mongodb:stitch-android-services-mongodb-remote:4.1.4'
 implementation 'org.mongodb:stitch-android-services-twilio:4.1.4'
 ```
 
+#### R8 / ProGuard
+
+For Android applications with ProGuard and minify enabled, add the following rules to prevent ProGuard from renaming and removing classes and members:
+
+```
+# MongoDB and Stitch
+-keep class com.mongodb.client.model.** { *; }
+-keep class com.mongodb.stitch.core.auth.internal.models.** { *; }
+-keep class com.mongodb.stitch.core.internal.net.** { *; }
+-keep class com.mongodb.embedded.capi.internal.* { *; }
+-keep class com.mongodb.embedded.client.MongoEmbeddedSettings { *; }
+
+# Sun JNA Package
+-keep class com.sun.jna.** { *; }
+
+# Jackson
+-keep class com.fasterxml.jackson.databind.ObjectMapper {
+    public <methods>;
+    protected <methods>;
+}
+-keep class com.fasterxml.jackson.databind.ObjectWriter {
+    public ** writeValueAsString(**);
+}
+-keepnames class com.fasterxml.jackson.** { *; }
+-dontwarn com.fasterxml.jackson.databind.**
+```
+
 ### Server/Java
 
 Add the following to the build.gradle for your module:
