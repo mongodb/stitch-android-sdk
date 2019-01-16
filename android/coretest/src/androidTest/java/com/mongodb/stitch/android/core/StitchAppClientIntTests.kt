@@ -84,7 +84,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
                 confirmEmailSubject = "email subject",
                 resetPasswordSubject = "password subject")
         )
-        val client = getAppClient(app.first)
+        var client = getAppClient(app.first)
 
         // check storage
         assertFalse(client.auth.isLoggedIn)
@@ -126,6 +126,32 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         // check storage
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+
+        // check everything is as it was
+        client = getAppClient(app.first)
+        assertTrue(client.auth.isLoggedIn)
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, id2)
+
+        assertEquals(client.auth.listUsers().size, 3)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        // imitate an app restart
+        Stitch.clearApps()
+
+        // check everything is as it was
+        client = getAppClient(app.first)
+        assertTrue(client.auth.isLoggedIn)
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, id2)
+
+        assertEquals(client.auth.listUsers().size, 3)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
 
         // Verify that logout clears storage
         Tasks.await(client.auth.logout())

@@ -240,4 +240,8 @@ public final class Stitch {
     appClients.put(clientAppId, client);
     return client;
   }
+
+  static void clearApps() {
+    appClients.clear();
+  }
 }

@@ -22,6 +22,7 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import java.io.Closeable;
+import java.util.List;
 
 /**
  * StitchAuth manages authentication for any Stitch based client. It provides methods for logging
@@ -98,4 +99,20 @@ public interface StitchAuth extends Closeable {
    * @param listener the listener to remove.
    */
   void removeAuthListener(final StitchAuthListener listener);
+
+  /**
+   * Returns a list of all logged in users.
+   *
+   * @return the list of currently logged in users
+   */
+  List<StitchUser> listUsers();
+
+  /**
+   * Switches the active user to the user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to switch to
+   * @throws IllegalArgumentException throws if user id not found
+   * @return the user that was switched to
+   */
+  StitchUser switchUser(final String userId) throws IllegalArgumentException;
 }
