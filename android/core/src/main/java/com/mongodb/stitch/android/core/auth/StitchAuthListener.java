@@ -30,7 +30,7 @@ public interface StitchAuthListener {
    * - When a user is linked to another identity.
    * - When a listener is registered. This is to handle the case where during registration
    *   an event happens that the registerer would otherwise miss out on.
-   *
+   * - When switching users.
    * @param auth the instance of {@link StitchAuth} where the event happened. It should be used to
    *     infer the current state of authentication.
    */

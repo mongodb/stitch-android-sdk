@@ -19,6 +19,9 @@ package com.mongodb.stitch.server.core.auth;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
+
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 /**
@@ -73,10 +76,27 @@ public interface StitchAuth {
   boolean isLoggedIn();
 
   /**
-   * Returns the currently logged in user; null if not logged in.
+   * Returns the currently logged in active user; null if not logged in.
    *
-   * @return the currently logged in user; null if not logged in.
+   * @return the currently logged in active user; null if not logged in.
    */
   @Nullable
   StitchUser getUser();
+
+
+  /**
+   * Returns a list of all logged in users.
+   *
+   * @return the list of currently logged in users
+   */
+  List<StitchUser> listUsers();
+
+  /**
+   * Switches the active user to the user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to switch to
+   * @throws IllegalArgumentException throws if user id not found
+   * @return the user that was switched to
+   */
+  StitchUser switchUser(final String userId) throws IllegalArgumentException;
 }

@@ -25,6 +25,7 @@ import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestRefreshToken
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestUserProfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -65,12 +66,15 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+
 import org.bson.Document;
 import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.IntegerCodec;
@@ -516,7 +520,7 @@ public class CoreStitchAuthUnitTests {
     assertNull(auth.getUser());
 
     // Scenario 2: User is logged in -> attempts login into other account -> initial login succeeds
-    //                               -> profile request fails -> original user is logged out
+    //                               -> profile request fails -> original user is still logged in
     doReturn(new Response(getTestUserProfile().toString()))
             .doThrow(
                     new StitchRequestException(
@@ -541,8 +545,8 @@ public class CoreStitchAuthUnitTests {
       // do nothing
     }
 
-    assertFalse(auth.isLoggedIn());
-    assertNull(auth.getUser());
+    assertTrue(auth.isLoggedIn());
+    assertNotNull(auth.getUser());
 
     // Scenario 3: User is logged in -> attempt to link to other identity
     //                               -> initial link request succeeds
@@ -575,6 +579,58 @@ public class CoreStitchAuthUnitTests {
 
     assertTrue(auth.isLoggedIn());
     assertEquals(userToBeLinked.getId(), auth.getUser().getId());
+  }
+
+  @Test
+  public void testSwitchUser() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+    final StitchAuth auth = new StitchAuth(
+        requestClient,
+        routes,
+        new MemoryStorage());
+
+    try {
+      auth.switchUser("not_a_user_id");
+      fail("should have thrown error due to missing key");
+    } catch (IllegalArgumentException e) {
+      assertNotNull(e);
+    }
+
+    final CoreStitchUser user =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+
+    assertEquals(user, auth.switchUser(user.getId()));
+    assertEquals(user, auth.getUser());
+
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hello ", "friend"));
+
+    assertEquals(user2, auth.getUser());
+    assertNotEquals(user, auth.getUser());
+
+    assertEquals(user, auth.switchUser(user.getId()));
+    assertEquals(user, auth.getUser());
+  }
+
+  @Test
+  public void testListUsers() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+    final StitchAuth auth = new StitchAuth(
+        requestClient,
+        routes,
+        new MemoryStorage());
+
+    final CoreStitchUser user =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+
+    assertTrue(auth.listUsers().stream().allMatch(Predicate.isEqual(user)));
+
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hello ", "friend"));
+
+    assertEquals(auth.listUsers(), Arrays.asList(user, user2));
   }
 
   protected static class StitchAuth extends CoreStitchAuth<CoreStitchUserImpl> {

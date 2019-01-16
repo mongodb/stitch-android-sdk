@@ -28,7 +28,8 @@ import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class StoreAuthInfo extends AuthInfo {
 
-  public static final String STORAGE_NAME = "auth_info";
+  public static final String ALL_USERS_STORAGE_NAME = "all_auth_infos";
+  public static final String ACTIVE_USER_STORAGE_NAME = "auth_info";
 
   /**
    * Constructs a {@link StoreAuthInfo} from storage.

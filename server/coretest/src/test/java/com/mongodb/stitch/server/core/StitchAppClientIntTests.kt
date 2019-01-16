@@ -84,10 +84,7 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         assertNull(client.auth.user)
 
         // login anonymously
-        val anonUser =
-                client.auth.loginWithCredential(
-                        AnonymousCredential()
-                )
+        val anonUser = client.auth.loginWithCredential(AnonymousCredential())
         assertNotNull(anonUser)
 
         // check storage
@@ -119,6 +116,12 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         // check storage
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+
+        assertEquals(client.auth.listUsers().size, 3)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+        assertEquals(client.auth.user?.id, id2)
 
         // Verify that logout clears storage
         client.auth.logout()

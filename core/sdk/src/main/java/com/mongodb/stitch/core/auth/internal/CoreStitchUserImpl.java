@@ -69,4 +69,18 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
   public List<? extends StitchUserIdentity> getIdentities() {
     return profile.getIdentities();
   }
+
+  @Override
+  public int hashCode() {
+    return this.id.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof CoreStitchUser &&
+        ((CoreStitchUser) o).getId().equals(getId()) &&
+        ((CoreStitchUser) o).getDeviceId().equals(getDeviceId()) &&
+        ((CoreStitchUser) o).getLoggedInProviderName().equals(getLoggedInProviderName()) &&
+        ((CoreStitchUser) o).getLoggedInProviderType().equals(getLoggedInProviderType());
+  }
 }
