@@ -5,6 +5,8 @@ import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+import com.mongodb.stitch.core.internal.common.MemoryStorage
+import com.mongodb.stitch.core.internal.common.Storage
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import com.mongodb.stitch.server.core.Stitch
 import com.mongodb.stitch.server.core.StitchAppClient
@@ -39,7 +41,7 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
         return System.getProperty("test.stitch.baseURL", "http://localhost:9090")
     }
 
-    fun getAppClient(app: AppResponse): StitchAppClient {
+    fun getAppClient(app: AppResponse, storage: Storage = MemoryStorage()): StitchAppClient {
         if (Stitch.hasAppClient(app.clientAppId)) {
             return Stitch.getAppClient(app.clientAppId)
         }
@@ -48,7 +50,8 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
                 StitchAppClientConfiguration.Builder()
                         .withDataDirectory(dataDir)
                         .withBaseUrl(getStitchBaseURL())
-                        .withNetworkMonitor(testNetworkMonitor).build())
+                        .withNetworkMonitor(testNetworkMonitor)
+                        .withStorage(storage).build())
         clients.add(client)
         return client
     }

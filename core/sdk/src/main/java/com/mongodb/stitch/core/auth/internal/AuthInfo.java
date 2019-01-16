@@ -81,7 +81,7 @@ public class AuthInfo {
       return null;
     }
 
-    return StitchObjectMapper.getInstance().readValue(rawInfo, AuthInfo.class);
+    return StitchObjectMapper.getInstance().readValue(rawInfo, StoreAuthInfo.class);
   }
 
   static List<AuthInfo> readCurrentUsersFromStorage(final Storage storage) throws IOException {
@@ -92,7 +92,7 @@ public class AuthInfo {
 
     return StitchObjectMapper.getInstance().readValue(
         rawInfo,
-        new TypeReference<ArrayList<AuthInfo>>(){});
+        new TypeReference<ArrayList<StoreAuthInfo>>(){});
   }
 
   static void writeActiveUserAuthInfoToStorage(final AuthInfo authInfo, final Storage storage) throws IOException {
