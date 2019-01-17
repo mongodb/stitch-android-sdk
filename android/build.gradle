@@ -39,6 +39,12 @@ subprojects {
                 }
                 buildTypes {
                     debug {
+                        if (project.hasProperty('withProguardMinification')) {
+                            minifyEnabled true
+                            testProguardFile getDefaultProguardFile('proguard-android.txt')
+                        } else {
+                            minifyEnabled false
+                        }
                         testCoverageEnabled true
                     }
                     release {

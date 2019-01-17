@@ -54,30 +54,9 @@ implementation 'org.mongodb:stitch-android-services-twilio:4.1.4'
 
 #### R8 / ProGuard
 
-For Android applications with ProGuard and minify enabled, add the following rules to prevent ProGuard from renaming and removing classes and members:
+For Android applications with ProGuard and minify enabled, the Stitch SDK provides a consumer ProGuard rules file that will automatically be applied when including the SDK.
 
-```
-# MongoDB and Stitch
--keep class com.mongodb.client.model.** { *; }
--keep class com.mongodb.stitch.core.auth.internal.models.** { *; }
--keep class com.mongodb.stitch.core.internal.net.** { *; }
--keep class com.mongodb.embedded.capi.internal.* { *; }
--keep class com.mongodb.embedded.client.MongoEmbeddedSettings { *; }
-
-# Sun JNA Package
--keep class com.sun.jna.** { *; }
-
-# Jackson
--keep class com.fasterxml.jackson.databind.ObjectMapper {
-    public <methods>;
-    protected <methods>;
-}
--keep class com.fasterxml.jackson.databind.ObjectWriter {
-    public ** writeValueAsString(**);
-}
--keepnames class com.fasterxml.jackson.** { *; }
--dontwarn com.fasterxml.jackson.databind.**
-```
+If you experience any ProGuard related warnings or error when using the Stitch SDK with an application where minify is enabled, try manually adding the rules in [android/core/lib-proguard-rules.pro](android/core/lib-proguard-rules.pro) to your application's `proguard-rules.pro` file. If that doesn't work, please open an issue on this repository.
 
 ### Server/Java
 
