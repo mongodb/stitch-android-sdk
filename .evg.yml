@@ -46,7 +46,7 @@ functions:
         script: |
           set -e
           SDK_HOME=`pwd`/.android
-          if [ ! -e  $SDK_HOME ]; then
+#          if [ ! -e  $SDK_HOME ]; then
               echo "Installing ANDROID SDK"
               DOWNLOAD_LOGS=$SDK_HOME/download_logs
               mkdir -p $SDK_HOME

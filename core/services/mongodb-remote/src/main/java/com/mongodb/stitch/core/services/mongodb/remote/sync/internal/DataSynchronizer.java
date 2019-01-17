@@ -838,7 +838,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
 
     // ii. If the current GUID of the remote document (as determined by this lookup) is equal
-    //     to the GUID of the local document, drop the event. We’re believed to be behind in
+    //     to the GUID of the local document, drop the event. We're believed to be behind in
     //     the change stream at this point.
     if (newestRemoteVersionInfo.hasVersion()
             && newestRemoteVersionInfo.getVersion().getInstanceId()
