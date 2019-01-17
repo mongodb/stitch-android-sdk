@@ -16,8 +16,8 @@
 
 package com.mongodb.stitch.core.auth.internal;
 
-import static com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo.ALL_USERS_STORAGE_NAME;
 import static com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo.ACTIVE_USER_STORAGE_NAME;
+import static com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo.ALL_USERS_STORAGE_NAME;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mongodb.stitch.core.auth.internal.models.ApiAuthInfo;
@@ -95,7 +95,8 @@ public class AuthInfo {
         new TypeReference<ArrayList<StoreAuthInfo>>(){});
   }
 
-  static void writeActiveUserAuthInfoToStorage(final AuthInfo authInfo, final Storage storage) throws IOException {
+  static void writeActiveUserAuthInfoToStorage(final AuthInfo authInfo,
+                                               final Storage storage) throws IOException {
     final StoreAuthInfo info =
         new StoreAuthInfo(
             authInfo.userId,

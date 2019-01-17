@@ -58,8 +58,8 @@ import org.bson.codecs.configuration.CodecRegistry;
 /**
  * CoreStitchAuth is responsible for authenticating clients as well as acting as a client for
  * authenticated requests. Synchronization in this class happens around the {@link
- * CoreStitchAuth#activeUserAuthInfo} and {@link CoreStitchAuth#activeUser} objects such that access to them
- * is 1. always atomic and 2. queued to prevent excess token refreshes.
+ * CoreStitchAuth#activeUserAuthInfo} and {@link CoreStitchAuth#activeUser} objects such that
+ * access to them is 1. always atomic and 2. queued to prevent excess token refreshes.
  *
  * @param <StitchUserT> The type of users that will be consumed/produced by this component.
  */
@@ -161,7 +161,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   public synchronized List<StitchUserT> listUsers() {
-    List<StitchUserT> userList = new ArrayList<>();
+    final List<StitchUserT> userList = new ArrayList<>();
     for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
       userList.add(getUserFactory().makeUser(
           authInfo.getUserId(),

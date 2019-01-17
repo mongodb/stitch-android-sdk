@@ -140,7 +140,6 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
 
-
         // Verify that logout clears storage
         client.auth.logout()
         assertFalse(client.auth.isLoggedIn)

@@ -152,7 +152,6 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
 
-
         // Verify that logout clears storage
         Tasks.await(client.auth.logout())
         assertFalse(client.auth.isLoggedIn)

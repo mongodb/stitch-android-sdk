@@ -111,8 +111,8 @@ public interface StitchAuth extends Closeable {
    * Switches the active user to the user with the provided id.
    * Throws an exception if the user was not found.
    * @param userId the id of the user to switch to
-   * @throws IllegalArgumentException throws if user id not found
    * @return the user that was switched to
+   * @throws IllegalArgumentException throws if user id not found
    */
   StitchUser switchUser(final String userId) throws IllegalArgumentException;
 }
