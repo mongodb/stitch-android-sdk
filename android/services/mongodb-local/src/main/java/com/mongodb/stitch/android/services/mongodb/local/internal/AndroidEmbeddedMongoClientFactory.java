@@ -16,8 +16,6 @@
 
 package com.mongodb.stitch.android.services.mongodb.local.internal;
 
-import android.app.Application;
-
 import com.mongodb.client.MongoClient;
 import com.mongodb.embedded.client.MongoClientSettings;
 import com.mongodb.embedded.client.MongoClients;
@@ -32,14 +30,7 @@ public final class AndroidEmbeddedMongoClientFactory extends EmbeddedMongoClient
 
   private AndroidEmbeddedMongoClientFactory() {
     super();
-    try {
-      Application application = (Application)Class.forName("android.app.ActivityThread")
-          .getMethod("currentApplication").invoke(null, (Object[]) null);
-      MongoClients.init(MongoEmbeddedSettings.builder().libraryPath(application.getApplicationInfo().nativeLibraryDir).build());
-    } catch (Exception e) {
-//      MongoClients.init(MongoEmbeddedSettings.builder().build());
-    }
-
+    MongoClients.init(MongoEmbeddedSettings.builder().build());
   }
 
   public static synchronized AndroidEmbeddedMongoClientFactory getInstance() {
