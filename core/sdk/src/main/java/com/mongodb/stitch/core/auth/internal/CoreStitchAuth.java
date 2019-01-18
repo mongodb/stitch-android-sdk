@@ -527,10 +527,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     try {
       profile = doGetUserProfile();
     } catch (final Exception ex) {
-      // If this was a link request, back out of setting authInfo and reset any created user. This
-      // will keep the currently logged in user logged in if the profile request failed, and in
-      // this particular edge case the user is linked, but they are logged in with their older
-      // credentials.
+      // If this was a link request or another user is logged in,
+      // back out of setting authInfo and reset any created user. This
+      // will keep the currently logged in user logged in if the profile
+      // request failed, and in this particular edge case the user is
+      // linked, but they are logged in with their older credentials.
       if (!loggedInUsersAuthInfoList.isEmpty()) {
         activeUserAuthInfo = oldActiveUserInfo;
         activeUser = oldActiveUser;
@@ -603,13 +604,26 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     if (!isLoggedIn()) {
       return;
     }
-    activeUserAuthInfo = activeUserAuthInfo.loggedOut();
+
+    if (listUsers().size() > 1) {
+      loggedInUsersAuthInfoList.remove(activeUserAuthInfo);
+      activeUserAuthInfo = loggedInUsersAuthInfoList.get(0);
+      this.activeUser = getUserFactory().makeUser(
+          this.activeUserAuthInfo.getUserId(),
+          this.activeUserAuthInfo.getDeviceId(),
+          this.activeUserAuthInfo.getLoggedInProviderType(),
+          this.activeUserAuthInfo.getLoggedInProviderName(),
+          this.activeUserAuthInfo.getUserProfile());
+    } else {
+      activeUserAuthInfo = activeUserAuthInfo.loggedOut();
+      activeUser = null;
+    }
+
     try {
       AuthInfo.writeActiveUserAuthInfoToStorage(activeUserAuthInfo, storage);
     } catch (final IOException e) {
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
     }
-    activeUser = null;
     onAuthEvent();
   }
 

@@ -200,13 +200,14 @@ public class CoreStitchAuthUnitTests {
     assertFalse(auth.isLoggedIn());
 
     auth.loginWithCredentialInternal(new AnonymousCredential());
+    auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
 
     assertTrue(auth.isLoggedIn());
 
     auth.logoutInternal();
 
     final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
-    verify(requestClient, times(3)).doRequest(reqArgs.capture());
+    verify(requestClient, times(5)).doRequest(reqArgs.capture());
 
     final StitchRequest.Builder expectedRequest = new StitchRequest.Builder();
     expectedRequest.withMethod(Method.DELETE)
@@ -214,7 +215,14 @@ public class CoreStitchAuthUnitTests {
     final Map<String, String> headers = new HashMap<>();
     headers.put(Headers.AUTHORIZATION, getAuthorizationBearer(getTestRefreshToken()));
     expectedRequest.withHeaders(headers);
-    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(2));
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(4));
+
+    assertTrue(auth.isLoggedIn());
+
+    auth.logoutInternal();
+
+    verify(requestClient, times(6)).doRequest(reqArgs.capture());
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(9));
 
     assertFalse(auth.isLoggedIn());
   }

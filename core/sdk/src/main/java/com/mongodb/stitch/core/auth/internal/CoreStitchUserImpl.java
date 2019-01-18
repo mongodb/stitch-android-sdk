@@ -77,10 +77,14 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
 
   @Override
   public boolean equals(final Object o) {
-    return o instanceof CoreStitchUser
-        && ((CoreStitchUser) o).getId().equals(getId())
-        && ((CoreStitchUser) o).getDeviceId().equals(getDeviceId())
-        && ((CoreStitchUser) o).getLoggedInProviderName().equals(getLoggedInProviderName())
-        &&  ((CoreStitchUser) o).getLoggedInProviderType().equals(getLoggedInProviderType());
+    if (!(o instanceof  CoreStitchUser)) {
+      return false;
+    }
+
+    CoreStitchUser user = (CoreStitchUser) o;
+    return user.getId().equals(getId())
+        && user.getDeviceId().equals(getDeviceId())
+        && user.getLoggedInProviderName().equals(getLoggedInProviderName())
+        &&  user.getLoggedInProviderType().equals(getLoggedInProviderType());
   }
 }

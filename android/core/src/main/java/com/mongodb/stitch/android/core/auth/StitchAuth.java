@@ -64,7 +64,8 @@ public interface StitchAuth extends Closeable {
   Task<StitchUser> loginWithCredential(final StitchCredential credential);
 
   /**
-   * Logs out the currently logged in user.
+   * Logs out the currently logged in, active user.
+   * Switches to the next logged in user if there is another.
    *
    * @return a {@link Task} completing when logged out.
    */
@@ -78,9 +79,9 @@ public interface StitchAuth extends Closeable {
   boolean isLoggedIn();
 
   /**
-   * Returns the currently logged in user; null if not logged in.
+   * Returns the currently logged in, active user; null if no users are logged in.
    *
-   * @return the currently logged in user; null if not logged in.
+   * @return the currently logged in, active user; null if no users are logged in.
    */
   @Nullable
   StitchUser getUser();
