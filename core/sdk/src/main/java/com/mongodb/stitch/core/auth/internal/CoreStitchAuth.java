@@ -181,11 +181,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * @param stitchReq the request to perform.
    * @return the response to the request, successful or not.
    */
-  public Response doAuthenticatedRequest(final StitchAuthRequest stitchReq) {
+  public synchronized Response doAuthenticatedRequest(final StitchAuthRequest stitchReq) {
     try {
-//      if (!stitchReq.getHeaders().containsKey(Headers.AUTHORIZATION)) {
-//        return requestClient.doRequest(prepareAuthRequest(stitchReq, activeUserAuthInfo));
-//      }
+      if (!stitchReq.getHeaders().containsKey(Headers.AUTHORIZATION)) {
+        return requestClient.doRequest(prepareAuthRequest(stitchReq, activeUserAuthInfo));
+      }
       return requestClient.doRequest(stitchReq);
     } catch (final StitchServiceException ex) {
       return handleAuthFailure(ex, stitchReq);

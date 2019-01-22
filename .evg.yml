@@ -47,34 +47,36 @@ functions:
           set -e
           SDK_HOME=`pwd`/.android
           if [ ! -e  $SDK_HOME ]; then
-              echo "Installing ANDROID SDK"
-              DOWNLOAD_LOGS=$SDK_HOME/download_logs
-              mkdir -p $SDK_HOME
-              mkdir -p $DOWNLOAD_LOGS
-              (
-                  cd $SDK_HOME
-                  export JAVA_HOME="/opt/java/jdk8"
+            echo "Installing ANDROID SDK"
+            DOWNLOAD_LOGS=$SDK_HOME/download_logs
+            mkdir -p $SDK_HOME
+            mkdir -p $DOWNLOAD_LOGS
+            (
+              cd $SDK_HOME
+              export JAVA_HOME="/opt/java/jdk8"
 
-                  export ANDROID_HOME=$SDK_HOME
-                  export ANDROID_SDK_ROOT=$SDK_HOME
-                  export ANDROID_SDK_HOME=$SDK_HOME
+              export ANDROID_HOME=$SDK_HOME
+              export ANDROID_SDK_ROOT=$SDK_HOME
+              export ANDROID_SDK_HOME=$SDK_HOME
 
-                  SDK_PACKAGE=sdk-tools-darwin-4333796.zip
-                  curl -O -s https://dl.google.com/android/repository/$SDK_PACKAGE
-                  unzip -o -qq $SDK_PACKAGE
-                  yes | $SDK_HOME/tools/bin/sdkmanager --channel=0 \
-                      "platforms;android-28"  \
-                      "emulator" \
-                      "patcher;v4" \
-                      "platform-tools"  \
-                      "build-tools;28.0.0" \
-                      "system-images;android-21;google_apis;x86_64"
+              SDK_PACKAGE=sdk-tools-darwin-4333796.zip
+              curl -O -s https://dl.google.com/android/repository/$SDK_PACKAGE
+              unzip -o -qq $SDK_PACKAGE
+              
+              yes | $SDK_HOME/tools/bin/sdkmanager --licenses
+              yes | $SDK_HOME/tools/bin/sdkmanager --channel=0 \
+                  "platforms;android-28"  \
+                  "emulator" \
+                  "patcher;v4" \
+                  "platform-tools"  \
+                  "build-tools;28.0.0" \
+                  "system-images;android-21;google_apis;x86_64"
 
-                  $SDK_HOME/tools/bin/sdkmanager --update
-                  PLATFORM_TOOLS=platform-tools-latest-darwin.zip
-                  curl -OL -s https://dl.google.com/android/repository/$PLATFORM_TOOLS
-                  unzip -o -qq $PLATFORM_TOOLS
-              ) &> $DOWNLOAD_LOGS/download.log
+              $SDK_HOME/tools/bin/sdkmanager --update
+              PLATFORM_TOOLS=platform-tools-latest-darwin.zip
+              curl -OL -s https://dl.google.com/android/repository/$PLATFORM_TOOLS
+              unzip -o -qq $PLATFORM_TOOLS
+            ) &> $DOWNLOAD_LOGS/download.log
           fi
 
   "setup_stitch":
@@ -161,18 +163,10 @@ functions:
           export ANDROID_SDK_ROOT=$SDK_HOME
           export ANDROID_SDK_HOME=$SDK_HOME
 
-          EMULATOR_PID=''
-          cleanup() {
-              kill -9 $EMULATOR_PID
-              avdmanager delete avd -n android_avd
-          }
-          trap cleanup EXIT
-
           # Create the AVD
+          echo "Starting emulator"
           echo no | $SDK_HOME/tools/bin/avdmanager create avd -n android_avd -c 1000M -k "system-images;android-21;google_apis;x86_64" -f
           $SDK_HOME/tools/emulator -avd android_avd -no-audio -no-window -no-snapshot -wipe-data -no-accel -gpu off &
-          EMULATOR_PID=$!
-          sleep infinity
     - command: shell.exec
       params:
         shell: "bash"
@@ -183,29 +177,10 @@ functions:
           SDK_HOME=`pwd`/.android
 
           # Wait for ADB to detect the device
+
           $SDK_HOME/platform-tools/adb wait-for-device
 
-          # Belt and braces waiting for the device
-          bootanim=""
-          failcounter=0
-          timeout_in_sec=360
-
-          until [[ "$bootanim" =~ "stopped" ]]; do
-            bootanim=`$SDK_HOME/platform-tools/adb -e shell getprop init.svc.bootanim 2>&1 &`
-            if [[ "$bootanim" =~ "device not found" || "$bootanim" =~ "device offline"
-              || "$bootanim" =~ "running" ]]; then
-              let "failcounter += 1"
-              if [[ "$failcounter" -gt timeout_in_sec ]]; then
-                echo "Timeout ($timeout_in_sec seconds) reached; failed to start emulator"
-                exit 1
-              elif (( "$failcounter" % 10 )); then
-                 echo "Waiting for emulator to start"
-              fi
-            fi
-            sleep 5
-          done
           echo "Emulator is ready"
-
   "publish_coveralls":
     - command: shell.exec
       params:
@@ -244,7 +219,6 @@ functions:
             export CI_PULL_REQUEST=${github_pr_number}
           fi
           ./gradlew coveralls
-
 tasks:
   - name: lint
     commands:
@@ -263,7 +237,6 @@ tasks:
             export ANDROID_SDK_HOME=$SDK_HOME
             cd stitch-java-sdk
             ./gradlew checkstyle ktlint findbugs pmd lint --continue --warning-mode=all < /dev/null
-
   - name: run_core_tests
     priority: 100
     exec_timeout_secs: 3600
@@ -307,16 +280,8 @@ tasks:
           background: true
           script: |
             set -e
-            LOGCAT_PID=''
-            cleanup() {
-                kill -9 $LOGCAT_PID
-            }
-            trap cleanup EXIT
-
             SDK_HOME=`pwd`/.android
             $SDK_HOME/platform-tools/adb logcat &
-            LOGCAT_PID=$!
-            sleep infinity
       - command: shell.exec
         params:
           shell: "bash"
@@ -333,6 +298,8 @@ tasks:
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
             ./gradlew connectedAndroidTest --info --continue --warning-mode=all --stacktrace  < /dev/null
+            $SDK_HOME/tools/bin/avdmanager delete avd -n android_avd
+            $SDK_HOME/platform-tools/adb kill-server
       - func: "publish_coveralls"
 
   - name: finalize_coverage
@@ -411,7 +378,7 @@ buildvariants:
     mongodb_url: http://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-4.0.2.tgz
     transpiler_target: node8-macos
   tasks:
-    - name: run_core_tests
+    # - name: run_core_tests
     - name: run_android_tests
-    - name: lint
-    - name: finalize_coverage
+    # - name: lint
+    # - name: finalize_coverage
