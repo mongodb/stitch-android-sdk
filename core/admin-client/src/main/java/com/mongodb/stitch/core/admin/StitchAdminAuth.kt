@@ -29,13 +29,15 @@ class StitchAdminAuth(
                                    deviceId,
                                    loggedInProviderType,
                                    loggedInProviderName,
-                                   userProfile ->
+                                   userProfile,
+                                   isLoggedIn ->
             StitchAdminUser(
                     id,
                     deviceId,
                     loggedInProviderType,
                     loggedInProviderName,
-                    userProfile
+                    userProfile,
+                    isLoggedIn
             )
         }
     }

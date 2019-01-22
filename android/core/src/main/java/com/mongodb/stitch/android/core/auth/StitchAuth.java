@@ -22,7 +22,7 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import java.io.Closeable;
-import java.util.List;
+import java.util.LinkedList;
 
 /**
  * StitchAuth manages authentication for any Stitch based client. It provides methods for logging
@@ -72,6 +72,30 @@ public interface StitchAuth extends Closeable {
   Task<Void> logout();
 
   /**
+   * Logs out the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to switch to
+   * @return a {@link Task} completing when logged out.
+   */
+  Task<Void> logout(final String userId);
+
+  /**
+   * Logs out and removes the currently logged in, active user.
+   * Switches to the next logged in user if there is another.
+   *
+   * @return a {@link Task} completing when logged out.
+   */
+  Task<Void> removeUser();
+
+  /**
+   * Logs out and removes the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to remove
+   * @return a {@link Task} completing when logged out.
+   */
+  Task<Void> removeUser(final String userId);
+
+  /**
    * Returns whether or not there's a currently logged in user.
    *
    * @return whether or not there's a currently logged in user.
@@ -106,7 +130,7 @@ public interface StitchAuth extends Closeable {
    *
    * @return the list of currently logged in users
    */
-  List<StitchUser> listUsers();
+  LinkedList<StitchUser> listUsers();
 
   /**
    * Switches the active user to the user with the provided id.

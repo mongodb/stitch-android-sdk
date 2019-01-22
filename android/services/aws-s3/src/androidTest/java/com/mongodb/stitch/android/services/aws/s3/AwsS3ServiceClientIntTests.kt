@@ -22,6 +22,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayInputStream
@@ -50,6 +51,7 @@ class AwsS3ServiceClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    @Ignore
     fun testPutObject() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)

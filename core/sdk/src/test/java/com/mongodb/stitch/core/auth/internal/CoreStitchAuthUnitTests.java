@@ -17,10 +17,11 @@
 package com.mongodb.stitch.core.auth.internal;
 
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getAuthorizationBearer;
+import static com.mongodb.stitch.core.testutils.ApiTestUtils.getLastDeviceId;
+import static com.mongodb.stitch.core.testutils.ApiTestUtils.getLastUserId;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getMockedRequestClient;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestAccessToken;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestLinkResponse;
-import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestLoginResponse;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestRefreshToken;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestUserProfile;
 import static org.junit.Assert.assertEquals;
@@ -61,6 +62,7 @@ import com.mongodb.stitch.core.internal.net.StitchDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.core.testutils.CustomType;
+
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import java.nio.charset.StandardCharsets;
@@ -100,7 +102,7 @@ public class CoreStitchAuthUnitTests {
         auth.loginWithCredentialInternal(new AnonymousCredential());
 
     final ApiCoreUserProfile profile = getTestUserProfile();
-    assertEquals(getTestLoginResponse().getUserId(), user.getId());
+    assertEquals(getLastUserId(), user.getId());
     assertEquals(AnonymousAuthProvider.DEFAULT_NAME, user.getLoggedInProviderName());
     assertEquals(AnonymousAuthProvider.TYPE, user.getLoggedInProviderType());
     assertEquals(profile.getUserType(), user.getUserType());
@@ -154,7 +156,7 @@ public class CoreStitchAuthUnitTests {
         .withBody(String.format(
             "{\"username\" : \"foo@foo.com\",\"password\" : \"bar\","
             + "\"options\" : {\"device\" : {\"deviceId\" : \"%s\"}}}",
-            getTestLoginResponse().getDeviceId()).getBytes(StandardCharsets.UTF_8))
+            getLastDeviceId()).getBytes(StandardCharsets.UTF_8))
         .withPath(routes.getAuthProviderLinkRoute(UserPasswordAuthProvider.DEFAULT_NAME));
     final Map<String, String> headers = new HashMap<>();
     headers.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
@@ -199,15 +201,24 @@ public class CoreStitchAuthUnitTests {
 
     assertFalse(auth.isLoggedIn());
 
-    auth.loginWithCredentialInternal(new AnonymousCredential());
-    auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
+    final CoreStitchUser user1 =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
+    final CoreStitchUser user3 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
 
+    assertEquals(auth.listUsers().getLast(), user3);
     assertTrue(auth.isLoggedIn());
 
     auth.logoutInternal();
 
+    // assert that though one user is logged out, two users are still listed
+    assertEquals(auth.listUsers().size(), 3);
+    assertEquals(auth.listUsers().getLast(), user2);
+
     final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
-    verify(requestClient, times(5)).doRequest(reqArgs.capture());
+    verify(requestClient, times(7)).doRequest(reqArgs.capture());
 
     final StitchRequest.Builder expectedRequest = new StitchRequest.Builder();
     expectedRequest.withMethod(Method.DELETE)
@@ -215,14 +226,80 @@ public class CoreStitchAuthUnitTests {
     final Map<String, String> headers = new HashMap<>();
     headers.put(Headers.AUTHORIZATION, getAuthorizationBearer(getTestRefreshToken()));
     expectedRequest.withHeaders(headers);
-    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(4));
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
 
     assertTrue(auth.isLoggedIn());
 
-    auth.logoutInternal();
+    auth.logoutInternal(auth.listUsers().getLast().getId());
 
-    verify(requestClient, times(6)).doRequest(reqArgs.capture());
-    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(9));
+    verify(requestClient, times(8)).doRequest(reqArgs.capture());
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(13));
+
+    assertEquals(auth.listUsers().size(), 3);
+    assertEquals(auth.listUsers().getLast(), user1);
+
+    auth.logoutInternal(auth.listUsers().getLast().getId());
+    assertEquals(auth.listUsers().size(), 3);
+    assertTrue(auth.listUsers().stream().allMatch(new Predicate<CoreStitchUserImpl>() {
+          @Override
+          public boolean test(final CoreStitchUserImpl coreStitchUser) {
+            return !coreStitchUser.isLoggedIn();
+          }
+        }));
+
+    assertFalse(auth.isLoggedIn());
+  }
+
+  @Test
+  public void testRemoveBlocking() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+    final StitchAuth auth = new StitchAuth(
+        requestClient,
+        routes,
+        new MemoryStorage());
+
+    assertFalse(auth.isLoggedIn());
+
+    final CoreStitchUser user1 =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
+    final CoreStitchUser user3 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
+
+    assertEquals(auth.listUsers().getLast(), user3);
+    assertTrue(auth.isLoggedIn());
+
+    auth.removeUserInternal();
+
+    // assert that though one user is logged out, two users are still listed
+    assertEquals(auth.listUsers().size(), 2);
+    assertEquals(auth.listUsers().getLast(), user2);
+
+    final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
+    verify(requestClient, times(7)).doRequest(reqArgs.capture());
+
+    final StitchRequest.Builder expectedRequest = new StitchRequest.Builder();
+    expectedRequest.withMethod(Method.DELETE)
+        .withPath(routes.getSessionRoute());
+    final Map<String, String> headers = new HashMap<>();
+    headers.put(Headers.AUTHORIZATION, getAuthorizationBearer(getTestRefreshToken()));
+    expectedRequest.withHeaders(headers);
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
+
+    assertTrue(auth.isLoggedIn());
+
+    auth.removeUserInternal(auth.listUsers().getLast().getId());
+
+    verify(requestClient, times(8)).doRequest(reqArgs.capture());
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(13));
+
+    assertEquals(auth.listUsers().size(), 1);
+    assertEquals(auth.listUsers().getLast(), user1);
+
+    auth.removeUserInternal(auth.listUsers().getLast().getId());
+    assertEquals(auth.listUsers().size(), 0);
 
     assertFalse(auth.isLoggedIn());
   }
@@ -298,7 +375,7 @@ public class CoreStitchAuthUnitTests {
         .withBody(String.format(
             "{\"username\" : \"foo@foo.com\",\"password\" : \"bar\","
             + "\"options\" : {\"device\" : {\"deviceId\" : \"%s\"}}}",
-            getTestLoginResponse().getDeviceId()).getBytes(StandardCharsets.UTF_8))
+            getLastDeviceId()).getBytes(StandardCharsets.UTF_8))
         .withPath(routes.getAuthProviderLinkRoute(UserPasswordAuthProvider.DEFAULT_NAME));
     final Map<String, String> headers2 = new HashMap<>();
     headers2.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
@@ -326,6 +403,7 @@ public class CoreStitchAuthUnitTests {
       assertEquals(ex.getErrorCode(), StitchServiceErrorCode.INVALID_SESSION);
     }
 
+    // the failure due to an invalid session will log the user out entirely
     assertFalse(auth.isLoggedIn());
   }
 
@@ -654,9 +732,10 @@ public class CoreStitchAuthUnitTests {
           String deviceId,
           String loggedInProviderType,
           String loggedInProviderName,
-          StitchUserProfileImpl userProfile) ->
+          StitchUserProfileImpl userProfile,
+          boolean isLoggedIn) ->
           new CoreStitchUserImpl(
-              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile) {};
+              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, isLoggedIn) {};
     }
 
     @Override

@@ -20,7 +20,7 @@ import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
 
-import java.util.List;
+import java.util.LinkedList;
 
 import javax.annotation.Nullable;
 
@@ -70,6 +70,27 @@ public interface StitchAuth {
   void logout();
 
   /**
+   * Logs out the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to logout
+   * @throws IllegalArgumentException throws if user id not found
+   */
+  void logout(final String userId) throws IllegalArgumentException;
+
+  /**
+   * Logs out and removes the currently logged in, active user.
+   * Switches to the next logged in user if there is another.
+   */
+  void removeUser();
+
+  /**
+   * Logs out and removes the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to remove
+   */
+  void removeUser(final String userId);
+
+  /**
    * Returns whether or not there's a currently logged in user.
    *
    * @return whether or not there's a currently logged in user.
@@ -86,11 +107,11 @@ public interface StitchAuth {
 
 
   /**
-   * Returns a list of all logged in users.
+   * Returns a set of all logged in users.
    *
-   * @return the list of currently logged in users
+   * @return the set of currently logged in users
    */
-  List<StitchUser> listUsers();
+  LinkedList<StitchUser> listUsers();
 
   /**
    * Switches the active user to the user with the provided id.

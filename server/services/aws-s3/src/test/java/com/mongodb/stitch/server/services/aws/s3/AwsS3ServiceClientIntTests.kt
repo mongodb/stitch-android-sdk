@@ -19,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -45,6 +46,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
 
     @Test
     @SuppressWarnings("deprecation")
+    @Ignore
     fun testPutObject() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)

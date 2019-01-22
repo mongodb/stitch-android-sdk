@@ -4,8 +4,7 @@ functions:
       params:
         script: |
           set -e
-          wget --quiet ${go_url}
-          tar xvf ./go1.11*gz
+          curl --silent ${go_url} | tar xz
   "fetch_source":
     - command: git.get_project
       params:
@@ -25,6 +24,7 @@ functions:
         script: |
           set -e
           cd mongodb-*
+          ls -l
           echo "starting mongod..."
           mkdir db_files
           ./bin/mongod --dbpath ./db_files --port 26000 --replSet test
@@ -59,7 +59,7 @@ functions:
                   export ANDROID_SDK_ROOT=$SDK_HOME
                   export ANDROID_SDK_HOME=$SDK_HOME
 
-                  SDK_PACKAGE=sdk-tools-linux-4333796.zip
+                  SDK_PACKAGE=sdk-tools-darwin-4333796.zip
                   curl -O -s https://dl.google.com/android/repository/$SDK_PACKAGE
                   unzip -o -qq $SDK_PACKAGE
                   yes | $SDK_HOME/tools/bin/sdkmanager --channel=0 \
@@ -71,7 +71,7 @@ functions:
                       "system-images;android-21;google_apis;x86_64"
 
                   $SDK_HOME/tools/bin/sdkmanager --update
-                  PLATFORM_TOOLS=platform-tools-latest-linux.zip
+                  PLATFORM_TOOLS=platform-tools-latest-darwin.zip
                   curl -OL -s https://dl.google.com/android/repository/$PLATFORM_TOOLS
                   unzip -o -qq $PLATFORM_TOOLS
               ) &> $DOWNLOAD_LOGS/download.log
@@ -86,17 +86,20 @@ functions:
           echo "cloning stitch"
           mkdir -p src/github.com/10gen
           git clone git@github.com:10gen/stitch src/github.com/10gen/stitch
-
-          echo "downloading libmongo"
-          wget --quiet "https://s3.amazonaws.com/stitch-artifacts/stitch-mongo-libs/stitch_mongo_libs_linux_64_patch_a4c34cbf6cdd2036fef442f966e404c8be506e62_5bb3da540305b91647c0dfd9_18_10_02_20_51_32/libmongo.so"
-          chmod +x libmongo.so
-
+          echo "downloading update_doc"
+          curl --silent -O "https://s3.amazonaws.com/stitch-artifacts/stitch-mongo-libs/stitch_mongo_libs_osx_patch_cbcbfd8ebefcca439ff2e4d99b022aedb0d61041_59e2b7a5c9ec4432c400181c_17_10_15_01_19_33/update_doc"
+          echo "downloading assisted_agg"
+          curl --silent -O "https://s3.amazonaws.com/stitch-artifacts/stitch-mongo-libs/stitch_mongo_libs_osx_patch_cbcbfd8ebefcca439ff2e4d99b022aedb0d61041_59e2b7ab2a60ed5647001827_17_10_15_01_19_39/assisted_agg"
+          chmod +x update_doc
+          chmod +x assisted_agg
           echo "building transpiler"
           cd src/github.com/10gen/stitch/etc/transpiler
-          curl -OL https://yarnpkg.com/latest.tar.gz
-          tar zvxf latest.tar.gz
-          mv yarn-* yarn
-          export PATH="`pwd`/yarn/bin:$PATH"
+          curl -O "https://nodejs.org/dist/v8.11.2/node-v8.11.2-darwin-x64.tar.gz"
+          tar zxf node-v8.11.2-darwin-x64.tar.gz
+          export PATH=`pwd`/node-v8.11.2-darwin-x64/bin/:$PATH
+          rm -rf $HOME/.yarn
+          curl -o- -L https://yarnpkg.com/install.sh | bash
+          export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
           yarn install && yarn run build -t ${transpiler_target}
     - command: shell.exec
       params:
@@ -335,10 +338,10 @@ tasks:
   - name: finalize_coverage
     depends_on:
       - name: run_core_tests
-        variant: "rhel70"
+        variant: "macos-1012"
         status: '*'
       - name: run_android_tests
-        variant: "rhel70"
+        variant: "macos-1012"
         status: '*'
     commands:
       - command: shell.exec
@@ -399,14 +402,14 @@ post:
       permissions: public-read
 
 buildvariants:
-- name: rhel70
-  display_name: rhel70
+- name: macos-1012
+  display_name: macos-1012
   run_on:
-    - rhel70
+    - macos-1012
   expansions:
-    go_url: "https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz"
-    mongodb_url: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-4.0.2.tgz
-    transpiler_target: node8-linux
+    go_url: "https://dl.google.com/go/go1.10.2.darwin-amd64.tar.gz"
+    mongodb_url: http://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-4.0.2.tgz
+    transpiler_target: node8-macos
   tasks:
     - name: run_core_tests
     - name: run_android_tests

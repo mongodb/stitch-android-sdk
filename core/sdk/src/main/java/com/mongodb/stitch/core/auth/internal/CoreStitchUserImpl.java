@@ -28,18 +28,21 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
   private final String loggedInProviderType;
   private final String loggedInProviderName;
   private final StitchUserProfileImpl profile;
+  private final boolean isLoggedIn;
 
   protected CoreStitchUserImpl(
       final String id,
       final String deviceId,
       final String loggedInProviderType,
       final String loggedInProviderName,
-      final StitchUserProfileImpl profile) {
+      final StitchUserProfileImpl profile,
+      final boolean isLoggedIn) {
     this.id = id;
     this.deviceId = deviceId;
     this.loggedInProviderType = loggedInProviderType;
     this.loggedInProviderName = loggedInProviderName;
     this.profile = profile == null ? StitchUserProfileImpl.empty() : profile;
+    this.isLoggedIn = isLoggedIn;
   }
 
   public String getId() {
@@ -71,6 +74,11 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
   }
 
   @Override
+  public boolean isLoggedIn() {
+    return isLoggedIn;
+  }
+
+  @Override
   public int hashCode() {
     return this.id.hashCode();
   }
@@ -81,7 +89,7 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
       return false;
     }
 
-    CoreStitchUser user = (CoreStitchUser) o;
+    final CoreStitchUser user = (CoreStitchUser) o;
     return user.getId().equals(getId())
         && user.getDeviceId().equals(getDeviceId())
         && user.getLoggedInProviderName().equals(getLoggedInProviderName())
