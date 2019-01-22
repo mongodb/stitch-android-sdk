@@ -43,6 +43,7 @@ class AwsSesServiceClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    // TODO: STITCH-2463
     @Ignore
     fun testSendMessage() {
         val app = createApp()

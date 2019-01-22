@@ -183,9 +183,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    */
   public Response doAuthenticatedRequest(final StitchAuthRequest stitchReq) {
     try {
-      if (!stitchReq.getHeaders().containsKey(Headers.AUTHORIZATION)) {
-        return requestClient.doRequest(prepareAuthRequest(stitchReq, activeUserAuthInfo));
-      }
+//      if (!stitchReq.getHeaders().containsKey(Headers.AUTHORIZATION)) {
+//        return requestClient.doRequest(prepareAuthRequest(stitchReq, activeUserAuthInfo));
+//      }
       return requestClient.doRequest(stitchReq);
     } catch (final StitchServiceException ex) {
       return handleAuthFailure(ex, stitchReq);
@@ -257,7 +257,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  public StitchUserT switchUser(final String userId) throws IllegalArgumentException {
+  public synchronized StitchUserT switchUser(final String userId) throws IllegalArgumentException {
     authLock.lock();
     try {
       for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
@@ -302,7 +302,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  protected StitchUserT linkUserWithCredentialInternal(
+  protected synchronized StitchUserT linkUserWithCredentialInternal(
       final CoreStitchUser user, final StitchCredential credential) {
     authLock.lock();
     try {
@@ -384,9 +384,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return activeUserAuthInfo.getDeviceId();
   }
 
-  private synchronized StitchAuthRequest prepareAuthRequest(final StitchAuthRequest stitchReq,
-                                                            final AuthInfo authInfo) {
-    if (!isLoggedIn()) {
+  private static StitchAuthRequest prepareAuthRequest(final StitchAuthRequest stitchReq,
+                                                      final AuthInfo authInfo) {
+    if (!authInfo.isLoggedIn()) {
       throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
     }
 
@@ -424,7 +424,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         req.builder().withShouldRefreshOnFailure(false).build(), decoder);
   }
 
-  private Response handleAuthFailure(final StitchServiceException ex, final StitchAuthRequest req) {
+  private synchronized Response handleAuthFailure(final StitchServiceException ex, final StitchAuthRequest req) {
     if (ex.getErrorCode() != StitchServiceErrorCode.INVALID_SESSION) {
       throw ex;
     }
@@ -470,7 +470,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  void refreshAccessToken() {
+  synchronized void refreshAccessToken() {
     authLock.lock();
     try {
       final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();

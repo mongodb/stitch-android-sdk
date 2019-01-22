@@ -51,6 +51,7 @@ class AwsS3ServiceClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    // TODO: STITCH-2463
     @Ignore
     fun testPutObject() {
         val app = createApp()

@@ -46,6 +46,7 @@ class AwsS3ServiceClientIntTests : BaseStitchServerIntTest() {
 
     @Test
     @SuppressWarnings("deprecation")
+    // TODO: STITCH-2463
     @Ignore
     fun testPutObject() {
         val app = createApp()
