@@ -76,7 +76,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  public void logout(final String userId) {
+  public void logoutUserWithId(final String userId) {
     logoutInternal(userId);
   }
 
@@ -86,7 +86,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  public void removeUser(final String userId) {
+  public void removeUserWithId(final String userId) {
     removeUserInternal(userId);
   }
 

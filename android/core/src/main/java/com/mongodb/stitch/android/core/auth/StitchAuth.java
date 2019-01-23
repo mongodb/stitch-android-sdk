@@ -22,7 +22,7 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import java.io.Closeable;
-import java.util.LinkedList;
+import java.util.List;
 
 /**
  * StitchAuth manages authentication for any Stitch based client. It provides methods for logging
@@ -77,7 +77,7 @@ public interface StitchAuth extends Closeable {
    * @param userId the id of the user to switch to
    * @return a {@link Task} completing when logged out.
    */
-  Task<Void> logout(final String userId);
+  Task<Void> logoutUserWithId(final String userId);
 
   /**
    * Logs out and removes the currently logged in, active user.
@@ -93,7 +93,7 @@ public interface StitchAuth extends Closeable {
    * @param userId the id of the user to remove
    * @return a {@link Task} completing when logged out.
    */
-  Task<Void> removeUser(final String userId);
+  Task<Void> removeUserWithId(final String userId);
 
   /**
    * Returns whether or not there's a currently logged in user.
@@ -130,7 +130,7 @@ public interface StitchAuth extends Closeable {
    *
    * @return the list of currently logged in users
    */
-  LinkedList<StitchUser> listUsers();
+  List<StitchUser> listUsers();
 
   /**
    * Switches the active user to the user with the provided id.
@@ -139,5 +139,5 @@ public interface StitchAuth extends Closeable {
    * @return the user that was switched to
    * @throws IllegalArgumentException throws if user id not found
    */
-  StitchUser switchUser(final String userId) throws IllegalArgumentException;
+  StitchUser switchToUserWithId(final String userId) throws IllegalArgumentException;
 }

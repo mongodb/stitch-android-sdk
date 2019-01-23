@@ -4,7 +4,8 @@ functions:
       params:
         script: |
           set -e
-          curl --silent ${go_url} | tar xz
+          wget --quiet ${go_url}
+          tar xvf ./go1.11*gz
   "fetch_source":
     - command: git.get_project
       params:
@@ -24,7 +25,6 @@ functions:
         script: |
           set -e
           cd mongodb-*
-          ls -l
           echo "starting mongod..."
           mkdir db_files
           ./bin/mongod --dbpath ./db_files --port 26000 --replSet test
@@ -47,11 +47,10 @@ functions:
           set -e
           SDK_HOME=`pwd`/.android
           if [ ! -e  $SDK_HOME ]; then
-            echo "Installing ANDROID SDK"
-            DOWNLOAD_LOGS=$SDK_HOME/download_logs
-            mkdir -p $SDK_HOME
-            mkdir -p $DOWNLOAD_LOGS
-            (
+              echo "Installing ANDROID SDK"
+              DOWNLOAD_LOGS=$SDK_HOME/download_logs
+              mkdir -p $SDK_HOME
+              mkdir -p $DOWNLOAD_LOGS
               cd $SDK_HOME
               export JAVA_HOME="/opt/java/jdk8"
 
@@ -59,10 +58,9 @@ functions:
               export ANDROID_SDK_ROOT=$SDK_HOME
               export ANDROID_SDK_HOME=$SDK_HOME
 
-              SDK_PACKAGE=sdk-tools-darwin-4333796.zip
+              SDK_PACKAGE=sdk-tools-linux-4333796.zip
               curl -O -s https://dl.google.com/android/repository/$SDK_PACKAGE
               unzip -o -qq $SDK_PACKAGE
-              
               yes | $SDK_HOME/tools/bin/sdkmanager --licenses
               yes | $SDK_HOME/tools/bin/sdkmanager --channel=0 \
                   "platforms;android-28"  \
@@ -73,10 +71,9 @@ functions:
                   "system-images;android-21;google_apis;x86_64"
 
               $SDK_HOME/tools/bin/sdkmanager --update
-              PLATFORM_TOOLS=platform-tools-latest-darwin.zip
+              PLATFORM_TOOLS=platform-tools-latest-linux.zip
               curl -OL -s https://dl.google.com/android/repository/$PLATFORM_TOOLS
               unzip -o -qq $PLATFORM_TOOLS
-            ) &> $DOWNLOAD_LOGS/download.log
           fi
 
   "setup_stitch":
@@ -88,20 +85,21 @@ functions:
           echo "cloning stitch"
           mkdir -p src/github.com/10gen
           git clone git@github.com:10gen/stitch src/github.com/10gen/stitch
-          echo "downloading update_doc"
-          curl --silent -O "https://s3.amazonaws.com/stitch-artifacts/stitch-mongo-libs/stitch_mongo_libs_osx_patch_cbcbfd8ebefcca439ff2e4d99b022aedb0d61041_59e2b7a5c9ec4432c400181c_17_10_15_01_19_33/update_doc"
-          echo "downloading assisted_agg"
-          curl --silent -O "https://s3.amazonaws.com/stitch-artifacts/stitch-mongo-libs/stitch_mongo_libs_osx_patch_cbcbfd8ebefcca439ff2e4d99b022aedb0d61041_59e2b7ab2a60ed5647001827_17_10_15_01_19_39/assisted_agg"
-          chmod +x update_doc
-          chmod +x assisted_agg
+
+          echo "downloading libmongo"
+          curl -OL -k "https://s3.amazonaws.com/stitch-artifacts/stitch-mongo-libs/stitch_mongo_libs_linux_64_patch_a4c34cbf6cdd2036fef442f966e404c8be506e62_5bb3da540305b91647c0dfd9_18_10_02_20_51_32/libmongo.so"
+          chmod +x libmongo.so
+
           echo "building transpiler"
+          curl -OL -k https://svn.apache.org/repos/asf/httpd/httpd/vendor/pcre/5.0/libpcre.pc.in
+          mkdir pkgs
+          mv libpcre.pc.in pkgs
+          export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:`pwd`/pkgs
           cd src/github.com/10gen/stitch/etc/transpiler
-          curl -O "https://nodejs.org/dist/v8.11.2/node-v8.11.2-darwin-x64.tar.gz"
-          tar zxf node-v8.11.2-darwin-x64.tar.gz
-          export PATH=`pwd`/node-v8.11.2-darwin-x64/bin/:$PATH
-          rm -rf $HOME/.yarn
-          curl -o- -L https://yarnpkg.com/install.sh | bash
-          export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+          curl -OL -k https://yarnpkg.com/latest.tar.gz
+          tar zvxf latest.tar.gz
+          mv yarn-* yarn
+          export PATH="`pwd`/yarn/bin:$PATH"
           yarn install && yarn run build -t ${transpiler_target}
     - command: shell.exec
       params:
@@ -163,10 +161,18 @@ functions:
           export ANDROID_SDK_ROOT=$SDK_HOME
           export ANDROID_SDK_HOME=$SDK_HOME
 
+          EMULATOR_PID=''
+          cleanup() {
+              kill -9 $EMULATOR_PID
+              $SDK_HOME/tools/bin/avdmanager delete avd -n android_avd
+          }
+          trap cleanup EXIT
+
           # Create the AVD
-          echo "Starting emulator"
           echo no | $SDK_HOME/tools/bin/avdmanager create avd -n android_avd -c 1000M -k "system-images;android-21;google_apis;x86_64" -f
           $SDK_HOME/tools/emulator -avd android_avd -no-audio -no-window -no-snapshot -wipe-data -no-accel -gpu off &
+          EMULATOR_PID=$!
+          sleep infinity
     - command: shell.exec
       params:
         shell: "bash"
@@ -177,10 +183,29 @@ functions:
           SDK_HOME=`pwd`/.android
 
           # Wait for ADB to detect the device
-
           $SDK_HOME/platform-tools/adb wait-for-device
 
+          # Belt and braces waiting for the device
+          bootanim=""
+          failcounter=0
+          timeout_in_sec=360
+
+          until [[ "$bootanim" =~ "stopped" ]]; do
+            bootanim=`$SDK_HOME/platform-tools/adb -e shell getprop init.svc.bootanim 2>&1 &`
+            if [[ "$bootanim" =~ "device not found" || "$bootanim" =~ "device offline"
+              || "$bootanim" =~ "running" ]]; then
+              let "failcounter += 1"
+              if [[ "$failcounter" -gt timeout_in_sec ]]; then
+                echo "Timeout ($timeout_in_sec seconds) reached; failed to start emulator"
+                exit 1
+              elif (( "$failcounter" % 10 )); then
+                 echo "Waiting for emulator to start"
+              fi
+            fi
+            sleep 5
+          done
           echo "Emulator is ready"
+
   "publish_coveralls":
     - command: shell.exec
       params:
@@ -219,6 +244,7 @@ functions:
             export CI_PULL_REQUEST=${github_pr_number}
           fi
           ./gradlew coveralls
+
 tasks:
   - name: lint
     commands:
@@ -237,6 +263,7 @@ tasks:
             export ANDROID_SDK_HOME=$SDK_HOME
             cd stitch-java-sdk
             ./gradlew checkstyle ktlint findbugs pmd lint --continue --warning-mode=all < /dev/null
+
   - name: run_core_tests
     priority: 100
     exec_timeout_secs: 3600
@@ -269,19 +296,27 @@ tasks:
     commands:
       - func: "fetch_go111"
       - func: "fetch_source"
-      - func: "setup_mongod"
-      - func: "setup_android"
+      # - func: "setup_mongod"
+      # - func: "setup_android"
       - func: "setup_stitch"
-      - func: "setup_emulator"
-      - func: "setup_test_creds"
+      # - func: "setup_emulator"
+      # - func: "setup_test_creds"
       - command: shell.exec
         params:
           shell: "bash"
           background: true
           script: |
             set -e
+            LOGCAT_PID=''
+            cleanup() {
+                kill -9 $LOGCAT_PID
+            }
+            trap cleanup EXIT
+
             SDK_HOME=`pwd`/.android
             $SDK_HOME/platform-tools/adb logcat &
+            LOGCAT_PID=$!
+            sleep infinity
       - command: shell.exec
         params:
           shell: "bash"
@@ -298,17 +333,15 @@ tasks:
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
             ./gradlew connectedAndroidTest --info --continue --warning-mode=all --stacktrace  < /dev/null
-            $SDK_HOME/tools/bin/avdmanager delete avd -n android_avd
-            $SDK_HOME/platform-tools/adb kill-server
       - func: "publish_coveralls"
 
   - name: finalize_coverage
     depends_on:
       - name: run_core_tests
-        variant: "macos-1012"
+        variant: "linux-64-amzn-test"
         status: '*'
       - name: run_android_tests
-        variant: "macos-1012"
+        variant: "linux-64-amzn-test"
         status: '*'
     commands:
       - command: shell.exec
@@ -369,14 +402,14 @@ post:
       permissions: public-read
 
 buildvariants:
-- name: macos-1012
-  display_name: macos-1012
+- name: linux-64-amzn-test
+  display_name: linux-64-amzn-test
   run_on:
-    - macos-1012
+    - linux-64-amzn-test
   expansions:
-    go_url: "https://dl.google.com/go/go1.10.2.darwin-amd64.tar.gz"
-    mongodb_url: http://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-4.0.2.tgz
-    transpiler_target: node8-macos
+    go_url: "https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz"
+    mongodb_url: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-4.0.2.tgz
+    transpiler_target: node8-linux
   tasks:
     # - name: run_core_tests
     - name: run_android_tests

@@ -24,6 +24,7 @@ import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestAccessToken;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestLinkResponse;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestRefreshToken;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestUserProfile;
+import static com.mongodb.stitch.core.testutils.ApiTestUtils.mockOldLoginResponse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -215,6 +216,12 @@ public class CoreStitchAuthUnitTests {
 
     // assert that though one user is logged out, two users are still listed
     assertEquals(auth.listUsers().size(), 3);
+    assertTrue(auth.listUsers().stream().allMatch(new Predicate<CoreStitchUserImpl>() {
+      @Override
+      public boolean test(final CoreStitchUserImpl coreStitchUser) {
+        return coreStitchUser.getProfile() != null;
+      }
+    }));
     assertEquals(auth.listUsers().getLast(), user2);
 
     final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
@@ -248,6 +255,16 @@ public class CoreStitchAuthUnitTests {
         }));
 
     assertFalse(auth.isLoggedIn());
+
+    mockOldLoginResponse(requestClient, user2.getId(), user2.getDeviceId());
+
+    assertEquals(
+        user2, auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there")));
+
+    assertEquals(auth.listUsers().size(), 3);
+    assertEquals(auth.listUsers().getLast(), user2);
+
+    assertTrue(auth.isLoggedIn());
   }
 
   @Test
@@ -302,6 +319,16 @@ public class CoreStitchAuthUnitTests {
     assertEquals(auth.listUsers().size(), 0);
 
     assertFalse(auth.isLoggedIn());
+
+    mockOldLoginResponse(requestClient, user2.getId(), user2.getDeviceId());
+
+    assertEquals(
+        user2, auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there")));
+
+    assertEquals(auth.listUsers().size(), 1);
+    assertEquals(auth.listUsers().getLast(), user2);
+
+    assertTrue(auth.isLoggedIn());
   }
 
   @Test
@@ -615,7 +642,8 @@ public class CoreStitchAuthUnitTests {
             .when(requestClient)
             .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/profile")));
 
-    assertNotNull(auth.loginWithCredentialInternal(new AnonymousCredential()));
+    final CoreStitchUser user1 = auth.loginWithCredentialInternal(new AnonymousCredential());
+    assertNotNull(user1);
 
     doThrow(new StitchRequestException(
             new Exception("profile request failed"), StitchRequestErrorCode.TRANSPORT_ERROR))
@@ -631,6 +659,7 @@ public class CoreStitchAuthUnitTests {
     }
 
     assertTrue(auth.isLoggedIn());
+    assertEquals(auth.getUser().getId(), user1.getId());
     assertNotNull(auth.getUser());
 
     // Scenario 3: User is logged in -> attempt to link to other identity
@@ -676,7 +705,7 @@ public class CoreStitchAuthUnitTests {
         new MemoryStorage());
 
     try {
-      auth.switchUser("not_a_user_id");
+      auth.switchToUserWithId("not_a_user_id");
       fail("should have thrown error due to missing key");
     } catch (IllegalArgumentException e) {
       assertNotNull(e);
@@ -685,7 +714,7 @@ public class CoreStitchAuthUnitTests {
     final CoreStitchUser user =
         auth.loginWithCredentialInternal(new AnonymousCredential());
 
-    assertEquals(user, auth.switchUser(user.getId()));
+    assertEquals(user, auth.switchToUserWithId(user.getId()));
     assertEquals(user, auth.getUser());
 
     final CoreStitchUser user2 =
@@ -694,7 +723,7 @@ public class CoreStitchAuthUnitTests {
     assertEquals(user2, auth.getUser());
     assertNotEquals(user, auth.getUser());
 
-    assertEquals(user, auth.switchUser(user.getId()));
+    assertEquals(user, auth.switchToUserWithId(user.getId()));
     assertEquals(user, auth.getUser());
   }
 

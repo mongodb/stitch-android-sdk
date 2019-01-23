@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core.testutils;
 
 import com.mongodb.stitch.core.auth.UserType;
+import com.mongodb.stitch.core.auth.internal.AuthInfo;
 import com.mongodb.stitch.core.auth.internal.models.ApiAuthInfo;
 import com.mongodb.stitch.core.auth.internal.models.ApiCoreUserProfile;
 import com.mongodb.stitch.core.auth.internal.models.ApiStitchUserIdentity;
@@ -116,6 +117,21 @@ public class ApiTestUtils {
         getLastDeviceId(),
         getTestAccessToken(),
         null);
+  }
+
+  public static void mockOldLoginResponse(final StitchRequestClient requestClient,
+                                          final String userId,
+                                          final String deviceId) {
+
+    Mockito.doAnswer((ignored) ->
+        new Response(
+            new ApiAuthInfo(
+                userId,
+                deviceId,
+                getTestAccessToken(),
+                getTestRefreshToken()).toString()))
+        .when(requestClient)
+        .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/login")));
   }
 
   /**

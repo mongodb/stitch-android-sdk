@@ -20,7 +20,7 @@ import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
 
-import java.util.LinkedList;
+import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -72,10 +72,10 @@ public interface StitchAuth {
   /**
    * Logs out the a user with the provided id.
    * Throws an exception if the user was not found.
-   * @param userId the id of the user to logout
+   * @param userId the id of the user to logoutUserWithId
    * @throws IllegalArgumentException throws if user id not found
    */
-  void logout(final String userId) throws IllegalArgumentException;
+  void logoutUserWithId(final String userId) throws IllegalArgumentException;
 
   /**
    * Logs out and removes the currently logged in, active user.
@@ -88,7 +88,7 @@ public interface StitchAuth {
    * Throws an exception if the user was not found.
    * @param userId the id of the user to remove
    */
-  void removeUser(final String userId);
+  void removeUserWithId(final String userId);
 
   /**
    * Returns whether or not there's a currently logged in user.
@@ -111,7 +111,7 @@ public interface StitchAuth {
    *
    * @return the set of currently logged in users
    */
-  LinkedList<StitchUser> listUsers();
+  List<StitchUser> listUsers();
 
   /**
    * Switches the active user to the user with the provided id.
@@ -120,5 +120,5 @@ public interface StitchAuth {
    * @return the user that was switched to
    * @throws IllegalArgumentException throws if user id not found
    */
-  StitchUser switchUser(final String userId) throws IllegalArgumentException;
+  StitchUser switchToUserWithId(final String userId) throws IllegalArgumentException;
 }

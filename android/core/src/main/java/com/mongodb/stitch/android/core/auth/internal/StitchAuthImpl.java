@@ -119,7 +119,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  public Task<Void> logout(final String userId) {
+  public Task<Void> logoutUserWithId(final String userId) {
     return dispatcher.dispatchTask(
         new Callable<Void>() {
           @Override
@@ -143,7 +143,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  public Task<Void> removeUser(final String userId) {
+  public Task<Void> removeUserWithId(final String userId) {
     return dispatcher.dispatchTask(
         new Callable<Void>() {
           @Override

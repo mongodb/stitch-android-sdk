@@ -241,6 +241,12 @@ public final class Stitch {
     return client;
   }
 
+  /**
+   * This will clear out all initialized app clients.
+   * This method is essentially for debugging, e.g.,
+   * imitating an application restart, as it will clear
+   * all in-memory settings.
+   */
   static void clearApps() {
     appClients.clear();
   }

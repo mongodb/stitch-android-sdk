@@ -257,7 +257,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  public synchronized StitchUserT switchUser(final String userId) throws IllegalArgumentException {
+  public synchronized StitchUserT switchToUserWithId(final String userId) throws IllegalArgumentException {
     authLock.lock();
     try {
       for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
@@ -291,7 +291,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
         if (credential.getProviderCapabilities().getReusesExistingSession()
             && credential.getProviderType().equals(authInfo.getLoggedInProviderType())) {
-          return switchUser(authInfo.getUserId());
+          return switchToUserWithId(authInfo.getUserId());
         }
       }
 
@@ -445,7 +445,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   // use this critical section to create a queue of pending outbound requests
-  // that should wait on the result of doing a token refresh or logout. This will
+  // that should wait on the result of doing a token refresh or logoutUserWithId. This will
   // prevent too many refreshes happening one after the other.
   private void tryRefreshAccessToken(final Long reqStartedAt) {
     authLock.lock();
@@ -608,7 +608,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
       // if this is a link request, remove the old active info
       // and replace it with the updated version
-      if (asLinkRequest) {
+      if (asLinkRequest || loggedInUsersAuthInfoList.contains(newAuthInfo)) {
         loggedInUsersAuthInfoList.remove(oldActiveUserInfo);
       }
       loggedInUsersAuthInfoList.add(newAuthInfo);

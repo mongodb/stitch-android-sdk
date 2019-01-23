@@ -141,7 +141,7 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
 
         // Verify that remove removes the second user
-        client.auth.removeUser(id2)
+        client.auth.removeUserWithId(id2)
         // Assert that we're still logged in
         assertTrue(client.auth.isLoggedIn)
         // Assert that the next user is up
