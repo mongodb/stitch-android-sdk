@@ -660,7 +660,6 @@ public class CoreStitchAuthUnitTests {
 
     assertTrue(auth.isLoggedIn());
     assertEquals(auth.getUser().getId(), user1.getId());
-    assertNotNull(auth.getUser());
 
     // Scenario 3: User is logged in -> attempt to link to other identity
     //                               -> initial link request succeeds
