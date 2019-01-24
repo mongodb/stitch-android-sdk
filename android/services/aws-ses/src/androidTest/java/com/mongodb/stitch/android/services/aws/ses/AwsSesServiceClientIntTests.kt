@@ -16,6 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.ExecutionException
@@ -42,6 +43,8 @@ class AwsSesServiceClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    // TODO: STITCH-2463
+    @Ignore
     fun testSendMessage() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)

@@ -76,6 +76,21 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
+  public void logoutUserWithId(final String userId) {
+    logoutInternal(userId);
+  }
+
+  @Override
+  public void removeUser() {
+    removeUserInternal();
+  }
+
+  @Override
+  public void removeUserWithId(final String userId) {
+    removeUserInternal(userId);
+  }
+
+  @Override
   protected Document getDeviceInfo() {
     final Document info = new Document();
     if (hasDeviceId()) {

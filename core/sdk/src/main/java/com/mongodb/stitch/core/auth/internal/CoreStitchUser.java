@@ -36,4 +36,6 @@ public interface CoreStitchUser {
   StitchUserProfile getProfile();
 
   List<? extends StitchUserIdentity> getIdentities();
+
+  boolean isLoggedIn();
 }

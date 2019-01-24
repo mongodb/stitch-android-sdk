@@ -119,6 +119,42 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
+  public Task<Void> logoutUserWithId(final String userId) {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            logoutInternal(userId);
+            return null;
+          }
+        });
+  }
+
+  @Override
+  public Task<Void> removeUser() {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            removeUserInternal();
+            return null;
+          }
+        });
+  }
+
+  @Override
+  public Task<Void> removeUserWithId(final String userId) {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            removeUserInternal(userId);
+            return null;
+          }
+        });
+  }
+
+  @Override
   protected Document getDeviceInfo() {
     final Document info = super.getDeviceInfo();
     if (appInfo.getLocalAppName() != null) {

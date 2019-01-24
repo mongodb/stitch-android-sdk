@@ -31,8 +31,9 @@ public final class StitchUserImpl extends CoreStitchUserImpl implements StitchUs
       final String loggedInProviderType,
       final String loggedInProviderName,
       final StitchUserProfileImpl profile,
-      final StitchAuthImpl auth) {
-    super(id, deviceId, loggedInProviderType, loggedInProviderName, profile);
+      final StitchAuthImpl auth,
+      final boolean isLoggedIn) {
+    super(id, deviceId, loggedInProviderType, loggedInProviderName, profile, isLoggedIn);
     this.auth = auth;
   }
 

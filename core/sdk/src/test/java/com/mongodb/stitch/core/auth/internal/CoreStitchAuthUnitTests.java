@@ -17,14 +17,17 @@
 package com.mongodb.stitch.core.auth.internal;
 
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getAuthorizationBearer;
+import static com.mongodb.stitch.core.testutils.ApiTestUtils.getLastDeviceId;
+import static com.mongodb.stitch.core.testutils.ApiTestUtils.getLastUserId;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getMockedRequestClient;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestAccessToken;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestLinkResponse;
-import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestLoginResponse;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestRefreshToken;
 import static com.mongodb.stitch.core.testutils.ApiTestUtils.getTestUserProfile;
+import static com.mongodb.stitch.core.testutils.ApiTestUtils.mockOldLoginResponse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -60,6 +63,7 @@ import com.mongodb.stitch.core.internal.net.StitchDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.core.testutils.CustomType;
+
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import java.nio.charset.StandardCharsets;
@@ -71,6 +75,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+
 import org.bson.Document;
 import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.IntegerCodec;
@@ -97,7 +103,7 @@ public class CoreStitchAuthUnitTests {
         auth.loginWithCredentialInternal(new AnonymousCredential());
 
     final ApiCoreUserProfile profile = getTestUserProfile();
-    assertEquals(getTestLoginResponse().getUserId(), user.getId());
+    assertEquals(getLastUserId(), user.getId());
     assertEquals(AnonymousAuthProvider.DEFAULT_NAME, user.getLoggedInProviderName());
     assertEquals(AnonymousAuthProvider.TYPE, user.getLoggedInProviderType());
     assertEquals(profile.getUserType(), user.getUserType());
@@ -151,7 +157,7 @@ public class CoreStitchAuthUnitTests {
         .withBody(String.format(
             "{\"username\" : \"foo@foo.com\",\"password\" : \"bar\","
             + "\"options\" : {\"device\" : {\"deviceId\" : \"%s\"}}}",
-            getTestLoginResponse().getDeviceId()).getBytes(StandardCharsets.UTF_8))
+            getLastDeviceId()).getBytes(StandardCharsets.UTF_8))
         .withPath(routes.getAuthProviderLinkRoute(UserPasswordAuthProvider.DEFAULT_NAME));
     final Map<String, String> headers = new HashMap<>();
     headers.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
@@ -196,14 +202,30 @@ public class CoreStitchAuthUnitTests {
 
     assertFalse(auth.isLoggedIn());
 
-    auth.loginWithCredentialInternal(new AnonymousCredential());
+    final CoreStitchUser user1 =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
+    final CoreStitchUser user3 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
 
+    assertEquals(auth.listUsers().getLast(), user3);
     assertTrue(auth.isLoggedIn());
 
     auth.logoutInternal();
 
+    // assert that though one user is logged out, two users are still listed
+    assertEquals(auth.listUsers().size(), 3);
+    assertTrue(auth.listUsers().stream().allMatch(new Predicate<CoreStitchUserImpl>() {
+      @Override
+      public boolean test(final CoreStitchUserImpl coreStitchUser) {
+        return coreStitchUser.getProfile() != null;
+      }
+    }));
+    assertEquals(auth.listUsers().getLast(), user2);
+
     final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
-    verify(requestClient, times(3)).doRequest(reqArgs.capture());
+    verify(requestClient, times(7)).doRequest(reqArgs.capture());
 
     final StitchRequest.Builder expectedRequest = new StitchRequest.Builder();
     expectedRequest.withMethod(Method.DELETE)
@@ -211,9 +233,104 @@ public class CoreStitchAuthUnitTests {
     final Map<String, String> headers = new HashMap<>();
     headers.put(Headers.AUTHORIZATION, getAuthorizationBearer(getTestRefreshToken()));
     expectedRequest.withHeaders(headers);
-    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(2));
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
 
     assertFalse(auth.isLoggedIn());
+    auth.switchToUserWithId(auth.listUsers().getLast().getId());
+    auth.logoutInternal(auth.listUsers().getLast().getId());
+
+    verify(requestClient, times(8)).doRequest(reqArgs.capture());
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(13));
+
+    assertEquals(auth.listUsers().size(), 3);
+    assertEquals(auth.listUsers().getLast(), user1);
+
+    auth.logoutInternal(auth.listUsers().getLast().getId());
+    assertEquals(auth.listUsers().size(), 3);
+    assertTrue(auth.listUsers().stream().allMatch(new Predicate<CoreStitchUserImpl>() {
+          @Override
+          public boolean test(final CoreStitchUserImpl coreStitchUser) {
+            return !coreStitchUser.isLoggedIn();
+          }
+        }));
+
+    assertFalse(auth.isLoggedIn());
+
+    mockOldLoginResponse(requestClient, user2.getId(), user2.getDeviceId());
+
+    assertEquals(
+        user2, auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there")));
+
+    assertEquals(auth.listUsers().size(), 3);
+    assertEquals(auth.listUsers().getLast(), user2);
+
+    assertTrue(auth.isLoggedIn());
+  }
+
+  @Test
+  public void testRemoveBlocking() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+    final StitchAuth auth = new StitchAuth(
+        requestClient,
+        routes,
+        new MemoryStorage());
+
+    assertFalse(auth.isLoggedIn());
+
+    final CoreStitchUser user1 =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
+    final CoreStitchUser user3 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
+
+    assertEquals(auth.listUsers().getLast(), user3);
+    assertTrue(auth.isLoggedIn());
+
+    auth.removeUserInternal();
+
+    // assert that though one user is logged out, two users are still listed
+    assertEquals(auth.listUsers().size(), 2);
+    assertEquals(auth.listUsers().getLast(), user2);
+
+    final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
+    verify(requestClient, times(7)).doRequest(reqArgs.capture());
+
+    final StitchRequest.Builder expectedRequest = new StitchRequest.Builder();
+    expectedRequest.withMethod(Method.DELETE)
+        .withPath(routes.getSessionRoute());
+    final Map<String, String> headers = new HashMap<>();
+    headers.put(Headers.AUTHORIZATION, getAuthorizationBearer(getTestRefreshToken()));
+    expectedRequest.withHeaders(headers);
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
+
+    assertFalse(auth.isLoggedIn());
+    auth.switchToUserWithId(auth.listUsers().getLast().getId());
+    assertTrue(auth.isLoggedIn());
+
+    auth.removeUserInternal(auth.listUsers().getLast().getId());
+
+    verify(requestClient, times(8)).doRequest(reqArgs.capture());
+    assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(13));
+
+    assertEquals(auth.listUsers().size(), 1);
+    assertEquals(auth.listUsers().getLast(), user1);
+
+    auth.removeUserInternal(auth.listUsers().getLast().getId());
+    assertEquals(auth.listUsers().size(), 0);
+
+    assertFalse(auth.isLoggedIn());
+
+    mockOldLoginResponse(requestClient, user2.getId(), user2.getDeviceId());
+
+    assertEquals(
+        user2, auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there")));
+
+    assertEquals(auth.listUsers().size(), 1);
+    assertEquals(auth.listUsers().getLast(), user2);
+
+    assertTrue(auth.isLoggedIn());
   }
 
   @Test
@@ -287,7 +404,7 @@ public class CoreStitchAuthUnitTests {
         .withBody(String.format(
             "{\"username\" : \"foo@foo.com\",\"password\" : \"bar\","
             + "\"options\" : {\"device\" : {\"deviceId\" : \"%s\"}}}",
-            getTestLoginResponse().getDeviceId()).getBytes(StandardCharsets.UTF_8))
+            getLastDeviceId()).getBytes(StandardCharsets.UTF_8))
         .withPath(routes.getAuthProviderLinkRoute(UserPasswordAuthProvider.DEFAULT_NAME));
     final Map<String, String> headers2 = new HashMap<>();
     headers2.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
@@ -315,6 +432,7 @@ public class CoreStitchAuthUnitTests {
       assertEquals(ex.getErrorCode(), StitchServiceErrorCode.INVALID_SESSION);
     }
 
+    // the failure due to an invalid session will log the user out entirely
     assertFalse(auth.isLoggedIn());
   }
 
@@ -516,7 +634,7 @@ public class CoreStitchAuthUnitTests {
     assertNull(auth.getUser());
 
     // Scenario 2: User is logged in -> attempts login into other account -> initial login succeeds
-    //                               -> profile request fails -> original user is logged out
+    //                               -> profile request fails -> original user is still logged in
     doReturn(new Response(getTestUserProfile().toString()))
             .doThrow(
                     new StitchRequestException(
@@ -526,7 +644,8 @@ public class CoreStitchAuthUnitTests {
             .when(requestClient)
             .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/profile")));
 
-    assertNotNull(auth.loginWithCredentialInternal(new AnonymousCredential()));
+    final CoreStitchUser user1 = auth.loginWithCredentialInternal(new AnonymousCredential());
+    assertNotNull(user1);
 
     doThrow(new StitchRequestException(
             new Exception("profile request failed"), StitchRequestErrorCode.TRANSPORT_ERROR))
@@ -541,8 +660,8 @@ public class CoreStitchAuthUnitTests {
       // do nothing
     }
 
-    assertFalse(auth.isLoggedIn());
-    assertNull(auth.getUser());
+    assertTrue(auth.isLoggedIn());
+    assertEquals(auth.getUser().getId(), user1.getId());
 
     // Scenario 3: User is logged in -> attempt to link to other identity
     //                               -> initial link request succeeds
@@ -577,6 +696,58 @@ public class CoreStitchAuthUnitTests {
     assertEquals(userToBeLinked.getId(), auth.getUser().getId());
   }
 
+  @Test
+  public void testSwitchUser() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+    final StitchAuth auth = new StitchAuth(
+        requestClient,
+        routes,
+        new MemoryStorage());
+
+    try {
+      auth.switchToUserWithId("not_a_user_id");
+      fail("should have thrown error due to missing key");
+    } catch (IllegalArgumentException e) {
+      assertNotNull(e);
+    }
+
+    final CoreStitchUser user =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+
+    assertEquals(user, auth.switchToUserWithId(user.getId()));
+    assertEquals(user, auth.getUser());
+
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hello ", "friend"));
+
+    assertEquals(user2, auth.getUser());
+    assertNotEquals(user, auth.getUser());
+
+    assertEquals(user, auth.switchToUserWithId(user.getId()));
+    assertEquals(user, auth.getUser());
+  }
+
+  @Test
+  public void testListUsers() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+    final StitchAuth auth = new StitchAuth(
+        requestClient,
+        routes,
+        new MemoryStorage());
+
+    final CoreStitchUser user =
+        auth.loginWithCredentialInternal(new AnonymousCredential());
+
+    assertTrue(auth.listUsers().stream().allMatch(Predicate.isEqual(user)));
+
+    final CoreStitchUser user2 =
+        auth.loginWithCredentialInternal(new UserPasswordCredential("hello ", "friend"));
+
+    assertEquals(auth.listUsers(), Arrays.asList(user, user2));
+  }
+
   protected static class StitchAuth extends CoreStitchAuth<CoreStitchUserImpl> {
     StitchAuth(
         final StitchRequestClient requestClient,
@@ -591,9 +762,10 @@ public class CoreStitchAuthUnitTests {
           String deviceId,
           String loggedInProviderType,
           String loggedInProviderName,
-          StitchUserProfileImpl userProfile) ->
+          StitchUserProfileImpl userProfile,
+          boolean isLoggedIn) ->
           new CoreStitchUserImpl(
-              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile) {};
+              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, isLoggedIn) {};
     }
 
     @Override

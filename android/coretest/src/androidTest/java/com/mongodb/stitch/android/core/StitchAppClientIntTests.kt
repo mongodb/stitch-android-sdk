@@ -84,7 +84,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
                 confirmEmailSubject = "email subject",
                 resetPasswordSubject = "password subject")
         )
-        val client = getAppClient(app.first)
+        var client = getAppClient(app.first)
 
         // check storage
         assertFalse(client.auth.isLoggedIn)
@@ -127,8 +127,74 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
 
-        // Verify that logout clears storage
-        Tasks.await(client.auth.logout())
+        // check everything is as it was
+        client = getAppClient(app.first)
+        assertTrue(client.auth.isLoggedIn)
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, id2)
+
+        assertEquals(client.auth.listUsers().size, 3)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        // imitate an app restart
+        Stitch.clearApps()
+
+        // check everything is as it was
+        client = getAppClient(app.first)
+        assertTrue(client.auth.isLoggedIn)
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, id2)
+
+        assertEquals(client.auth.listUsers().size, 3)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        // Verify that remove removes the second user
+        Tasks.await(client.auth.removeUserWithId(id2))
+        // Assert that we're no longer logged in
+        assertFalse(client.auth.isLoggedIn)
+        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
+
+        // Assert that the next user is up
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, emailUserId)
+
+        assertEquals(client.auth.listUsers().size, 2)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        // imitate an app restart
+        Stitch.clearApps()
+        // Assert that we're still logged in
+        assertTrue(client.auth.isLoggedIn)
+        // Assert that the next user is up
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, emailUserId)
+
+        assertEquals(client.auth.listUsers().size, 2)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        Tasks.await(client.auth.removeUser())
+
+        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
+
+        // Assert that the next user is up
+        assertEquals(client.auth.user!!.loggedInProviderType, AnonymousAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, anonUser.id)
+
+        assertEquals(client.auth.listUsers().size, 1)
+        assertNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        Tasks.await(client.auth.removeUser())
+        assertEquals(client.auth.listUsers().size, 0)
         assertFalse(client.auth.isLoggedIn)
         assertNull(client.auth.user)
     }

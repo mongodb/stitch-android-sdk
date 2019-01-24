@@ -13,6 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 
 class AwsSesServiceClientIntTests : BaseStitchServerIntTest() {
@@ -37,6 +38,8 @@ class AwsSesServiceClientIntTests : BaseStitchServerIntTest() {
 
     @Test
     @SuppressWarnings("deprecation")
+    // TODO: STITCH-2463
+    @Ignore
     fun testSendEmail() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)

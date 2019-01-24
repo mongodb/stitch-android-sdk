@@ -19,6 +19,9 @@ package com.mongodb.stitch.server.core.auth;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
+
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 /**
@@ -61,9 +64,31 @@ public interface StitchAuth {
   StitchUser loginWithCredential(final StitchCredential credential);
 
   /**
-   * Logs out the currently logged in user.
+   * Logs out the currently logged in, active user.
+   * Switches to the next logged in user if there is another.
    */
   void logout();
+
+  /**
+   * Logs out the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to logoutUserWithId
+   * @throws IllegalArgumentException throws if user id not found
+   */
+  void logoutUserWithId(final String userId) throws IllegalArgumentException;
+
+  /**
+   * Logs out and removes the currently logged in, active user.
+   * Switches to the next logged in user if there is another.
+   */
+  void removeUser();
+
+  /**
+   * Logs out and removes the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to remove
+   */
+  void removeUserWithId(final String userId);
 
   /**
    * Returns whether or not there's a currently logged in user.
@@ -73,10 +98,27 @@ public interface StitchAuth {
   boolean isLoggedIn();
 
   /**
-   * Returns the currently logged in user; null if not logged in.
+   * Returns the currently logged in, active user; null if no users are logged in.
    *
-   * @return the currently logged in user; null if not logged in.
+   * @return the currently logged in, active user; null if no users are logged in.
    */
   @Nullable
   StitchUser getUser();
+
+
+  /**
+   * Returns a set of all logged in users.
+   *
+   * @return the set of currently logged in users
+   */
+  List<StitchUser> listUsers();
+
+  /**
+   * Switches the active user to the user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to switch to
+   * @return the user that was switched to
+   * @throws IllegalArgumentException throws if user id not found
+   */
+  StitchUser switchToUserWithId(final String userId) throws IllegalArgumentException;
 }

@@ -22,6 +22,7 @@ import com.mongodb.stitch.android.core.auth.providers.internal.AuthProviderClien
 import com.mongodb.stitch.android.core.auth.providers.internal.NamedAuthProviderClientFactory;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import java.io.Closeable;
+import java.util.List;
 
 /**
  * StitchAuth manages authentication for any Stitch based client. It provides methods for logging
@@ -63,11 +64,36 @@ public interface StitchAuth extends Closeable {
   Task<StitchUser> loginWithCredential(final StitchCredential credential);
 
   /**
-   * Logs out the currently logged in user.
+   * Logs out the currently logged in, active user.
+   * Switches to the next logged in user if there is another.
    *
    * @return a {@link Task} completing when logged out.
    */
   Task<Void> logout();
+
+  /**
+   * Logs out the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to switch to
+   * @return a {@link Task} completing when logged out.
+   */
+  Task<Void> logoutUserWithId(final String userId);
+
+  /**
+   * Logs out and removes the currently logged in, active user.
+   * Switches to the next logged in user if there is another.
+   *
+   * @return a {@link Task} completing when logged out.
+   */
+  Task<Void> removeUser();
+
+  /**
+   * Logs out and removes the a user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to remove
+   * @return a {@link Task} completing when logged out.
+   */
+  Task<Void> removeUserWithId(final String userId);
 
   /**
    * Returns whether or not there's a currently logged in user.
@@ -77,9 +103,9 @@ public interface StitchAuth extends Closeable {
   boolean isLoggedIn();
 
   /**
-   * Returns the currently logged in user; null if not logged in.
+   * Returns the currently logged in, active user; null if no users are logged in.
    *
-   * @return the currently logged in user; null if not logged in.
+   * @return the currently logged in, active user; null if no users are logged in.
    */
   @Nullable
   StitchUser getUser();
@@ -98,4 +124,20 @@ public interface StitchAuth extends Closeable {
    * @param listener the listener to remove.
    */
   void removeAuthListener(final StitchAuthListener listener);
+
+  /**
+   * Returns a list of all logged in users.
+   *
+   * @return the list of currently logged in users
+   */
+  List<StitchUser> listUsers();
+
+  /**
+   * Switches the active user to the user with the provided id.
+   * Throws an exception if the user was not found.
+   * @param userId the id of the user to switch to
+   * @return the user that was switched to
+   * @throws IllegalArgumentException throws if user id not found
+   */
+  StitchUser switchToUserWithId(final String userId) throws IllegalArgumentException;
 }
