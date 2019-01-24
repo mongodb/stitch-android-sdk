@@ -154,8 +154,10 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         // Verify that remove removes the second user
         Tasks.await(client.auth.removeUserWithId(id2))
-        // Assert that we're still logged in
-        assertTrue(client.auth.isLoggedIn)
+        // Assert that we're no longer logged in
+        assertFalse(client.auth.isLoggedIn)
+        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
+
         // Assert that the next user is up
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, emailUserId)
@@ -179,6 +181,9 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
 
         Tasks.await(client.auth.removeUser())
+
+        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
+
         // Assert that the next user is up
         assertEquals(client.auth.user!!.loggedInProviderType, AnonymousAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, anonUser.id)

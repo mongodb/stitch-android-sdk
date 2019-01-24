@@ -235,8 +235,8 @@ public class CoreStitchAuthUnitTests {
     expectedRequest.withHeaders(headers);
     assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
 
-    assertTrue(auth.isLoggedIn());
-
+    assertFalse(auth.isLoggedIn());
+    auth.switchToUserWithId(auth.listUsers().getLast().getId());
     auth.logoutInternal(auth.listUsers().getLast().getId());
 
     verify(requestClient, times(8)).doRequest(reqArgs.capture());
@@ -305,6 +305,8 @@ public class CoreStitchAuthUnitTests {
     expectedRequest.withHeaders(headers);
     assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
 
+    assertFalse(auth.isLoggedIn());
+    auth.switchToUserWithId(auth.listUsers().getLast().getId());
     assertTrue(auth.isLoggedIn());
 
     auth.removeUserInternal(auth.listUsers().getLast().getId());

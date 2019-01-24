@@ -317,7 +317,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   protected synchronized void logoutInternal() {
-    if (!isLoggedIn() || activeUser == null) {
+    if (!isLoggedIn()) {
       return;
     }
 
@@ -327,16 +327,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   protected synchronized void logoutInternal(final String userId) throws IllegalArgumentException {
     authLock.lock();
     try {
-      if (!isLoggedIn()) {
+      final AuthInfo authInfo = findAuthInfoById(userId);
+      if (!authInfo.isLoggedIn()) {
         return;
       }
-      final AuthInfo authInfo = findAuthInfoById(userId);
+
       try {
         doLogout(authInfo);
       } catch (final StitchServiceException ex) {
         // Do nothing
       } finally {
-        clearActiveUser();
+        clearUser(authInfo);
         // add logged out user to front of queue
         loggedInUsersAuthInfoList.addFirst(authInfo.loggedOut());
       }
@@ -356,15 +357,16 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   protected synchronized void removeUserInternal(final String userId) {
     authLock.lock();
     try {
-      if (!isLoggedIn()) {
+      final AuthInfo authInfo = findAuthInfoById(userId);
+      if (!authInfo.isLoggedIn()) {
         return;
       }
       try {
-        doLogout(findAuthInfoById(userId));
+        doLogout(authInfo);
       } catch (final StitchServiceException ex) {
         // Do nothing
       } finally {
-        clearUser(userId);
+        clearUser(authInfo);
       }
     } finally {
       authLock.unlock();
@@ -611,6 +613,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       if (asLinkRequest || loggedInUsersAuthInfoList.contains(newAuthInfo)) {
         loggedInUsersAuthInfoList.remove(oldActiveUserInfo);
       }
+
       loggedInUsersAuthInfoList.add(newAuthInfo);
       AuthInfo.writeLoggedInUsersAuthInfoToStorage(loggedInUsersAuthInfoList, storage);
     } catch (final IOException e) {
@@ -663,19 +666,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
     loggedInUsersAuthInfoList.remove(activeUserAuthInfo);
 
-    if (listUsers().size() >= 1) {
-      activeUserAuthInfo = loggedInUsersAuthInfoList.getLast();
-      this.activeUser = getUserFactory().makeUser(
-          this.activeUserAuthInfo.getUserId(),
-          this.activeUserAuthInfo.getDeviceId(),
-          this.activeUserAuthInfo.getLoggedInProviderType(),
-          this.activeUserAuthInfo.getLoggedInProviderName(),
-          this.activeUserAuthInfo.getUserProfile(),
-          this.activeUserAuthInfo.isLoggedIn());
-    } else {
-      activeUserAuthInfo = activeUserAuthInfo.loggedOut();
-      activeUser = null;
-    }
+    activeUserAuthInfo = activeUserAuthInfo.loggedOut();
+    activeUser = null;
 
     try {
       AuthInfo.writeActiveUserAuthInfoToStorage(activeUserAuthInfo, storage);
@@ -685,12 +677,12 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     onAuthEvent();
   }
 
-  private synchronized void clearUser(final String userId) {
+  private synchronized void clearUser(final AuthInfo authInfo) {
     try {
-      if (loggedInUsersAuthInfoList.remove(findAuthInfoById(userId))) {
+      if (loggedInUsersAuthInfoList.remove(authInfo)) {
         AuthInfo.writeLoggedInUsersAuthInfoToStorage(loggedInUsersAuthInfoList, storage);
       }
-      if (activeUserAuthInfo.getUserId().equals(userId)) {
+      if (activeUserAuthInfo.equals(authInfo)) {
         clearActiveUser();
       }
     } catch (final IOException e) {

@@ -30,7 +30,9 @@ open class BaseStitchServerIntTest : BaseStitchIntTest() {
 
     @After
     override fun teardown() {
-        clients.forEach { it.auth.logout() }
+        clients.forEach {
+            it.auth.logout()
+        }
         clients.clear()
         // TODO: add back after SERVER-35421
 //        FileUtils.forceDelete(File(dataDir))
