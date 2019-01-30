@@ -29,6 +29,7 @@ import org.junit.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
+import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
@@ -1837,5 +1838,20 @@ class DataSynchronizerUnitTests {
                         BsonDocument("_id", fakeRecoveryDocumentId)
                 ).firstOrNull()
         )
+    }
+
+    @Test
+    fun testReinitialize() {
+        val ctx = harness.freshTestContext(false)
+
+        ctx.dataSynchronizer.reinitialize(ctx.localClient)
+
+        ctx.verifyStopCalled(1)
+
+        ctx.verifyStartCalled(1)
+
+        // without a configuration it should not be
+        // configured or running
+        assertFalse(ctx.dataSynchronizer.isRunning)
     }
 }

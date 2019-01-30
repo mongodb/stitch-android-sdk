@@ -66,6 +66,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -93,17 +94,19 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
 
   private final CoreStitchServiceClient service;
-  private final MongoClient localClient;
   private final CoreRemoteMongoClient remoteClient;
   private final NetworkMonitor networkMonitor;
   private final AuthMonitor authMonitor;
   private final Logger logger;
-  private final MongoDatabase configDb;
-  private final MongoCollection<InstanceSynchronizationConfig> instancesColl;
   private final Lock syncLock;
-  private InstanceChangeStreamListener instanceChangeStreamListener;
+  private final String instanceKey;
 
+  private MongoClient localClient;
+  private MongoDatabase configDb;
+  private MongoCollection<InstanceSynchronizationConfig> instancesColl;
+  private InstanceChangeStreamListener instanceChangeStreamListener;
   private InstanceSynchronizationConfig syncConfig;
+
   private boolean syncThreadEnabled = true;
   private boolean isConfigured = false;
   private boolean isRunning = false;
@@ -132,7 +135,26 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.syncLock = new ReentrantLock();
     this.listenersLock = new ReentrantLock();
     this.eventDispatcher = eventDispatcher;
+    this.instanceKey = instanceKey;
 
+    this.logger =
+        Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
+    if (this.networkMonitor != null) {
+      this.networkMonitor.addNetworkStateListener(this);
+    }
+
+    initialize();
+    final Semaphore recoveryStarted = new Semaphore(0);
+    new Thread(() -> recover(recoveryStarted)).start();
+    try {
+      // Wait to return after the thread has confirmed it has started.
+      recoveryStarted.acquire();
+    } catch (final InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private void initialize() {
     this.configDb =
         localClient.getDatabase("sync_config" + instanceKey)
             .withCodecRegistry(CodecRegistries.fromRegistries(
@@ -161,21 +183,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         authMonitor);
     for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
       this.instanceChangeStreamListener.addNamespace(ns);
-    }
-
-    this.logger =
-        Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
-    if (this.networkMonitor != null) {
-      this.networkMonitor.addNetworkStateListener(this);
-    }
-
-    final Semaphore recoveryStarted = new Semaphore(0);
-    new Thread(() -> recover(recoveryStarted)).start();
-    try {
-      // Wait to return after the thread has confirmed it has started.
-      recoveryStarted.acquire();
-    } catch (final InterruptedException e) {
-      Thread.currentThread().interrupt();
     }
   }
 
@@ -296,10 +303,23 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
+  public void reinitialize(final MongoClient localClient) {
+    syncLock.lock();
+    try {
+      this.instanceChangeStreamListener.stop();
+      this.stop();
+      this.localClient = localClient;
+      initialize();
+      this.start();
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
   /**
    * Reloads the synchronization config. This wipes all in-memory synchronization settings.
    */
-  public void reloadConfig() {
+  public void wipeInMemorySettings() {
     syncLock.lock();
     try {
       this.instanceChangeStreamListener.stop();

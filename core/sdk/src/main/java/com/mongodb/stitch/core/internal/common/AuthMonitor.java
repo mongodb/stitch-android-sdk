@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.internal.common;
 
+import javax.annotation.Nullable;
+
 public interface AuthMonitor {
   boolean isLoggedIn();
+  @Nullable String getActiveUserId();
 }

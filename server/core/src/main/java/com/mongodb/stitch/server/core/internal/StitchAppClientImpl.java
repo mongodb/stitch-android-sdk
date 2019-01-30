@@ -37,6 +37,8 @@ import java.util.List;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
+import javax.annotation.Nullable;
+
 public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
 
   private final CoreStitchAppClient coreClient;
@@ -180,6 +182,12 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
   @Override
   public boolean isLoggedIn() {
     return getAuth().isLoggedIn();
+  }
+
+  @Nullable
+  @Override
+  public String getActiveUserId() {
+    return getAuth().getUser() != null ? getAuth().getUser().getId() : null;
   }
 
   /**

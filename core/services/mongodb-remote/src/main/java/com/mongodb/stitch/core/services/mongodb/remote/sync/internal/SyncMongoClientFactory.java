@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.services.mongodb.local.internal.EmbeddedMongoClientFactory;
 
 public abstract class SyncMongoClientFactory {
@@ -30,10 +31,13 @@ public abstract class SyncMongoClientFactory {
     if (dataDir == null) {
       throw new IllegalArgumentException("StitchAppClient not configured with a data directory");
     }
+
+    final String userId = appInfo.getAuthMonitor().isLoggedIn() ?
+        appInfo.getAuthMonitor().getActiveUserId() : "unbound";
     final String instanceKey = String.format(
-        "%s-%s_sync_%s", appInfo.getClientAppId(), dataDir, serviceName);
+        "%s-%s_sync_%s_%s", appInfo.getClientAppId(), dataDir, serviceName, userId);
     final String dbPath = String.format(
-        "%s/%s/sync_mongodb_%s/0/", dataDir, appInfo.getClientAppId(), serviceName);
+        "%s/%s/sync_mongodb_%s/%s/0/", dataDir, appInfo.getClientAppId(), serviceName, userId);
     return clientFactory.getClient(instanceKey, dbPath, appInfo.getCodecRegistry());
   }
 }

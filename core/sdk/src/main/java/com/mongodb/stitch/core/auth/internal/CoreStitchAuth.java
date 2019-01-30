@@ -340,6 +340,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         clearUser(authInfo);
         // add logged out user to front of queue
         loggedInUsersAuthInfoList.addFirst(authInfo.loggedOut());
+        try {
+          AuthInfo.writeLoggedInUsersAuthInfoToStorage(loggedInUsersAuthInfoList, storage);
+        } catch (final IOException e) {
+          // Do nothing
+        }
       }
     } finally {
       authLock.unlock();

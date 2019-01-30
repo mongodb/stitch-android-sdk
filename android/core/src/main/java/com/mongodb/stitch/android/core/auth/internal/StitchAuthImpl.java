@@ -47,6 +47,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   private final TaskDispatcher dispatcher;
   private final StitchAppClientInfo appInfo;
   private final Set<StitchAuthListener> listeners = new HashSet<>();
+  private final Set<StitchAuthListener> synchronizedListeners = new HashSet<>();
 
   /**
    * Constructs a {@link StitchAuthImpl}.
@@ -189,6 +190,16 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     onAuthEvent(listener);
   }
 
+  public void addSynchronizedAuthListener(final StitchAuthListener listener) {
+    synchronized (this) {
+      synchronizedListeners.add(listener);
+    }
+
+    // Trigger the onUserLoggedIn event in case some event happens and
+    // this caller would miss out on this event other wise.
+    onAuthEvent(listener);
+  }
+
   /**
    * Removes a listener.
    *
@@ -214,6 +225,9 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   protected void onAuthEvent() {
     for (final StitchAuthListener listener : listeners) {
       onAuthEvent(listener);
+    }
+    for (final StitchAuthListener listener : synchronizedListeners) {
+      listener.onAuthEvent(this);
     }
   }
 }

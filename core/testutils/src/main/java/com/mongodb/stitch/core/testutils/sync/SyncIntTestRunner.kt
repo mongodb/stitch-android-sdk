@@ -3,6 +3,7 @@ package com.mongodb.stitch.core.testutils.sync
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
+import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import org.junit.After
@@ -38,6 +39,17 @@ interface SyncIntTestRunner {
 
     var mdbService: Apps.App.Services.Service
     var mdbRule: RuleResponse
+
+    var userId1: String
+    var userId2: String
+    var userId3: String
+
+    fun listUsers(): List<CoreStitchUser>
+
+    fun switchUser(userId: String)
+
+    fun currentUserId(): String?
+
     /**
      * A series of remote methods, independent of platform,
      * that have been normalized for testing.
@@ -153,4 +165,7 @@ interface SyncIntTestRunner {
 
     @Test
     fun testConflictForEmptyVersionDocuments()
+
+    @Test
+    fun testMultiUserSupport()
 }

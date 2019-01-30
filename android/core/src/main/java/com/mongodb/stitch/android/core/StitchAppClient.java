@@ -22,6 +22,7 @@ import com.mongodb.stitch.android.core.push.StitchPush;
 import com.mongodb.stitch.android.core.services.StitchServiceClient;
 import com.mongodb.stitch.android.core.services.internal.NamedServiceClientFactory;
 import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;

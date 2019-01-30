@@ -26,6 +26,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Ignore
 import org.junit.Test
 import java.lang.Exception
@@ -1686,6 +1687,103 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
     }
 
+    @Test
+    fun testMultiUserSupport() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        // insert a new document remotely
+        val docToInsertUser1 = Document("hello", "world")
+        val docToInsertUser2 = Document("hola", "mundo")
+        val docToInsertUser3 = Document("hallo", "welt")
+
+        // configure Sync to resolve a custom document when handling a conflict
+        // insert and sync the same document locally, creating a conflict
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+            fail()
+            Document()
+        }, null, null)
+
+        val doc1Id = coll.insertOne(docToInsertUser1).insertedId
+        val doc1Filter = Document("_id", doc1Id)
+
+        // sync. assert that the resolution is reflected locally,
+        // but not yet remotely.
+        streamAndSync()
+        var expectedDocument = Document(docToInsertUser1)
+
+        assertEquals(expectedDocument, coll.find(doc1Filter).first()!!)
+        assertEquals(docToInsertUser1, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
+
+        // sync again. assert that the resolution is reflected
+        // locally and remotely.
+        streamAndSync()
+        assertEquals(expectedDocument, coll.find(doc1Filter).first()!!)
+        assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
+        assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
+
+        // switch to the other user. this function chain
+        // is the simplest way to do this for now
+        syncTestRunner.switchUser(syncTestRunner.userId2)
+
+        assertNull(coll.find(doc1Filter).firstOrNull())
+
+        // sync again. since the configurations have been reset, nothing should exist locally
+        streamAndSync()
+        assertNull(coll.find(doc1Filter).firstOrNull())
+        // assert nothing has changed remotely
+        assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
+        assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
+
+        val doc2Id = coll.insertOne(docToInsertUser2).insertedId
+        val doc2Filter = Document("_id", doc2Id)
+
+        streamAndSync()
+
+        expectedDocument = Document(docToInsertUser2)
+        assertEquals(expectedDocument, coll.find(doc2Filter).first()!!)
+        assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc2Filter).first()!!))
+        assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
+
+        // switch back to the previous user
+        syncTestRunner.switchUser(syncTestRunner.userId3)
+
+        assertNull(coll.find(doc1Filter).firstOrNull())
+        assertNull(coll.find(doc2Filter).firstOrNull())
+
+        // sync again. since the configurations have been reset, nothing should exist locally
+        streamAndSync()
+        assertNull(coll.find(doc1Filter).firstOrNull())
+        // assert nothing has changed remotely
+        assertEquals(docToInsertUser1, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
+        assertEquals(docToInsertUser2, withoutSyncVersion(remoteColl.find(doc2Filter).first()!!))
+        assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
+
+        val doc3Id = coll.insertOne(docToInsertUser3).insertedId
+        val doc3Filter = Document("_id", doc3Id)
+
+        streamAndSync()
+
+        expectedDocument = Document(docToInsertUser3)
+        assertEquals(expectedDocument, coll.find(doc3Filter).first()!!)
+        assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc3Filter).first()!!))
+        assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
+
+        syncTestRunner.switchUser(syncTestRunner.userId1)
+
+        // assert docs are still intact
+        assertEquals(docToInsertUser1, coll.find(doc1Filter).first()!!)
+        assertNull(coll.find(doc2Filter).firstOrNull())
+        assertNull(coll.find(doc3Filter).firstOrNull())
+
+        syncTestRunner.switchUser(syncTestRunner.userId2)
+
+        // assert docs are still intact
+        assertNull(coll.find(doc1Filter).firstOrNull())
+        assertEquals(docToInsertUser2, coll.find(doc2Filter).firstOrNull())
+        assertNull(coll.find(doc3Filter).firstOrNull())
+    }
+
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {
         println("watching for $n change event(s) ns=$namespace")
         val waitFor = AtomicInteger(n)
@@ -1719,7 +1817,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     }
 
     private fun powerCycleDevice() {
-        syncTestRunner.dataSynchronizer.reloadConfig()
+        syncTestRunner.dataSynchronizer.wipeInMemorySettings()
     }
 
     private fun goOffline() {

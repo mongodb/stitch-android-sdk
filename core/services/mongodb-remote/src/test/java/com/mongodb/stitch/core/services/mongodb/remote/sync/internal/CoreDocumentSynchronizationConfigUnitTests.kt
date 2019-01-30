@@ -38,7 +38,15 @@ class CoreDocumentSynchronizationConfigUnitTests {
         }
     }
 
-    private val authMonitor = AuthMonitor { true }
+    private val authMonitor = object: AuthMonitor {
+        override fun isLoggedIn(): Boolean {
+            return true
+        }
+
+        override fun getActiveUserId(): String? {
+            return "bound"
+        }
+    }
     private val localClient = SyncMongoClientFactory.getClient(
             StitchAppClientInfo(
                     "<client-app-id>",

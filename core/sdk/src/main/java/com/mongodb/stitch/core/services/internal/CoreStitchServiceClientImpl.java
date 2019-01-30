@@ -24,7 +24,10 @@ import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
+import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.bson.Document;
@@ -37,6 +40,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   private final StitchServiceRoutes serviceRoutes;
   private final String serviceName;
   private final CodecRegistry codecRegistry;
+  private final List<WeakReference<StitchServiceBinder>> serviceBinders;
 
   public CoreStitchServiceClientImpl(
       final StitchAuthRequestClient requestClient,
@@ -57,6 +61,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     this.serviceRoutes = routes;
     this.serviceName = name;
     this.codecRegistry = codecRegistry;
+    this.serviceBinders = new ArrayList<>();
   }
 
   private StitchAuthRequest getStreamServiceFunctionRequest(
@@ -186,6 +191,25 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         serviceRoutes,
         serviceName,
         codecRegistry);
+  }
+
+  @Override
+  public void bind(StitchServiceBinder binder) {
+    this.serviceBinders.add(new WeakReference<>(binder));
+  }
+
+  @Override
+  public void onRebindEvent() {
+    final Iterator<WeakReference<StitchServiceBinder>> iterator = this.serviceBinders.iterator();
+    while (iterator.hasNext()) {
+      final WeakReference<StitchServiceBinder> weakReference = iterator.next();
+      final StitchServiceBinder binder = weakReference.get();
+      if (binder == null) {
+        this.serviceBinders.remove(weakReference);
+      } else {
+        binder.onRebindEvent();
+      }
+    }
   }
 
   private static class FunctionFields {
