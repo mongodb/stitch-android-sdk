@@ -38,7 +38,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         }
     }
 
-    private val authMonitor = object: AuthMonitor {
+    private val authMonitor = object : AuthMonitor {
         override fun isLoggedIn(): Boolean {
             return true
         }

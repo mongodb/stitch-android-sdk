@@ -19,7 +19,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.client.MongoDatabase;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;

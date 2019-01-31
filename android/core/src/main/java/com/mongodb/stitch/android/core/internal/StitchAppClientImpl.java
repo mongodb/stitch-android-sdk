@@ -45,10 +45,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import javax.annotation.Nullable;
+
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
-
-import javax.annotation.Nullable;
 
 public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, StitchAuthListener {
 
@@ -294,7 +294,7 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
   }
 
   @Override
-  public void onAuthEvent(StitchAuth auth) {
+  public void onAuthEvent(final StitchAuth auth) {
     final Iterator<WeakReference<CoreStitchServiceClient>> iterator =
         this.serviceClients.iterator();
     while (iterator.hasNext()) {

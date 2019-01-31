@@ -257,7 +257,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  public synchronized StitchUserT switchToUserWithId(final String userId) throws IllegalArgumentException {
+  public synchronized StitchUserT switchToUserWithId(final String userId)
+      throws IllegalArgumentException {
     authLock.lock();
     try {
       for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
@@ -431,7 +432,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         req.builder().withShouldRefreshOnFailure(false).build(), decoder);
   }
 
-  private synchronized Response handleAuthFailure(final StitchServiceException ex, final StitchAuthRequest req) {
+  private synchronized Response handleAuthFailure(final StitchServiceException ex,
+                                                  final StitchAuthRequest req) {
     if (ex.getErrorCode() != StitchServiceErrorCode.INVALID_SESSION) {
       throw ex;
     }

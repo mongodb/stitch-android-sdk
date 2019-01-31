@@ -194,7 +194,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   }
 
   @Override
-  public void bind(StitchServiceBinder binder) {
+  public void bind(final StitchServiceBinder binder) {
     this.serviceBinders.add(new WeakReference<>(binder));
   }
 

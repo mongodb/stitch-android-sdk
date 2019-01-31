@@ -379,10 +379,10 @@ tasks:
   - name: finalize_coverage
     depends_on:
       - name: run_core_tests
-        variant: "rhel70"
+        variant: "ubuntu1804-build"
         status: '*'
       - name: run_android_tests
-        variant: "rhel70"
+        variant: "ubuntu1804-build"
         status: '*'
       - name: run_android_tests_with_proguard
     commands:
@@ -444,10 +444,10 @@ post:
       permissions: public-read
 
 buildvariants:
-- name: rhel70
-  display_name: rhel70
+- name: ubuntu1804-build
+  display_name: ubuntu1804-build
   run_on:
-    - rhel70
+    - ubuntu1804-build
   expansions:
     go_url: "https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz"
     mongodb_url: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-4.0.2.tgz

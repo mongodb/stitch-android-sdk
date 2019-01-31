@@ -34,10 +34,11 @@ import com.mongodb.stitch.server.core.services.internal.ServiceClientFactory;
 import com.mongodb.stitch.server.core.services.internal.StitchServiceClientImpl;
 import java.io.IOException;
 import java.util.List;
-import org.bson.codecs.Decoder;
-import org.bson.codecs.configuration.CodecRegistry;
 
 import javax.annotation.Nullable;
+
+import org.bson.codecs.Decoder;
+import org.bson.codecs.configuration.CodecRegistry;
 
 public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
 
