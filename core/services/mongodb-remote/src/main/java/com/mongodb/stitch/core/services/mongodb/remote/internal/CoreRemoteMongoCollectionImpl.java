@@ -21,7 +21,9 @@ import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
+import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -34,9 +36,13 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchro
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncOperations;
 
 import java.util.List;
+
 import org.bson.BsonDocument;
+import org.bson.BsonObjectId;
+import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 public class CoreRemoteMongoCollectionImpl<DocumentT>
     implements CoreRemoteMongoCollection<DocumentT> {
@@ -369,6 +375,35 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   ) {
     return multi ? operations.updateMany(filter, update, updateOptions).execute(service)
         : operations.updateOne(filter, update, updateOptions).execute(service);
+  }
+
+  /**
+   * Watches specified IDs in a collection.  This convenience overload supports the use case
+   * of non-{@link BsonValue} instances of {@link ObjectId} by wrapping them in
+   * {@link BsonObjectId} instances for the user.
+   * @param ids unique object identifiers of the IDs to watch.
+   * @return the stream of change events.
+   */
+  @Override
+  public Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids) {
+    final BsonValue[] transformedIds = new BsonValue[ids.length];
+
+    for (int i = 0; i < ids.length; i++) {
+      transformedIds[i] = new BsonObjectId(ids[i]);
+    }
+
+    return watch(transformedIds);
+  }
+
+  /**
+   * Watches specified IDs in a collection.
+   * @param ids the ids to watch.
+   * @return the stream of change events.
+   */
+  @Override
+  @SuppressWarnings("unchecked")
+  public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids) {
+    return operations.watch(ids).execute(service);
   }
 
   @Override

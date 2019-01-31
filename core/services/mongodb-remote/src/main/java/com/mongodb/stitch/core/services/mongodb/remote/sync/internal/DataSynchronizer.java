@@ -16,11 +16,6 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalDelete;
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalInsert;
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalReplace;
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.changeEventForLocalUpdate;
-
 import com.mongodb.Block;
 import com.mongodb.Function;
 import com.mongodb.MongoClientSettings;
@@ -45,8 +40,11 @@ import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.common.Dispatcher;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
@@ -88,9 +86,10 @@ import org.bson.diagnostics.Loggers;
  * and a remote MongoDB (via Stitch). It also expose CRUD operations to interact with synchronized
  * documents.
  */
+//TODO: API24 replace deprecated forEach calls with forEach(Consumer)
 public class DataSynchronizer implements NetworkMonitor.StateListener {
 
-  static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
+  public static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
 
   private final CoreStitchServiceClient service;
   private final MongoClient localClient;
@@ -572,7 +571,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             syncRemoteChangeEventToLocal(
                 nsConfig,
                 docConfig,
-                changeEventForLocalReplace(
+                ChangeEvents.changeEventForLocalReplace(
                     nsConfig.getNamespace(),
                     docId,
                     latestDocumentMap.get(docId),
@@ -590,17 +589,19 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         for (final BsonValue unseenId : unseenIds) {
           final CoreDocumentSynchronizationConfig docConfig =
               nsConfig.getSynchronizedDocument(unseenId);
-          if (docConfig == null
-              || docConfig.getLastKnownRemoteVersion() == null
-              || docConfig.isPaused()) {
-            // means we aren't actually synchronizing on this remote doc
+          if (docConfig == null) {
+            continue;
+          }
+          // XXX: Changed this for 7-11
+          if (docConfig.getLastKnownRemoteVersion() == null || docConfig.isPaused()) {
+            //docConfig.setStale(false);
             continue;
           }
 
           syncRemoteChangeEventToLocal(
               nsConfig,
               docConfig,
-              changeEventForLocalDelete(
+              ChangeEvents.changeEventForLocalDelete(
                   nsConfig.getNamespace(),
                   unseenId,
                   docConfig.hasUncommittedWrites()
@@ -832,7 +833,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       resolveConflict(
               nsConfig.getNamespace(),
               docConfig,
-              changeEventForLocalDelete(
+              ChangeEvents.changeEventForLocalDelete(
                       nsConfig.getNamespace(),
                       docConfig.getDocumentId(),
                       docConfig.hasUncommittedWrites()));
@@ -891,7 +892,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     resolveConflict(
             nsConfig.getNamespace(),
             docConfig,
-            changeEventForLocalReplace(
+            ChangeEvents.changeEventForLocalReplace(
                     nsConfig.getNamespace(),
                     docConfig.getDocumentId(),
                     newestRemoteDocument,
@@ -1114,7 +1115,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   continue;
                 }
 
-                final ChangeEvent.UpdateDescription localUpdateDescription =
+                final UpdateDescription localUpdateDescription =
                         localChangeEvent.getUpdateDescription();
                 if (localUpdateDescription.getRemovedFields().isEmpty()
                         && localUpdateDescription.getUpdatedFields().isEmpty()) {
@@ -1391,11 +1392,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final Object resolvedDocument;
     final ChangeEvent transformedRemoteEvent;
     try {
-      final ChangeEvent transformedLocalEvent = ChangeEvent.transformChangeEventForUser(
+      final ChangeEvent transformedLocalEvent = ChangeEvents.transformChangeEventForUser(
           docConfig.getLastUncommittedChangeEvent(),
           syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
-      transformedRemoteEvent =
-          ChangeEvent.transformChangeEventForUser(
+      transformedRemoteEvent = ChangeEvents.transformChangeEventForUser(
               remoteEvent,
               syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
       resolvedDocument = resolveConflictWithResolver(
@@ -1424,7 +1424,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
 
     final BsonDocument remoteVersion;
-    if (remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE) {
+    if (remoteEvent.getOperationType() == OperationType.DELETE) {
       // We expect there will be no version on the document. Note: it's very possible
       // that the document could be reinserted at this point with no version field and we
       // would end up deleting it, unless we receive a notification in time.
@@ -1570,9 +1570,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // a. When the document is looked up, if it cannot be found the synthesized change event is a
     // DELETE, otherwise it's a REPLACE.
     if (document == null) {
-      return changeEventForLocalDelete(ns, documentId, false);
+      return ChangeEvents.changeEventForLocalDelete(ns, documentId, false);
     }
-    return changeEventForLocalReplace(ns, documentId, document, false);
+    return ChangeEvents.changeEventForLocalReplace(ns, documentId, document, false);
   }
 
   /**
@@ -1844,7 +1844,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     try {
       getLocalCollection(namespace).insertOne(docForStorage);
       documentId = BsonUtils.getDocumentId(docForStorage);
-      event = changeEventForLocalInsert(namespace, docForStorage, true);
+      event = ChangeEvents.changeEventForLocalInsert(namespace, docForStorage, true);
       final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
           namespace,
           documentId
@@ -1880,7 +1880,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       for (final BsonDocument document : docsForStorage) {
         final BsonValue documentId = BsonUtils.getDocumentId(document);
         final ChangeEvent<BsonDocument> event =
-            changeEventForLocalInsert(namespace, document, true);
+            ChangeEvents.changeEventForLocalInsert(namespace, document, true);
         final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
             namespace,
             documentId
@@ -1982,14 +1982,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (documentBeforeUpdate == null && updateOptions.isUpsert()) {
         triggerNamespace = true;
         config = syncConfig.addSynchronizedDocument(namespace, documentId);
-        event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
+        event = ChangeEvents.changeEventForLocalInsert(namespace, documentAfterUpdate, true);
       } else {
         triggerNamespace = false;
         config = syncConfig.getSynchronizedDocument(namespace, documentId);
-        event = changeEventForLocalUpdate(
+        event = ChangeEvents.changeEventForLocalUpdate(
             namespace,
             BsonUtils.getDocumentId(documentAfterUpdate),
-            ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, documentAfterUpdate),
+            UpdateDescription.diff(documentBeforeUpdate, documentAfterUpdate),
             documentAfterUpdate,
             true);
       }
@@ -2110,13 +2110,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             // else treat it as a standard update
             if (beforeDocument == null && updateOptions.isUpsert()) {
               config = syncConfig.addSynchronizedDocument(namespace, documentId);
-              event = changeEventForLocalInsert(namespace, afterDocument, true);
+              event = ChangeEvents.changeEventForLocalInsert(namespace, afterDocument, true);
             } else {
               config = syncConfig.getSynchronizedDocument(namespace, documentId);
-              event = changeEventForLocalUpdate(
+              event = ChangeEvents.changeEventForLocalUpdate(
                   namespace,
                   documentId,
-                  ChangeEvent.UpdateDescription.diff(beforeDocument, afterDocument),
+                  UpdateDescription.diff(beforeDocument, afterDocument),
                   afterDocument,
                   true);
             }
@@ -2181,13 +2181,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               docForStorage,
               new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
 
-      if (remoteEvent.getOperationType() == ChangeEvent.OperationType.DELETE) {
-        event = changeEventForLocalInsert(namespace, documentAfterUpdate, true);
+      if (remoteEvent.getOperationType() == OperationType.DELETE) {
+        event = ChangeEvents.changeEventForLocalInsert(namespace, documentAfterUpdate, true);
       } else {
-        event = changeEventForLocalUpdate(
+        event = ChangeEvents.changeEventForLocalUpdate(
             namespace,
             documentId,
-            ChangeEvent.UpdateDescription.diff(
+            UpdateDescription.diff(
                     sanitizeDocument(remoteEvent.getFullDocument()),
                     documentAfterUpdate),
             docForStorage,
@@ -2254,7 +2254,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         undoCollection.deleteOne(getDocumentIdFilter(documentId));
       }
 
-      event = changeEventForLocalReplace(namespace, documentId, docForStorage, false);
+      event = ChangeEvents.changeEventForLocalReplace(namespace, documentId, docForStorage, false);
     } finally {
       lock.unlock();
     }
@@ -2297,12 +2297,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       undoCollection.insertOne(docToDelete);
 
       result = localCollection.deleteOne(filter);
-      event = changeEventForLocalDelete(namespace, documentId, true);
+      event = ChangeEvents.changeEventForLocalDelete(namespace, documentId, true);
 
       // this block is to trigger coalescence for a delete after insert
       if (config.getLastUncommittedChangeEvent() != null
           && config.getLastUncommittedChangeEvent().getOperationType()
-          == ChangeEvent.OperationType.INSERT) {
+          == OperationType.INSERT) {
         desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
         undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
         return result;
@@ -2357,12 +2357,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         }
 
         final ChangeEvent<BsonDocument> event =
-            changeEventForLocalDelete(namespace, documentId, true);
+            ChangeEvents.changeEventForLocalDelete(namespace, documentId, true);
 
         // this block is to trigger coalescence for a delete after insert
         if (config.getLastUncommittedChangeEvent() != null
             && config.getLastUncommittedChangeEvent().getOperationType()
-            == ChangeEvent.OperationType.INSERT) {
+            == OperationType.INSERT) {
           desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
           undoCollection.deleteOne(getDocumentIdFilter(documentId));
           continue;
@@ -2414,7 +2414,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
       localCollection
           .deleteOne(getDocumentIdFilter(documentId));
-      event = changeEventForLocalDelete(namespace, documentId, true);
+      event = ChangeEvents.changeEventForLocalDelete(namespace, documentId, true);
       config.setSomePendingWrites(
           logicalT, atVersion, event);
       if (documentToDelete != null) {
@@ -2461,7 +2461,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } finally {
       lock.unlock();
     }
-    emitEvent(documentId, changeEventForLocalDelete(namespace, documentId, false));
+    emitEvent(documentId, ChangeEvents.changeEventForLocalDelete(namespace, documentId, false));
   }
 
   private void triggerListeningToNamespace(final MongoNamespace namespace) {
@@ -2534,7 +2534,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             if (namespaceListener.getEventListener() != null) {
               namespaceListener.getEventListener().onEvent(
                   documentId,
-                  ChangeEvent.transformChangeEventForUser(
+                  ChangeEvents.transformChangeEventForUser(
                       event, namespaceListener.getDocumentCodec()));
             }
           } catch (final Exception ex) {

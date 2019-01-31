@@ -2,7 +2,10 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoNamespace
 import com.mongodb.client.MongoCollection
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent.UpdateDescription.diff
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType
+import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
+import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders
 import org.bson.BsonArray
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
@@ -24,21 +27,21 @@ class ChangeEventUnitTests {
     fun testNew() {
         val expectedFullDocument = BsonDocument("foo", BsonString("bar")).append("_id", BsonObjectId())
         val expectedId = BsonDocument("_id", expectedFullDocument["_id"])
-        val expectedOperationType = ChangeEvent.OperationType.INSERT
+        val expectedOperationType = OperationType.INSERT
         val expectedNamespace = namespace
         val expectedDocumentKey = BsonDocument("_id", expectedFullDocument["_id"])
-        val expectedUpdateDescription = ChangeEvent.UpdateDescription(
+        val expectedUpdateDescription = UpdateDescription(
             BsonDocument("foo", BsonString("bar")),
             listOf("baz"))
 
         val changeEvent = ChangeEvent(
-            expectedId,
-            expectedOperationType,
-            expectedFullDocument,
-            expectedNamespace,
-            expectedDocumentKey,
-            expectedUpdateDescription,
-            true
+                expectedId,
+                expectedOperationType,
+                expectedFullDocument,
+                expectedNamespace,
+                expectedDocumentKey,
+                expectedUpdateDescription,
+                true
         )
 
         assertEquals(expectedId, changeEvent.id)
@@ -53,56 +56,56 @@ class ChangeEventUnitTests {
     @Test
     fun testOperationTypeFromRemote() {
         assertEquals(
-            ChangeEvent.OperationType.INSERT,
-            ChangeEvent.OperationType.fromRemote("insert"))
+            OperationType.INSERT,
+            OperationType.fromRemote("insert"))
 
         assertEquals(
-            ChangeEvent.OperationType.UPDATE,
-            ChangeEvent.OperationType.fromRemote("update"))
+            OperationType.UPDATE,
+            OperationType.fromRemote("update"))
 
         assertEquals(
-            ChangeEvent.OperationType.REPLACE,
-            ChangeEvent.OperationType.fromRemote("replace"))
+            OperationType.REPLACE,
+            OperationType.fromRemote("replace"))
 
         assertEquals(
-            ChangeEvent.OperationType.DELETE,
-            ChangeEvent.OperationType.fromRemote("delete"))
+            OperationType.DELETE,
+            OperationType.fromRemote("delete"))
 
         assertEquals(
-            ChangeEvent.OperationType.UNKNOWN,
-            ChangeEvent.OperationType.fromRemote("bad"))
+            OperationType.UNKNOWN,
+            OperationType.fromRemote("bad"))
     }
 
     @Test
     fun testOperationTypeToRemote() {
-        assertEquals("insert", ChangeEvent.OperationType.INSERT.toRemote())
-        assertEquals("update", ChangeEvent.OperationType.UPDATE.toRemote())
-        assertEquals("replace", ChangeEvent.OperationType.REPLACE.toRemote())
-        assertEquals("delete", ChangeEvent.OperationType.DELETE.toRemote())
-        assertEquals("unknown", ChangeEvent.OperationType.UNKNOWN.toRemote())
+        assertEquals("insert", OperationType.INSERT.toRemote())
+        assertEquals("update", OperationType.UPDATE.toRemote())
+        assertEquals("replace", OperationType.REPLACE.toRemote())
+        assertEquals("delete", OperationType.DELETE.toRemote())
+        assertEquals("unknown", OperationType.UNKNOWN.toRemote())
     }
 
     @Test
     fun testToBsonDocumentRoundTrip() {
         val expectedFullDocument = BsonDocument("foo", BsonString("bar")).append("_id", BsonObjectId())
         val expectedId = BsonDocument("_id", expectedFullDocument["_id"])
-        val expectedOperationType = ChangeEvent.OperationType.INSERT
+        val expectedOperationType = OperationType.INSERT
         val expectedNamespace = namespace
         val expectedDocumentKey = BsonDocument("_id", expectedFullDocument["_id"])
-        val expectedUpdateDescription = ChangeEvent.UpdateDescription(
+        val expectedUpdateDescription = UpdateDescription(
             BsonDocument("foo", BsonString("bar")),
             listOf("baz"))
 
         val changeEvent = ChangeEvent(
-            expectedId,
-            expectedOperationType,
-            expectedFullDocument,
-            expectedNamespace,
-            expectedDocumentKey,
-            expectedUpdateDescription,
-            true)
+                expectedId,
+                expectedOperationType,
+                expectedFullDocument,
+                expectedNamespace,
+                expectedDocumentKey,
+                expectedUpdateDescription,
+                true)
 
-        val changeEventDocument = ChangeEvent.toBsonDocument(changeEvent)
+        val changeEventDocument = changeEvent.toBsonDocument()
 
         assertEquals(expectedFullDocument, changeEventDocument["fullDocument"])
         assertEquals(expectedId, changeEventDocument["_id"])
@@ -333,7 +336,7 @@ class ChangeEventUnitTests {
         val updatedFields = BsonDocument("hi", BsonString("there"))
         val removedFields = listOf("meow", "bark")
 
-        val updateDoc = ChangeEvent.UpdateDescription(
+        val updateDoc = UpdateDescription(
             updatedFields,
             removedFields
         ).toUpdateDocument()
@@ -349,7 +352,7 @@ class ChangeEventUnitTests {
         afterDocument: BsonDocument
     ) {
         // create an update description via diff'ing the two documents.
-        val updateDescription = diff(withoutId(beforeDocument), withoutId(afterDocument))
+        val updateDescription = UpdateDescription.diff(withoutId(beforeDocument), withoutId(afterDocument))
 
         assertEquals(
             expectedUpdateDocument,

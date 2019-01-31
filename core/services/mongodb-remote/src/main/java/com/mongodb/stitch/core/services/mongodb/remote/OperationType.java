@@ -22,7 +22,13 @@ package com.mongodb.stitch.core.services.mongodb.remote;
 public enum OperationType {
   INSERT, DELETE, REPLACE, UPDATE, UNKNOWN;
 
-  static OperationType fromRemote(final String type) {
+  /**
+   * Returns the appropriate local operation type enum value vased on the remote operation type
+   * string from a change stream event.
+   * @param type the string description of the operation type.
+   * @return the operation type.
+   */
+  public static OperationType fromRemote(final String type) {
     switch (type) {
       case "insert":
         return INSERT;
@@ -37,7 +43,7 @@ public enum OperationType {
     }
   }
 
-  String toRemote() {
+ public String toRemote() {
     switch (this) {
       case INSERT:
         return "insert";

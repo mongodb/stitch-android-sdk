@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.Callback;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import java.util.Map;
 

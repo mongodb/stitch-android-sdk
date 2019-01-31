@@ -20,6 +20,9 @@ import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
+import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -50,6 +53,7 @@ class CoreDocumentSynchronizationConfig {
   private final MongoNamespace namespace;
   private final BsonValue documentId;
   private final ReadWriteLock docLock;
+  private final BsonDocumentCodec bsonDocumentCodec = new BsonDocumentCodec();
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
   private long lastResolution;
   private BsonDocument lastKnownRemoteVersion;
@@ -61,47 +65,36 @@ class CoreDocumentSynchronizationConfig {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    this.docsColl = docsColl;
-    this.namespace = namespace;
-    this.documentId = documentId;
-    this.docLock = new ReentrantReadWriteLock();
-    this.lastResolution = -1;
-    this.lastKnownRemoteVersion = null;
-    this.lastUncommittedChangeEvent = null;
-    this.isStale = false;
+    this(docsColl, namespace, documentId, null, -1, null, new ReentrantReadWriteLock(), false, false);
   }
 
   CoreDocumentSynchronizationConfig(
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final CoreDocumentSynchronizationConfig config
   ) {
-    this.docsColl = docsColl;
-    this.namespace = config.namespace;
-    this.documentId = config.documentId;
-    this.docLock = config.docLock;
-    this.lastResolution = config.lastResolution;
-    this.lastKnownRemoteVersion = config.lastKnownRemoteVersion;
-    this.lastUncommittedChangeEvent = config.lastUncommittedChangeEvent;
-    this.isStale = config.isStale;
-    this.isPaused = config.isPaused;
+    this(docsColl, config.namespace, config.documentId, config.lastUncommittedChangeEvent,
+        config.lastResolution, config.lastKnownRemoteVersion, config.docLock, config.isStale,
+        config.isPaused);
   }
 
   private CoreDocumentSynchronizationConfig(
+      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
       final BsonValue documentId,
       final ChangeEvent<BsonDocument> lastUncommittedChangeEvent,
       final long lastResolution,
       final BsonDocument lastVersion,
+      final ReadWriteLock docsLock,
       final boolean isStale,
       final boolean isPaused
   ) {
+    this.docsColl = docsColl;
     this.namespace = namespace;
     this.documentId = documentId;
     this.lastResolution = lastResolution;
     this.lastKnownRemoteVersion = lastVersion;
     this.lastUncommittedChangeEvent = lastUncommittedChangeEvent;
-    this.docLock = new ReentrantReadWriteLock();
-    this.docsColl = null;
+    this.docLock = docsLock;
     this.isStale = isStale;
     this.isPaused = isPaused;
   }
@@ -373,7 +366,7 @@ class CoreDocumentSynchronizationConfig {
           case UPDATE:
             return new ChangeEvent<>(
                 newestChangeEvent.getId(),
-                ChangeEvent.OperationType.INSERT,
+                OperationType.INSERT,
                 newestChangeEvent.getFullDocument(),
                 newestChangeEvent.getNamespace(),
                 newestChangeEvent.getDocumentKey(),
@@ -392,7 +385,7 @@ class CoreDocumentSynchronizationConfig {
           case INSERT:
             return new ChangeEvent<>(
                 newestChangeEvent.getId(),
-                ChangeEvent.OperationType.REPLACE,
+                OperationType.REPLACE,
                 newestChangeEvent.getFullDocument(),
                 newestChangeEvent.getNamespace(),
                 newestChangeEvent.getDocumentKey(),
@@ -420,11 +413,12 @@ class CoreDocumentSynchronizationConfig {
       if (getLastKnownRemoteVersion() != null) {
         asDoc.put(ConfigCodec.Fields.LAST_KNOWN_REMOTE_VERSION_FIELD, getLastKnownRemoteVersion());
       }
-      if (getLastUncommittedChangeEvent() != null) {
-        final BsonDocument ceDoc = ChangeEvent.toBsonDocument(getLastUncommittedChangeEvent());
+
+      if (lastUncommittedChangeEvent != null) {
+        final BsonDocument ceDoc = lastUncommittedChangeEvent.toBsonDocument();
         final OutputBuffer outputBuffer = new BasicOutputBuffer();
         final BsonWriter innerWriter = new BsonBinaryWriter(outputBuffer);
-        new BsonDocumentCodec().encode(innerWriter, ceDoc, EncoderContext.builder().build());
+        bsonDocumentCodec.encode(innerWriter, ceDoc, EncoderContext.builder().build());
         final BsonBinary encoded = new BsonBinary(outputBuffer.toByteArray());
         // TODO: This may put the doc above the 16MiB but ignore for now.
         asDoc.put(ConfigCodec.Fields.LAST_UNCOMMITTED_CHANGE_EVENT, encoded);
@@ -470,18 +464,20 @@ class CoreDocumentSynchronizationConfig {
       final BsonBinary eventBin =
           document.getBinary(ConfigCodec.Fields.LAST_UNCOMMITTED_CHANGE_EVENT);
       final BsonReader innerReader = new BsonBinaryReader(ByteBuffer.wrap(eventBin.getData()));
-      lastUncommittedChangeEvent =
-          ChangeEvent.changeEventCoder.decode(innerReader, DecoderContext.builder().build());
+      lastUncommittedChangeEvent = ResultDecoders.changeEventDecoder.decode(innerReader,
+          DecoderContext.builder().build());
     } else {
       lastUncommittedChangeEvent = null;
     }
 
     return new CoreDocumentSynchronizationConfig(
+        null,
         namespace,
         document.get(ConfigCodec.Fields.DOCUMENT_ID_FIELD),
         lastUncommittedChangeEvent,
         document.getNumber(ConfigCodec.Fields.LAST_RESOLUTION_FIELD).longValue(),
         lastVersion,
+        new ReentrantReadWriteLock(),
         document.getBoolean(ConfigCodec.Fields.IS_STALE).getValue(),
         document.getBoolean(ConfigCodec.Fields.IS_PAUSED, new BsonBoolean(false)).getValue());
   }

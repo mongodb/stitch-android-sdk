@@ -18,13 +18,22 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
+import com.mongodb.MongoNamespace;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
+
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.bson.BsonArray;
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonReader;
 import org.bson.BsonValue;
@@ -37,7 +46,9 @@ public class ResultDecoders {
   public static final Decoder<RemoteUpdateResult> updateResultDecoder = new UpdateResultDecoder();
 
   private static final class UpdateResultDecoder implements Decoder<RemoteUpdateResult> {
-    public RemoteUpdateResult decode(final BsonReader reader, final DecoderContext decoderContext) {
+    public RemoteUpdateResult decode(
+        final BsonReader reader,
+        final DecoderContext decoderContext) {
       final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
       keyPresent(Fields.MATCHED_COUNT_FIELD, document);
       keyPresent(Fields.MODIFIED_COUNT_FIELD, document);
@@ -63,7 +74,9 @@ public class ResultDecoders {
   public static final Decoder<RemoteDeleteResult> deleteResultDecoder = new DeleteResultDecoder();
 
   private static final class DeleteResultDecoder implements Decoder<RemoteDeleteResult> {
-    public RemoteDeleteResult decode(final BsonReader reader, final DecoderContext decoderContext) {
+    public RemoteDeleteResult decode(
+        final BsonReader reader,
+        final DecoderContext decoderContext) {
       final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
       keyPresent(Fields.DELETED_COUNT_FIELD, document);
       return new RemoteDeleteResult(document.getNumber(Fields.DELETED_COUNT_FIELD).longValue());
@@ -113,6 +126,20 @@ public class ResultDecoders {
 
     private static final class Fields {
       static final String INSERTED_IDS_FIELD = "insertedIds";
+    }
+  }
+
+  public static final Decoder<ChangeEvent<BsonDocument>> changeEventDecoder =
+      new ChangeEventDecoder();
+
+  private static final class ChangeEventDecoder implements Decoder<ChangeEvent<BsonDocument>> {
+    @Override
+    public ChangeEvent<BsonDocument> decode(
+        final BsonReader reader,
+        final DecoderContext decoderContext
+    ) {
+      final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
+      return ChangeEvent.fromBsonDocument(document);
     }
   }
 }

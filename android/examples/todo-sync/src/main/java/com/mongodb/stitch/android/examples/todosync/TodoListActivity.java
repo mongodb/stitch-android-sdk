@@ -42,7 +42,7 @@ import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;

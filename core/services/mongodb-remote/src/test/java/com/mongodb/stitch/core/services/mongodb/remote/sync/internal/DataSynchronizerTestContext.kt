@@ -6,6 +6,7 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.internal.net.Event
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
@@ -125,9 +126,9 @@ interface DataSynchronizerTestContext : Closeable {
      * Verify the conflict handler was called for the test document.
      */
     fun verifyConflictHandlerCalledForActiveDoc(
-        times: Int,
-        expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
-        expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null
+            times: Int,
+            expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
+            expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null
     )
 
     /**

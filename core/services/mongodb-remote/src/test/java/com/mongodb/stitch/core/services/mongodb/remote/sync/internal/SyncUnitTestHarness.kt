@@ -14,12 +14,11 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.internal.net.Stream
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoDatabaseImpl
+import com.mongodb.stitch.core.services.mongodb.remote.internal.*
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
@@ -72,9 +71,9 @@ class SyncUnitTestHarness : Closeable {
             var exceptionToThrow: Exception? = null
         ) : ConflictHandler<BsonDocument> {
             override fun resolveConflict(
-                documentId: BsonValue?,
-                localEvent: ChangeEvent<BsonDocument>?,
-                remoteEvent: ChangeEvent<BsonDocument>?
+                    documentId: BsonValue?,
+                    localEvent: ChangeEvent<BsonDocument>?,
+                    remoteEvent: ChangeEvent<BsonDocument>?
             ): BsonDocument? {
                 if (exceptionToThrow != null) {
                     throw exceptionToThrow!!
@@ -230,8 +229,8 @@ class SyncUnitTestHarness : Closeable {
         override val instanceKey: String = "${Random().nextInt()}"
     ) : DataSynchronizerTestContext {
         open class TestChangeEventListener(
-            private val expectedEvent: ChangeEvent<BsonDocument>?,
-            var emitEventSemaphore: Semaphore?
+                private val expectedEvent: ChangeEvent<BsonDocument>?,
+                var emitEventSemaphore: Semaphore?
         ) : ChangeEventListener<BsonDocument> {
             val eventAccumulator = mutableListOf<ChangeEvent<BsonDocument>>()
             var totalEventsToAccumulate = 0
@@ -257,7 +256,7 @@ class SyncUnitTestHarness : Closeable {
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
         override var nextStreamEvent: Event = Event.Builder().withEventName("MOCK").build()
-        private val streamMock = Stream(TestEventStream(this), ChangeEvent.changeEventCoder)
+        private val streamMock = Stream(TestEventStream(this), ResultDecoders.changeEventDecoder)
         override val testDocument = newDoc("count", BsonInt32(1))
         override val testDocumentId: BsonObjectId by lazy { testDocument["_id"] as BsonObjectId }
         override val testDocumentFilter by lazy { BsonDocument("_id", testDocumentId) }
@@ -366,7 +365,7 @@ class SyncUnitTestHarness : Closeable {
                 Mockito.`when`(service.streamFunction(
                     ArgumentMatchers.anyString(),
                     ArgumentMatchers.anyList<Any>(),
-                    ArgumentMatchers.eq(ChangeEvent.changeEventCoder))
+                    ArgumentMatchers.eq(ResultDecoders.changeEventDecoder))
                 ).thenReturn(streamMock)
 
                 val databaseSpy = Mockito.mock(CoreRemoteMongoDatabaseImpl::class.java)
@@ -470,7 +469,7 @@ class SyncUnitTestHarness : Closeable {
 
         override fun queueConsumableRemoteInsertEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalInsert(namespace, testDocument, true)),
+                mapOf(testDocument to ChangeEvents.changeEventForLocalInsert(namespace, testDocument, true)),
                 mapOf())
         }
 
@@ -523,27 +522,27 @@ class SyncUnitTestHarness : Closeable {
                 }
             }
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(document to ChangeEvent.changeEventForLocalUpdate(
+                mapOf(document to ChangeEvents.changeEventForLocalUpdate(
                     namespace, id, null, fakeUpdateDoc, false)),
                 mapOf())
         }
 
         override fun queueConsumableRemoteDeleteEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent.changeEventForLocalDelete(namespace, testDocumentId, true)),
+                mapOf(testDocument to ChangeEvents.changeEventForLocalDelete(namespace, testDocumentId, true)),
                 mapOf())
         }
 
         override fun queueConsumableRemoteUnknownEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
                 mapOf(testDocument to ChangeEvent(
-                    BsonDocument("_id", testDocumentId),
-                    ChangeEvent.OperationType.UNKNOWN,
-                    testDocument,
-                    namespace,
-                    BsonDocument("_id", testDocumentId),
-                    null,
-                    true)), mapOf())
+                        BsonDocument("_id", testDocumentId),
+                        OperationType.UNKNOWN,
+                        testDocument,
+                        namespace,
+                        BsonDocument("_id", testDocumentId),
+                        null,
+                        true)), mapOf())
         }
 
         override fun findTestDocumentFromLocalCollection(): BsonDocument? {
@@ -591,9 +590,9 @@ class SyncUnitTestHarness : Closeable {
         }
 
         override fun verifyConflictHandlerCalledForActiveDoc(
-            times: Int,
-            expectedLocalConflictEvent: ChangeEvent<BsonDocument>?,
-            expectedRemoteConflictEvent: ChangeEvent<BsonDocument>?
+                times: Int,
+                expectedLocalConflictEvent: ChangeEvent<BsonDocument>?,
+                expectedRemoteConflictEvent: ChangeEvent<BsonDocument>?
         ) {
             val localChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
             val remoteChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
@@ -614,7 +613,7 @@ class SyncUnitTestHarness : Closeable {
 
         override fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document) {
             Mockito.verify(service, times(times)).streamFunction(
-                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ChangeEvent.changeEventCoder))
+                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ResultDecoders.changeEventDecoder))
         }
 
         override fun verifyStartCalled(times: Int) {

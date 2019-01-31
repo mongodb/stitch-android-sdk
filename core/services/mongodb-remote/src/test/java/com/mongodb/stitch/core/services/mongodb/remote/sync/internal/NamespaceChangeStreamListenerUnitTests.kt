@@ -1,6 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.stitch.core.internal.net.Event
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonObjectId
 import org.bson.Document
@@ -83,9 +84,9 @@ class NamespaceChangeStreamListenerUnitTests {
 
         // assert that, with an expected ChangeEvent, the event is stored
         // and the stream remains open
-        val expectedChangeEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true)
+        val expectedChangeEvent = ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true)
         ctx.nextStreamEvent = Event.Builder().withEventName("message").withData(
-            ChangeEvent.toBsonDocument(expectedChangeEvent).toJson()
+            expectedChangeEvent.toBsonDocument().toJson()
         ).build()
         namespaceChangeStreamListener.storeNextEvent()
         assertTrue(namespaceChangeStreamListener.isOpen)

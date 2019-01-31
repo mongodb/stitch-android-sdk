@@ -34,7 +34,9 @@ import static org.mockito.Mockito.when;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.CollectionDecoder;
+import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -604,4 +606,48 @@ public class CoreRemoteMongoCollectionUnitTests {
     assertThrows(() -> coll.updateMany(new Document(), new Document()),
         IllegalArgumentException.class);
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testWatchBsonValueIDs() {
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
+    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(
+            service,
+            getClientInfo(),
+            ServerEmbeddedMongoClientFactory.getInstance());
+    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
+
+    // test for stream of BSON documents
+    final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
+
+    final BsonObjectId id = new BsonObjectId();
+    doReturn(mockStream).when(service).streamFunction(any(), any(), any(Decoder.class));
+
+    final BsonValue[] expectedIDs = new BsonValue[] {new BsonString("foobar"),
+        new BsonObjectId(),
+        new BsonDocument()};
+    Stream<ChangeEvent<Document>> result = coll.watch(expectedIDs);
+
+    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
+        ArgumentCaptor.forClass(Decoder.class);
+    verify(service)
+        .callFunction(
+            funcNameArg.capture(),
+            funcArgsArg.capture(),
+            resultClassArg.capture());
+
+    assertEquals("watch", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    final Document expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("ids", expectedIDs);
+    assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
+    assertEquals(ResultDecoders.changeEventDecoder, resultClassArg.getValue());
+  }
+
 }

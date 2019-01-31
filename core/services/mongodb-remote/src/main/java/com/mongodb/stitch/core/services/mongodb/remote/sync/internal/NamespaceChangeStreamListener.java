@@ -25,6 +25,8 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -200,7 +202,7 @@ public class NamespaceChangeStreamListener {
         service.streamFunction(
             "watch",
             Collections.singletonList(args),
-            ChangeEvent.changeEventCoder);
+            ResultDecoders.changeEventDecoder);
 
     if (currentStream.isOpen()) {
       this.nsConfig.setStale(true);

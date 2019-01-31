@@ -21,6 +21,7 @@ import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import java.util.HashMap;
 import java.util.Map;
