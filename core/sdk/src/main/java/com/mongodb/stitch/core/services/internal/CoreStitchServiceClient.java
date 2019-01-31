@@ -80,5 +80,10 @@ public interface CoreStitchServiceClient extends StitchServiceBinder {
 
   CoreStitchServiceClient withCodecRegistry(final CodecRegistry codecRegistry);
 
+  /**
+   * Bind a given service to this service client.
+   *
+   * @param binder the service binder that links the service to this client
+   */
   void bind(final StitchServiceBinder binder);
 }

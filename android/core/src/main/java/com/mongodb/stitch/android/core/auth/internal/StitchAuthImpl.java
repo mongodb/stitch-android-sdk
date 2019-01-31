@@ -46,7 +46,14 @@ import org.bson.Document;
 public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements StitchAuth {
   private final TaskDispatcher dispatcher;
   private final StitchAppClientInfo appInfo;
+  /**
+   * A set of auth listeners that should be dispatched to asynchronously
+   */
   private final Set<StitchAuthListener> listeners = new HashSet<>();
+  /**
+   * A set of auth listeners that should be dispatched to synchronously.
+   * For internal use.
+   */
   private final Set<StitchAuthListener> synchronizedListeners = new HashSet<>();
 
   /**

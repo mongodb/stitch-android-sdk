@@ -57,6 +57,8 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
 
   @Override
   public void onRebindEvent() {
+    // reinitialize the DataSynchronizer entirely.
+    // any auth event will trigger this.
     this.dataSynchronizer.reinitialize(
         SyncMongoClientFactory.getClient(
             appInfo,

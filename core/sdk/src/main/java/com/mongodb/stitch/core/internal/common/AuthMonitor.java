@@ -19,6 +19,19 @@ package com.mongodb.stitch.core.internal.common;
 import javax.annotation.Nullable;
 
 public interface AuthMonitor {
+  /**
+   * Get whether or not the application client is currently
+   * logged in.
+   *
+   * @return whether or not the application client is logged in
+   */
   boolean isLoggedIn();
+
+  /**
+   * Get the active user id from the applications
+   * auth request client.
+   *
+   * @return active user id if there is one, null if not
+   */
   @Nullable String getActiveUserId();
 }

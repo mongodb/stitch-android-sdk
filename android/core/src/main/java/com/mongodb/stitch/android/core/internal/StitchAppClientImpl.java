@@ -58,6 +58,10 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
   private final StitchAppRoutes routes;
   private final StitchAuthImpl auth;
   private final StitchPush push;
+  /**
+   * A list of weak references to any service client created
+   * by a user.
+   */
   private final List<WeakReference<CoreStitchServiceClient>> serviceClients;
 
   /**
@@ -277,6 +281,14 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
     return getAuth().getUser() != null ? getAuth().getUser().getId() : null;
   }
 
+  /**
+   * Bind a given service client to this app client.
+   * This allows the app client to dispatch events that require
+   * the service to rebind to the application, e.g., a change
+   * in authentication.
+   *
+   * @param coreStitchServiceClient the service client to bind
+   */
   private void bindServiceClient(final CoreStitchServiceClient coreStitchServiceClient) {
     this.serviceClients.add(new WeakReference<>(coreStitchServiceClient));
   }
@@ -288,6 +300,8 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
     while (iterator.hasNext()) {
       final WeakReference<CoreStitchServiceClient> weakReference = iterator.next();
       final CoreStitchServiceClient binder = weakReference.get();
+      // if the binder has been dealloc'd, remove it from the list
+      // else, notify the binder that a rebind event has occurred
       if (binder == null) {
         this.serviceClients.remove(weakReference);
       } else {
