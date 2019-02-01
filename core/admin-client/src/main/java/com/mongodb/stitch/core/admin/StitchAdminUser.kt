@@ -11,7 +11,8 @@ class StitchAdminUser(
     private val deviceId: String,
     private val loggedInProviderType: String,
     private val loggedInProviderName: String,
-    private val profile: StitchUserProfileImpl?
+    private val profile: StitchUserProfileImpl?,
+    private val isLoggedIn: Boolean
 ) : CoreStitchUser {
 
     override fun getLoggedInProviderType(): String {
@@ -40,5 +41,9 @@ class StitchAdminUser(
 
     override fun getDeviceId(): String {
         return deviceId
+    }
+
+    override fun isLoggedIn(): Boolean {
+        return isLoggedIn
     }
 }

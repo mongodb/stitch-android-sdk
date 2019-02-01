@@ -34,8 +34,9 @@ public final class StitchUserFactoryImpl implements StitchUserFactory<StitchUser
       final String deviceId,
       final String loggedInProviderType,
       final String loggedInProviderName,
-      final StitchUserProfileImpl userProfile) {
+      final StitchUserProfileImpl userProfile,
+      final boolean isLoggedIn) {
     return new StitchUserImpl(
-        id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, auth);
+        id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, auth, isLoggedIn);
   }
 }

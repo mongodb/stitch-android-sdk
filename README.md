@@ -11,7 +11,7 @@ The official [MongoDB Stitch](https://stitch.mongodb.com/) SDK for Android/Java.
 - [Example Usage](#example-usage)
 
 ## Documentation
-* [API/Javadoc Documentation](https://s3.amazonaws.com/stitch-sdks/java/docs/4.1.3/index.html)
+* [API/Javadoc Documentation](https://docs.mongodb.com/stitch-sdks/java/4.1.4/index.html)
 * [MongoDB Stitch Documentation](https://docs.mongodb.com/stitch/)
 
 ## Discussion
@@ -27,7 +27,7 @@ The SDK artifacts are hosted by JCenter/Bintray at https://bintray.com/mongodb/M
 Add the following to the build.gradle for your app module:
 
 ```gradle
-implementation 'org.mongodb:stitch-android-sdk:4.1.3'
+implementation 'org.mongodb:stitch-android-sdk:4.1.4'
 ```
 
 Also add the following to your android block in your app module:
@@ -44,20 +44,26 @@ This will start you off with the core SDK functionality as well as the remote Mo
 For customized dependencies use the following:
 
 ```gradle
-implementation 'org.mongodb:stitch-android-core:4.1.3'
-implementation 'org.mongodb:stitch-android-services-aws:4.1.3'
-implementation 'org.mongodb:stitch-android-services-fcm:4.1.3'
-implementation 'org.mongodb:stitch-android-services-http:4.1.3'
-implementation 'org.mongodb:stitch-android-services-mongodb-remote:4.1.3'
-implementation 'org.mongodb:stitch-android-services-twilio:4.1.3'
+implementation 'org.mongodb:stitch-android-core:4.1.4'
+implementation 'org.mongodb:stitch-android-services-aws:4.1.4'
+implementation 'org.mongodb:stitch-android-services-fcm:4.1.4'
+implementation 'org.mongodb:stitch-android-services-http:4.1.4'
+implementation 'org.mongodb:stitch-android-services-mongodb-remote:4.1.4'
+implementation 'org.mongodb:stitch-android-services-twilio:4.1.4'
 ```
+
+#### R8 / ProGuard
+
+For Android applications with ProGuard and minify enabled, the Stitch SDK provides a consumer ProGuard rules file that will automatically be applied when including the SDK.
+
+If you experience any ProGuard related warnings or error when using the Stitch SDK with an application where minify is enabled, try manually adding the rules in [android/core/lib-proguard-rules.pro](android/core/lib-proguard-rules.pro) to your application's `proguard-rules.pro` file. If that doesn't work, please open an issue on this repository.
 
 ### Server/Java
 
 Add the following to the build.gradle for your module:
 
 ```gradle
-implementation 'org.mongodb:stitch-server-sdk:4.1.3'
+implementation 'org.mongodb:stitch-server-sdk:4.1.4'
 ```
 
 This will start you off with the core SDK functionality as well as the remote MongoDB service.
@@ -65,12 +71,12 @@ This will start you off with the core SDK functionality as well as the remote Mo
 For customized dependencies use the following:
 
 ```gradle
-implementation 'org.mongodb:stitch-server-core:4.1.3'
-implementation 'org.mongodb:stitch-server-services-aws:4.1.3'
-implementation 'org.mongodb:stitch-server-services-fcm:4.1.3'
-implementation 'org.mongodb:stitch-server-services-http:4.1.3'
-implementation 'org.mongodb:stitch-server-services-mongodb-remote:4.1.3'
-implementation 'org.mongodb:stitch-server-services-twilio:4.1.3'
+implementation 'org.mongodb:stitch-server-core:4.1.4'
+implementation 'org.mongodb:stitch-server-services-aws:4.1.4'
+implementation 'org.mongodb:stitch-server-services-fcm:4.1.4'
+implementation 'org.mongodb:stitch-server-services-http:4.1.4'
+implementation 'org.mongodb:stitch-server-services-mongodb-remote:4.1.4'
+implementation 'org.mongodb:stitch-server-services-twilio:4.1.4'
 ```
 
 ## Example Usage
@@ -92,7 +98,7 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.1.3'
 3. In your build.gradle for your app module, add the following to your dependencies block:
 
 	```gradle
-    implementation 'org.mongodb:stitch-android-sdk:4.1.3'
+    implementation 'org.mongodb:stitch-android-sdk:4.1.4'
     ```
 4. In your build.gradle for your app module, add the following to your android block:
 
@@ -108,9 +114,14 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.1.3'
 
 1. In Android Studio, go to Tools, Android, AVD manager.
 2. Click Create Virtual Device.
-3. Select a device that should run your app (the default is fine).
+3. Select a device that should run your app (as of Android Studio 3.2, the default device does not work properly for this purpose).
 4. Select and download a recommended system image of your choice (the latest is fine).
-	* x86_64 images are available in the x86 tab.
+    * This device must use a system image built on an architecture supported by the
+```libmongo``` library, e.g. x86_64
+        * x86 images are unsupported
+        * x86_64 images are available in the x86 tab.
+    * The current minimum Android API version: 21
+    * Please consult the the [MongoDB Mobile Documentation](https://docs.mongodb.com/stitch/mongodb/mobile/getting-started/) for more information about minimum device requirements.
 5. Name your device and hit finish.
 
 #### Using the SDK

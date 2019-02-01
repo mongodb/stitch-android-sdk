@@ -11,6 +11,7 @@ import com.mongodb.stitch.core.auth.providers.custom.CustomAuthProvider
 import com.mongodb.stitch.core.auth.providers.custom.CustomCredential
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvider
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+import com.mongodb.stitch.core.internal.common.MemoryStorage
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
 import io.jsonwebtoken.Jwts
@@ -77,17 +78,16 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
                 confirmEmailSubject = "email subject",
                 resetPasswordSubject = "password subject")
         )
-        val client = getAppClient(app.first)
+
+        val storage = MemoryStorage()
+        var client = getAppClient(app.first, storage)
 
         // check storage
         assertFalse(client.auth.isLoggedIn)
         assertNull(client.auth.user)
 
         // login anonymously
-        val anonUser =
-                client.auth.loginWithCredential(
-                        AnonymousCredential()
-                )
+        val anonUser = client.auth.loginWithCredential(AnonymousCredential())
         assertNotNull(anonUser)
 
         // check storage
@@ -119,9 +119,70 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         // check storage
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, id2)
 
-        // Verify that logout clears storage
-        client.auth.logout()
+        assertEquals(client.auth.listUsers().size, 3)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        // imitate an app restart
+        Stitch.clearApps()
+
+        // check everything is as it was
+        client = getAppClient(app.first, storage)
+        assertTrue(client.auth.isLoggedIn)
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, id2)
+
+        assertEquals(client.auth.listUsers().size, 3)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        // Verify that remove removes the second user
+        client.auth.removeUserWithId(id2)
+
+        assertFalse(client.auth.isLoggedIn)
+        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
+        // Assert that we're still logged in
+        assertTrue(client.auth.isLoggedIn)
+        // Assert that the next user is up
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, emailUserId)
+
+        assertEquals(client.auth.listUsers().size, 2)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        // imitate an app restart
+        Stitch.clearApps()
+        // Assert that we're still logged in
+        assertTrue(client.auth.isLoggedIn)
+        // Assert that the next user is up
+        assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, emailUserId)
+
+        assertEquals(client.auth.listUsers().size, 2)
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        client.auth.removeUser()
+        assertFalse(client.auth.isLoggedIn)
+        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
+        // Assert that the next user is up
+        assertEquals(client.auth.user!!.loggedInProviderType, AnonymousAuthProvider.TYPE)
+        assertEquals(client.auth.user?.id, anonUser.id)
+
+        assertEquals(client.auth.listUsers().size, 1)
+        assertNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
+        assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
+        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+
+        client.auth.removeUser()
+        assertEquals(client.auth.listUsers().size, 0)
         assertFalse(client.auth.isLoggedIn)
         assertNull(client.auth.user)
     }

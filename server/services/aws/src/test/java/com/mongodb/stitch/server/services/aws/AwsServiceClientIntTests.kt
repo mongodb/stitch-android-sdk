@@ -20,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.charset.StandardCharsets
 
@@ -44,6 +45,8 @@ class AwsServiceClientIntTests : BaseStitchServerIntTest() {
     }
 
     @Test
+    // TODO: STITCH-2463
+    @Ignore
     fun testPutObject() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)

@@ -16,14 +16,19 @@
 
 package com.mongodb.stitch.core.auth.internal;
 
-import static com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo.STORAGE_NAME;
+import static com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo.ACTIVE_USER_STORAGE_NAME;
+import static com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo.ALL_USERS_STORAGE_NAME;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.mongodb.stitch.core.auth.internal.models.ApiAuthInfo;
 import com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import com.mongodb.stitch.core.internal.common.Storage;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
 /** AuthInfo describes the authentication state of a user and the SDK. */
 public class AuthInfo {
@@ -71,30 +76,68 @@ public class AuthInfo {
     return StitchObjectMapper.getInstance().readValue(is, ApiAuthInfo.class);
   }
 
-  static AuthInfo readFromStorage(final Storage storage) throws IOException {
-    final String rawInfo = storage.get(STORAGE_NAME);
+  static AuthInfo readActiveUserFromStorage(final Storage storage) throws IOException {
+    final String rawInfo = storage.get(ACTIVE_USER_STORAGE_NAME);
     if (rawInfo == null) {
       return null;
     }
+
     return StitchObjectMapper.getInstance().readValue(rawInfo, StoreAuthInfo.class);
   }
 
-  void writeToStorage(final Storage storage) throws IOException {
+  static LinkedList<AuthInfo> readCurrentUsersFromStorage(
+      final Storage storage
+  ) throws IOException {
+    final String rawInfo = storage.get(ALL_USERS_STORAGE_NAME);
+    if (rawInfo == null) {
+      return null;
+    }
+
+    return StitchObjectMapper.getInstance().readValue(
+        rawInfo,
+        new TypeReference<LinkedList<StoreAuthInfo>>(){});
+  }
+
+  static void writeActiveUserAuthInfoToStorage(final AuthInfo authInfo,
+                                               final Storage storage) throws IOException {
     final StoreAuthInfo info =
         new StoreAuthInfo(
-            userId,
-            deviceId,
-            accessToken,
-            refreshToken,
-            loggedInProviderType,
-            loggedInProviderName,
-            userProfile);
+            authInfo.userId,
+            authInfo.deviceId,
+            authInfo.accessToken,
+            authInfo.refreshToken,
+            authInfo.loggedInProviderType,
+            authInfo.loggedInProviderName,
+            authInfo.userProfile
+        );
+
     final String rawInfo = StitchObjectMapper.getInstance().writeValueAsString(info);
-    storage.set(STORAGE_NAME, rawInfo);
+    storage.set(ACTIVE_USER_STORAGE_NAME, rawInfo);
+  }
+
+  static void writeLoggedInUsersAuthInfoToStorage(
+      final LinkedList<AuthInfo> loggedInUsersAuthInfo,
+      final Storage storage
+  ) throws IOException {
+    final List<AuthInfo> authInfos = new ArrayList<>();
+    for (final AuthInfo authInfo : loggedInUsersAuthInfo) {
+      authInfos.add(new StoreAuthInfo(
+          authInfo.userId,
+          authInfo.deviceId,
+          authInfo.accessToken,
+          authInfo.refreshToken,
+          authInfo.loggedInProviderType,
+          authInfo.loggedInProviderName,
+          authInfo.userProfile));
+    }
+
+    final String rawInfo = StitchObjectMapper.getInstance().writeValueAsString(authInfos);
+    storage.set(ALL_USERS_STORAGE_NAME, rawInfo);
   }
 
   AuthInfo loggedOut() {
-    return new AuthInfo(null, deviceId, null, null, null, null, null);
+    return new AuthInfo(
+        userId, deviceId, null, null, loggedInProviderType, loggedInProviderName, userProfile);
   }
 
   AuthInfo merge(final AuthInfo newInfo) {
@@ -134,5 +177,27 @@ public class AuthInfo {
 
   public StitchUserProfileImpl getUserProfile() {
     return userProfile;
+  }
+
+  public boolean isLoggedIn() {
+    return accessToken != null && refreshToken != null;
+  }
+
+  @Override
+  public int hashCode() {
+    return this.userId.hashCode();
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (!(o instanceof AuthInfo)) {
+      return false;
+    }
+
+    final AuthInfo authInfo = (AuthInfo) o;
+    return authInfo.getUserId().equals(getUserId())
+        && authInfo.getDeviceId().equals(getDeviceId())
+        && authInfo.getLoggedInProviderName().equals(getLoggedInProviderName())
+        &&  authInfo.getLoggedInProviderType().equals(getLoggedInProviderType());
   }
 }

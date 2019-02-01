@@ -325,21 +325,66 @@ tasks:
             export ANDROID_HOME=$SDK_HOME
             export ANDROID_SDK_ROOT=$SDK_HOME
             export ANDROID_SDK_HOME=$SDK_HOME
-            export ADB_INSTALL_TIMEOUT=20
+            export ADB_INSTALL_TIMEOUT=30
             cd stitch-java-sdk
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
             ./gradlew connectedAndroidTest --info --continue --warning-mode=all --stacktrace  < /dev/null
       - func: "publish_coveralls"
 
+  - name: run_android_tests_with_proguard
+    exec_timeout_secs: 7200
+    commands:
+    - func: "fetch_go111"
+    - func: "fetch_source"
+    - func: "setup_mongod"
+    - func: "setup_android"
+    - func: "setup_stitch"
+    - func: "setup_emulator"
+    - func: "setup_test_creds"
+    - command: shell.exec
+      params:
+        shell: "bash"
+        background: true
+        script: |
+          set -e
+          LOGCAT_PID=''
+          cleanup() {
+              kill -9 $LOGCAT_PID
+          }
+          trap cleanup EXIT
+
+          SDK_HOME=`pwd`/.android
+          $SDK_HOME/platform-tools/adb logcat &
+          LOGCAT_PID=$!
+          sleep infinity
+    - command: shell.exec
+      params:
+        shell: "bash"
+        script: |
+          set -e
+          SDK_HOME=`pwd`/.android
+          export JAVA_HOME="/opt/java/jdk8"
+
+          export ANDROID_HOME=$SDK_HOME
+          export ANDROID_SDK_ROOT=$SDK_HOME
+          export ANDROID_SDK_HOME=$SDK_HOME
+          export ADB_INSTALL_TIMEOUT=30
+          cd stitch-java-sdk
+          echo "running android tests"
+          echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
+          ./gradlew connectedAndroidTest -PwithProguardMinification --info --continue --warning-mode=all --stacktrace  < /dev/null
+    - func: "publish_coveralls"
+
   - name: finalize_coverage
     depends_on:
       - name: run_core_tests
-        variant: "ubuntu-1804"
+        variant: "rhel70"
         status: '*'
       - name: run_android_tests
-        variant: "ubuntu-1804"
+        variant: "rhel70"
         status: '*'
+      - name: run_android_tests_with_proguard
     commands:
       - command: shell.exec
         params:
@@ -399,10 +444,10 @@ post:
       permissions: public-read
 
 buildvariants:
-- name: ubuntu-1804
-  display_name: Ubuntu-1804
+- name: rhel70
+  display_name: rhel70
   run_on:
-    - ubuntu1804-build
+    - rhel70
   expansions:
     go_url: "https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz"
     mongodb_url: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-4.0.2.tgz
@@ -410,5 +455,6 @@ buildvariants:
   tasks:
     - name: run_core_tests
     - name: run_android_tests
+    - name: run_android_tests_with_proguard
     - name: lint
     - name: finalize_coverage

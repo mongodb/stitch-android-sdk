@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core.testutils;
 
 import com.mongodb.stitch.core.auth.UserType;
+import com.mongodb.stitch.core.auth.internal.AuthInfo;
 import com.mongodb.stitch.core.auth.internal.models.ApiAuthInfo;
 import com.mongodb.stitch.core.auth.internal.models.ApiCoreUserProfile;
 import com.mongodb.stitch.core.auth.internal.models.ApiStitchUserIdentity;
@@ -33,12 +34,16 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 public class ApiTestUtils {
   private static final String TEST_ACCESS_TOKEN = getTestAccessToken();
   private static final String TEST_REFRESH_TOKEN = getTestRefreshToken();
+
+  private static int uniqueUserId = -1;
+  private static int uniqueDeviceId = -1;
 
   /**
    * Gets an access token JWT for testing that is always the same.
@@ -81,26 +86,52 @@ public class ApiTestUtils {
         .compact();
   }
 
+  public static String getLastUserId() {
+    return Integer.toString(uniqueUserId);
+  }
+
+  public static String getLastDeviceId() {
+    return Integer.toString(uniqueDeviceId);
+  }
+
   /**
-   * Gets a login response for testing that is always the same.
+   * Gets a login response for testing that increments device and user id by one.
    */
-  public static ApiAuthInfo getTestLoginResponse() {
+  private static ApiAuthInfo getTestLoginResponse() {
+    uniqueUserId++;
+    uniqueDeviceId++;
+
     return new ApiAuthInfo(
-        "some-unique-user-id",
-        "0123456012345601234560123456",
+        Integer.toString(uniqueUserId),
+        Integer.toString(uniqueDeviceId),
         getTestAccessToken(),
         getTestRefreshToken());
   }
 
   /**
-   * Gets a link response for testing that is always the same.
+   * Gets a link response for testing that corresponds with the last login response.
    */
   public static ApiAuthInfo getTestLinkResponse() {
     return new ApiAuthInfo(
-        "some-unique-user-id",
-        "0123456012345601234560123456",
+        getLastUserId(),
+        getLastDeviceId(),
         getTestAccessToken(),
         null);
+  }
+
+  public static void mockOldLoginResponse(final StitchRequestClient requestClient,
+                                          final String userId,
+                                          final String deviceId) {
+
+    Mockito.doAnswer((ignored) ->
+        new Response(
+            new ApiAuthInfo(
+                userId,
+                deviceId,
+                getTestAccessToken(),
+                getTestRefreshToken()).toString()))
+        .when(requestClient)
+        .doRequest(ArgumentMatchers.argThat(req -> req.getPath().endsWith("/login")));
   }
 
   /**

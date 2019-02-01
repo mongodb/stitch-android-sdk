@@ -22,5 +22,6 @@ public interface StitchUserFactory<StitchUserT extends CoreStitchUser> {
       String deviceId,
       String loggedInProviderType,
       String loggedInProviderName,
-      StitchUserProfileImpl userProfile);
+      StitchUserProfileImpl userProfile,
+      boolean isLoggedIn);
 }

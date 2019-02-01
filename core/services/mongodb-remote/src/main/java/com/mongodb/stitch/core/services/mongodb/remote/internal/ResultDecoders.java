@@ -18,22 +18,16 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
-import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
-import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.bson.BsonArray;
-import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonReader;
 import org.bson.BsonValue;
