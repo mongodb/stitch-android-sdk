@@ -569,11 +569,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           final CoreDocumentSynchronizationConfig docConfig =
               nsConfig.getSynchronizedDocument(unseenId);
           if (docConfig == null) {
+            // means we aren't actually synchronizing on this remote doc
             continue;
           }
-          // XXX: Changed this for 7-11
           if (docConfig.getLastKnownRemoteVersion() == null || docConfig.isPaused()) {
-            //docConfig.setStale(false);
+            docConfig.setStale(false);
             continue;
           }
 
