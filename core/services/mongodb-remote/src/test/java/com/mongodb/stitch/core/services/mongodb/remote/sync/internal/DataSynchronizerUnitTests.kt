@@ -4,8 +4,10 @@ import com.mongodb.client.model.CountOptions
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
+import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterableImpl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
@@ -18,6 +20,7 @@ import org.bson.BsonString
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.Document
+import org.bson.conversions.Bson
 import org.junit.After
 
 import org.junit.Assert.assertEquals
@@ -130,7 +133,7 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalInsert(
+            ChangeEvents.changeEventForLocalInsert(
                 ctx.namespace,
                 ctx.testDocument,
                 true))
@@ -138,7 +141,7 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalInsert(
+            ChangeEvents.changeEventForLocalInsert(
                 ctx.namespace,
                 ctx.testDocument,
                 false))
@@ -172,11 +175,11 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
+            ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
         ctx.verifyConflictHandlerCalledForActiveDoc(
             times = 1,
-            expectedLocalConflictEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
-            expectedRemoteConflictEvent = ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
+            expectedLocalConflictEvent = ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
+            expectedRemoteConflictEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
         assertNull(ctx.findTestDocumentFromLocalCollection())
 
@@ -193,11 +196,11 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+            ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
         ctx.verifyConflictHandlerCalledForActiveDoc(
             times = 1,
-            expectedLocalConflictEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
-            expectedRemoteConflictEvent = ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
+            expectedLocalConflictEvent = ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
+            expectedRemoteConflictEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
 
@@ -273,10 +276,10 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalUpdate(
+            ChangeEvents.changeEventForLocalUpdate(
                     ctx.namespace,
                     ctx.testDocumentId,
-                    ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(3)), Collections.emptyList()),
+                    UpdateDescription(BsonDocument("count", BsonInt32(3)), Collections.emptyList()),
                     expectedDocument,
                     false
             )
@@ -364,14 +367,14 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1,
-            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+            ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
         ctx.updateTestDocument()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1,
-            ChangeEvent.changeEventForLocalUpdate(
+            ChangeEvents.changeEventForLocalUpdate(
                 ctx.namespace,
                 ctx.testDocumentId,
-                ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+                UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
                 docAfterUpdate,
                 true
             ))
@@ -381,10 +384,10 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         ctx.doSyncPass()
         ctx.waitForEvents()
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalUpdate(
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             false
         ))
@@ -392,7 +395,7 @@ class DataSynchronizerUnitTests {
         verify(ctx.collectionMock, times(1)).updateOne(any(), docCaptor.capture())
 
         // create what we expect the diff to look like
-        val expectedDiff = ChangeEvent.UpdateDescription.diff(
+        val expectedDiff = UpdateDescription.diff(
             BsonDocument.parse(ctx.testDocument.toJson()),
             docAfterUpdate).toUpdateDocument()
         expectedDiff.remove("\$unset")
@@ -416,10 +419,10 @@ class DataSynchronizerUnitTests {
         var ctx = harness.freshTestContext()
         // setup our expectations
         var docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
-        var expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
+        var expectedLocalEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true)
 
@@ -454,13 +457,13 @@ class DataSynchronizerUnitTests {
         // reset (delete, insert, sync)
         ctx = harness.freshTestContext()
         docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
-        expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
+        expectedLocalEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true)
-        var expectedRemoteEvent = ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
+        var expectedRemoteEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
 
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
         ctx.insertTestDocument()
@@ -469,7 +472,7 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+            ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
 
         // update the document and wait for the local update event
         ctx.updateTestDocument()
@@ -485,7 +488,7 @@ class DataSynchronizerUnitTests {
         // and no errors were emitted
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalInsert(ctx.namespace, docAfterUpdate, true))
+            ChangeEvents.changeEventForLocalInsert(ctx.namespace, docAfterUpdate, true))
         ctx.verifyConflictHandlerCalledForActiveDoc(1, expectedLocalEvent, expectedRemoteEvent)
         ctx.verifyErrorListenerCalledForActiveDoc(0)
 
@@ -499,13 +502,13 @@ class DataSynchronizerUnitTests {
         // reset (delete, insert, sync)
         ctx = harness.freshTestContext()
         docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
-        expectedLocalEvent = ChangeEvent.changeEventForLocalUpdate(
+        expectedLocalEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true)
-        expectedRemoteEvent = ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
+        expectedRemoteEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
 
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
 
@@ -514,7 +517,7 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
-            1, ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+            1, ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
         ctx.doSyncPass()
 
         // update the reset doc
@@ -566,10 +569,10 @@ class DataSynchronizerUnitTests {
         val ctx = harness.freshTestContext()
         // set up expectations and insert
         val docAfterUpdate = BsonDocument("count", BsonInt32(2)).append("_id", ctx.testDocumentId)
-        val expectedEvent = ChangeEvent.changeEventForLocalUpdate(
+        val expectedEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocument["_id"],
-            ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
             docAfterUpdate,
             true
         )
@@ -593,7 +596,7 @@ class DataSynchronizerUnitTests {
         verify(ctx.collectionMock, times(1)).updateOne(any(), docCaptor.capture())
 
         // create what we expect the diff to look like
-        val expectedDiff = ChangeEvent.UpdateDescription.diff(
+        val expectedDiff = UpdateDescription.diff(
             BsonDocument.parse(ctx.testDocument.toJson()),
             expectedEvent.fullDocument).toUpdateDocument()
         expectedDiff.remove("\$unset")
@@ -625,17 +628,17 @@ class DataSynchronizerUnitTests {
         // have been reflected w/ and w/o pending writes
         ctx.insertTestDocument()
         ctx.waitForEvents()
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
         ctx.doSyncPass()
         ctx.waitForEvents()
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
 
         // delete the document and wait
         ctx.deleteTestDocument()
         ctx.waitForEvents()
 
         // verify a delete event with pending writes is called
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalDelete(
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalDelete(
             ctx.namespace,
             ctx.testDocument["_id"],
             true))
@@ -648,7 +651,7 @@ class DataSynchronizerUnitTests {
         val docCaptor = ArgumentCaptor.forClass(BsonDocument::class.java)
         verify(ctx.collectionMock, times(1)).deleteOne(docCaptor.capture())
         assertEquals(ctx.testDocument["_id"], docCaptor.value["_id"])
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalDelete(
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalDelete(
             ctx.namespace,
             ctx.testDocument["_id"],
             false))
@@ -661,7 +664,7 @@ class DataSynchronizerUnitTests {
     fun testConflictedDelete() {
         var ctx = harness.freshTestContext()
 
-        var expectedLocalEvent = ChangeEvent.changeEventForLocalDelete(
+        var expectedLocalEvent = ChangeEvents.changeEventForLocalDelete(
             ctx.namespace,
             ctx.testDocument["_id"],
             true
@@ -684,14 +687,14 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
 
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalReplace(
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalReplace(
             ctx.namespace,
             ctx.testDocumentId,
             ctx.testDocument,
             false
         ))
         ctx.verifyConflictHandlerCalledForActiveDoc(1, expectedLocalEvent,
-            ChangeEvent.changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId, null, ctx.testDocument, false))
+            ChangeEvents.changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId, null, ctx.testDocument, false))
         ctx.verifyErrorListenerCalledForActiveDoc(0)
 
         assertEquals(
@@ -701,7 +704,7 @@ class DataSynchronizerUnitTests {
         // 2: Local wins
         ctx = harness.freshTestContext()
 
-        expectedLocalEvent = ChangeEvent.changeEventForLocalDelete(
+        expectedLocalEvent = ChangeEvents.changeEventForLocalDelete(
             ctx.namespace,
             ctx.testDocument["_id"],
             true
@@ -723,14 +726,14 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
 
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalDelete(
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalDelete(
             ctx.namespace,
             ctx.testDocumentId,
             true
         ))
         ctx.verifyConflictHandlerCalledForActiveDoc(1,
-            ChangeEvent.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, true),
-            ChangeEvent.changeEventForLocalUpdate(
+            ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, true),
+            ChangeEvents.changeEventForLocalUpdate(
                 ctx.namespace, ctx.testDocumentId, null, ctx.testDocument, false
             ))
         ctx.verifyErrorListenerCalledForActiveDoc(0)
@@ -742,7 +745,7 @@ class DataSynchronizerUnitTests {
     fun testFailedDelete() {
         val ctx = harness.freshTestContext()
 
-        val expectedEvent = ChangeEvent.changeEventForLocalDelete(
+        val expectedEvent = ChangeEvents.changeEventForLocalDelete(
             ctx.namespace,
             ctx.testDocument["_id"],
             true
@@ -843,7 +846,7 @@ class DataSynchronizerUnitTests {
 
         ctx.insertTestDocument()
 
-        val expectedEvent = ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true)
+        val expectedEvent = ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true)
 
         ctx.deleteTestDocument()
 
@@ -866,8 +869,8 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.insertMany(ctx.namespace, listOf(doc1, doc2))
 
-        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
-        val expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
+        val expectedEvent1 = ChangeEvents.changeEventForLocalInsert(ctx.namespace, doc1, true)
+        val expectedEvent2 = ChangeEvents.changeEventForLocalInsert(ctx.namespace, doc2, true)
 
         ctx.waitForEvents(amount = 2)
 
@@ -930,8 +933,8 @@ class DataSynchronizerUnitTests {
         assertTrue(updateResult.wasAcknowledged())
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalUpdate(
-                ctx.namespace, ctx.testDocumentId, ChangeEvent.UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()), expectedDocumentAfterUpdate, true))
+            ChangeEvents.changeEventForLocalUpdate(
+                ctx.namespace, ctx.testDocumentId, UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()), expectedDocumentAfterUpdate, true))
         // assert that the updated document equals what we've expected
         assertEquals(ctx.testDocument["_id"], ctx.findTestDocumentFromLocalCollection()?.get("_id"))
         assertEquals(expectedDocumentAfterUpdate, ctx.findTestDocumentFromLocalCollection()!!)
@@ -958,7 +961,7 @@ class DataSynchronizerUnitTests {
         assertEquals(1, result.modifiedCount)
         assertNotNull(result.upsertedId)
 
-        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace,
+        val expectedEvent1 = ChangeEvents.changeEventForLocalInsert(ctx.namespace,
             doc1.append("_id", result.upsertedId), true)
 
         ctx.waitForEvents(amount = 1)
@@ -1009,9 +1012,9 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.insertMany(ctx.namespace, listOf(doc1, doc2, doc3))
 
-        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc1, true)
-        val expectedEvent2 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc2, true)
-        val expectedEvent3 = ChangeEvent.changeEventForLocalInsert(ctx.namespace, doc3, true)
+        val expectedEvent1 = ChangeEvents.changeEventForLocalInsert(ctx.namespace, doc1, true)
+        val expectedEvent2 = ChangeEvents.changeEventForLocalInsert(ctx.namespace, doc2, true)
+        val expectedEvent3 = ChangeEvents.changeEventForLocalInsert(ctx.namespace, doc3, true)
 
         ctx.waitForEvents(amount = 3)
 
@@ -1045,19 +1048,19 @@ class DataSynchronizerUnitTests {
             expectedEvent1,
             expectedEvent2,
             expectedEvent3,
-            ChangeEvent.changeEventForLocalUpdate(
+            ChangeEvents.changeEventForLocalUpdate(
                 ctx.namespace,
                 doc1["_id"],
-                ChangeEvent.UpdateDescription(
+                UpdateDescription(
                     BsonDocument("count", BsonInt32(2)),
                     listOf()
                 ),
                 expectedDocAfterUpdate1,
                 true),
-            ChangeEvent.changeEventForLocalUpdate(
+            ChangeEvents.changeEventForLocalUpdate(
                 ctx.namespace,
                 doc2["_id"],
-                ChangeEvent.UpdateDescription(
+                UpdateDescription(
                     BsonDocument("count", BsonInt32(2)),
                     listOf()
                 ),
@@ -1096,7 +1099,7 @@ class DataSynchronizerUnitTests {
         assertEquals(0, result.modifiedCount)
         assertNotNull(result.upsertedId)
 
-        val expectedEvent1 = ChangeEvent.changeEventForLocalInsert(
+        val expectedEvent1 = ChangeEvents.changeEventForLocalInsert(
             ctx.namespace,
             doc1.append("_id", result.upsertedId), true)
 
@@ -1205,7 +1208,7 @@ class DataSynchronizerUnitTests {
         assertEquals(1, deleteResult.deletedCount)
         assertTrue(deleteResult.wasAcknowledged())
         ctx.verifyChangeEventListenerCalledForActiveDoc(1,
-            ChangeEvent.changeEventForLocalDelete(
+            ChangeEvents.changeEventForLocalDelete(
                 ctx.namespace, ctx.testDocumentId, true
             ))
         // assert that the updated document equals what we've expected
@@ -1262,7 +1265,7 @@ class DataSynchronizerUnitTests {
         ctx.insertTestDocument()
         ctx.waitForEvents()
 
-        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvent.changeEventForLocalInsert(
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalInsert(
             ctx.namespace, ctx.testDocument, true))
         assertTrue(ctx.dataSynchronizer.isRunning)
     }
@@ -1349,7 +1352,7 @@ class DataSynchronizerUnitTests {
         ctx.waitForEvents(1)
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvent.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+            ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
 
         // update the document and wait for the local update event
         ctx.updateTestDocument()
@@ -1660,10 +1663,10 @@ class DataSynchronizerUnitTests {
 
         origCtx.setPendingWritesForDocId(
                 testDocumentId,
-                ChangeEvent.changeEventForLocalUpdate(
+                ChangeEvents.changeEventForLocalUpdate(
                         origCtx.namespace,
                         testDocumentId,
-                        ChangeEvent.UpdateDescription.diff(originalTestDocument, expectedNewDocument),
+                        UpdateDescription.diff(originalTestDocument, expectedNewDocument),
                         expectedNewDocument,
                         true
                 ))
@@ -1737,7 +1740,7 @@ class DataSynchronizerUnitTests {
 
         origCtx.setPendingWritesForDocId(
                 testDocumentId,
-                ChangeEvent.changeEventForLocalDelete(
+                ChangeEvents.changeEventForLocalDelete(
                         origCtx.namespace,
                         testDocumentId,
                         true
@@ -1837,5 +1840,31 @@ class DataSynchronizerUnitTests {
                         BsonDocument("_id", fakeRecoveryDocumentId)
                 ).firstOrNull()
         )
+    }
+
+    @Test
+    fun testMissingDocument() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        ctx.dataSynchronizer.stop()
+
+        ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.doSyncPass()
+
+        val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(mockEmptyFindResult
+                .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
+                .thenReturn(HashSet<Any>())
+        `when`(ctx.collectionMock.find(any()))
+                .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
+
+        verify(ctx.collectionMock, times(1)).find(any())
+
+        ctx.doSyncPass()
+
+        verify(ctx.collectionMock, times(1)).find(any())
     }
 }
