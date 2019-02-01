@@ -18,7 +18,6 @@ import org.bson.BsonString
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.Document
-import org.bson.conversions.Bson
 import org.junit.After
 
 import org.junit.Assert.assertEquals
