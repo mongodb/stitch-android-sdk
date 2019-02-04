@@ -1853,4 +1853,91 @@ class DataSynchronizerUnitTests {
         // configured or running
         assertFalse(ctx.dataSynchronizer.isRunning)
     }
+  
+    fun testMissingDocument() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        ctx.dataSynchronizer.stop()
+
+        ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.doSyncPass()
+
+        val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(mockEmptyFindResult
+                .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
+                .thenReturn(HashSet<Any>())
+        `when`(ctx.collectionMock.find(any()))
+                .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
+
+        verify(ctx.collectionMock, times(1)).find(any())
+
+        ctx.doSyncPass()
+
+        verify(ctx.collectionMock, times(1)).find(any())
+    }
+
+    @Test
+    fun testMissingDocumentThatAppearsLaterAsInsertEvent() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        ctx.dataSynchronizer.stop()
+
+        ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.doSyncPass()
+
+        val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(mockEmptyFindResult
+                .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
+                .thenReturn(HashSet<Any>())
+        `when`(ctx.collectionMock.find(any()))
+                .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
+
+
+        ctx.queueConsumableRemoteInsertEvent()
+        ctx.doSyncPass()
+        ctx.waitForEvents()
+
+        verify(ctx.collectionMock, times(1)).find(any())
+
+        val localDoc = ctx.dataSynchronizer
+                .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
+        assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
+    }
+
+    @Test
+    fun testMissingDocumentThatAppearsLaterAsUpdateEvent() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        ctx.dataSynchronizer.stop()
+
+        ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.doSyncPass()
+
+        val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(mockEmptyFindResult
+                .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
+                .thenReturn(HashSet<Any>())
+        `when`(ctx.collectionMock.find(any()))
+                .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
+
+
+        ctx.queueConsumableRemoteUpdateEvent()
+        ctx.doSyncPass()
+        ctx.waitForEvents()
+
+        verify(ctx.collectionMock, times(1)).find(any())
+
+        val localDoc = ctx.dataSynchronizer
+                .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
+        assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
+    }
 }
