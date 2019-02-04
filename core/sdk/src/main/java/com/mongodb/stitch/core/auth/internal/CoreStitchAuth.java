@@ -272,6 +272,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
               activeUserAuthInfo.getUserProfile(),
               activeUserAuthInfo.isLoggedIn());
           onAuthEvent();
+          try {
+            AuthInfo.writeActiveUserAuthInfoToStorage(this.activeUserAuthInfo, this.storage);
+          } catch (IOException e) {
+            throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
+          }
           return this.activeUser;
         }
       }
@@ -364,11 +369,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     authLock.lock();
     try {
       final AuthInfo authInfo = findAuthInfoById(userId);
-      if (!authInfo.isLoggedIn()) {
-        return;
-      }
       try {
-        doLogout(authInfo);
+        if (authInfo.isLoggedIn()) {
+          doLogout(authInfo);
+        }
       } catch (final StitchServiceException ex) {
         // Do nothing
       } finally {
