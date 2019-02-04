@@ -588,10 +588,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         for (final BsonValue unseenId : unseenIds) {
           final CoreDocumentSynchronizationConfig docConfig =
               nsConfig.getSynchronizedDocument(unseenId);
-          if (docConfig == null
-              || docConfig.getLastKnownRemoteVersion() == null
-              || docConfig.isPaused()) {
+          if (docConfig == null) {
             // means we aren't actually synchronizing on this remote doc
+            continue;
+          }
+          if (docConfig.getLastKnownRemoteVersion() == null || docConfig.isPaused()) {
+            docConfig.setStale(false);
             continue;
           }
 
