@@ -32,6 +32,7 @@ import com.mongodb.stitch.core.testutils.sync.ProxySyncMethods
 import com.mongodb.stitch.core.testutils.sync.SyncIntTestProxy
 import com.mongodb.stitch.core.testutils.sync.SyncIntTestRunner
 import com.mongodb.stitch.android.core.StitchAppClient
+import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import org.bson.BsonValue
 import org.bson.Document
@@ -142,7 +143,6 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         get() = BaseStitchAndroidIntTest.testNetworkMonitor
 
     private val mongodbUriProp = "test.stitch.mongodbURI"
-    private lateinit var remoteMongoClient: RemoteMongoClient
     private lateinit var mongoClient: RemoteMongoClient
 
     private val testProxy = SyncIntTestProxy(this)
@@ -200,7 +200,6 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         mongoClient = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.stop()
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.disableSyncThread()
-        remoteMongoClient = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         BaseStitchAndroidIntTest.testNetworkMonitor.connectedState = true
     }
 
@@ -208,12 +207,13 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     override fun teardown() {
         if (::mongoClient.isInitialized) {
             (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+            AndroidEmbeddedMongoClientFactory.getInstance().close()
         }
         super.teardown()
     }
 
     override fun remoteMethods(): ProxyRemoteMethods {
-        val db = remoteMongoClient.getDatabase(dbName)
+        val db = mongoClient.getDatabase(dbName)
         Assert.assertEquals(dbName, db.name)
         val coll = db.getCollection(collName)
         Assert.assertEquals(MongoNamespace(dbName, collName), coll.namespace)
