@@ -1650,13 +1650,22 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * document will happen later in a {@link DataSynchronizer#doSyncPass()} iteration.
    *
    * @param namespace  the namespace to put the document in.
-   * @param documentId the _id of the document.
+   * @param documentIds the _ids of the documents.
    */
-  public void syncDocumentFromRemote(
+  public void syncDocumentsFromRemote(
       final MongoNamespace namespace,
-      final BsonValue documentId
+      final BsonValue... documentIds
   ) {
+<<<<<<< Updated upstream
     syncConfig.addSynchronizedDocument(namespace, documentId);
+=======
+    this.assertInitialized();
+
+    for (final BsonValue documentId : documentIds) {
+      syncConfig.addSynchronizedDocument(namespace, documentId);
+    }
+
+>>>>>>> Stashed changes
     triggerListeningToNamespace(namespace);
   }
 
