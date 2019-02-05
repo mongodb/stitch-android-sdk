@@ -1656,16 +1656,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonValue... documentIds
   ) {
-<<<<<<< Updated upstream
-    syncConfig.addSynchronizedDocument(namespace, documentId);
-=======
-    this.assertInitialized();
-
     for (final BsonValue documentId : documentIds) {
       syncConfig.addSynchronizedDocument(namespace, documentId);
     }
 
->>>>>>> Stashed changes
     triggerListeningToNamespace(namespace);
   }
 
