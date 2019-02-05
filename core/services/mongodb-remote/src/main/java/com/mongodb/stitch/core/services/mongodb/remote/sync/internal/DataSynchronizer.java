@@ -37,6 +37,8 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.lang.NonNull;
+import com.mongodb.stitch.core.StitchClientErrorCode;
+import com.mongodb.stitch.core.StitchClientException;
 import com.mongodb.stitch.core.StitchServiceErrorCode;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
@@ -116,6 +118,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private final Dispatcher eventDispatcher;
 
   private ErrorListener errorListener;
+  private Thread initThread;
 
   public DataSynchronizer(
       final String instanceKey,
@@ -142,15 +145,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       this.networkMonitor.addNetworkStateListener(this);
     }
 
-    initialize();
-    final Semaphore recoveryStarted = new Semaphore(0);
-    new Thread(() -> recover(recoveryStarted)).start();
-    try {
-      // Wait to return after the thread has confirmed it has started.
-      recoveryStarted.acquire();
-    } catch (final InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    this.initThread = new Thread(() -> {
+      initialize();
+      recover();
+    });
+
+    this.initThread.start();
   }
 
   private void initialize() {
@@ -189,7 +189,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * Recovers the state of synchronization in case a system failure happened. The goal is to revert
    * to a known, good state.
    */
-  private void recover(final Semaphore recoveryStarted) {
+  private void recover() {
     final List<NamespaceSynchronizationConfig> nsConfigs = new ArrayList<>();
     for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
       nsConfigs.add(this.syncConfig.getNamespaceConfig(ns));
@@ -197,7 +197,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
       nsConfig.getLock().writeLock().lock();
     }
-    recoveryStarted.release();
     try {
       for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
         recoverNamespace(nsConfig);
@@ -308,8 +307,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       this.instanceChangeStreamListener.stop();
       this.stop();
       this.localClient = localClient;
-      initialize();
-      this.start();
+      this.initThread = new Thread(() -> {
+        initialize();
+        this.start();
+      });
+      this.initThread.start();
     } finally {
       syncLock.unlock();
     }
@@ -319,6 +321,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * Reloads the synchronization config. This wipes all in-memory synchronization settings.
    */
   public void wipeInMemorySettings() {
+    this.assertInitialized();
+
     syncLock.lock();
     try {
       this.instanceChangeStreamListener.stop();
@@ -351,6 +355,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               + "provided.");
       return;
     }
+
+    this.assertInitialized();
 
     this.errorListener = errorListener;
 
@@ -436,6 +442,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * Stops the background data synchronization thread and releases the local client.
    */
   public void close() {
+    this.assertInitialized();
+
     syncLock.lock();
     try {
       if (this.networkMonitor != null) {
@@ -1600,6 +1608,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the set of synchronized namespaces.
    */
   public Set<MongoNamespace> getSynchronizedNamespaces() {
+    this.assertInitialized();
     return this.syncConfig.getSynchronizedNamespaces();
   }
 
@@ -1612,6 +1621,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public Set<CoreDocumentSynchronizationConfig> getSynchronizedDocuments(
       final MongoNamespace namespace
   ) {
+    this.assertInitialized();
     return this.syncConfig.getSynchronizedDocuments(namespace);
   }
 
@@ -1622,6 +1632,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the set of synchronized documents _ids in a namespace.
    */
   public Set<BsonValue> getSynchronizedDocumentIds(final MongoNamespace namespace) {
+    this.assertInitialized();
     return this.syncConfig.getSynchronizedDocumentIds(namespace);
   }
 
@@ -1633,6 +1644,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the set of paused document _ids in a namespace
    */
   public Set<BsonValue> getPausedDocumentIds(final MongoNamespace namespace) {
+    this.assertInitialized();
+
     final Set<BsonValue> pausedDocumentIds = new HashSet<>();
 
     for (final CoreDocumentSynchronizationConfig config :
@@ -1656,6 +1669,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
+    this.assertInitialized();
+
     syncConfig.addSynchronizedDocument(namespace, documentId);
     triggerListeningToNamespace(namespace);
   }
@@ -1671,6 +1686,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
+    this.assertInitialized();
+
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1721,6 +1738,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the number of documents in the collection
    */
   long count(final MongoNamespace namespace) {
+    this.assertInitialized();
     return count(namespace, new BsonDocument());
   }
 
@@ -1731,6 +1749,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the number of documents in the collection
    */
   long count(final MongoNamespace namespace, final Bson filter) {
+    this.assertInitialized();
     return count(namespace, filter, new CountOptions());
   }
 
@@ -1742,6 +1761,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the number of documents in the collection
    */
   long count(final MongoNamespace namespace, final Bson filter, final CountOptions options) {
+    this.assertInitialized();
+
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1756,6 +1777,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonDocument filter
   ) {
+    this.assertInitialized();
+
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1777,6 +1800,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Class<T> resultClass,
       final CodecRegistry codecRegistry
   ) {
+    this.assertInitialized();
+
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1816,6 +1841,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final List<? extends Bson> pipeline,
       final Class<ResultT> resultClass) {
+    this.assertInitialized();
+
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1834,6 +1861,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param document  the document to insert.
    */
   void insertOne(final MongoNamespace namespace, final BsonDocument document) {
+    this.assertInitialized();
+
     // Remove forbidden fields from the document before inserting it into the local collection.
     final BsonDocument docForStorage = sanitizeDocument(document);
 
@@ -1864,6 +1893,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   void insertMany(final MongoNamespace namespace,
                   final List<BsonDocument> documents) {
+    this.assertInitialized();
+
     // Remove forbidden fields from the documents before inserting them into the local collection.
     final List<BsonDocument> docsForStorage = new ArrayList<>(documents.size());
 
@@ -1923,6 +1954,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Bson filter,
       final Bson update,
       final UpdateOptions updateOptions) {
+    this.assertInitialized();
+
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -2038,6 +2071,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Bson filter,
       final Bson update,
       final UpdateOptions updateOptions) {
+    this.assertInitialized();
+
     final List<ChangeEvent<BsonDocument>> eventsToEmit = new ArrayList<>();
     final UpdateResult result;
     final Lock lock =
@@ -2270,6 +2305,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the result of the remove one operation
    */
   DeleteResult deleteOne(final MongoNamespace namespace, final Bson filter) {
+    this.assertInitialized();
+
     final ChangeEvent<BsonDocument> event;
     final DeleteResult result;
     final Lock lock =
@@ -2326,6 +2363,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   DeleteResult deleteMany(final MongoNamespace namespace,
                           final Bson filter) {
+    this.assertInitialized();
+
     final List<ChangeEvent<BsonDocument>> eventsToEmit = new ArrayList<>();
     final DeleteResult result;
     final Lock lock =
@@ -2647,6 +2686,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     ).into(new HashSet<>());
   }
 
+  private void assertInitialized() {
+    try {
+      this.initThread.join();
+    } catch (InterruptedException e) {
+      throw new StitchClientException(StitchClientErrorCode.COULD_NOT_LOAD_DATA_SYNCHRONIZER);
+    }
+  }
   /**
    * Returns a query filter searching for the given document _id.
    *

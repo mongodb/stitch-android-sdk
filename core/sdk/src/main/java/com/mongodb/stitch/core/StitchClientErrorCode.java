@@ -26,7 +26,8 @@ public enum StitchClientErrorCode {
   USER_NO_LONGER_VALID(
       "user instance being accessed is no longer valid; please get a new user with auth.getUser()"),
   COULD_NOT_LOAD_PERSISTED_AUTH_INFO("failed to load stored auth information for Stitch"),
-  COULD_NOT_PERSIST_AUTH_INFO("failed to save auth information for Stitch");
+  COULD_NOT_PERSIST_AUTH_INFO("failed to save auth information for Stitch"),
+  COULD_NOT_LOAD_DATA_SYNCHRONIZER("failed to load data synchronizer for Stitch");
 
   private final String description;
 
