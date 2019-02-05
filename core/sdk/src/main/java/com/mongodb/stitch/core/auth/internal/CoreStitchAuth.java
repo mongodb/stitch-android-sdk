@@ -257,7 +257,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  public synchronized StitchUserT switchToUserWithId(final String userId) throws IllegalArgumentException {
+  public synchronized StitchUserT switchToUserWithId(final String userId)
+      throws IllegalArgumentException {
     authLock.lock();
     try {
       for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
@@ -271,6 +272,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
               activeUserAuthInfo.getUserProfile(),
               activeUserAuthInfo.isLoggedIn());
           onAuthEvent();
+          try {
+            AuthInfo.writeActiveUserAuthInfoToStorage(this.activeUserAuthInfo, this.storage);
+          } catch (IOException e) {
+            throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
+          }
           return this.activeUser;
         }
       }
@@ -340,6 +346,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         clearUser(authInfo);
         // add logged out user to front of queue
         loggedInUsersAuthInfoList.addFirst(authInfo.loggedOut());
+        try {
+          AuthInfo.writeLoggedInUsersAuthInfoToStorage(loggedInUsersAuthInfoList, storage);
+        } catch (final IOException e) {
+          // Do nothing
+        }
       }
     } finally {
       authLock.unlock();
@@ -358,11 +369,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     authLock.lock();
     try {
       final AuthInfo authInfo = findAuthInfoById(userId);
-      if (!authInfo.isLoggedIn()) {
-        return;
-      }
       try {
-        doLogout(authInfo);
+        if (authInfo.isLoggedIn()) {
+          doLogout(authInfo);
+        }
       } catch (final StitchServiceException ex) {
         // Do nothing
       } finally {
@@ -426,7 +436,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         req.builder().withShouldRefreshOnFailure(false).build(), decoder);
   }
 
-  private synchronized Response handleAuthFailure(final StitchServiceException ex, final StitchAuthRequest req) {
+  private synchronized Response handleAuthFailure(final StitchServiceException ex,
+                                                  final StitchAuthRequest req) {
     if (ex.getErrorCode() != StitchServiceErrorCode.INVALID_SESSION) {
       throw ex;
     }

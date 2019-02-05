@@ -17,7 +17,6 @@
 package com.mongodb.stitch.core.testutils;
 
 import com.mongodb.stitch.core.auth.UserType;
-import com.mongodb.stitch.core.auth.internal.AuthInfo;
 import com.mongodb.stitch.core.auth.internal.models.ApiAuthInfo;
 import com.mongodb.stitch.core.auth.internal.models.ApiCoreUserProfile;
 import com.mongodb.stitch.core.auth.internal.models.ApiStitchUserIdentity;

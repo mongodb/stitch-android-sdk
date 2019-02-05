@@ -16,40 +16,68 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.stitch.core.internal.common.AuthMonitor;
-import com.mongodb.stitch.core.internal.common.Dispatcher;
-import com.mongodb.stitch.core.internal.net.NetworkMonitor;
+import com.mongodb.stitch.core.StitchAppClientInfo;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.internal.StitchServiceBinder;
+import com.mongodb.stitch.core.services.mongodb.local.internal.EmbeddedMongoClientFactory;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncMongoClientFactory;
 
-public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient {
+import javax.annotation.Nonnull;
+
+public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchServiceBinder {
 
   private final CoreStitchServiceClient service;
-  private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
-  private final MongoDatabase tempDb;
+  private final StitchAppClientInfo appInfo;
+  private final EmbeddedMongoClientFactory clientFactory;
+
+  private DataSynchronizer dataSynchronizer;
+  @Nonnull private String lastActiveUserId;
 
   public CoreRemoteMongoClientImpl(final CoreStitchServiceClient service,
                                    final String instanceKey,
-                                   final MongoClient localClient,
-                                   final NetworkMonitor networkMonitor,
-                                   final AuthMonitor authMonitor,
-                                   final Dispatcher eventDispatcher) {
+                                   final StitchAppClientInfo appInfo,
+                                   final EmbeddedMongoClientFactory clientFactory) {
     this.service = service;
-    this.networkMonitor = networkMonitor;
-    this.tempDb = localClient.getDatabase("sync_temp");
+    this.appInfo = appInfo;
+    this.clientFactory = clientFactory;
+    this.service.bind(this);
+    // set this to an empty string to avoid cumbersome null
+    // checks when comparing to the next activeUser
+    this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
+        ? appInfo.getAuthMonitor().getActiveUserId() : "";
 
     this.dataSynchronizer = new DataSynchronizer(
         instanceKey,
         service,
-        localClient,
+        SyncMongoClientFactory.getClient(
+            appInfo,
+            service.getName(),
+            clientFactory
+        ),
         this,
-        networkMonitor,
-        authMonitor,
-        eventDispatcher
+        appInfo.getNetworkMonitor(),
+        appInfo.getAuthMonitor(),
+        appInfo.getEventDispatcher()
     );
+  }
+
+  @Override
+  public void onRebindEvent() {
+    if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
+      this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
+          ? appInfo.getAuthMonitor().getActiveUserId() : "";
+
+      // reinitialize the DataSynchronizer entirely.
+      // any auth event will trigger this.
+      this.dataSynchronizer.reinitialize(
+          SyncMongoClientFactory.getClient(
+              appInfo,
+              service.getName(),
+              clientFactory
+          )
+      );
+    }
   }
 
   /**
@@ -63,8 +91,7 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient {
       databaseName,
       service,
       dataSynchronizer,
-      networkMonitor,
-      tempDb
+      appInfo.getNetworkMonitor()
     );
   }
 

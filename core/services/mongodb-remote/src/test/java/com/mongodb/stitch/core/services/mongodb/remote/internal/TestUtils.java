@@ -29,6 +29,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteC
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -100,6 +101,12 @@ public final class TestUtils {
           @Override
           public boolean isLoggedIn() {
             return true;
+          }
+
+          @Nullable
+          @Override
+          public String getActiveUserId() {
+            return "bound";
           }
         },
         new ThreadDispatcher());

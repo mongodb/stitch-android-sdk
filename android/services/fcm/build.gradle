@@ -8,7 +8,7 @@ ext.pomDisplayName = "Android FCM Service"
 
 buildscript {
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.2.1'
+        classpath 'com.android.tools.build:gradle:3.3.0'
         classpath 'digital.wup:android-maven-publish:3.3.0'
         classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"

@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.internal.common;
+package com.mongodb.stitch.core.services.internal;
 
-import javax.annotation.Nullable;
-
-public interface AuthMonitor {
+/**
+ * An ifc that allows any service of any type
+ * to bind to it's associated {@link CoreStitchServiceClient}.
+ *
+ * {@link CoreStitchServiceClient#bind(StitchServiceBinder)}
+ */
+public interface StitchServiceBinder {
   /**
-   * Get whether or not the application client is currently
-   * logged in.
-   *
-   * @return whether or not the application client is logged in
+   * Notify the binder that a rebind event has occured.
+   * E.g., a change in authentication.
    */
-  boolean isLoggedIn();
-
-  /**
-   * Get the active user id from the applications
-   * auth request client.
-   *
-   * @return active user id if there is one, null if not
-   */
-  @Nullable String getActiveUserId();
+  void onRebindEvent();
 }

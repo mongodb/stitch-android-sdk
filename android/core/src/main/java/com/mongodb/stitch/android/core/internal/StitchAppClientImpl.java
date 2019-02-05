@@ -19,6 +19,7 @@ package com.mongodb.stitch.android.core.internal;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
+import com.mongodb.stitch.android.core.auth.StitchAuthListener;
 import com.mongodb.stitch.android.core.auth.internal.StitchAuthImpl;
 import com.mongodb.stitch.android.core.internal.common.MainLooperDispatcher;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
@@ -34,16 +35,22 @@ import com.mongodb.stitch.core.internal.CoreStitchAppClient;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.net.StitchAppRequestClientImpl;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
+import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
+
+import javax.annotation.Nullable;
 
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
+public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, StitchAuthListener {
 
   private final CoreStitchAppClient coreClient;
   private final TaskDispatcher dispatcher;
@@ -51,6 +58,11 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
   private final StitchAppRoutes routes;
   private final StitchAuthImpl auth;
   private final StitchPush push;
+  /**
+   * A list of weak references to any service client created
+   * by a user.
+   */
+  private final List<WeakReference<CoreStitchServiceClient>> serviceClients;
 
   /**
    * Constructs an app client with the given configuration.
@@ -82,6 +94,8 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
             requestClient, this.routes.getAuthRoutes(), config.getStorage(), dispatcher, this.info);
     this.coreClient = new CoreStitchAppClient(this.auth, this.routes, config.getCodecRegistry());
     this.push = new StitchPushImpl(this.auth, this.routes.getPushRoutes(), dispatcher);
+    this.serviceClients = new ArrayList<>();
+    this.auth.addSynchronousAuthListener(this);
   }
 
   @Override
@@ -98,37 +112,36 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
   public <T> T getServiceClient(
       final NamedServiceClientFactory<T> factory,
       final String serviceName) {
-    return factory.getClient(
-        new CoreStitchServiceClientImpl(
-            auth,
-            routes.getServiceRoutes(),
-            serviceName,
-            info.getCodecRegistry()),
-        info,
-        dispatcher);
+    final CoreStitchServiceClient serviceClient = new CoreStitchServiceClientImpl(
+        auth,
+        routes.getServiceRoutes(),
+        serviceName,
+        info.getCodecRegistry());
+    this.bindServiceClient(serviceClient);
+    return factory.getClient(serviceClient, info, dispatcher);
   }
 
   @Override
   public <T> T getServiceClient(final ServiceClientFactory<T> factory) {
-    return factory.getClient(
-        new CoreStitchServiceClientImpl(
-            auth,
-            routes.getServiceRoutes(),
-            "",
-            info.getCodecRegistry()),
-        info,
-        dispatcher);
+    final CoreStitchServiceClient serviceClient = new CoreStitchServiceClientImpl(
+        auth,
+        routes.getServiceRoutes(),
+        "",
+        info.getCodecRegistry());
+
+    this.bindServiceClient(serviceClient);
+    return factory.getClient(serviceClient, info, dispatcher);
   }
 
   @Override
   public StitchServiceClient getServiceClient(final String serviceName) {
-    return new StitchServiceClientImpl(
-        new CoreStitchServiceClientImpl(
-            auth,
-            routes.getServiceRoutes(),
-            serviceName,
-            info.getCodecRegistry()),
-        dispatcher);
+    final CoreStitchServiceClient serviceClient = new CoreStitchServiceClientImpl(
+        auth,
+        routes.getServiceRoutes(),
+        serviceName,
+        info.getCodecRegistry());
+    this.bindServiceClient(serviceClient);
+    return new StitchServiceClientImpl(serviceClient, dispatcher);
   }
 
   @Override
@@ -260,6 +273,41 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor {
   @Override
   public boolean isLoggedIn() {
     return getAuth().isLoggedIn();
+  }
+
+  @Nullable
+  @Override
+  public String getActiveUserId() {
+    return getAuth().getUser() != null ? getAuth().getUser().getId() : null;
+  }
+
+  /**
+   * Bind a given service client to this app client.
+   * This allows the app client to dispatch events that require
+   * the service to rebind to the application, e.g., a change
+   * in authentication.
+   *
+   * @param coreStitchServiceClient the service client to bind
+   */
+  private void bindServiceClient(final CoreStitchServiceClient coreStitchServiceClient) {
+    this.serviceClients.add(new WeakReference<>(coreStitchServiceClient));
+  }
+
+  @Override
+  public void onAuthEvent(final StitchAuth auth) {
+    final Iterator<WeakReference<CoreStitchServiceClient>> iterator =
+        this.serviceClients.iterator();
+    while (iterator.hasNext()) {
+      final WeakReference<CoreStitchServiceClient> weakReference = iterator.next();
+      final CoreStitchServiceClient binder = weakReference.get();
+      // if the binder has been dealloc'd, remove it from the list
+      // else, notify the binder that a rebind event has occurred
+      if (binder == null) {
+        this.serviceClients.remove(weakReference);
+      } else {
+        binder.onRebindEvent();
+      }
+    }
   }
 
   /**

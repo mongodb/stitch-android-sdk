@@ -19,7 +19,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.client.MongoDatabase;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
@@ -49,14 +48,12 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   private final CoreSync<DocumentT> sync;
   private final DataSynchronizer dataSynchronizer;
   private final NetworkMonitor networkMonitor;
-  private final MongoDatabase tempDb;
 
   CoreRemoteMongoCollectionImpl(final MongoNamespace namespace,
                                 final Class<DocumentT> documentClass,
                                 final CoreStitchServiceClient service,
                                 final DataSynchronizer dataSynchronizer,
-                                final NetworkMonitor networkMonitor,
-                                final MongoDatabase tempDb) {
+                                final NetworkMonitor networkMonitor) {
     notNull("namespace", namespace);
     notNull("documentClass", documentClass);
     this.namespace = namespace;
@@ -65,7 +62,6 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
     this.operations = new Operations<>(namespace, documentClass, service.getCodecRegistry());
     this.dataSynchronizer = dataSynchronizer;
     this.networkMonitor = networkMonitor;
-    this.tempDb = tempDb;
 
     this.sync = new CoreSyncImpl<>(
       getNamespace(),
@@ -115,8 +111,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
       clazz,
       service,
       dataSynchronizer,
-      networkMonitor,
-      tempDb);
+      networkMonitor);
   }
 
   public CoreRemoteMongoCollection<DocumentT> withCodecRegistry(final CodecRegistry codecRegistry) {
@@ -125,8 +120,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
       documentClass,
       service.withCodecRegistry(codecRegistry),
       dataSynchronizer,
-      networkMonitor,
-      tempDb);
+      networkMonitor);
   }
 
   /**
