@@ -1674,18 +1674,20 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * will be lost.
    *
    * @param namespace  the namespace to put the document in.
-   * @param documentId the _id of the document.
+   * @param documentIds the _ids of the documents.
    */
-  public void desyncDocumentFromRemote(
+  public void desyncDocumentsFromRemote(
       final MongoNamespace namespace,
-      final BsonValue documentId
+      final BsonValue... documentIds
   ) {
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
     try {
-      syncConfig.removeSynchronizedDocument(namespace, documentId);
-      getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+      for (final BsonValue documentId : documentIds) {
+        syncConfig.removeSynchronizedDocument(namespace, documentId);
+        getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+      }
     } finally {
       lock.unlock();
     }
