@@ -95,7 +95,7 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
     this.coreClient = new CoreStitchAppClient(this.auth, this.routes, config.getCodecRegistry());
     this.push = new StitchPushImpl(this.auth, this.routes.getPushRoutes(), dispatcher);
     this.serviceClients = new ArrayList<>();
-    this.auth.addSynchronizedAuthListener(this);
+    this.auth.addSynchronousAuthListener(this);
   }
 
   @Override

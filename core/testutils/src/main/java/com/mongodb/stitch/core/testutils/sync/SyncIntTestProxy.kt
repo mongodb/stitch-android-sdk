@@ -1692,13 +1692,12 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val coll = syncTestRunner.syncMethods()
         val remoteColl = syncTestRunner.remoteMethods()
 
-        // insert a new document remotely
+        // insert documents that correspond to different users
         val docToInsertUser1 = Document("hello", "world")
         val docToInsertUser2 = Document("hola", "mundo")
         val docToInsertUser3 = Document("hallo", "welt")
 
-        // configure Sync to resolve a custom document when handling a conflict
-        // insert and sync the same document locally, creating a conflict
+        // configure Sync
         coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
             fail()
             Document()

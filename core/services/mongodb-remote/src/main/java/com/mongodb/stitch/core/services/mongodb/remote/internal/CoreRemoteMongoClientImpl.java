@@ -23,6 +23,8 @@ import com.mongodb.stitch.core.services.mongodb.local.internal.EmbeddedMongoClie
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncMongoClientFactory;
 
+import javax.annotation.Nonnull;
+
 public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchServiceBinder {
 
   private final CoreStitchServiceClient service;
@@ -30,6 +32,7 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
   private final EmbeddedMongoClientFactory clientFactory;
 
   private DataSynchronizer dataSynchronizer;
+  @Nonnull private String lastActiveUserId;
 
   public CoreRemoteMongoClientImpl(final CoreStitchServiceClient service,
                                    final String instanceKey,
@@ -39,6 +42,10 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
     this.appInfo = appInfo;
     this.clientFactory = clientFactory;
     this.service.bind(this);
+    // set this to an empty string to avoid cumbersome null
+    // checks when comparing to the next activeUser
+    this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
+        ? appInfo.getAuthMonitor().getActiveUserId() : "";
 
     this.dataSynchronizer = new DataSynchronizer(
         instanceKey,
@@ -57,15 +64,20 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
 
   @Override
   public void onRebindEvent() {
-    // reinitialize the DataSynchronizer entirely.
-    // any auth event will trigger this.
-    this.dataSynchronizer.reinitialize(
-        SyncMongoClientFactory.getClient(
-            appInfo,
-            service.getName(),
-            clientFactory
-        )
-    );
+    if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
+      this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
+          ? appInfo.getAuthMonitor().getActiveUserId() : "";
+
+      // reinitialize the DataSynchronizer entirely.
+      // any auth event will trigger this.
+      this.dataSynchronizer.reinitialize(
+          SyncMongoClientFactory.getClient(
+              appInfo,
+              service.getName(),
+              clientFactory
+          )
+      );
+    }
   }
 
   /**
