@@ -305,7 +305,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     syncLock.lock();
     dispatchGroup.blockAndWait();
     try {
-      this.instanceChangeStreamListener.stop();
       this.stop();
       this.localClient = localClient;
       this.initThread = new Thread(() -> {
