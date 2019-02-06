@@ -40,6 +40,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.mongodb.stitch.core.StitchClientErrorCode;
+import com.mongodb.stitch.core.StitchClientException;
 import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.StitchServiceErrorCode;
@@ -214,7 +216,8 @@ public class CoreStitchAuthUnitTests {
 
     auth.logoutInternal();
 
-    // assert that though one user is logged out, two users are still listed
+    // assert that though one user is logged out, three users are still listed, and their profiles
+    // are all non-null
     assertEquals(auth.listUsers().size(), 3);
     assertTrue(auth.listUsers().stream().allMatch(new Predicate<CoreStitchUserImpl>() {
       @Override
@@ -222,7 +225,6 @@ public class CoreStitchAuthUnitTests {
         return coreStitchUser.getProfile() != null;
       }
     }));
-    assertEquals(auth.listUsers().getLast(), user2);
 
     final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
     verify(requestClient, times(7)).doRequest(reqArgs.capture());
@@ -236,17 +238,20 @@ public class CoreStitchAuthUnitTests {
     assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
 
     assertFalse(auth.isLoggedIn());
-    auth.switchToUserWithId(auth.listUsers().getLast().getId());
-    auth.logoutInternal(auth.listUsers().getLast().getId());
+    auth.switchToUserWithId(user2.getId());
+    auth.logoutInternal();
 
     verify(requestClient, times(8)).doRequest(reqArgs.capture());
     assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(13));
 
     assertEquals(auth.listUsers().size(), 3);
-    assertEquals(auth.listUsers().getLast(), user1);
 
-    auth.logoutInternal(auth.listUsers().getLast().getId());
-    assertEquals(auth.listUsers().size(), 3);
+    // log out the last user without switching to them
+    auth.logoutUserWithIdInternal(user1.getId());
+
+    // assert that this leaves only two users since logging out an anonymous
+    // user deletes that user, and assert they are all logged out
+    assertEquals(auth.listUsers().size(), 2);
     assertTrue(auth.listUsers().stream().allMatch(new Predicate<CoreStitchUserImpl>() {
           @Override
           public boolean test(final CoreStitchUserImpl coreStitchUser) {
@@ -256,13 +261,20 @@ public class CoreStitchAuthUnitTests {
 
     assertFalse(auth.isLoggedIn());
 
+    // assert that we still have a device ID
+    assertTrue(auth.hasDeviceId());
+
+    // assert that logging back into a non-anon user after logging out works
     mockOldLoginResponse(requestClient, user2.getId(), user2.getDeviceId());
 
     assertEquals(
         user2, auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there")));
 
-    assertEquals(auth.listUsers().size(), 3);
-    assertEquals(auth.listUsers().getLast(), user2);
+    assertEquals(auth.listUsers().size(), 2);
+
+    // assert that the list ordering has been preserved (except for the now-missing anonymous user)
+    assertEquals(auth.listUsers().get(0).getId(), user2.getId());
+    assertEquals(auth.listUsers().get(1).getId(), user3.getId());
 
     assertTrue(auth.isLoggedIn());
   }
@@ -305,23 +317,29 @@ public class CoreStitchAuthUnitTests {
     expectedRequest.withHeaders(headers);
     assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(6));
 
+
+    // assert that switching to a user, and removing self works
     assertFalse(auth.isLoggedIn());
-    auth.switchToUserWithId(auth.listUsers().getLast().getId());
+    auth.switchToUserWithId(user2.getId());
     assertTrue(auth.isLoggedIn());
 
-    auth.removeUserInternal(auth.listUsers().getLast().getId());
+    auth.removeUserInternal();
 
     verify(requestClient, times(8)).doRequest(reqArgs.capture());
     assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(13));
 
+
+    // assert that there is one user left
     assertEquals(auth.listUsers().size(), 1);
     assertEquals(auth.listUsers().getLast(), user1);
 
-    auth.removeUserInternal(auth.listUsers().getLast().getId());
+    // assert that we can remove the user without switching to it
+    auth.removeUserWithIdInternal(auth.listUsers().getLast().getId());
     assertEquals(auth.listUsers().size(), 0);
 
     assertFalse(auth.isLoggedIn());
 
+    // assert that we can log back into the user that we removed
     mockOldLoginResponse(requestClient, user2.getId(), user2.getDeviceId());
 
     assertEquals(
@@ -708,13 +726,14 @@ public class CoreStitchAuthUnitTests {
     try {
       auth.switchToUserWithId("not_a_user_id");
       fail("should have thrown error due to missing key");
-    } catch (IllegalArgumentException e) {
-      assertNotNull(e);
+    } catch (StitchClientException e) {
+      assertEquals(StitchClientErrorCode.USER_NOT_FOUND, e.getErrorCode());
     }
 
     final CoreStitchUser user =
-        auth.loginWithCredentialInternal(new AnonymousCredential());
+        auth.loginWithCredentialInternal(new UserPasswordCredential("greetings ", "friend"));
 
+    // can switch to self
     assertEquals(user, auth.switchToUserWithId(user.getId()));
     assertEquals(user, auth.getUser());
 
@@ -724,8 +743,24 @@ public class CoreStitchAuthUnitTests {
     assertEquals(user2, auth.getUser());
     assertNotEquals(user, auth.getUser());
 
+    // can switch back to old user
     assertEquals(user, auth.switchToUserWithId(user.getId()));
     assertEquals(user, auth.getUser());
+
+    // switch back to second user after logging out
+    auth.logoutInternal();
+    assertEquals(2, auth.listUsers().size());
+    assertEquals(user2, auth.switchToUserWithId(user2.getId()));
+
+    // assert that we can't switch to a logged out user
+    try {
+      auth.switchToUserWithId(user.getId());
+      fail("should have thrown error due to logged out user");
+    } catch (StitchClientException e) {
+      assertEquals(StitchClientErrorCode.USER_NOT_LOGGED_IN, e.getErrorCode());
+    }
+
+
   }
 
   @Test

@@ -25,6 +25,10 @@ public enum StitchClientErrorCode {
   MUST_AUTHENTICATE_FIRST("method called requires being authenticated"),
   USER_NO_LONGER_VALID(
       "user instance being accessed is no longer valid; please get a new user with auth.getUser()"),
+  USER_NOT_FOUND("user not found in list of users"),
+  USER_NOT_LOGGED_IN(
+      "cannot make the active user a logged out user; please use loginWithCredential() to "
+       + " switch to this user"),
   COULD_NOT_LOAD_PERSISTED_AUTH_INFO("failed to load stored auth information for Stitch"),
   COULD_NOT_PERSIST_AUTH_INFO("failed to save auth information for Stitch");
 
