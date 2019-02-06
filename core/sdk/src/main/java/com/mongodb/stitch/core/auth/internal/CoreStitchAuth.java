@@ -41,8 +41,8 @@ import com.mongodb.stitch.core.internal.net.Stream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
@@ -164,8 +164,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return activeUser;
   }
 
-  public synchronized LinkedList<StitchUserT> listUsers() {
-    final LinkedList<StitchUserT> userSet = new LinkedList<>();
+  public synchronized List<StitchUserT> listUsers() {
+    final ArrayList<StitchUserT> userSet = new ArrayList<>();
     for (final AuthInfo authInfo : this.allUsersAuthInfo.values()) {
       userSet.add(getUserFactory().makeUser(
           authInfo.getUserId(),
@@ -716,14 +716,12 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   private synchronized void clearUserAuth(final String userId) {
     final AuthInfo unclearedAuthInfo = this.allUsersAuthInfo.get(userId);
-    if (unclearedAuthInfo == null) {
+    if (unclearedAuthInfo == null && !this.activeUserAuthInfo.getUserId().equals(userId)) {
       // this doesn't necessarily mean there's an error. we could be in a
       // provisional state where the profile request failed and we're just
       // trying to log out the active user.
-      if (this.activeUserAuthInfo.getUserId() != userId) {
-        // only throw if this ID is not the active user either
-        throw new StitchClientException(StitchClientErrorCode.USER_NOT_FOUND);
-      }
+      // only throw if this ID is not the active user either
+      throw new StitchClientException(StitchClientErrorCode.USER_NOT_FOUND);
     }
 
     try {

@@ -211,7 +211,7 @@ public class CoreStitchAuthUnitTests {
     final CoreStitchUser user3 =
         auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
 
-    assertEquals(auth.listUsers().getLast(), user3);
+    assertEquals(auth.listUsers().get(2), user3);
     assertTrue(auth.isLoggedIn());
 
     auth.logoutInternal();
@@ -297,14 +297,14 @@ public class CoreStitchAuthUnitTests {
     final CoreStitchUser user3 =
         auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
 
-    assertEquals(auth.listUsers().getLast(), user3);
+    assertEquals(auth.listUsers().get(2), user3);
     assertTrue(auth.isLoggedIn());
 
     auth.removeUserInternal();
 
     // assert that though one user is logged out, two users are still listed
     assertEquals(auth.listUsers().size(), 2);
-    assertEquals(auth.listUsers().getLast(), user2);
+    assertEquals(auth.listUsers().get(1), user2);
 
     final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
     verify(requestClient, times(7)).doRequest(reqArgs.capture());
@@ -331,10 +331,10 @@ public class CoreStitchAuthUnitTests {
 
     // assert that there is one user left
     assertEquals(auth.listUsers().size(), 1);
-    assertEquals(auth.listUsers().getLast(), user1);
+    assertEquals(auth.listUsers().get(0), user1);
 
     // assert that we can remove the user without switching to it
-    auth.removeUserWithIdInternal(auth.listUsers().getLast().getId());
+    auth.removeUserWithIdInternal(user1.getId());
     assertEquals(auth.listUsers().size(), 0);
 
     assertFalse(auth.isLoggedIn());
@@ -346,7 +346,7 @@ public class CoreStitchAuthUnitTests {
         user2, auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there")));
 
     assertEquals(auth.listUsers().size(), 1);
-    assertEquals(auth.listUsers().getLast(), user2);
+    assertEquals(auth.listUsers().get(0), user2);
 
     assertTrue(auth.isLoggedIn());
   }
