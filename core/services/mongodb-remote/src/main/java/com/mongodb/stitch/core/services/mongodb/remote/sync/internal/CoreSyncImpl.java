@@ -75,26 +75,22 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
 
   @Override
   public void syncOne(final BsonValue id) {
-    this.dataSynchronizer.syncDocumentFromRemote(this.namespace, id);
+    this.dataSynchronizer.syncDocumentsFromRemote(this.namespace, id);
   }
 
   @Override
   public void syncMany(final BsonValue... ids) {
-    for (final BsonValue id: ids) {
-      this.syncOne(id);
-    }
+    this.dataSynchronizer.syncDocumentsFromRemote(this.namespace, ids);
   }
 
   @Override
   public void desyncOne(final BsonValue id) {
-    this.dataSynchronizer.desyncDocumentFromRemote(namespace, id);
+    this.dataSynchronizer.desyncDocumentsFromRemote(namespace, id);
   }
 
   @Override
   public void desyncMany(final BsonValue... ids) {
-    for (final BsonValue id: ids) {
-      this.desyncOne(id);
-    }
+    this.dataSynchronizer.desyncDocumentsFromRemote(namespace, ids);
   }
 
   @Override
