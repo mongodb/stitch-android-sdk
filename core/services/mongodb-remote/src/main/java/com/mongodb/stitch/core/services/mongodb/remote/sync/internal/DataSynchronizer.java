@@ -118,7 +118,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   private ErrorListener errorListener;
   private Thread initThread;
-  private DispatchGroup dispatchGroup;
+  private DispatchGroup ongoingOperationsGroup;
 
   public DataSynchronizer(
       final String instanceKey,
@@ -138,7 +138,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.listenersLock = new ReentrantLock();
     this.eventDispatcher = eventDispatcher;
     this.instanceKey = instanceKey;
-    this.dispatchGroup = new DispatchGroup();
+    this.ongoingOperationsGroup = new DispatchGroup();
     this.logger =
         Loggers.getLogger(String.format("DataSynchronizer-%s", instanceKey));
     if (this.networkMonitor != null) {
@@ -305,14 +305,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   public void reinitialize(final MongoClient localClient) {
     syncLock.lock();
-    dispatchGroup.blockAndWait();
+    ongoingOperationsGroup.blockAndWait();
     try {
       this.stop();
       this.localClient = localClient;
       this.initThread = new Thread(() -> {
         initialize();
         this.start();
-        dispatchGroup.unblock();
+        ongoingOperationsGroup.unblock();
       });
 
       this.initThread.start();
@@ -1614,10 +1614,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public Set<MongoNamespace> getSynchronizedNamespaces() {
     this.waitUntilInitialized();
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       return this.syncConfig.getSynchronizedNamespaces();
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1632,10 +1632,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   ) {
     this.waitUntilInitialized();
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       return this.syncConfig.getSynchronizedDocuments(namespace);
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1648,10 +1648,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public Set<BsonValue> getSynchronizedDocumentIds(final MongoNamespace namespace) {
     this.waitUntilInitialized();
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       return this.syncConfig.getSynchronizedDocumentIds(namespace);
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1666,7 +1666,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       final Set<BsonValue> pausedDocumentIds = new HashSet<>();
 
       for (final CoreDocumentSynchronizationConfig config :
@@ -1678,7 +1678,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       return pausedDocumentIds;
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1696,14 +1696,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       for (final BsonValue documentId : documentIds) {
         syncConfig.addSynchronizedDocument(namespace, documentId);
       }
 
       triggerListeningToNamespace(namespace);
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1721,7 +1721,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       for (final BsonValue documentId : documentIds) {
         syncConfig.removeSynchronizedDocument(namespace, documentId);
       }
@@ -1729,7 +1729,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       getLocalCollection(namespace).deleteMany(
           new Document("_id", new Document("$in", documentIds)));
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1795,7 +1795,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       final Lock lock =
           this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
       lock.lock();
@@ -1805,7 +1805,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         lock.unlock();
       }
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1815,7 +1815,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   ) {
     this.waitUntilInitialized();
 
-    dispatchGroup.enter();
+    ongoingOperationsGroup.enter();
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1825,7 +1825,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           .into(new ArrayList<>());
     } finally {
       lock.unlock();
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1840,7 +1840,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   ) {
     this.waitUntilInitialized();
 
-    dispatchGroup.enter();
+    ongoingOperationsGroup.enter();
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1853,7 +1853,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           .into(new ArrayList<>());
     } finally {
       lock.unlock();
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1883,7 +1883,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final Class<ResultT> resultClass) {
     this.waitUntilInitialized();
 
-    dispatchGroup.enter();
+    ongoingOperationsGroup.enter();
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
@@ -1891,7 +1891,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return getLocalCollection(namespace).aggregate(pipeline, resultClass);
     } finally {
       lock.unlock();
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1906,7 +1906,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       // Remove forbidden fields from the document before inserting it into the local collection.
       final BsonDocument docForStorage = sanitizeDocument(document);
 
@@ -1929,7 +1929,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       triggerListeningToNamespace(namespace);
       emitEvent(documentId, event);
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -1943,7 +1943,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       // Remove forbidden fields from the documents before inserting them into the local collection.
       final List<BsonDocument> docsForStorage = new ArrayList<>(documents.size());
 
@@ -1976,7 +1976,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
       }
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -2009,7 +2009,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       final Lock lock =
           this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
       lock.lock();
@@ -2096,7 +2096,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       emitEvent(documentId, event);
       return UpdateResult.acknowledged(1, 1L, updateOptions.isUpsert() ? documentId : null);
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -2130,7 +2130,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final UpdateOptions updateOptions) {
     this.waitUntilInitialized();
 
-    dispatchGroup.enter();
+    ongoingOperationsGroup.enter();
     try {
       final List<ChangeEvent<BsonDocument>> eventsToEmit = new ArrayList<>();
       final UpdateResult result;
@@ -2230,7 +2230,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
       return result;
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -2370,7 +2370,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       final ChangeEvent<BsonDocument> event;
       final DeleteResult result;
       final Lock lock =
@@ -2416,7 +2416,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
       return result;
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
@@ -2432,7 +2432,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     try {
-      dispatchGroup.enter();
+      ongoingOperationsGroup.enter();
       final List<ChangeEvent<BsonDocument>> eventsToEmit = new ArrayList<>();
       final DeleteResult result;
       final Lock lock =
@@ -2486,7 +2486,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
       return result;
     } finally {
-      dispatchGroup.exit();
+      ongoingOperationsGroup.exit();
     }
   }
 
