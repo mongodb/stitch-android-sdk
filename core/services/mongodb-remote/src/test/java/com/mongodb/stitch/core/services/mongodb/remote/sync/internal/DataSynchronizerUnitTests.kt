@@ -1905,8 +1905,6 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
 
-        verify(ctx.collectionMock, times(1)).find(any())
-
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
         assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
@@ -1934,8 +1932,6 @@ class DataSynchronizerUnitTests {
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
         ctx.waitForEvents()
-
-        verify(ctx.collectionMock, times(1)).find(any())
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()

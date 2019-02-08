@@ -401,7 +401,6 @@ class SyncUnitTestHarness : Closeable {
          * errorListener.
          */
         override fun reconfigure() {
-            println(dataSynchronizer)
             dataSynchronizer.configure(
                 namespace,
                 conflictHandler,
@@ -430,12 +429,10 @@ class SyncUnitTestHarness : Closeable {
          * Insert the current test document.
          */
         override fun insertTestDocument() {
-            println("configuring insert!!")
             configureNewChangeEventListener()
             configureNewErrorListener()
             configureNewConflictHandler()
 
-            println("inserting one!!")
             dataSynchronizer.insertOne(namespace, testDocument)
         }
 
@@ -706,9 +703,7 @@ class SyncUnitTestHarness : Closeable {
         unclosedDataSynchronizers.clear()
 
         latestCtx?.dataSynchronizer?.close()
-        println("copy new data sync ctx")
         latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
-        println(latestCtx!!.dataSynchronizer)
         return latestCtx!!
     }
 
