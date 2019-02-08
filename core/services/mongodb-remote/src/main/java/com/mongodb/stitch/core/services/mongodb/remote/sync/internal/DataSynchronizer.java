@@ -102,10 +102,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private final String instanceKey;
 
   private MongoClient localClient;
-  private MongoDatabase configDb;
-  private MongoCollection<InstanceSynchronizationConfig> instancesColl;
-  private InstanceChangeStreamListener instanceChangeStreamListener;
-  private InstanceSynchronizationConfig syncConfig;
+  private volatile MongoDatabase configDb;
+  private volatile MongoCollection<InstanceSynchronizationConfig> instancesColl;
+  private volatile InstanceChangeStreamListener instanceChangeStreamListener;
+  private volatile InstanceSynchronizationConfig syncConfig;
 
   private boolean syncThreadEnabled = true;
   private boolean isConfigured = false;
@@ -145,9 +145,18 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       this.networkMonitor.addNetworkStateListener(this);
     }
 
+    System.out.println("Starting init for:");
+    System.out.println(this);
     this.initThread = new Thread(() -> {
+      System.out.println("init thread running");
       initialize();
-      recover();
+      System.out.println("init complete; begin recovery");
+      try {
+        recover();
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+      System.out.println("init thread complete");
     });
 
     this.initThread.start();
@@ -194,6 +203,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
       nsConfigs.add(this.syncConfig.getNamespaceConfig(ns));
     }
+    System.out.println("locking namespaces");
     for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
       nsConfig.getLock().writeLock().lock();
     }
@@ -202,6 +212,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         recoverNamespace(nsConfig);
       }
     } finally {
+      System.out.println("unlocking namespaces");
       for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
         nsConfig.getLock().writeLock().unlock();
       }
@@ -215,6 +226,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * collection is in the desired state with respect to those documents.
    */
   private void recoverNamespace(final NamespaceSynchronizationConfig nsConfig) {
+    System.out.println("recovering namespace " + nsConfig.getNamespace());
     final MongoCollection<BsonDocument> undoCollection =
         getUndoCollection(nsConfig.getNamespace());
     final MongoCollection<BsonDocument> localCollection =
@@ -223,6 +235,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         undoCollection.find().into(new ArrayList<>());
     final Set<BsonValue> recoveredIds = new HashSet<>();
 
+    System.out.println("replacing local docs");
     // Replace local docs with undo docs. Presence of an undo doc implies we had a system failure
     // during a write. This covers updates and deletes.
     for (final BsonDocument undoDoc : undoDocs) {
@@ -233,6 +246,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       recoveredIds.add(documentId);
     }
 
+    System.out.println("restoring document");
     // If we recovered a document, but its pending writes are set to do something else, then the
     // failure occurred after the pending writes were set, but before the undo document was
     // deleted. In this case, we should restore the document to the state that the pending
@@ -244,13 +258,18 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue documentId = docConfig.getDocumentId();
       final BsonDocument filter = getDocumentIdFilter(documentId);
 
+      System.out.println("restoring " + documentId.toString());
       if (recoveredIds.contains(docConfig.getDocumentId())) {
+        System.out.println("recoveredIds contains docId");
         final ChangeEvent<BsonDocument> pendingWrite = docConfig.getLastUncommittedChangeEvent();
+        System.out.println("pending write await");
         if (pendingWrite != null) {
+          System.out.println("pending write was not nil");
           switch (pendingWrite.getOperationType()) {
             case INSERT:
             case UPDATE:
             case REPLACE:
+              System.out.println("restoring find and replace");
               localCollection.findOneAndReplace(
                       filter,
                       pendingWrite.getFullDocument(),
@@ -258,9 +277,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               );
               break;
             case DELETE:
+              System.out.println("restoring delete");
               localCollection.deleteOne(filter);
               break;
             default:
+              System.out.println("exception occurred");
               // There should never be pending writes with an unknown event type, but if someone
               // is messing with the config collection we want to stop the synchronizer to prevent
               // further data corruption.
@@ -272,24 +293,31 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
     }
 
+    System.out.println("moving on");
+
     // Delete all of our undo documents. If we've reached this point, we've recovered the local
     // collection to the state we want with respect to all of our undo documents. If we fail before
     // these deletes or while carrying out the deletes, but after recovering the documents to
     // their desired state, that's okay because the next recovery pass will be effectively a no-op
     // up to this point.
     for (final BsonValue recoveredId : recoveredIds) {
+      System.out.println("deleting undo docs");
       undoCollection.deleteOne(getDocumentIdFilter(recoveredId));
     }
 
+    System.out.println("deleting many local docs");
     // Find local documents for which there are no document configs and delete them. This covers
     // inserts, upserts, and desync deletes. This will occur on any recovery pass regardless of
     // the documents in the undo collection, so it's fine that we do this after deleting the undo
     // documents.
+
     localCollection.deleteMany(new BsonDocument(
         "_id",
         new BsonDocument(
             "$nin",
-            new BsonArray(new ArrayList<>(getSynchronizedDocumentIds(nsConfig.getNamespace()))))));
+            new BsonArray(new ArrayList<>(this.syncConfig.getSynchronizedDocumentIds(nsConfig.getNamespace()))))));
+
+    System.out.println("doc deletion complete");
   }
 
   @Override
@@ -310,12 +338,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       this.initThread = new Thread(() -> {
         initialize();
         this.start();
+        dispatchGroup.unblock();
       });
 
       this.initThread.start();
     } finally {
       syncLock.unlock();
-      dispatchGroup.unblock();
     }
   }
 
@@ -350,6 +378,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                             @Nullable final ChangeEventListener<T> changeEventListener,
                             @Nullable final ErrorListener errorListener,
                             @Nonnull final Codec<T> codec) {
+    System.out.println("configuring waiting!");
+    System.out.println(this);
+    this.waitUntilInitialized();
+
     if (conflictHandler == null) {
       logger.warn(
           "Invalid configuration: conflictHandler should not be null. "
@@ -357,8 +389,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               + "provided.");
       return;
     }
-
-    this.waitUntilInitialized();
 
     this.errorListener = errorListener;
 
@@ -2757,7 +2787,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     ).into(new HashSet<>());
   }
 
-  private void waitUntilInitialized() {
+  void waitUntilInitialized() {
     try {
       this.initThread.join();
     } catch (InterruptedException e) {

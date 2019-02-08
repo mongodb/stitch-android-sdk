@@ -345,15 +345,20 @@ class SyncUnitTestHarness : Closeable {
                 }
             }
 
-            Mockito.spy(DataSynchronizer(
-                    instanceKey,
-                    service,
-                    localClient,
-                    remoteClient,
-                    networkMonitor,
-                    authMonitor,
-                    ThreadDispatcher()
-            ))
+            var ds = DataSynchronizer(
+                instanceKey,
+                service,
+                localClient,
+                remoteClient,
+                networkMonitor,
+                authMonitor,
+                ThreadDispatcher()
+            )
+            ds.waitUntilInitialized()
+            ds = Mockito.spy(ds)
+
+            ds.waitUntilInitialized()
+            ds
         }
 
         private var eventSemaphore: Semaphore? = null
@@ -396,6 +401,7 @@ class SyncUnitTestHarness : Closeable {
          * errorListener.
          */
         override fun reconfigure() {
+            println(dataSynchronizer)
             dataSynchronizer.configure(
                 namespace,
                 conflictHandler,
@@ -424,10 +430,12 @@ class SyncUnitTestHarness : Closeable {
          * Insert the current test document.
          */
         override fun insertTestDocument() {
+            println("configuring insert!!")
             configureNewChangeEventListener()
             configureNewErrorListener()
             configureNewConflictHandler()
 
+            println("inserting one!!")
             dataSynchronizer.insertOne(namespace, testDocument)
         }
 
@@ -698,7 +706,9 @@ class SyncUnitTestHarness : Closeable {
         unclosedDataSynchronizers.clear()
 
         latestCtx?.dataSynchronizer?.close()
+        println("copy new data sync ctx")
         latestCtx = DataSynchronizerTestContextImpl(shouldPreconfigure)
+        println(latestCtx!!.dataSynchronizer)
         return latestCtx!!
     }
 

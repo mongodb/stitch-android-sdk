@@ -79,6 +79,7 @@ class DataSynchronizerUnitTests {
 
     @After
     fun teardown() {
+        println("teardown called!")
         harness.close()
         CoreRemoteClientFactory.close()
         ServerEmbeddedMongoClientFactory.getInstance().close()
@@ -184,6 +185,7 @@ class DataSynchronizerUnitTests {
         // reset
         ctx = harness.freshTestContext()
         ctx.mockInsertException(duplicateInsertException)
+        println("inserting test doc")
         ctx.insertTestDocument()
 
         // accept the local event this time, which will insert the local doc.
@@ -1844,6 +1846,7 @@ class DataSynchronizerUnitTests {
         val ctx = harness.freshTestContext(false)
 
         ctx.dataSynchronizer.reinitialize(ctx.localClient)
+        ctx.dataSynchronizer.waitUntilInitialized()
 
         ctx.verifyStopCalled(1)
 
