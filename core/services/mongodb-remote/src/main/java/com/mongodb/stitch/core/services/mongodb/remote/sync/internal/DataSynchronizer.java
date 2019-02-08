@@ -635,7 +635,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       currentRemoteVersionInfo = DocumentVersionInfo
           .getRemoteVersionInfo(remoteChangeEvent.getFullDocument());
     } catch (final Exception e) {
-      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+      desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
           String.format(
               Locale.US,
@@ -651,7 +651,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     if (currentRemoteVersionInfo.hasVersion()
         && currentRemoteVersionInfo.getVersion().getSyncProtocolVersion() != 1) {
-      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+      desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
 
       emitError(docConfig,
               String.format(
@@ -826,7 +826,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       newestRemoteVersionInfo = DocumentVersionInfo
           .getRemoteVersionInfo(newestRemoteDocument);
     } catch (final Exception e) {
-      desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+      desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
           String.format(
               Locale.US,
@@ -952,7 +952,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               unprocessedEventVersion = DocumentVersionInfo
                   .getRemoteVersionInfo(unprocessedRemoteEvent.getFullDocument());
             } catch (final Exception e) {
-              desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+              desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
               emitError(docConfig,
                   String.format(
                       Locale.US,
@@ -1217,10 +1217,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   } else {
                     // d. Desynchronize the document if there is no conflict, or if fetching a
                     // remote document after the conflict is raised returns no remote document.
-                    desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                    desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
                   }
                 } else {
-                  desyncDocumentFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                  desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
                 }
                 break;
               }
@@ -1416,7 +1416,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             .getRemoteVersionInfo(remoteEvent.getFullDocument());
         remoteVersion = remoteVersionInfo.getVersionDoc();
       } catch (final Exception e) {
-        desyncDocumentFromRemote(namespace, docConfig.getDocumentId());
+        desyncDocumentsFromRemote(namespace, docConfig.getDocumentId());
         emitError(docConfig,
             String.format(
                 Locale.US,
@@ -1631,13 +1631,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * document will happen later in a {@link DataSynchronizer#doSyncPass()} iteration.
    *
    * @param namespace  the namespace to put the document in.
-   * @param documentId the _id of the document.
+   * @param documentIds the _ids of the documents.
    */
-  public void syncDocumentFromRemote(
+  public void syncDocumentsFromRemote(
       final MongoNamespace namespace,
-      final BsonValue documentId
+      final BsonValue... documentIds
   ) {
-    syncConfig.addSynchronizedDocument(namespace, documentId);
+    for (final BsonValue documentId : documentIds) {
+      syncConfig.addSynchronizedDocument(namespace, documentId);
+    }
+
     triggerListeningToNamespace(namespace);
   }
 
@@ -1646,18 +1649,22 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * will be lost.
    *
    * @param namespace  the namespace to put the document in.
-   * @param documentId the _id of the document.
+   * @param documentIds the _ids of the documents.
    */
-  public void desyncDocumentFromRemote(
+  public void desyncDocumentsFromRemote(
       final MongoNamespace namespace,
-      final BsonValue documentId
+      final BsonValue... documentIds
   ) {
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
     try {
-      syncConfig.removeSynchronizedDocument(namespace, documentId);
-      getLocalCollection(namespace).deleteOne(getDocumentIdFilter(documentId));
+      for (final BsonValue documentId : documentIds) {
+        syncConfig.removeSynchronizedDocument(namespace, documentId);
+      }
+
+      getLocalCollection(namespace).deleteMany(
+          new Document("_id", new Document("$in", documentIds)));
     } finally {
       lock.unlock();
     }
@@ -2284,7 +2291,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (config.getLastUncommittedChangeEvent() != null
           && config.getLastUncommittedChangeEvent().getOperationType()
           == ChangeEvent.OperationType.INSERT) {
-        desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+        desyncDocumentsFromRemote(config.getNamespace(), config.getDocumentId());
         undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
         return result;
       }
@@ -2344,7 +2351,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         if (config.getLastUncommittedChangeEvent() != null
             && config.getLastUncommittedChangeEvent().getOperationType()
             == ChangeEvent.OperationType.INSERT) {
-          desyncDocumentFromRemote(config.getNamespace(), config.getDocumentId());
+          desyncDocumentsFromRemote(config.getNamespace(), config.getDocumentId());
           undoCollection.deleteOne(getDocumentIdFilter(documentId));
           continue;
         }
@@ -2432,12 +2439,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonDocument documentToDelete = localCollection
           .find(getDocumentIdFilter(documentId)).first();
       if (documentToDelete == null) {
-        desyncDocumentFromRemote(namespace, documentId);
+        desyncDocumentsFromRemote(namespace, documentId);
         return;
       }
       undoCollection.insertOne(documentToDelete);
       localCollection.deleteOne(getDocumentIdFilter(documentId));
-      desyncDocumentFromRemote(namespace, documentId);
+      desyncDocumentsFromRemote(namespace, documentId);
       undoCollection.deleteOne(getDocumentIdFilter(documentId));
     } finally {
       lock.unlock();
