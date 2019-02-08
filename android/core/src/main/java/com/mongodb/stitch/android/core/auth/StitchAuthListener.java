@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.android.core.auth;
 
+import javax.annotation.Nullable;
+
 /**
  * StitchAuthListener allows one to hook into authentication events as they happen in a Stitch app
  * client.
@@ -29,10 +31,39 @@ public interface StitchAuthListener {
    * - When a user logs out.
    * - When a user is linked to another identity.
    * - When a listener is registered. This is to handle the case where during registration
-   *   an event happens that the registerer would otherwise miss out on.
+   * an event happens that the registerer would otherwise miss out on.
    * - When switching users.
+   *
    * @param auth the instance of {@link StitchAuth} where the event happened. It should be used to
-   *     infer the current state of authentication.
+   *             infer the current state of authentication.
    */
+  @Deprecated
   void onAuthEvent(final StitchAuth auth);
+
+  default void onUserCreated(final StitchAuth auth, final StitchUser createdUser) {
+  }
+
+  default void onUserLoggedIn(final StitchAuth auth,
+                              final StitchUser loggedInUser,
+                              @Nullable final StitchUser previousActiveUser) {
+
+  }
+
+  default void onUserLoggedOut(final StitchAuth auth, final StitchUser loggedOutUser) {
+
+  }
+
+  default void onActiveUserSwitched(final StitchAuth auth,
+                                    final StitchUser currentActiveUser,
+                                    @Nullable final StitchUser previousActiveUser) {
+
+  }
+
+  default void onUserRemoved(final StitchAuth auth, final StitchUser removedUser) {
+
+  }
+
+  default void onListenerInitialized(final StitchAuth auth) {
+
+  }
 }

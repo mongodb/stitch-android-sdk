@@ -45,6 +45,26 @@ class StitchAdminAuth(
     override fun onAuthEvent() { /* do nothing */
     }
 
+    override fun onActiveUserSwitched(currentActiveUser: StitchAdminUser?,
+                                      previousActiveUser: StitchAdminUser?) {
+    }
+
+    override fun onListenerInitialized() {
+    }
+
+    override fun onUserCreated(createdUser: StitchAdminUser?) {
+    }
+
+    override fun onUserLoggedIn(loggedInUser: StitchAdminUser?,
+                                previousActiveUser: StitchAdminUser?) {
+    }
+
+    override fun onUserLoggedOut(loggedOutUser: StitchAdminUser?) {
+    }
+
+    override fun onUserRemoved(removedUser: StitchAdminUser?) {
+    }
+
     public override fun getDeviceInfo(): Document {
         val document = Document()
         document[DeviceFields.APP_ID] = "MongoDB Stitch Java/Kotlin Admin Client"

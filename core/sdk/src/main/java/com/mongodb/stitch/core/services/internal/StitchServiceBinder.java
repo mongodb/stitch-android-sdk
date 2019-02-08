@@ -26,6 +26,8 @@ public interface StitchServiceBinder {
   /**
    * Notify the binder that a rebind event has occured.
    * E.g., a change in authentication.
+   *
+   * @param rebindEvent the rebind event that occurred
    */
-  void onRebindEvent();
+  void onRebindEvent(final RebindEvent rebindEvent);
 }

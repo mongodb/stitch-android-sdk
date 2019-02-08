@@ -133,6 +133,20 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   protected abstract void onAuthEvent();
 
+  protected abstract void onUserCreated(final StitchUserT createdUser);
+
+  protected abstract void onUserLoggedIn(final StitchUserT loggedInUser,
+                               @Nullable final StitchUserT previousActiveUser);
+
+  protected abstract void onUserLoggedOut(final StitchUserT loggedOutUser);
+
+  protected abstract void onActiveUserSwitched(final StitchUserT currentActiveUser,
+                                     @Nullable final StitchUserT previousActiveUser);
+
+  protected abstract void onUserRemoved(final StitchUserT removedUser);
+
+  protected abstract void onListenerInitialized();
+
   protected Document getDeviceInfo() {
     final Document info = new Document();
     if (hasDeviceId()) {
@@ -158,7 +172,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   /**
    * Returns the active logged in user.
-  */
+   */
   @Nullable
   public synchronized StitchUserT getUser() {
     return activeUser;
@@ -664,7 +678,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       // delete the new partial auth info from the list of all users if
       // if the new auth info is not the same user as the older user
       if (!newAuthInfo.getUserId().equals(oldActiveUserInfo.getUserId())
-           && newAuthInfo.getUserId() != null) {
+          && newAuthInfo.getUserId() != null) {
         this.allUsersAuthInfo.remove(newAuthInfo.getUserId());
       }
 

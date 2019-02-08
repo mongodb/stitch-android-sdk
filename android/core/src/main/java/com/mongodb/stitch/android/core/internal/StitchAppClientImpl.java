@@ -20,6 +20,7 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.core.auth.StitchAuth;
 import com.mongodb.stitch.android.core.auth.StitchAuthListener;
+import com.mongodb.stitch.android.core.auth.StitchUser;
 import com.mongodb.stitch.android.core.auth.internal.StitchAuthImpl;
 import com.mongodb.stitch.android.core.internal.common.MainLooperDispatcher;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
@@ -35,8 +36,10 @@ import com.mongodb.stitch.core.internal.CoreStitchAppClient;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.net.StitchAppRequestClientImpl;
 import com.mongodb.stitch.core.internal.net.StitchAppRoutes;
+import com.mongodb.stitch.core.services.internal.AuthEvent;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
+import com.mongodb.stitch.core.services.internal.RebindEvent;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -293,8 +296,7 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
     this.serviceClients.add(new WeakReference<>(coreStitchServiceClient));
   }
 
-  @Override
-  public void onAuthEvent(final StitchAuth auth) {
+  private void onRebindEvent(final RebindEvent rebindEvent) {
     final Iterator<WeakReference<CoreStitchServiceClient>> iterator =
         this.serviceClients.iterator();
     while (iterator.hasNext()) {
@@ -305,9 +307,38 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
       if (binder == null) {
         this.serviceClients.remove(weakReference);
       } else {
-        binder.onRebindEvent();
+        binder.onRebindEvent(rebindEvent);
       }
     }
+  }
+
+  @Override
+  public void onAuthEvent(StitchAuth auth) {
+  }
+
+  @Override
+  public void onUserLoggedIn(final StitchAuth auth,
+                             final StitchUser loggedInUser,
+                             final @Nullable StitchUser previousActiveUser) {
+    onRebindEvent(new AuthEvent.UserLoggedIn<>(loggedInUser, previousActiveUser));
+  }
+
+  @Override
+  public void onUserLoggedOut(final StitchAuth auth,
+                              final StitchUser loggedOutUser) {
+    onRebindEvent(new AuthEvent.UserLoggedOut<>(loggedOutUser));
+  }
+
+  @Override
+  public void onActiveUserSwitched(final StitchAuth auth,
+                                   final StitchUser currentActiveUser,
+                                   final @Nullable StitchUser previousActiveUser) {
+    onRebindEvent(new AuthEvent.UserSwitched<>(currentActiveUser, previousActiveUser));
+  }
+
+  @Override
+  public void onUserRemoved(final StitchAuth auth, final StitchUser removedUser) {
+    onRebindEvent(new AuthEvent.UserRemoved<>(removedUser));
   }
 
   /**

@@ -90,6 +90,8 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
+import javax.annotation.Nullable;
+
 public class CoreStitchAuthUnitTests {
 
   @Test
@@ -794,16 +796,44 @@ public class CoreStitchAuthUnitTests {
     @Override
     protected StitchUserFactory<CoreStitchUserImpl> getUserFactory() {
       return (String id,
-          String deviceId,
-          String loggedInProviderType,
-          String loggedInProviderName,
-          StitchUserProfileImpl userProfile,
-          boolean isLoggedIn) ->
+              String deviceId,
+              String loggedInProviderType,
+              String loggedInProviderName,
+              StitchUserProfileImpl userProfile,
+              boolean isLoggedIn) ->
           new CoreStitchUserImpl(
-              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, isLoggedIn) {};
+              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, isLoggedIn) {
+          };
     }
 
     @Override
-    protected void onAuthEvent() {}
+    protected void onAuthEvent() {
+    }
+
+    @Override
+    protected void onUserLoggedOut(CoreStitchUserImpl loggedOutUser) {
+    }
+
+    @Override
+    protected void onUserRemoved(CoreStitchUserImpl removedUser) {
+    }
+
+    @Override
+    protected void onUserLoggedIn(CoreStitchUserImpl loggedInUser,
+                                  @Nullable CoreStitchUserImpl previousActiveUser) {
+    }
+
+    @Override
+    protected void onUserCreated(CoreStitchUserImpl createdUser) {
+    }
+
+    @Override
+    protected void onActiveUserSwitched(CoreStitchUserImpl currentActiveUser,
+                                        @Nullable CoreStitchUserImpl previousActiveUser) {
+    }
+
+    @Override
+    protected void onListenerInitialized() {
+    }
   }
 }

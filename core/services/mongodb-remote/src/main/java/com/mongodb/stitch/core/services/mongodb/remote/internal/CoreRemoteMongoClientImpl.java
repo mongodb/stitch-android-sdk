@@ -17,7 +17,9 @@
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.services.internal.AuthEvent;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.internal.RebindEvent;
 import com.mongodb.stitch.core.services.internal.StitchServiceBinder;
 import com.mongodb.stitch.core.services.mongodb.local.internal.EmbeddedMongoClientFactory;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
@@ -62,21 +64,44 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
     );
   }
 
-  @Override
-  public void onRebindEvent() {
-    if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
-      this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
-          ? appInfo.getAuthMonitor().getActiveUserId() : "";
+  private void onAuthEvent(final AuthEvent authEvent) {
+    switch (authEvent.getAuthEventType()) {
+      case USER_REMOVED:
+        final String userId = ((AuthEvent.UserRemoved)authEvent).getRemovedUser().getId();
+        if (!SyncMongoClientFactory.deleteDatabase(
+            appInfo,
+            service.getName(),
+            clientFactory,
+            userId
+        )) {
+          System.err.println("Could not delete database for user id " + userId);
+        }
+        break;
+      default:
+        if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
+          this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
+              ? appInfo.getAuthMonitor().getActiveUserId() : "";
 
-      // reinitialize the DataSynchronizer entirely.
-      // any auth event will trigger this.
-      this.dataSynchronizer.reinitialize(
-          SyncMongoClientFactory.getClient(
-              appInfo,
-              service.getName(),
-              clientFactory
-          )
-      );
+          // reinitialize the DataSynchronizer entirely.
+          // any auth event will trigger this.
+          this.dataSynchronizer.reinitialize(
+              SyncMongoClientFactory.getClient(
+                  appInfo,
+                  service.getName(),
+                  clientFactory
+              )
+          );
+        }
+        break;
+    }
+  }
+
+  @Override
+  public void onRebindEvent(final RebindEvent rebindEvent) {
+    switch (rebindEvent.getType()) {
+      case AUTH_EVENT:
+        this.onAuthEvent((AuthEvent)rebindEvent);
+        break;
     }
   }
 
