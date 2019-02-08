@@ -127,16 +127,25 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
 
-        // check everything is as it was
-        client = getAppClient(app.first)
+        // verify that logout clears storage
+        Tasks.await(client.auth.logout())
+        assertFalse(client.auth.isLoggedIn)
+        assertNull(client.auth.user)
+
+        // log back into the last user
+        Tasks.await(client.auth.loginWithCredential(
+            UserPasswordCredential("test2@10gen.com", "hunter2")
+        ))
+
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, id2)
 
+        // verify ordering
         assertEquals(client.auth.listUsers().size, 3)
-        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
-        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
-        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+        assertEquals(client.auth.listUsers()[0].id, anonUser.id)
+        assertEquals(client.auth.listUsers()[1].id, emailUserId)
+        assertEquals(client.auth.listUsers()[2].id, id2)
 
         // imitate an app restart
         Stitch.clearApps()
@@ -147,18 +156,25 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, id2)
 
+        // verify ordering is preserved
         assertEquals(client.auth.listUsers().size, 3)
-        assertNotNull(client.auth.listUsers().firstOrNull { it.id == emailUserId })
-        assertNotNull(client.auth.listUsers().firstOrNull { it.id == id2 })
-        assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
+        assertEquals(client.auth.listUsers()[0].id, anonUser.id)
+        assertEquals(client.auth.listUsers()[1].id, emailUserId)
+        assertEquals(client.auth.listUsers()[2].id, id2)
 
-        // Verify that remove removes the second user
-        Tasks.await(client.auth.removeUserWithId(id2))
+        // verify that removing the user with id2 also logs out the active user
+        Tasks.await(client.auth.logoutUserWithId(id2))
         // Assert that we're no longer logged in
         assertFalse(client.auth.isLoggedIn)
-        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
 
-        // Assert that the next user is up
+        // and assert you can remove a user even if you're not logged in
+        Tasks.await(client.auth.removeUserWithId(id2))
+
+        assertEquals(client.auth.listUsers().size, 2)
+
+        // switch to the user with emailUserId and verify that is the user switched to
+        client.auth.switchToUserWithId(emailUserId)
+
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, emailUserId)
 
@@ -169,6 +185,8 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         // imitate an app restart
         Stitch.clearApps()
+        client = getAppClient(app.first)
+
         // Assert that we're still logged in
         assertTrue(client.auth.isLoggedIn)
         // Assert that the next user is up
@@ -180,9 +198,10 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
 
+        // assert that removing the active user just leaves the anon user
         Tasks.await(client.auth.removeUser())
 
-        client.auth.switchToUserWithId(client.auth.listUsers().last().id)
+        client.auth.switchToUserWithId(anonUser.id)
 
         // Assert that the next user is up
         assertEquals(client.auth.user!!.loggedInProviderType, AnonymousAuthProvider.TYPE)
@@ -193,9 +212,11 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertNull(client.auth.listUsers().firstOrNull { it.id == id2 })
         assertNotNull(client.auth.listUsers().firstOrNull { it.id == anonUser.id })
 
-        Tasks.await(client.auth.removeUser())
-        assertEquals(client.auth.listUsers().size, 0)
+        // assert that logging out of the anonymous user removes it as well
+        Tasks.await(client.auth.logout())
+
         assertFalse(client.auth.isLoggedIn)
+        assertEquals(client.auth.listUsers().size, 0)
         assertNull(client.auth.user)
     }
 
@@ -235,6 +256,11 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         Tasks.await(client.auth.logout())
         assertFalse(client.auth.isLoggedIn)
+
+        // assert that there is one user in the list, and that it did not get
+        // deleted when logging out because the linked user is no longer anon
+        assertEquals(client.auth.listUsers().size, 1)
+        assertEquals(client.auth.listUsers()[0].id, linkedUser.id)
     }
 
     @Test

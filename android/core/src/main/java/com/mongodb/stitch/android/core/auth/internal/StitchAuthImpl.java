@@ -132,7 +132,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<Void>() {
           @Override
           public Void call() {
-            logoutInternal(userId);
+            logoutUserWithIdInternal(userId);
             return null;
           }
         });
@@ -156,7 +156,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<Void>() {
           @Override
           public Void call() {
-            removeUserInternal(userId);
+            removeUserWithIdInternal(userId);
             return null;
           }
         });

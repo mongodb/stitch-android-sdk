@@ -27,6 +27,7 @@ import com.mongodb.stitch.core.internal.common.Storage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -115,12 +116,12 @@ public class AuthInfo {
     storage.set(ACTIVE_USER_STORAGE_NAME, rawInfo);
   }
 
-  static void writeLoggedInUsersAuthInfoToStorage(
-      final LinkedList<AuthInfo> loggedInUsersAuthInfo,
+  static void writeCurrentUsersToStorage(
+      final Collection<AuthInfo> allUsersAuthInfo,
       final Storage storage
   ) throws IOException {
     final List<AuthInfo> authInfos = new ArrayList<>();
-    for (final AuthInfo authInfo : loggedInUsersAuthInfo) {
+    for (final AuthInfo authInfo : allUsersAuthInfo) {
       authInfos.add(new StoreAuthInfo(
           authInfo.userId,
           authInfo.deviceId,
@@ -138,6 +139,19 @@ public class AuthInfo {
   AuthInfo loggedOut() {
     return new AuthInfo(
         userId, deviceId, null, null, loggedInProviderType, loggedInProviderName, userProfile);
+  }
+
+  AuthInfo withClearedUser() {
+    return new AuthInfo(
+        null, deviceId, null, null, null, null, null);
+  }
+
+  AuthInfo withAuthProvider(
+      final String providerType,
+      final String providerName
+  ) {
+    return new AuthInfo(
+        userId, deviceId, accessToken, refreshToken, providerType, providerName, userProfile);
   }
 
   AuthInfo merge(final AuthInfo newInfo) {
@@ -181,6 +195,10 @@ public class AuthInfo {
 
   public boolean isLoggedIn() {
     return accessToken != null && refreshToken != null;
+  }
+
+  public boolean hasUser() {
+    return userId != null;
   }
 
   @Override
