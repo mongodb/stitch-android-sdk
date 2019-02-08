@@ -1858,8 +1858,6 @@ class DataSynchronizerUnitTests {
         `when`(ctx.collectionMock.find(any()))
                 .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
 
-        verify(ctx.collectionMock, times(1)).find(any())
-
         ctx.doSyncPass()
 
         verify(ctx.collectionMock, times(1)).find(any())
@@ -1917,7 +1915,7 @@ class DataSynchronizerUnitTests {
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
         ctx.waitForEvents()
-        
+
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
         assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
