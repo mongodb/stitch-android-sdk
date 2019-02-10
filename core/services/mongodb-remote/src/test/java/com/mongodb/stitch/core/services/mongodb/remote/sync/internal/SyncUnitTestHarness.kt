@@ -256,7 +256,7 @@ class SyncUnitTestHarness : Closeable {
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
         override var nextStreamEvent: Event = Event.Builder().withEventName("MOCK").build()
-        private val streamMock = Stream(TestEventStream(this), ResultDecoders.changeEventDecoder)
+        private val streamMock = Stream(TestEventStream(this), ResultDecoders.changeEventDecoder(BsonDocumentCodec()))
         override val testDocument = newDoc("count", BsonInt32(1))
         override val testDocumentId: BsonObjectId by lazy { testDocument["_id"] as BsonObjectId }
         override val testDocumentFilter by lazy { BsonDocument("_id", testDocumentId) }
@@ -365,7 +365,7 @@ class SyncUnitTestHarness : Closeable {
                 Mockito.`when`(service.streamFunction(
                     ArgumentMatchers.anyString(),
                     ArgumentMatchers.anyList<Any>(),
-                    ArgumentMatchers.eq(ResultDecoders.changeEventDecoder))
+                    ArgumentMatchers.eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
                 ).thenReturn(streamMock)
 
                 val databaseSpy = Mockito.mock(CoreRemoteMongoDatabaseImpl::class.java)
@@ -407,6 +407,15 @@ class SyncUnitTestHarness : Closeable {
             }
             waitLock.unlock()
             assertTrue(changeEventListener.emitEventSemaphore?.tryAcquire(10, TimeUnit.SECONDS) ?: true)
+        }
+
+        override fun waitForDataSynchronizerStreams() {
+            waitLock.lock()
+            while (!dataSynchronizer.areAllStreamsOpen()) {
+                Thread.sleep(500)
+            }
+            waitLock.unlock()
+            assertTrue(dataSynchronizer.areAllStreamsOpen())
         }
 
         override fun waitForError() {
@@ -613,7 +622,7 @@ class SyncUnitTestHarness : Closeable {
 
         override fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document) {
             Mockito.verify(service, times(times)).streamFunction(
-                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ResultDecoders.changeEventDecoder))
+                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
         }
 
         override fun verifyStartCalled(times: Int) {

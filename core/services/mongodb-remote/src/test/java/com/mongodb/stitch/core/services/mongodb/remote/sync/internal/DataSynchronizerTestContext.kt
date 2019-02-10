@@ -72,6 +72,11 @@ interface DataSynchronizerTestContext : Closeable {
     fun reconfigure()
 
     /**
+     * Wait for the data synchronizer to open streams.
+     */
+    fun waitForDataSynchronizerStreams()
+
+    /**
      * Wait for an error to be emitted.
      */
     fun waitForError()

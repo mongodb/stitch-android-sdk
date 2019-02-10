@@ -1852,6 +1852,8 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
 
+        ctx.waitForDataSynchronizerStreams();
+
         ctx.doSyncPass()
 
         val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
@@ -1877,6 +1879,8 @@ class DataSynchronizerUnitTests {
         ctx.dataSynchronizer.stop()
 
         ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.waitForDataSynchronizerStreams()
 
         ctx.doSyncPass()
 
