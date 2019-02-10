@@ -35,6 +35,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreSyncImp
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncOperations;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import org.bson.BsonDocument;
@@ -403,7 +405,8 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   @Override
   @SuppressWarnings("unchecked")
   public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids) {
-    return operations.watch(ids).execute(service);
+    return operations.watch(new HashSet<BsonValue>(Arrays.asList(ids)), documentClass)
+        .execute(service);
   }
 
   @Override

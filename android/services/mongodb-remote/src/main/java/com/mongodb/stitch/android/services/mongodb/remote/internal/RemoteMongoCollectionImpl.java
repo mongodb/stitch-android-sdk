@@ -353,7 +353,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   public Task<Stream<ChangeEvent<DocumentT>>> watch(final ObjectId... ids) {
     return dispatcher.dispatchTask(new Callable<Stream<ChangeEvent<DocumentT>>>() {
       @Override
-      public Stream<ChangeEvent<DocumentT>> call () {
+      public Stream<ChangeEvent<DocumentT>> call() throws Exception {
         return proxy.watch(ids);
       }
     });

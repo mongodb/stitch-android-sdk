@@ -16,30 +16,34 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
-import java.util.Collections;
-
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
-import org.bson.BsonDocument;
+import java.util.Collections;
+import java.util.Set;
+
 import org.bson.BsonValue;
 import org.bson.Document;
+import org.bson.codecs.Codec;
 
 public class WatchOperation<DocumentT> {
   private final MongoNamespace namespace;
-  private final BsonValue[] ids;
+  private final Set<BsonValue> ids;
+  private final Codec<DocumentT> fullDocumentCodec;
 
   WatchOperation(
       final MongoNamespace namespace,
-      final BsonValue[] ids
+      final Set<BsonValue> ids,
+      final Codec<DocumentT> fullDocumentCodec
   ) {
     this.namespace = namespace;
     this.ids = ids;
+    this.fullDocumentCodec = fullDocumentCodec;
   }
 
-  public Stream<ChangeEvent<BsonDocument>> execute(final CoreStitchServiceClient service) {
+  public Stream<ChangeEvent<DocumentT>> execute(final CoreStitchServiceClient service) {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());
@@ -48,6 +52,6 @@ public class WatchOperation<DocumentT> {
     return service.streamFunction(
         "watch",
         Collections.singletonList(args),
-        ResultDecoders.changeEventDecoder);
+        ResultDecoders.changeEventDecoder(fullDocumentCodec));
   }
 }

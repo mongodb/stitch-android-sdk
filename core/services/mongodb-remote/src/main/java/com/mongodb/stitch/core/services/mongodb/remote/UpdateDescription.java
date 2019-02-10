@@ -40,6 +40,11 @@ public final class UpdateDescription {
   private final BsonDocument updatedFields;
   private final Collection<String> removedFields;
 
+  /**
+   * Creates an update descirption with the specified updated fields and removed field names.
+   * @param updatedFields Nested key-value pair representation of updated fields.
+   * @param removedFields Collection of removed field names.
+   */
   public UpdateDescription(
       final BsonDocument updatedFields,
       final Collection<String> removedFields
@@ -192,5 +197,21 @@ public final class UpdateDescription {
         new BsonDocument(),
         new ArrayList<>()
     );
+  }
+
+  @Override
+  public boolean equals(final Object obj) {
+    if (!obj.getClass().equals(UpdateDescription.class)) {
+      return false;
+    }
+    final UpdateDescription other = (UpdateDescription) obj;
+
+    return other.getRemovedFields().equals(this.removedFields)
+        && other.getUpdatedFields().equals(this.updatedFields);
+  }
+
+  @Override
+  public int hashCode() {
+    return removedFields.hashCode() + 31 * updatedFields.hashCode();
   }
 }

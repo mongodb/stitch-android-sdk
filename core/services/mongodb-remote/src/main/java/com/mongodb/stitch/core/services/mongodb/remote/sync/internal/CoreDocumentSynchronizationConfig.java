@@ -49,6 +49,8 @@ import org.bson.io.OutputBuffer;
 
 
 class CoreDocumentSynchronizationConfig {
+  private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
+
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
   private final BsonValue documentId;
@@ -464,8 +466,8 @@ class CoreDocumentSynchronizationConfig {
       final BsonBinary eventBin =
           document.getBinary(ConfigCodec.Fields.LAST_UNCOMMITTED_CHANGE_EVENT);
       final BsonReader innerReader = new BsonBinaryReader(ByteBuffer.wrap(eventBin.getData()));
-      lastUncommittedChangeEvent = ResultDecoders.changeEventDecoder.decode(innerReader,
-          DecoderContext.builder().build());
+      lastUncommittedChangeEvent = ResultDecoders.changeEventDecoder(BSON_DOCUMENT_CODEC)
+          .decode(innerReader, DecoderContext.builder().build());
     } else {
       lastUncommittedChangeEvent = null;
     }

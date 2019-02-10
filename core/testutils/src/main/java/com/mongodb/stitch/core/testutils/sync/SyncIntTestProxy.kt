@@ -7,12 +7,13 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.rule
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonElement
@@ -1205,7 +1206,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             // ensure that there is no version information in the event document.
             assertNoVersionFieldsInDoc(event.fullDocument)
 
-            if (event.operationType == ChangeEvent.OperationType.UPDATE &&
+            if (event.operationType == OperationType.UPDATE &&
                 !event.hasUncommittedWrites()) {
                 assertEquals(
                     updateDoc["\$set"],
@@ -1808,12 +1809,12 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         BsonDocument("_id", documentId)
 
     private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: ChangeEvent<Document> ->
-        val localEventDescription = when (event1.operationType == ChangeEvent.OperationType.DELETE) {
+        val localEventDescription = when (event1.operationType == OperationType.DELETE) {
             true -> "delete"
             false -> event1.fullDocument.toJson()
         }
 
-        val remoteEventDescription = when (event2.operationType == ChangeEvent.OperationType.DELETE) {
+        val remoteEventDescription = when (event2.operationType == OperationType.DELETE) {
             true -> "delete"
             false -> event2.fullDocument.toJson()
         }

@@ -83,6 +83,7 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
     for (final BsonValue id: ids) {
       this.syncOne(id);
     }
+
   }
 
   @Override

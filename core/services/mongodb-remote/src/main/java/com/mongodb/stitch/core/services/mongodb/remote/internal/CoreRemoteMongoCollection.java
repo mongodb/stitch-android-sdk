@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import com.mongodb.MongoNamespace;

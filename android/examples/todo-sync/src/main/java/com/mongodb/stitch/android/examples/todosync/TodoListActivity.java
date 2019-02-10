@@ -39,6 +39,7 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
 import com.mongodb.stitch.core.auth.providers.serverapikey.ServerApiKeyCredential;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
@@ -236,7 +237,7 @@ public class TodoListActivity extends AppCompatActivity {
   private class ItemUpdateListener implements ChangeEventListener<TodoItem> {
     @Override
     public void onEvent(final BsonValue documentId, final ChangeEvent<TodoItem> event) {
-      if (event.getOperationType() == ChangeEvent.OperationType.DELETE) {
+      if (event.getOperationType() == OperationType.DELETE) {
         todoAdapter.removeItemById(event.getDocumentKey().getObjectId("_id").getValue());
         return;
       }

@@ -17,6 +17,8 @@
 package com.mongodb.stitch.server.services.mongodb.remote;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.stitch.core.internal.net.Stream;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -24,8 +26,11 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import java.util.List;
+
+import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 /**
  * The RemoteMongoCollection interface.
@@ -239,4 +244,19 @@ public interface RemoteMongoCollection<DocumentT> {
       final Bson filter,
       final Bson update,
       final RemoteUpdateOptions updateOptions);
+
+  /**
+   * Watches specified IDs in a collection.  This convenience overload supports the use case
+   * of non-{@link BsonValue} instances of {@link ObjectId}.
+   * @param ids unique object identifiers of the IDs to watch.
+   * @return the stream of change events.
+   */
+  Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids);
+
+  /**
+   * Watches specified IDs in a collection.
+   * @param ids the ids to watch.
+   * @return the stream of change events.
+   */
+  Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids);
 }

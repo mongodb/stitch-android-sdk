@@ -16,7 +16,8 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
-import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
@@ -24,16 +25,16 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonReader;
 import org.bson.BsonValue;
 import org.bson.codecs.BsonDocumentCodec;
+import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
+
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 public class ResultDecoders {
 
@@ -123,17 +124,42 @@ public class ResultDecoders {
     }
   }
 
-  public static final Decoder<ChangeEvent<BsonDocument>> changeEventDecoder =
-      new ChangeEventDecoder();
+  @SuppressWarnings("unused")
+  public static <DocumentT> Decoder<ChangeEvent<DocumentT>>
+      changeEventDecoder(final Codec<DocumentT> codec) {
+    return new ChangeEventDecoder<>(codec);
+  }
 
-  private static final class ChangeEventDecoder implements Decoder<ChangeEvent<BsonDocument>> {
+  private static final class ChangeEventDecoder<DocumentT> implements
+      Decoder<ChangeEvent<DocumentT>> {
+    private final Codec<DocumentT> codec;
+
+    ChangeEventDecoder(final Codec<DocumentT> codec) {
+      this.codec = codec;
+    }
+
     @Override
-    public ChangeEvent<BsonDocument> decode(
+    @SuppressWarnings("unchecked")
+    public ChangeEvent<DocumentT> decode(
         final BsonReader reader,
         final DecoderContext decoderContext
     ) {
       final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
-      return ChangeEvent.fromBsonDocument(document);
+      final ChangeEvent<BsonDocument> rawChangeEvent = ChangeEvent.fromBsonDocument(document);
+
+      if (codec.getClass().equals(BsonDocumentCodec.class)) {
+        return (ChangeEvent<DocumentT>)rawChangeEvent;
+      }
+      return new ChangeEvent<>(
+          rawChangeEvent.getId(),
+          rawChangeEvent.getOperationType(),
+          rawChangeEvent.getFullDocument() == null ? null : codec.decode(
+              rawChangeEvent.getFullDocument().asBsonReader(),
+              DecoderContext.builder().build()),
+          rawChangeEvent.getNamespace(),
+          rawChangeEvent.getDocumentKey(),
+          rawChangeEvent.getUpdateDescription(),
+          rawChangeEvent.hasUncommittedWrites());
     }
   }
 }

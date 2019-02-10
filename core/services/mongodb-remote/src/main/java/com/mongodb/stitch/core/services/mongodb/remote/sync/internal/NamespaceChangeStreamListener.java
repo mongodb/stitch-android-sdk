@@ -45,10 +45,14 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.Document;
+import org.bson.codecs.BsonDocumentCodec;
+import org.bson.codecs.Codec;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
 public class NamespaceChangeStreamListener {
+  private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
+
   private final MongoNamespace namespace;
   private final NamespaceSynchronizationConfig nsConfig;
   private final CoreStitchServiceClient service;
@@ -202,7 +206,7 @@ public class NamespaceChangeStreamListener {
         service.streamFunction(
             "watch",
             Collections.singletonList(args),
-            ResultDecoders.changeEventDecoder);
+            ResultDecoders.changeEventDecoder(BSON_DOCUMENT_CODEC));
 
     if (currentStream.isOpen()) {
       this.nsConfig.setStale(true);

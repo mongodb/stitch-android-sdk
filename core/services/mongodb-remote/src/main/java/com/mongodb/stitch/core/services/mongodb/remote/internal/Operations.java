@@ -16,12 +16,10 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
+import static com.mongodb.stitch.core.internal.common.BsonUtils.documentToBsonDocument;
+import static com.mongodb.stitch.core.internal.common.BsonUtils.getCodec;
+import static com.mongodb.stitch.core.internal.common.BsonUtils.toBsonDocument;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
@@ -29,18 +27,17 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
 import org.bson.BsonDocument;
-import org.bson.BsonObjectId;
 import org.bson.BsonValue;
 import org.bson.codecs.CollectibleCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-
-import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
-import static com.mongodb.stitch.core.internal.common.BsonUtils.documentToBsonDocument;
-import static com.mongodb.stitch.core.internal.common.BsonUtils.getCodec;
-import static com.mongodb.stitch.core.internal.common.BsonUtils.toBsonDocument;
 
 public class Operations<DocumentT> {
   private final MongoNamespace namespace;
@@ -173,8 +170,10 @@ public class Operations<DocumentT> {
         .upsert(updateOptions.isUpsert());
   }
 
-  WatchOperation watch(final BsonValue... ids) {
-    return new WatchOperation(namespace, ids);
+  <ResultT> WatchOperation<ResultT> watch(
+                       final Set<BsonValue> ids,
+                       final Class<ResultT> resultClass) {
+    return new WatchOperation<>(namespace, ids, codecRegistry.get(resultClass));
   }
 
   private List<BsonDocument> toBsonDocumentList(final List<? extends Bson> bsonList) {
