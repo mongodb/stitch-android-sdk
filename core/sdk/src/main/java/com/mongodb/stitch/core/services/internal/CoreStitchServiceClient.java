@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
-public interface CoreStitchServiceClient {
+public interface CoreStitchServiceClient extends StitchServiceBinder {
 
   @Nullable
   String getName();
@@ -79,4 +79,11 @@ public interface CoreStitchServiceClient {
   CodecRegistry getCodecRegistry();
 
   CoreStitchServiceClient withCodecRegistry(final CodecRegistry codecRegistry);
+
+  /**
+   * Bind a given service to this service client.
+   *
+   * @param binder the service binder that links the service to this client
+   */
+  void bind(final StitchServiceBinder binder);
 }

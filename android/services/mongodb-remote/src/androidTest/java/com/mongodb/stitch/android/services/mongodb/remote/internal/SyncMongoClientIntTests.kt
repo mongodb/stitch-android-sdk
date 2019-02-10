@@ -31,6 +31,9 @@ import com.mongodb.stitch.core.testutils.sync.ProxyRemoteMethods
 import com.mongodb.stitch.core.testutils.sync.ProxySyncMethods
 import com.mongodb.stitch.core.testutils.sync.SyncIntTestProxy
 import com.mongodb.stitch.core.testutils.sync.SyncIntTestRunner
+import com.mongodb.stitch.android.core.StitchAppClient
+import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
+import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
@@ -129,6 +132,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         }
     }
 
+    lateinit var client: StitchAppClient
+
     private var dbName = ObjectId().toHexString()
     private var collName = ObjectId().toHexString()
     override var namespace = MongoNamespace(dbName, collName)
@@ -138,12 +143,15 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         get() = BaseStitchAndroidIntTest.testNetworkMonitor
 
     private val mongodbUriProp = "test.stitch.mongodbURI"
-    private lateinit var remoteMongoClient: RemoteMongoClient
     private lateinit var mongoClient: RemoteMongoClient
 
     private val testProxy = SyncIntTestProxy(this)
     override lateinit var mdbService: Apps.App.Services.Service
     override lateinit var mdbRule: RuleResponse
+
+    override lateinit var userId1: String
+    override lateinit var userId2: String
+    override lateinit var userId3: String
 
     @Before
     override fun setup() {
@@ -179,13 +187,19 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             schema = RuleCreator.MongoDb.Schema())
         mdbRule = addRule(mdbService, rule)
         addRule(svc2.second, rule)
-
-        val client = getAppClient(app.first)
-        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+        addProvider(app.second, config = ProviderConfigs.Userpass(
+            emailConfirmationUrl = "http://emailConfirmURL.com",
+            resetPasswordUrl = "http://resetPasswordURL.com",
+            confirmEmailSubject = "email subject",
+            resetPasswordSubject = "password subject")
+        )
+        this.client = getAppClient(app.first)
+        userId3 = Tasks.await(client.auth.loginWithCredential(AnonymousCredential())).id
+        userId2 = registerAndLoginWithUserPass(app.second, client, "test1@10gen.com", "password")
+        userId1 = registerAndLoginWithUserPass(app.second, client, "test2@10gen.com", "password")
         mongoClient = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.stop()
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.disableSyncThread()
-        remoteMongoClient = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
         BaseStitchAndroidIntTest.testNetworkMonitor.connectedState = true
     }
 
@@ -193,12 +207,13 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     override fun teardown() {
         if (::mongoClient.isInitialized) {
             (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+            AndroidEmbeddedMongoClientFactory.getInstance().close()
         }
         super.teardown()
     }
 
     override fun remoteMethods(): ProxyRemoteMethods {
-        val db = remoteMongoClient.getDatabase(dbName)
+        val db = mongoClient.getDatabase(dbName)
         Assert.assertEquals(dbName, db.name)
         val coll = db.getCollection(collName)
         Assert.assertEquals(MongoNamespace(dbName, collName), coll.namespace)
@@ -211,6 +226,18 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         val coll = db.getCollection(collName)
         Assert.assertEquals(MongoNamespace(dbName, collName), coll.namespace)
         return SyncMethods(coll.sync())
+    }
+
+    override fun listUsers(): List<CoreStitchUser> {
+        return client.auth.listUsers()
+    }
+
+    override fun switchUser(userId: String) {
+        client.auth.switchToUserWithId(userId)
+    }
+
+    override fun currentUserId(): String? {
+        return client.auth.user?.id
     }
 
     @Test
@@ -367,6 +394,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         testProxy.testConflictForEmptyVersionDocuments()
     }
 
+    @Test
+    override fun testMultiUserSupport() {
+        testProxy.testMultiUserSupport()
+    }
     /**
      * Get the uri for where mongodb is running locally.
      */

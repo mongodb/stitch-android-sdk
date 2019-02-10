@@ -1843,6 +1843,20 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
+    fun testReinitialize() {
+        val ctx = harness.freshTestContext(false)
+
+        ctx.dataSynchronizer.reinitialize(ctx.localClient)
+
+        ctx.verifyStopCalled(1)
+
+        ctx.verifyStartCalled(1)
+
+        // without a configuration it should not be
+        // configured or running
+        assertFalse(ctx.dataSynchronizer.isRunning)
+    }
+
     fun testMissingDocument() {
         val ctx = harness.freshTestContext()
 
@@ -1891,7 +1905,6 @@ class DataSynchronizerUnitTests {
         `when`(ctx.collectionMock.find(any()))
                 .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
 
-
         ctx.queueConsumableRemoteInsertEvent()
         ctx.doSyncPass()
         ctx.waitForEvents()
@@ -1921,7 +1934,6 @@ class DataSynchronizerUnitTests {
                 .thenReturn(HashSet<Any>())
         `when`(ctx.collectionMock.find(any()))
                 .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
-
 
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()

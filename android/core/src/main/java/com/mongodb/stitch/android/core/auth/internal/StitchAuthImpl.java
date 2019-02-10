@@ -46,7 +46,15 @@ import org.bson.Document;
 public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements StitchAuth {
   private final TaskDispatcher dispatcher;
   private final StitchAppClientInfo appInfo;
+  /**
+   * A set of auth listeners that should be dispatched to asynchronously
+   */
   private final Set<StitchAuthListener> listeners = new HashSet<>();
+  /**
+   * A set of auth listeners that should be dispatched to synchronously.
+   * For internal use.
+   */
+  private final Set<StitchAuthListener> synchronousListeners = new HashSet<>();
 
   /**
    * Constructs a {@link StitchAuthImpl}.
@@ -124,7 +132,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<Void>() {
           @Override
           public Void call() {
-            logoutInternal(userId);
+            logoutUserWithIdInternal(userId);
             return null;
           }
         });
@@ -148,7 +156,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<Void>() {
           @Override
           public Void call() {
-            removeUserInternal(userId);
+            removeUserWithIdInternal(userId);
             return null;
           }
         });
@@ -189,6 +197,16 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     onAuthEvent(listener);
   }
 
+  public void addSynchronousAuthListener(final StitchAuthListener listener) {
+    synchronized (this) {
+      synchronousListeners.add(listener);
+    }
+
+    // Trigger the onUserLoggedIn event in case some event happens and
+    // this caller would miss out on this event other wise.
+    onAuthEvent(listener);
+  }
+
   /**
    * Removes a listener.
    *
@@ -214,6 +232,9 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   protected void onAuthEvent() {
     for (final StitchAuthListener listener : listeners) {
       onAuthEvent(listener);
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onAuthEvent(this);
     }
   }
 }

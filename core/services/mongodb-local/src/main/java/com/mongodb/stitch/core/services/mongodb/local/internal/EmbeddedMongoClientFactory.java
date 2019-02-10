@@ -48,6 +48,12 @@ public abstract class EmbeddedMongoClientFactory {
     if (instances.containsKey(key)) {
       return instances.get(key);
     }
+
+    for (final MongoClient value : instances.values()) {
+      value.close();
+    }
+    instances.clear();
+
     final MongoClient client = createClient(dbPath, codecRegistry);
 
     instances.put(key, client);

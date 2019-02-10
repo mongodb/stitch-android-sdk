@@ -115,8 +115,14 @@ class SyncUnitTestHarness : Closeable {
          */
         open class TestAuthMonitor : AuthMonitor {
             var isAuthed = true
+            var userId = "bound"
+
             override fun isLoggedIn(): Boolean {
                 return isAuthed
+            }
+
+            override fun getActiveUserId(): String? {
+                return userId
             }
         }
 

@@ -24,6 +24,7 @@ import com.mongodb.stitch.core.StitchServiceErrorCode;
 import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.core.auth.internal.models.ApiCoreUserProfile;
+import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousAuthProvider;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.IoUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
@@ -40,7 +41,8 @@ import com.mongodb.stitch.core.internal.net.Stream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
@@ -69,7 +71,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   private final StitchAuthRoutes authRoutes;
   private final Storage storage;
   private Thread refresherThread;
-  private LinkedList<AuthInfo> loggedInUsersAuthInfoList;
+  private LinkedHashMap<String, AuthInfo> allUsersAuthInfo;
   private StitchUserT activeUser;
   private AuthInfo activeUserAuthInfo;
   private Lock authLock;
@@ -84,16 +86,18 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     this.storage = storage;
     this.authLock = new ReentrantLock();
 
-    final List<AuthInfo> loggedInUsersAuthInfo;
+    final List<AuthInfo> allUsersAuthInfoList;
     try {
-      loggedInUsersAuthInfo = AuthInfo.readCurrentUsersFromStorage(storage);
+      allUsersAuthInfoList = AuthInfo.readCurrentUsersFromStorage(storage);
     } catch (final IOException e) {
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_LOAD_PERSISTED_AUTH_INFO);
     }
 
-    this.loggedInUsersAuthInfoList = new LinkedList<>();
-    if (loggedInUsersAuthInfo != null) {
-      this.loggedInUsersAuthInfoList.addAll(loggedInUsersAuthInfo);
+    this.allUsersAuthInfo = new LinkedHashMap<>();
+    if (allUsersAuthInfoList != null) {
+      for (final AuthInfo authInfo : allUsersAuthInfoList) {
+        this.allUsersAuthInfo.put(authInfo.getUserId(), authInfo);
+      }
     }
 
     try {
@@ -106,7 +110,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       this.activeUserAuthInfo = AuthInfo.empty();
     }
 
-    if (this.activeUserAuthInfo.getUserId() != null) {
+    if (this.activeUserAuthInfo.hasUser()) {
       this.activeUser = getUserFactory().makeUser(
           this.activeUserAuthInfo.getUserId(),
           this.activeUserAuthInfo.getDeviceId(),
@@ -160,9 +164,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return activeUser;
   }
 
-  public synchronized LinkedList<StitchUserT> listUsers() {
-    final LinkedList<StitchUserT> userSet = new LinkedList<>();
-    for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
+  public synchronized List<StitchUserT> listUsers() {
+    final ArrayList<StitchUserT> userSet = new ArrayList<>();
+    for (final AuthInfo authInfo : this.allUsersAuthInfo.values()) {
       userSet.add(getUserFactory().makeUser(
           authInfo.getUserId(),
           authInfo.getDeviceId(),
@@ -182,11 +186,19 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * @return the response to the request, successful or not.
    */
   public synchronized Response doAuthenticatedRequest(final StitchAuthRequest stitchReq) {
+    return doAuthenticatedRequest(stitchReq, activeUserAuthInfo);
+  }
+
+  /**
+   * Internal method which performs the authenticated request by preparing the auth request with
+   * the provided auth info and request.
+   */
+  private synchronized Response doAuthenticatedRequest(
+      final StitchAuthRequest stitchReq,
+      final AuthInfo authInfo
+  ) {
     try {
-      if (!stitchReq.getHeaders().containsKey(Headers.AUTHORIZATION)) {
-        return requestClient.doRequest(prepareAuthRequest(stitchReq, activeUserAuthInfo));
-      }
-      return requestClient.doRequest(stitchReq);
+      return requestClient.doRequest(prepareAuthRequest(stitchReq, authInfo));
     } catch (final StitchServiceException ex) {
       return handleAuthFailure(ex, stitchReq);
     }
@@ -258,28 +270,37 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   public synchronized StitchUserT switchToUserWithId(final String userId)
-      throws IllegalArgumentException {
+      throws StitchClientException {
     authLock.lock();
     try {
-      for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
-        if (authInfo.getUserId().equals(userId)) {
-          this.activeUserAuthInfo = authInfo;
-          this.activeUser = getUserFactory().makeUser(
-              activeUserAuthInfo.getUserId(),
-              activeUserAuthInfo.getDeviceId(),
-              activeUserAuthInfo.getLoggedInProviderType(),
-              activeUserAuthInfo.getLoggedInProviderName(),
-              activeUserAuthInfo.getUserProfile(),
-              activeUserAuthInfo.isLoggedIn());
-          onAuthEvent();
-          return this.activeUser;
-        }
+      final AuthInfo authInfo = findAuthInfoById(userId);
+      if (!authInfo.isLoggedIn()) {
+        throw new StitchClientException(StitchClientErrorCode.USER_NOT_LOGGED_IN);
       }
+
+      // persist auth info storage before actually setting auth state so that
+      // if the persist call throws, we are not in an inconsistent state
+      // with storage
+      try {
+        AuthInfo.writeActiveUserAuthInfoToStorage(authInfo, this.storage);
+      } catch (IOException e) {
+        throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
+      }
+
+      this.activeUserAuthInfo = authInfo;
+      this.activeUser = getUserFactory().makeUser(
+          activeUserAuthInfo.getUserId(),
+          activeUserAuthInfo.getDeviceId(),
+          activeUserAuthInfo.getLoggedInProviderType(),
+          activeUserAuthInfo.getLoggedInProviderName(),
+          activeUserAuthInfo.getUserProfile(),
+          activeUserAuthInfo.isLoggedIn());
+      onAuthEvent();
+
+      return this.activeUser;
     } finally {
       authLock.unlock();
     }
-
-    throw new IllegalArgumentException(String.format("User with id %s not found", userId));
   }
 
   protected StitchUserT loginWithCredentialInternal(final StitchCredential credential) {
@@ -289,13 +310,13 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         return doLogin(credential, false);
       }
 
-      for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
-        if (credential.getProviderCapabilities().getReusesExistingSession()
-            && credential.getProviderType().equals(authInfo.getLoggedInProviderType())) {
-          return switchToUserWithId(authInfo.getUserId());
+      if (credential.getProviderCapabilities().getReusesExistingSession()) {
+        for (final AuthInfo authInfo : this.allUsersAuthInfo.values()) {
+          if (authInfo.getLoggedInProviderType().equals(credential.getProviderType())) {
+            return switchToUserWithId(authInfo.getUserId());
+          }
         }
       }
-
 
       return doLogin(credential, false);
     } finally {
@@ -322,10 +343,12 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       return;
     }
 
-    logoutInternal(activeUser.getId());
+    logoutUserWithIdInternal(activeUser.getId());
   }
 
-  protected synchronized void logoutInternal(final String userId) throws IllegalArgumentException {
+  protected synchronized void logoutUserWithIdInternal(
+      final String userId
+  ) throws StitchClientException {
     authLock.lock();
     try {
       final AuthInfo authInfo = findAuthInfoById(userId);
@@ -338,9 +361,13 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       } catch (final StitchServiceException ex) {
         // Do nothing
       } finally {
-        clearUser(authInfo);
-        // add logged out user to front of queue
-        loggedInUsersAuthInfoList.addFirst(authInfo.loggedOut());
+        clearUserAuth(authInfo.getUserId());
+
+        // if the user was anonymous, delete the user, since you can't log back
+        // in to an anonymous user after they have logged out.
+        if (authInfo.getLoggedInProviderType().equals(AnonymousAuthProvider.TYPE)) {
+          this.removeUserWithIdInternal(userId);
+        }
       }
     } finally {
       authLock.unlock();
@@ -352,22 +379,28 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       return;
     }
 
-    removeUserInternal(activeUser.getId());
+    removeUserWithIdInternal(activeUser.getId());
   }
 
-  protected synchronized void removeUserInternal(final String userId) {
+  protected synchronized void removeUserWithIdInternal(final String userId) {
     authLock.lock();
     try {
       final AuthInfo authInfo = findAuthInfoById(userId);
-      if (!authInfo.isLoggedIn()) {
-        return;
-      }
       try {
-        doLogout(authInfo);
+        if (authInfo.isLoggedIn()) {
+          doLogout(authInfo);
+        }
       } catch (final StitchServiceException ex) {
         // Do nothing
-      } finally {
-        clearUser(authInfo);
+      }
+
+      clearUserAuth(authInfo.getUserId());
+      this.allUsersAuthInfo.remove(userId);
+
+      try {
+        AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), this.storage);
+      } catch (IOException e) {
+        throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
       }
     } finally {
       authLock.unlock();
@@ -417,7 +450,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     // using a refresh token implies we cannot refresh anything, so clear auth and
     // notify
     if (req.getUseRefreshToken() || !req.getShouldRefreshOnFailure()) {
-      clearActiveUser();
+      clearActiveUserAuth();
       throw ex;
     }
 
@@ -436,16 +469,13 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     // using a refresh token implies we cannot refresh anything, so clear auth and
     // notify
     if (req.getUseRefreshToken() || !req.getShouldRefreshOnFailure()) {
-      clearActiveUser();
+      clearActiveUserAuth();
       throw ex;
     }
 
     tryRefreshAccessToken(req.getStartedAt());
 
-    return doAuthenticatedRequest(
-        prepareAuthRequest(
-            req.builder().withShouldRefreshOnFailure(false).build(),
-            activeUserAuthInfo));
+    return doAuthenticatedRequest(req.builder().withShouldRefreshOnFailure(false).build());
   }
 
   // use this critical section to create a queue of pending outbound requests
@@ -483,8 +513,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
           .withPath(authRoutes.getSessionRoute())
           .withMethod(Method.POST);
 
-      final Response response = doAuthenticatedRequest(
-          prepareAuthRequest(reqBuilder.build(), activeUserAuthInfo));
+      final Response response = doAuthenticatedRequest(reqBuilder.build(), activeUserAuthInfo);
 
       try {
         final AuthInfo partialInfo = AuthInfo.readFromApi(response.getBody());
@@ -537,7 +566,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
     final StitchAuthDocRequest linkRequest =
         new StitchAuthDocRequest(reqBuilder.build(), reqBuilder.getDocument());
-    return doAuthenticatedRequest(prepareAuthRequest(linkRequest, activeUserAuthInfo));
+    return doAuthenticatedRequest(linkRequest);
   }
 
   private StitchUserT processLoginResponse(
@@ -578,18 +607,29 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
     final StitchUserProfileImpl profile;
     try {
-      profile = doGetUserProfile(activeUserAuthInfo);
+      profile = doGetUserProfile();
     } catch (final Exception ex) {
-      // If this was a link request or another user is logged in,
+      // If this was a link request or there was an active user logged in,
       // back out of setting authInfo and reset any created user. This
       // will keep the currently logged in user logged in if the profile
       // request failed, and in this particular edge case the user is
       // linked, but they are logged in with their older credentials.
-      if (asLinkRequest || !loggedInUsersAuthInfoList.isEmpty()) {
+      if (asLinkRequest || oldActiveUserInfo.hasUser()) {
+        final AuthInfo linkedAuthInfo = activeUserAuthInfo;
         activeUserAuthInfo = oldActiveUserInfo;
         activeUser = oldActiveUser;
+
+        // to prevent the case where this user gets removed when logged out
+        // in the future because the original provider type was anonymous,
+        // make sure the auth info reflects the new logged in provider type
+        if (asLinkRequest) {
+          this.activeUserAuthInfo = this.activeUserAuthInfo.withAuthProvider(
+              linkedAuthInfo.getLoggedInProviderType(),
+              linkedAuthInfo.getLoggedInProviderName()
+          );
+        }
       } else { // otherwise if this was a normal login request, log the user out
-        clearActiveUser();
+        clearActiveUserAuth();
       }
 
       throw ex;
@@ -610,22 +650,28 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     try {
       AuthInfo.writeActiveUserAuthInfoToStorage(newAuthInfo, storage);
 
-      // if this is a link request, remove the old active info
-      // and replace it with the updated version
-      if (asLinkRequest || loggedInUsersAuthInfoList.contains(newAuthInfo)) {
-        loggedInUsersAuthInfoList.remove(oldActiveUserInfo);
-      }
+      // this replaces any old info that may have
+      // existed for this user if this was a link request, or if this
+      // user already existed in the list of all users
+      this.allUsersAuthInfo.put(newAuthInfo.getUserId(), newAuthInfo);
 
-      loggedInUsersAuthInfoList.add(newAuthInfo);
-      AuthInfo.writeLoggedInUsersAuthInfoToStorage(loggedInUsersAuthInfoList, storage);
+      AuthInfo.writeCurrentUsersToStorage(allUsersAuthInfo.values(), storage);
     } catch (final IOException e) {
-      // Back out of setting authInfo
+      // Back out of setting authInfo with this new user
       activeUserAuthInfo = oldActiveUserInfo;
       activeUser = null;
-      loggedInUsersAuthInfoList.remove(newAuthInfo);
+
+      // delete the new partial auth info from the list of all users if
+      // if the new auth info is not the same user as the older user
+      if (!newAuthInfo.getUserId().equals(oldActiveUserInfo.getUserId())
+           && newAuthInfo.getUserId() != null) {
+        this.allUsersAuthInfo.remove(newAuthInfo.getUserId());
+      }
+
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
     }
 
+    // set the active user info to the new auth info and new user with profile
     activeUserAuthInfo = newAuthInfo;
     activeUser =
         getUserFactory()
@@ -640,12 +686,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return activeUser;
   }
 
-  private StitchUserProfileImpl doGetUserProfile(final AuthInfo authInfo) {
+  private StitchUserProfileImpl doGetUserProfile() {
     final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
     reqBuilder.withMethod(Method.GET).withPath(authRoutes.getProfileRoute());
 
-    final Response response = doAuthenticatedRequest(
-        prepareAuthRequest(reqBuilder.build(), authInfo));
+    final Response response = doAuthenticatedRequest(reqBuilder.build());
 
     try {
       return StitchObjectMapper.getInstance()
@@ -658,34 +703,41 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   private void doLogout(final AuthInfo authInfo) {
     final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
     reqBuilder.withRefreshToken().withPath(authRoutes.getSessionRoute()).withMethod(Method.DELETE);
-    this.doAuthenticatedRequest(prepareAuthRequest(reqBuilder.build(), authInfo));
+    this.doAuthenticatedRequest(reqBuilder.build(), authInfo);
   }
 
-  private synchronized void clearActiveUser() {
+  private synchronized void clearActiveUserAuth() {
     if (!isLoggedIn()) {
       return;
     }
 
-    loggedInUsersAuthInfoList.remove(activeUserAuthInfo);
-
-    activeUserAuthInfo = activeUserAuthInfo.loggedOut();
-    activeUser = null;
-
-    try {
-      AuthInfo.writeActiveUserAuthInfoToStorage(activeUserAuthInfo, storage);
-    } catch (final IOException e) {
-      throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
-    }
-    onAuthEvent();
+    this.clearUserAuth(activeUserAuthInfo.getUserId());
   }
 
-  private synchronized void clearUser(final AuthInfo authInfo) {
+  private synchronized void clearUserAuth(final String userId) {
+    final AuthInfo unclearedAuthInfo = this.allUsersAuthInfo.get(userId);
+    if (unclearedAuthInfo == null && !this.activeUserAuthInfo.getUserId().equals(userId)) {
+      // this doesn't necessarily mean there's an error. we could be in a
+      // provisional state where the profile request failed and we're just
+      // trying to log out the active user.
+      // only throw if this ID is not the active user either
+      throw new StitchClientException(StitchClientErrorCode.USER_NOT_FOUND);
+    }
+
     try {
-      if (loggedInUsersAuthInfoList.remove(authInfo)) {
-        AuthInfo.writeLoggedInUsersAuthInfoToStorage(loggedInUsersAuthInfoList, storage);
+      if (unclearedAuthInfo != null) {
+        this.allUsersAuthInfo.put(userId, unclearedAuthInfo.loggedOut());
+        AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), storage);
       }
-      if (activeUserAuthInfo.equals(authInfo)) {
-        clearActiveUser();
+
+      // if the auth info we're clearing is also the active user's auth info,
+      // clear the active user's auth as well
+      if (activeUserAuthInfo.hasUser() && activeUserAuthInfo.getUserId().equals(userId)) {
+        this.activeUserAuthInfo = this.activeUserAuthInfo.withClearedUser();
+        this.activeUser = null;
+
+        AuthInfo.writeActiveUserAuthInfoToStorage(this.activeUserAuthInfo, this.storage);
+        this.onAuthEvent();
       }
     } catch (final IOException e) {
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
@@ -710,14 +762,13 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return authRoutes;
   }
 
-  private AuthInfo findAuthInfoById(final String userId) throws IllegalArgumentException {
-    for (final AuthInfo authInfo : loggedInUsersAuthInfoList) {
-      if (authInfo.getUserId().equals(userId)) {
-        return authInfo;
-      }
+  private AuthInfo findAuthInfoById(final String userId) throws StitchClientException {
+    final AuthInfo authInfo = this.allUsersAuthInfo.get(userId);
+    if (authInfo == null) {
+      throw new StitchClientException(StitchClientErrorCode.USER_NOT_FOUND);
     }
 
-    throw new IllegalArgumentException("user id not found");
+    return authInfo;
   }
 
   private static class AuthStreamFields {
