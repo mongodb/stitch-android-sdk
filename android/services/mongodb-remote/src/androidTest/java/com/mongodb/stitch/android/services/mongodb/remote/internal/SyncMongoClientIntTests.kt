@@ -317,6 +317,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     @Test
     override fun testDesync() {
+        // TODO: there is a race here
         testProxy.testDesync()
     }
 
@@ -327,6 +328,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     @Test
     override fun testConfigure() {
+        testProxy.testConfigure()
     }
 
     @Test

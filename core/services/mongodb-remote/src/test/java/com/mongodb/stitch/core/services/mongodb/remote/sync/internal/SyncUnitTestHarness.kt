@@ -345,15 +345,20 @@ class SyncUnitTestHarness : Closeable {
                 }
             }
 
-            Mockito.spy(DataSynchronizer(
-                    instanceKey,
-                    service,
-                    localClient,
-                    remoteClient,
-                    networkMonitor,
-                    authMonitor,
-                    ThreadDispatcher()
-            ))
+            var ds = DataSynchronizer(
+                instanceKey,
+                service,
+                localClient,
+                remoteClient,
+                networkMonitor,
+                authMonitor,
+                ThreadDispatcher()
+            )
+            ds.waitUntilInitialized()
+            ds = Mockito.spy(ds)
+
+            ds.waitUntilInitialized()
+            ds
         }
 
         private var eventSemaphore: Semaphore? = null

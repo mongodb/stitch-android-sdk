@@ -45,7 +45,7 @@ class DataSynchronizerUnitTests {
         ) {
             ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
             ctx.queueConsumableRemoteInsertEvent()
-            ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+            ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
             ctx.doSyncPass()
 
             // prepare a remote update and a local update.
@@ -184,6 +184,7 @@ class DataSynchronizerUnitTests {
         // reset
         ctx = harness.freshTestContext()
         ctx.mockInsertException(duplicateInsertException)
+        println("inserting test doc")
         ctx.insertTestDocument()
 
         // accept the local event this time, which will insert the local doc.
@@ -1188,7 +1189,7 @@ class DataSynchronizerUnitTests {
         // called (coalescence). verify desync was called
         assertEquals(1, deleteResult.deletedCount)
         assertTrue(deleteResult.wasAcknowledged())
-        verify(ctx.dataSynchronizer).desyncDocumentFromRemote(eq(ctx.namespace), eq(ctx.testDocumentId))
+        verify(ctx.dataSynchronizer).desyncDocumentsFromRemote(eq(ctx.namespace), eq(ctx.testDocumentId))
         // assert that the updated document equals what we've expected
         assertNull(ctx.findTestDocumentFromLocalCollection())
 
@@ -1844,6 +1845,7 @@ class DataSynchronizerUnitTests {
         val ctx = harness.freshTestContext(false)
 
         ctx.dataSynchronizer.reinitialize(ctx.localClient)
+        ctx.dataSynchronizer.waitUntilInitialized()
 
         ctx.verifyStopCalled(1)
 
@@ -1861,7 +1863,7 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.stop()
 
-        ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
         ctx.doSyncPass()
 
@@ -1887,7 +1889,7 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.stop()
 
-        ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
         ctx.doSyncPass()
 
@@ -1902,8 +1904,6 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
 
-        verify(ctx.collectionMock, times(1)).find(any())
-
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
         assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
@@ -1917,7 +1917,7 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.stop()
 
-        ctx.dataSynchronizer.syncDocumentFromRemote(ctx.namespace, ctx.testDocumentId)
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
         ctx.doSyncPass()
 
@@ -1931,8 +1931,6 @@ class DataSynchronizerUnitTests {
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
         ctx.waitForEvents()
-
-        verify(ctx.collectionMock, times(1)).find(any())
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
