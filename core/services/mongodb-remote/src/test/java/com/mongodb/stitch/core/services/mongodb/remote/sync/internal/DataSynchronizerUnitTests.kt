@@ -79,7 +79,6 @@ class DataSynchronizerUnitTests {
 
     @After
     fun teardown() {
-        println("teardown called!")
         harness.close()
         CoreRemoteClientFactory.close()
         ServerEmbeddedMongoClientFactory.getInstance().close()

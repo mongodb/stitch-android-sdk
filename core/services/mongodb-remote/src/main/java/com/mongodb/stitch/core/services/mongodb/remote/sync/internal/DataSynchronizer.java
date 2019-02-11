@@ -1720,7 +1720,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue... documentIds
   ) {
     this.waitUntilInitialized();
-
+    final Lock lock =
+        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
     try {
       ongoingOperationsGroup.enter();
       for (final BsonValue documentId : documentIds) {
@@ -1731,7 +1733,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           new Document("_id", new Document("$in", Arrays.asList(documentIds))));
     } finally {
       ongoingOperationsGroup.exit();
+      lock.unlock();
     }
+
+    triggerListeningToNamespace(namespace);
   }
 
   /**
@@ -2477,8 +2482,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             continue;
           }
 
-          config.setSomePendingWrites(
-              logicalT, event);
+          config.setSomePendingWrites(logicalT, event);
           undoCollection.deleteOne(getDocumentIdFilter(documentId));
           eventsToEmit.add(event);
         }
