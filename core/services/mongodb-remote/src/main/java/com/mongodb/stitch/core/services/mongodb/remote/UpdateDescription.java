@@ -201,7 +201,7 @@ public final class UpdateDescription {
 
   @Override
   public boolean equals(final Object obj) {
-    if (!obj.getClass().equals(UpdateDescription.class)) {
+    if (obj == null || !obj.getClass().equals(UpdateDescription.class)) {
       return false;
     }
     final UpdateDescription other = (UpdateDescription) obj;
