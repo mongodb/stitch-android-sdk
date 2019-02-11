@@ -14,22 +14,13 @@ public abstract class AuthEvent extends RebindEvent {
 
   public static class UserLoggedIn<StitchUserT extends CoreStitchUser> extends AuthEvent {
     private final StitchUserT loggedInUser;
-    @Nullable
-    private final StitchUserT previousActiveUser;
 
-    public UserLoggedIn(final StitchUserT loggedInUser,
-                        @Nullable final StitchUserT previousActiveUser) {
+    public UserLoggedIn(final StitchUserT loggedInUser) {
       this.loggedInUser = loggedInUser;
-      this.previousActiveUser = previousActiveUser;
     }
 
     public StitchUserT getLoggedInUser() {
       return loggedInUser;
-    }
-
-    @Nullable
-    public StitchUserT getPreviousActiveUser() {
-      return previousActiveUser;
     }
 
     @Override

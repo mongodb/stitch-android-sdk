@@ -46,7 +46,11 @@ interface SyncIntTestRunner {
 
     fun listUsers(): List<CoreStitchUser>
 
+    fun reloginUser2()
+
     fun switchUser(userId: String)
+
+    fun removeUser(userId: String)
 
     fun currentUserId(): String?
 

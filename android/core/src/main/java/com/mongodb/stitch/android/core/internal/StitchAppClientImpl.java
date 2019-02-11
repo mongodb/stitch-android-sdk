@@ -318,9 +318,8 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
 
   @Override
   public void onUserLoggedIn(final StitchAuth auth,
-                             final StitchUser loggedInUser,
-                             final @Nullable StitchUser previousActiveUser) {
-    onRebindEvent(new AuthEvent.UserLoggedIn<>(loggedInUser, previousActiveUser));
+                             final StitchUser loggedInUser) {
+    onRebindEvent(new AuthEvent.UserLoggedIn<>(loggedInUser));
   }
 
   @Override
