@@ -2,6 +2,9 @@ package com.mongodb.stitch.android.core
 
 import android.support.test.runner.AndroidJUnit4
 import com.google.android.gms.tasks.Tasks
+import com.mongodb.stitch.android.core.auth.StitchAuth
+import com.mongodb.stitch.android.core.auth.StitchAuthListener
+import com.mongodb.stitch.android.core.auth.StitchUser
 import com.mongodb.stitch.android.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.StitchRequestErrorCode
@@ -32,6 +35,8 @@ import java.util.Arrays
 import java.util.Date
 import java.util.Calendar
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
@@ -44,24 +49,24 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         val client = getAppClient(app.first)
         val jwt = Jwts.builder()
-                .setHeader(
-                        mapOf(
-                                "alg" to "HS256",
-                                "typ" to "JWT"
-                        ))
-                .claim("stitch_meta",
-                        mapOf(
-                                "email" to "name@example.com",
-                                "name" to "Joe Bloggs",
-                                "picture" to "https://goo.gl/xqR6Jd"
-                        ))
-                .setIssuedAt(Date())
-                .setNotBefore(Date())
-                .setAudience(app.first.clientAppId)
-                .setSubject("uniqueUserID")
-                .setExpiration(Date(((Calendar.getInstance().timeInMillis + (5 * 60 * 1000)))))
-                .signWith(SignatureAlgorithm.HS256, signingKey.toByteArray())
-                .compact()
+            .setHeader(
+                mapOf(
+                    "alg" to "HS256",
+                    "typ" to "JWT"
+                ))
+            .claim("stitch_meta",
+                mapOf(
+                    "email" to "name@example.com",
+                    "name" to "Joe Bloggs",
+                    "picture" to "https://goo.gl/xqR6Jd"
+                ))
+            .setIssuedAt(Date())
+            .setNotBefore(Date())
+            .setAudience(app.first.clientAppId)
+            .setSubject("uniqueUserID")
+            .setExpiration(Date(((Calendar.getInstance().timeInMillis + (5 * 60 * 1000)))))
+            .signWith(SignatureAlgorithm.HS256, signingKey.toByteArray())
+            .compact()
 
         val user = Tasks.await(client.auth.loginWithCredential(CustomCredential(jwt)))
         assertNotNull(user)
@@ -79,12 +84,72 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)
         addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
+            emailConfirmationUrl = "http://emailConfirmURL.com",
+            resetPasswordUrl = "http://resetPasswordURL.com",
+            confirmEmailSubject = "email subject",
+            resetPasswordSubject = "password subject")
         )
         var client = getAppClient(app.first)
+
+        val semaphore = Semaphore(0)
+        // set up a responsive auth listener
+        var authListener = object : StitchAuthListener {
+            var listenerInitialized: ((auth: StitchAuth?) -> Void)? = null
+            var activeUserChanged: ((auth: StitchAuth?,
+                                     currentActiveUser: StitchUser?,
+                                     previousActiveUser: StitchUser?) -> Void)? = null
+            var userCreated: ((auth: StitchAuth?,
+                               createdUser: StitchUser?) -> Void)? = null
+
+            var userLinked: ((auth: StitchAuth?,
+                              linkedUser: StitchUser?) -> Void)? = null
+
+            var userLoggedIn: ((auth: StitchAuth?,
+                                loggedInUser: StitchUser?) -> Void)? = null
+
+            var userLoggedOut: ((auth: StitchAuth?,
+                                 loggedOutUser: StitchUser?) -> Void)? = null
+
+            var userRemoved: ((auth: StitchAuth?,
+                               removedUser: StitchUser?) -> Void)? = null
+
+            override fun onAuthEvent(auth: StitchAuth?) {
+            }
+
+            override fun onListenerInitialized(auth: StitchAuth?) {
+                listenerInitialized?.invoke(auth)
+            }
+
+            override fun onActiveUserChanged(auth: StitchAuth?,
+                                             currentActiveUser: StitchUser?,
+                                             previousActiveUser: StitchUser?) {
+                activeUserChanged?.invoke(auth, currentActiveUser, previousActiveUser)
+            }
+
+            override fun onUserCreated(auth: StitchAuth?, createdUser: StitchUser?) {
+                userCreated?.invoke(auth, createdUser)
+            }
+
+            override fun onUserLinked(auth: StitchAuth?, linkedUser: StitchUser?) {
+                userLinked?.invoke(auth, linkedUser)
+            }
+
+            override fun onUserLoggedIn(auth: StitchAuth?, loggedInUser: StitchUser?) {
+                userLoggedIn?.invoke(auth, loggedInUser)
+            }
+
+            override fun onUserLoggedOut(auth: StitchAuth?, loggedOutUser: StitchUser?) {
+                userLoggedOut?.invoke(auth, loggedOutUser)
+            }
+
+            override fun onUserRemoved(auth: StitchAuth?, removedUser: StitchUser?) {
+                userRemoved?.invoke(auth, removedUser)
+            }
+        }
+
+        client.auth.addAuthListener(authListener)
+        semaphore.tryAcquire(0, 10, TimeUnit.SECONDS)
+        client.auth.removeAuthListener(authListener)
 
         // check storage
         assertFalse(client.auth.isLoggedIn)
@@ -92,9 +157,11 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         // login anonymously
         val anonUser =
-                Tasks.await(client.auth.loginWithCredential(
-                        AnonymousCredential()
-                ))
+            Tasks.await(client.auth.loginWithCredential(
+                AnonymousCredential()
+            ))
+        client.auth.addAuthListener(authListener)
+        semaphore.tryAcquire(0, 10, TimeUnit.SECONDS)
         assertNotNull(anonUser)
 
         // check storage
@@ -103,9 +170,9 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         // login anonymously again and make sure user ID is the same
         assertEquals(anonUser.id,
-                Tasks.await(client.auth.loginWithCredential(
-                        AnonymousCredential()
-                )).id)
+            Tasks.await(client.auth.loginWithCredential(
+                AnonymousCredential()
+            )).id)
 
         // check storage
         assertTrue(client.auth.isLoggedIn)
@@ -225,10 +292,10 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)
         addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
+            emailConfirmationUrl = "http://emailConfirmURL.com",
+            resetPasswordUrl = "http://resetPasswordURL.com",
+            confirmEmailSubject = "email subject",
+            resetPasswordSubject = "password subject")
         )
 
         val client = getAppClient(app.first)
@@ -242,7 +309,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         Tasks.await(userPassClient.confirmUser(conf.token, conf.tokenId))
 
         val anonUser = Tasks.await(client.auth.loginWithCredential(
-                AnonymousCredential()
+            AnonymousCredential()
         ))
         assertNotNull(anonUser)
         assertEquals(anonUser.loggedInProviderType, AnonymousAuthProvider.TYPE)
@@ -270,18 +337,18 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         val client = getAppClient(app.first)
 
         app.second.functions.create(FunctionCreator(
-                "testFunction",
-                "exports = function(intArg, stringArg) { " +
-                        "return { intValue: intArg, stringValue: stringArg} " +
-                        "}",
-                null,
-                false)
+            "testFunction",
+            "exports = function(intArg, stringArg) { " +
+                "return { intValue: intArg, stringValue: stringArg} " +
+                "}",
+            null,
+            false)
         )
 
         Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
 
         val resultDoc = Tasks.await(client.callFunction(
-                "testFunction", Arrays.asList(42, "hello"), Document::class.java
+            "testFunction", Arrays.asList(42, "hello"), Document::class.java
         ))
 
         assertTrue(resultDoc.containsKey("intValue"))
@@ -292,16 +359,16 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         // Ensure that a function call with 1ms timeout fails
         try {
             Tasks.await(client.callFunction(
-                    "testFunction",
-                    Arrays.asList(42, "hello"),
-                    1L,
-                    Document::class.java
+                "testFunction",
+                Arrays.asList(42, "hello"),
+                1L,
+                Document::class.java
             ))
         } catch (ex: ExecutionException) {
             assertTrue(ex.cause is StitchRequestException)
             assertEquals(
-                    (ex.cause as StitchRequestException).errorCode,
-                    StitchRequestErrorCode.TRANSPORT_ERROR
+                (ex.cause as StitchRequestException).errorCode,
+                StitchRequestErrorCode.TRANSPORT_ERROR
             )
         }
     }

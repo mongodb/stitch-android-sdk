@@ -113,14 +113,13 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserLoggedIn(StitchUser loggedInUser,
-                                @Nullable StitchUser previousActiveUser) {
+  protected void onUserLoggedIn(StitchUser loggedInUser) {
 
   }
 
   @Override
-  protected void onActiveUserSwitched(StitchUser currentActiveUser,
-                                      @Nullable StitchUser previousActiveUser) {
+  protected void onActiveUserChanged(StitchUser currentActiveUser,
+                                     @Nullable StitchUser previousActiveUser) {
 
   }
 

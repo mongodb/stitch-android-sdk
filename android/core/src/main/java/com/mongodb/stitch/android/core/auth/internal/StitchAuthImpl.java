@@ -261,20 +261,20 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onActiveUserSwitched(StitchUser currentActiveUser, @Nullable StitchUser previousActiveUser) {
+  protected void onActiveUserChanged(StitchUser currentActiveUser, @Nullable StitchUser previousActiveUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
             public Void call() {
-              listener.onActiveUserSwitched(
+              listener.onActiveUserChanged(
                   StitchAuthImpl.this, currentActiveUser, previousActiveUser);
               return null;
             }
           });
     }
     for (final StitchAuthListener listener : synchronousListeners) {
-      listener.onActiveUserSwitched(
+      listener.onActiveUserChanged(
           this, currentActiveUser, previousActiveUser);
     }
   }
@@ -298,20 +298,20 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserLoggedIn(StitchUser loggedInUser, @Nullable StitchUser previousActiveUser) {
+  protected void onUserLoggedIn(StitchUser loggedInUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
             public Void call() {
               listener.onUserLoggedIn(
-                  StitchAuthImpl.this, loggedInUser, previousActiveUser);
+                  StitchAuthImpl.this, loggedInUser);
               return null;
             }
           });
     }
     for (final StitchAuthListener listener : synchronousListeners) {
-      listener.onUserLoggedIn(this, loggedInUser, previousActiveUser);
+      listener.onUserLoggedIn(this, loggedInUser);
     }
   }
 
@@ -346,6 +346,23 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     }
     for (final StitchAuthListener listener : synchronousListeners) {
       listener.onUserLoggedOut(this, loggedOutUser);
+    }
+  }
+
+  @Override
+  protected void onUserLinked(StitchUser linkedUser) {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onUserLinked(StitchAuthImpl.this, linkedUser);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onUserLinked(this, linkedUser);
     }
   }
 }

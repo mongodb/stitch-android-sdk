@@ -44,8 +44,7 @@ public interface StitchAuthListener {
   }
 
   default void onUserLoggedIn(final StitchAuth auth,
-                              final StitchUser loggedInUser,
-                              @Nullable final StitchUser previousActiveUser) {
+                              final StitchUser loggedInUser) {
 
   }
 
@@ -63,9 +62,9 @@ public interface StitchAuthListener {
 
   }
 
-  default void onActiveUserSwitched(final StitchAuth auth,
-                                    final StitchUser currentActiveUser,
-                                    @Nullable final StitchUser previousActiveUser) {
+  default void onActiveUserChanged(final StitchAuth auth,
+                                   final StitchUser currentActiveUser,
+                                   @Nullable final StitchUser previousActiveUser) {
 
   }
 

@@ -45,8 +45,8 @@ class StitchAdminAuth(
     override fun onAuthEvent() { /* do nothing */
     }
 
-    override fun onActiveUserSwitched(currentActiveUser: StitchAdminUser?,
-                                      previousActiveUser: StitchAdminUser?) {
+    override fun onActiveUserChanged(currentActiveUser: StitchAdminUser?,
+                                     previousActiveUser: StitchAdminUser?) {
     }
 
     override fun onListenerInitialized() {
@@ -55,8 +55,7 @@ class StitchAdminAuth(
     override fun onUserCreated(createdUser: StitchAdminUser?) {
     }
 
-    override fun onUserLoggedIn(loggedInUser: StitchAdminUser?,
-                                previousActiveUser: StitchAdminUser?) {
+    override fun onUserLoggedIn(loggedInUser: StitchAdminUser?) {
     }
 
     override fun onUserLoggedOut(loggedOutUser: StitchAdminUser?) {

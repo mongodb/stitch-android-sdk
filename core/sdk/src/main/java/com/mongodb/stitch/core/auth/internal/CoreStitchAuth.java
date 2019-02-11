@@ -135,13 +135,12 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   protected abstract void onUserCreated(final StitchUserT createdUser);
 
-  protected abstract void onUserLoggedIn(final StitchUserT loggedInUser,
-                               @Nullable final StitchUserT previousActiveUser);
+  protected abstract void onUserLoggedIn(final StitchUserT loggedInUser);
 
   protected abstract void onUserLoggedOut(final StitchUserT loggedOutUser);
 
-  protected abstract void onActiveUserSwitched(final StitchUserT currentActiveUser,
-                                     @Nullable final StitchUserT previousActiveUser);
+  protected abstract void onActiveUserChanged(final StitchUserT currentActiveUser,
+                                              @Nullable final StitchUserT previousActiveUser);
 
   protected abstract void onUserRemoved(final StitchUserT removedUser);
 
@@ -313,7 +312,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
           activeUserAuthInfo.getUserProfile(),
           activeUserAuthInfo.isLoggedIn());
       onAuthEvent();
-      onActiveUserSwitched(this.activeUser, previousUser);
+      onActiveUserChanged(this.activeUser, previousUser);
       return this.activeUser;
     } finally {
       authLock.unlock();
@@ -389,7 +388,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       }
     } finally {
       authLock.unlock();
-      onUserLoggedOut(activeUser);
     }
   }
 
@@ -421,6 +419,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       } catch (IOException e) {
         throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
       }
+
+      onUserRemoved(
+          getUserFactory().makeUser(
+              authInfo.getUserId(),
+              authInfo.getDeviceId(),
+              authInfo.getLoggedInProviderType(),
+              authInfo.getLoggedInProviderName(),
+              authInfo.getUserProfile(),
+              authInfo.isLoggedIn()
+          )
+      );
     } finally {
       authLock.unlock();
     }
@@ -564,7 +573,12 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final StitchUserT previousUser = activeUser;
     final StitchUserT user = processLoginResponse(credential, response, asLinkRequest);
     onAuthEvent();
-    onUserLoggedIn(user, previousUser);
+    onUserLoggedIn(user);
+
+    if (previousUser != null) {
+      onActiveUserChanged(activeUser, previousUser);
+    }
+
     return user;
   }
 
@@ -750,7 +764,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       if (unclearedAuthInfo != null) {
         this.allUsersAuthInfo.put(userId, unclearedAuthInfo.loggedOut());
         AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), storage);
-        this.onUserRemoved(
+        this.onUserLoggedOut(
             getUserFactory().makeUser(
                 unclearedAuthInfo.getUserId(),
                 unclearedAuthInfo.getDeviceId(),
