@@ -145,6 +145,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   protected abstract void onUserRemoved(final StitchUserT removedUser);
 
+  protected abstract void onUserLinked(final StitchUserT linkedUser);
+
   protected abstract void onListenerInitialized();
 
   protected Document getDeviceInfo() {
@@ -301,6 +303,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
       }
 
+      final StitchUserT previousUser = this.activeUser;
       this.activeUserAuthInfo = authInfo;
       this.activeUser = getUserFactory().makeUser(
           activeUserAuthInfo.getUserId(),
@@ -310,7 +313,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
           activeUserAuthInfo.getUserProfile(),
           activeUserAuthInfo.isLoggedIn());
       onAuthEvent();
-
+      onActiveUserSwitched(this.activeUser, previousUser);
       return this.activeUser;
     } finally {
       authLock.unlock();
@@ -349,6 +352,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       return doLogin(credential, true);
     } finally {
       authLock.unlock();
+      onUserLinked(activeUser);
     }
   }
 
@@ -385,6 +389,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       }
     } finally {
       authLock.unlock();
+      onUserLoggedOut(activeUser);
     }
   }
 
@@ -555,8 +560,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   // callers of doLogin should be serialized before calling in.
   private StitchUserT doLogin(final StitchCredential credential, final boolean asLinkRequest) {
     final Response response = doLoginRequest(credential, asLinkRequest);
+
+    final StitchUserT previousUser = activeUser;
     final StitchUserT user = processLoginResponse(credential, response, asLinkRequest);
     onAuthEvent();
+    onUserLoggedIn(user, previousUser);
     return user;
   }
 
@@ -742,6 +750,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       if (unclearedAuthInfo != null) {
         this.allUsersAuthInfo.put(userId, unclearedAuthInfo.loggedOut());
         AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), storage);
+        this.onUserRemoved(
+            getUserFactory().makeUser(
+                unclearedAuthInfo.getUserId(),
+                unclearedAuthInfo.getDeviceId(),
+                unclearedAuthInfo.getLoggedInProviderType(),
+                unclearedAuthInfo.getLoggedInProviderName(),
+                unclearedAuthInfo.getUserProfile(),
+                unclearedAuthInfo.isLoggedIn()
+            )
+        );
+        this.onAuthEvent();
       }
 
       // if the auth info we're clearing is also the active user's auth info,
@@ -751,7 +770,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         this.activeUser = null;
 
         AuthInfo.writeActiveUserAuthInfoToStorage(this.activeUserAuthInfo, this.storage);
-        this.onAuthEvent();
       }
     } catch (final IOException e) {
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);

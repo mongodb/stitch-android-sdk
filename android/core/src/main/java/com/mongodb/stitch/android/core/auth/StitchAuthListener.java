@@ -49,6 +49,16 @@ public interface StitchAuthListener {
 
   }
 
+  /**
+   * Called whenever a user is linked to a new identity.
+   *
+   * @param auth The instance of [[StitchAuth]] where the user was linked. It can be used to infer the current state of authentication.
+   * @param linkedUser The user that was linked to a new identity.
+   */
+  default void onUserLinked(final StitchAuth auth, final StitchUser linkedUser) {
+
+  }
+
   default void onUserLoggedOut(final StitchAuth auth, final StitchUser loggedOutUser) {
 
   }

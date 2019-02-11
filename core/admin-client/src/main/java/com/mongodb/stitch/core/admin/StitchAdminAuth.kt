@@ -65,6 +65,9 @@ class StitchAdminAuth(
     override fun onUserRemoved(removedUser: StitchAdminUser?) {
     }
 
+    override fun onUserLinked(linkedUser: StitchAdminUser?) {
+    }
+
     public override fun getDeviceInfo(): Document {
         val document = Document()
         document[DeviceFields.APP_ID] = "MongoDB Stitch Java/Kotlin Admin Client"

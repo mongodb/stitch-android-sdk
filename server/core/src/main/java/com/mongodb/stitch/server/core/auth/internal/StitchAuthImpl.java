@@ -33,6 +33,8 @@ import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderC
 
 import org.bson.Document;
 
+import javax.annotation.Nullable;
+
 public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements StitchAuth {
   private final StitchAppClientInfo appInfo;
 
@@ -88,6 +90,43 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   @Override
   public void removeUserWithId(final String userId) {
     removeUserWithIdInternal(userId);
+  }
+
+  @Override
+  protected void onListenerInitialized() {
+
+  }
+
+  @Override
+  protected void onUserCreated(StitchUser createdUser) {
+
+  }
+
+  @Override
+  protected void onUserLoggedOut(StitchUser loggedOutUser) {
+
+  }
+
+  @Override
+  protected void onUserRemoved(StitchUser removedUser) {
+
+  }
+
+  @Override
+  protected void onUserLoggedIn(StitchUser loggedInUser,
+                                @Nullable StitchUser previousActiveUser) {
+
+  }
+
+  @Override
+  protected void onActiveUserSwitched(StitchUser currentActiveUser,
+                                      @Nullable StitchUser previousActiveUser) {
+
+  }
+
+  @Override
+  protected void onUserLinked(StitchUser linkedUser) {
+
   }
 
   @Override

@@ -55,6 +55,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1683,7 +1684,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       getLocalCollection(namespace).deleteMany(
-          new Document("_id", new Document("$in", documentIds)));
+          new Document("_id", new Document("$in", Arrays.asList(documentIds))));
     } finally {
       lock.unlock();
     }
