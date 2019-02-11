@@ -86,7 +86,7 @@ class CoreSyncUnitTests {
         // assert that calling syncOne on coreSync proxies the appropriate call
         // to the data synchronizer. assert that the appropriate document is being synchronized
         coreSync.syncOne(ctx.testDocumentId)
-        verify(ctx.dataSynchronizer, times(1)).syncDocumentFromRemote(
+        verify(ctx.dataSynchronizer, times(1)).syncDocumentsFromRemote(
             eq(ctx.namespace),
             eq(ctx.testDocumentId))
         assertEquals(1, ctx.dataSynchronizer.getSynchronizedDocuments(ctx.namespace).size)
@@ -103,7 +103,7 @@ class CoreSyncUnitTests {
         // assert that calling syncMany on coreSync proxies the appropriate call to the data
         // synchronizer for each document being sync'd
         coreSync.syncMany(ctx.testDocumentId, ctx.testDocumentId)
-        verify(ctx.dataSynchronizer, times(2)).syncDocumentFromRemote(
+        verify(ctx.dataSynchronizer, times(2)).syncDocumentsFromRemote(
             eq(ctx.namespace),
             eq(ctx.testDocumentId))
     }
