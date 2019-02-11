@@ -67,10 +67,12 @@ public abstract class SyncMongoClientFactory {
         clientFactory.getClient(instanceKey, dbPath, appInfo.getCodecRegistry());
 
     for (final String listDatabaseName : client.listDatabaseNames()) {
-      client.getDatabase(listDatabaseName).drop();
+      try {
+        client.getDatabase(listDatabaseName).drop();
+      } catch (Exception e) {
+        // do nothing
+      }
     }
-
-    client.close();
 
     return new File(dbPath).delete();
   }
