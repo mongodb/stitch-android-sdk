@@ -43,7 +43,13 @@ public enum OperationType {
     }
   }
 
- public String toRemote() {
+  /**
+   * Converts this operation to the remote string representation of the operation as
+   * represented in a {@link ChangeEvent} from a remote cluster.
+   *
+   * @return the remote representation of the update operation.
+   */
+  public String toRemote() {
     switch (this) {
       case INSERT:
         return "insert";

@@ -17,19 +17,18 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-
-import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 /**
  * Represents a change event communicated via a MongoDB change stream.

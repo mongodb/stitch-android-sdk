@@ -64,7 +64,6 @@ import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Decoder;
-import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.types.ObjectId;
@@ -692,8 +691,8 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("ids", Arrays.stream(expectedIDs).map(o -> new BsonObjectId(o))
         .collect(Collectors.toList()).toArray(new BsonValue[0]));
 
-    for (Map.Entry entry : expectedArgs.entrySet()) {
-      Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
+    for (final Map.Entry entry : expectedArgs.entrySet()) {
+      final Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
       if (entry.getValue().getClass() == BsonValue[].class) {
         assertArrayEquals((BsonValue[])entry.getValue(), (BsonValue[])capturedValue);
       } else {

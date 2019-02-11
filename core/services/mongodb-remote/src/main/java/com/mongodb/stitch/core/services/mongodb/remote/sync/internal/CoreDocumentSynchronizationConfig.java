@@ -67,7 +67,8 @@ class CoreDocumentSynchronizationConfig {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    this(docsColl, namespace, documentId, null, -1, null, new ReentrantReadWriteLock(), false, false);
+    this(docsColl, namespace, documentId, null, -1, null, new ReentrantReadWriteLock(),
+        false, false);
   }
 
   CoreDocumentSynchronizationConfig(

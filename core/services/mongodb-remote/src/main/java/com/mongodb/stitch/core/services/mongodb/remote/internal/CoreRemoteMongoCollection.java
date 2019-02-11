@@ -16,10 +16,6 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
@@ -31,8 +27,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 
-import org.bson.BsonDocument;
-import org.bson.BsonObjectId;
+import java.util.List;
+
 import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;

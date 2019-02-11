@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-present MongoDB, Inc.
+ * Copyright 2018-present MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
+import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeDocument;
+
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
@@ -26,8 +28,6 @@ import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
-
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeDocument;
 
 public final class ChangeEvents {
   /**
