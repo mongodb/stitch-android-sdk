@@ -30,7 +30,8 @@ public enum StitchClientErrorCode {
       "cannot make the active user a logged out user; please use loginWithCredential() to "
        + " switch to this user"),
   COULD_NOT_LOAD_PERSISTED_AUTH_INFO("failed to load stored auth information for Stitch"),
-  COULD_NOT_PERSIST_AUTH_INFO("failed to save auth information for Stitch");
+  COULD_NOT_PERSIST_AUTH_INFO("failed to save auth information for Stitch"),
+  COULD_NOT_LOAD_DATA_SYNCHRONIZER("failed to load data synchronizer for Stitch");
 
   private final String description;
 

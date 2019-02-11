@@ -103,8 +103,9 @@ class CoreSyncUnitTests {
         // assert that calling syncMany on coreSync proxies the appropriate call to the data
         // synchronizer for each document being sync'd
         coreSync.syncMany(ctx.testDocumentId, ctx.testDocumentId)
-        verify(ctx.dataSynchronizer, times(2)).syncDocumentsFromRemote(
+        verify(ctx.dataSynchronizer, times(1)).syncDocumentsFromRemote(
             eq(ctx.namespace),
+            eq(ctx.testDocumentId),
             eq(ctx.testDocumentId))
     }
 

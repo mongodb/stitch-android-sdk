@@ -158,7 +158,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   @CheckReturnValue(when = When.NEVER)
-  synchronized AuthInfo getAuthInfo() {
+  AuthInfo getAuthInfo() {
     return activeUserAuthInfo;
   }
 
@@ -168,7 +168,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * @return whether or not the client is logged in.
    */
   @CheckReturnValue(when = When.NEVER)
-  public synchronized boolean isLoggedIn() {
+  public boolean isLoggedIn() {
     return activeUser != null && activeUser.isLoggedIn();
   }
 
