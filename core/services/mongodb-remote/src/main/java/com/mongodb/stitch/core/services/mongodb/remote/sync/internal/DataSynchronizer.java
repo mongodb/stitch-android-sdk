@@ -2064,8 +2064,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         final CoreDocumentSynchronizationConfig config;
         documentId = BsonUtils.getDocumentId(unsanitizedDocumentAfterUpdate);
 
-        // Ensure that the update didn't add any forbidden fields to the document, and remove them if
-        // it did.
+        // Ensure that the update didn't add any forbidden fields to the document, and remove them
+        // if it did.
         final BsonDocument documentAfterUpdate =
             sanitizeCachedDocument(localCollection, unsanitizedDocumentAfterUpdate, documentId);
 
@@ -2770,6 +2770,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_LOAD_DATA_SYNCHRONIZER);
     }
   }
+
   /**
    * Returns a query filter searching for the given document _id.
    *
