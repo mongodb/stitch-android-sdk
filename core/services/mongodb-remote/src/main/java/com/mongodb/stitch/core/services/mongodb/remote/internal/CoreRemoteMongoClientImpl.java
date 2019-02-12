@@ -77,7 +77,7 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
           System.err.println("Could not delete database for user id " + userId);
         }
         break;
-      default:
+      case USER_SWITCHED:
         if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
           this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
               ? appInfo.getAuthMonitor().getActiveUserId() : "";

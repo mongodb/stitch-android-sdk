@@ -852,7 +852,7 @@ public class CoreStitchAuthUnitTests {
     }
 
     @Override
-    protected void onUserCreated(CoreStitchUserImpl createdUser) {
+    protected void onUserAdded(CoreStitchUserImpl createdUser) {
     }
 
     @Override

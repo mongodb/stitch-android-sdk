@@ -52,7 +52,7 @@ class StitchAdminAuth(
     override fun onListenerInitialized() {
     }
 
-    override fun onUserCreated(createdUser: StitchAdminUser?) {
+    override fun onUserAdded(createdUser: StitchAdminUser?) {
     }
 
     override fun onUserLoggedIn(loggedInUser: StitchAdminUser?) {

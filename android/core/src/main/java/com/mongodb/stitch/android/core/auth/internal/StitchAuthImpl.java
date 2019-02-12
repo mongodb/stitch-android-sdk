@@ -294,7 +294,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserCreated(StitchUser createdUser) {
+  protected void onUserAdded(StitchUser createdUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {

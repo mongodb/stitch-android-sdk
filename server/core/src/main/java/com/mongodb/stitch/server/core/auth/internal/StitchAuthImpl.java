@@ -98,7 +98,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserCreated(StitchUser createdUser) {
+  protected void onUserAdded(StitchUser createdUser) {
 
   }
 

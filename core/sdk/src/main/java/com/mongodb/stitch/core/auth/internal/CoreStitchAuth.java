@@ -133,7 +133,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
   protected abstract void onAuthEvent();
 
-  protected abstract void onUserCreated(final StitchUserT createdUser);
+  protected abstract void onUserAdded(final StitchUserT createdUser);
 
   protected abstract void onUserLoggedIn(final StitchUserT loggedInUser);
 
@@ -684,6 +684,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 credential.getProviderName(),
                 profile));
 
+    boolean newUserAdded = this.allUsersAuthInfo.containsKey(newAuthInfo.getUserId());
+
     try {
       AuthInfo.writeActiveUserAuthInfoToStorage(newAuthInfo, storage);
 
@@ -698,12 +700,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       activeUserAuthInfo = oldActiveUserInfo;
       activeUser = null;
 
-      // delete the new partial auth info from the list of all users if
+      // this replaces auth info from the list of all users if
       // if the new auth info is not the same user as the older user
-      if (!newAuthInfo.getUserId().equals(oldActiveUserInfo.getUserId())
-          && newAuthInfo.getUserId() != null) {
-        this.allUsersAuthInfo.remove(newAuthInfo.getUserId());
-      }
+      this.allUsersAuthInfo.put(newAuthInfo.getUserId(), newAuthInfo);
 
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
     }
@@ -720,6 +719,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 profile,
                 activeUserAuthInfo.isLoggedIn());
 
+    if (newUserAdded) {
+      onUserAdded(this.activeUser);
+    }
     return activeUser;
   }
 
@@ -762,29 +764,45 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
 
     try {
-      if (unclearedAuthInfo != null) {
+      StitchUserT loggedOutUser = null;
+      if (unclearedAuthInfo != null
+          && unclearedAuthInfo.getAccessToken() != null
+          && unclearedAuthInfo.getRefreshToken() != null) {
         this.allUsersAuthInfo.put(userId, unclearedAuthInfo.loggedOut());
         AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), storage);
-        this.onUserLoggedOut(
-            getUserFactory().makeUser(
-                unclearedAuthInfo.getUserId(),
-                unclearedAuthInfo.getDeviceId(),
-                unclearedAuthInfo.getLoggedInProviderType(),
-                unclearedAuthInfo.getLoggedInProviderName(),
-                unclearedAuthInfo.getUserProfile(),
-                unclearedAuthInfo.isLoggedIn()
-            )
+        loggedOutUser = getUserFactory().makeUser(
+            unclearedAuthInfo.getUserId(),
+            unclearedAuthInfo.getDeviceId(),
+            unclearedAuthInfo.getLoggedInProviderType(),
+            unclearedAuthInfo.getLoggedInProviderName(),
+            unclearedAuthInfo.getUserProfile(),
+            unclearedAuthInfo.isLoggedIn()
         );
-        this.onAuthEvent();
+      } else if (unclearedAuthInfo != null && !unclearedAuthInfo.isLoggedIn()) {
+        // if the auth info's tokens are already cleared, there's no need to
+        // clear them again
+        return;
       }
 
       // if the auth info we're clearing is also the active user's auth info,
       // clear the active user's auth as well
+      boolean wasActiveUser = false;
       if (activeUserAuthInfo.hasUser() && activeUserAuthInfo.getUserId().equals(userId)) {
+        wasActiveUser = true;
         this.activeUserAuthInfo = this.activeUserAuthInfo.withClearedUser();
         this.activeUser = null;
 
         AuthInfo.writeActiveUserAuthInfoToStorage(this.activeUserAuthInfo, this.storage);
+      }
+
+      if (loggedOutUser != null) {
+        this.onAuthEvent();
+
+        this.onUserLoggedOut(loggedOutUser);
+
+        if (wasActiveUser) {
+          onActiveUserChanged(null, loggedOutUser);
+        }
       }
     } catch (final IOException e) {
       throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
