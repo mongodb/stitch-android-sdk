@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -40,6 +41,7 @@ public class AuthInfo {
   private final String loggedInProviderType;
   private final String loggedInProviderName;
   private final StitchUserProfileImpl userProfile;
+  private final Date lastAuthActivity;
 
   /**
    * Constructs a new AuthInfo that's fully specified.
@@ -51,6 +53,8 @@ public class AuthInfo {
    * @param loggedInProviderType the type of auth provider the current user logged in with.
    * @param loggedInProviderName the name of the auth provider the current user logged in with.
    * @param userProfile the profile information about the currently logged in user.
+   * @param lastAuthActivity the time since the Unix Epoch since this user was logged into,
+   *                         logged out of, switched to, or switched from.
    */
   public AuthInfo(
       final String userId,
@@ -59,7 +63,8 @@ public class AuthInfo {
       final String refreshToken,
       final String loggedInProviderType,
       final String loggedInProviderName,
-      final StitchUserProfileImpl userProfile) {
+      final StitchUserProfileImpl userProfile,
+      final Date lastAuthActivity) {
     this.userId = userId;
     this.deviceId = deviceId;
     this.accessToken = accessToken;
@@ -67,10 +72,11 @@ public class AuthInfo {
     this.loggedInProviderType = loggedInProviderType;
     this.loggedInProviderName = loggedInProviderName;
     this.userProfile = userProfile;
+    this.lastAuthActivity = lastAuthActivity == null ? null : new Date(lastAuthActivity.getTime());
   }
 
   static AuthInfo empty() {
-    return new AuthInfo(null, null, null, null, null, null, null);
+    return new AuthInfo(null, null, null, null, null, null, null, null);
   }
 
   static AuthInfo readFromApi(final InputStream is) throws IOException {
@@ -109,7 +115,8 @@ public class AuthInfo {
             authInfo.refreshToken,
             authInfo.loggedInProviderType,
             authInfo.loggedInProviderName,
-            authInfo.userProfile
+            authInfo.userProfile,
+            authInfo.lastAuthActivity
         );
 
     final String rawInfo = StitchObjectMapper.getInstance().writeValueAsString(info);
@@ -129,7 +136,8 @@ public class AuthInfo {
           authInfo.refreshToken,
           authInfo.loggedInProviderType,
           authInfo.loggedInProviderName,
-          authInfo.userProfile));
+          authInfo.userProfile,
+          authInfo.lastAuthActivity));
     }
 
     final String rawInfo = StitchObjectMapper.getInstance().writeValueAsString(authInfos);
@@ -138,20 +146,27 @@ public class AuthInfo {
 
   AuthInfo loggedOut() {
     return new AuthInfo(
-        userId, deviceId, null, null, loggedInProviderType, loggedInProviderName, userProfile);
+        userId, deviceId, null, null, loggedInProviderType,
+            loggedInProviderName, userProfile, new Date());
+  }
+
+  AuthInfo withNewAuthActivityTime() {
+    return new AuthInfo(
+            userId, deviceId, accessToken, refreshToken, loggedInProviderType,
+            loggedInProviderName, userProfile, new Date());
   }
 
   AuthInfo withClearedUser() {
     return new AuthInfo(
-        null, deviceId, null, null, null, null, null);
+        null, deviceId, null, null, null, null, null, null);
   }
 
   AuthInfo withAuthProvider(
       final String providerType,
       final String providerName
   ) {
-    return new AuthInfo(
-        userId, deviceId, accessToken, refreshToken, providerType, providerName, userProfile);
+    return new AuthInfo(userId, deviceId, accessToken, refreshToken, providerType,
+            providerName, userProfile, new Date());
   }
 
   AuthInfo merge(final AuthInfo newInfo) {
@@ -162,7 +177,8 @@ public class AuthInfo {
         newInfo.refreshToken == null ? refreshToken : newInfo.refreshToken,
         newInfo.loggedInProviderType == null ? loggedInProviderType : newInfo.loggedInProviderType,
         newInfo.loggedInProviderName == null ? loggedInProviderName : newInfo.loggedInProviderName,
-        newInfo.userProfile == null ? userProfile : newInfo.userProfile);
+        newInfo.userProfile == null ? userProfile : newInfo.userProfile,
+        new Date());
   }
 
   public String getUserId() {
@@ -191,6 +207,10 @@ public class AuthInfo {
 
   public StitchUserProfileImpl getUserProfile() {
     return userProfile;
+  }
+
+  public Date getLastAuthActivity() {
+    return lastAuthActivity == null ? null : new Date(lastAuthActivity.getTime());
   }
 
   public boolean isLoggedIn() {

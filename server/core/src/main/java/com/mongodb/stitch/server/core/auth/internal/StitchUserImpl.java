@@ -21,6 +21,8 @@ import com.mongodb.stitch.core.auth.internal.CoreStitchUserImpl;
 import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl;
 import com.mongodb.stitch.server.core.auth.StitchUser;
 
+import java.util.Date;
+
 public final class StitchUserImpl extends CoreStitchUserImpl implements StitchUser {
   private final StitchAuthImpl auth;
 
@@ -31,8 +33,10 @@ public final class StitchUserImpl extends CoreStitchUserImpl implements StitchUs
       final String loggedInProviderName,
       final StitchUserProfileImpl profile,
       final StitchAuthImpl auth,
-      final boolean isLoggedIn) {
-    super(id, deviceId, loggedInProviderType, loggedInProviderName, profile, isLoggedIn);
+      final boolean isLoggedIn,
+      final Date lastAuthActivity) {
+    super(id, deviceId, loggedInProviderType, loggedInProviderName,
+            profile, isLoggedIn, lastAuthActivity);
     this.auth = auth;
   }
 

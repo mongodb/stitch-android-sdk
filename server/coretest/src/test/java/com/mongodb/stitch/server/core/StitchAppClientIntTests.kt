@@ -93,6 +93,7 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         // check storage
         assertTrue(client.auth.isLoggedIn)
         assertEquals(anonUser.loggedInProviderType, AnonymousAuthProvider.TYPE)
+        assertNotNull(client.auth.user!!.lastAuthActivity)
 
         // login anonymously again and make sure user ID is the same
         assertEquals(anonUser.id, client.auth.loginWithCredential(AnonymousCredential()).id)
@@ -129,7 +130,7 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, id2)
 
-        // verify ordering
+        // verify orderingcore
         assertEquals(client.auth.listUsers().size, 3)
         assertEquals(client.auth.listUsers()[0].id, anonUser.id)
         assertEquals(client.auth.listUsers()[1].id, emailUserId)
@@ -143,6 +144,8 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, id2)
+        assertNotNull(client.auth.user!!.lastAuthActivity)
+
 
         // verify ordering is preserved
         assertEquals(client.auth.listUsers().size, 3)

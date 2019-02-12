@@ -20,6 +20,7 @@ import com.mongodb.stitch.core.auth.StitchUserIdentity;
 import com.mongodb.stitch.core.auth.StitchUserProfile;
 import com.mongodb.stitch.core.auth.UserType;
 
+import java.util.Date;
 import java.util.List;
 
 public abstract class CoreStitchUserImpl implements CoreStitchUser {
@@ -29,6 +30,7 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
   private final String loggedInProviderName;
   private final StitchUserProfileImpl profile;
   private final boolean isLoggedIn;
+  private final Date lastAuthActivity;
 
   protected CoreStitchUserImpl(
       final String id,
@@ -36,13 +38,15 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
       final String loggedInProviderType,
       final String loggedInProviderName,
       final StitchUserProfileImpl profile,
-      final boolean isLoggedIn) {
+      final boolean isLoggedIn,
+      final Date lastAuthActivity) {
     this.id = id;
     this.deviceId = deviceId;
     this.loggedInProviderType = loggedInProviderType;
     this.loggedInProviderName = loggedInProviderName;
     this.profile = profile == null ? StitchUserProfileImpl.empty() : profile;
     this.isLoggedIn = isLoggedIn;
+    this.lastAuthActivity = lastAuthActivity;
   }
 
   public String getId() {
@@ -71,6 +75,10 @@ public abstract class CoreStitchUserImpl implements CoreStitchUser {
 
   public List<? extends StitchUserIdentity> getIdentities() {
     return profile.getIdentities();
+  }
+
+  public Date getLastAuthActivity() {
+    return lastAuthActivity == null ? null : new Date(lastAuthActivity.getTime());
   }
 
   @Override

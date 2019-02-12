@@ -42,6 +42,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,13 +112,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
 
     if (this.activeUserAuthInfo.hasUser()) {
-      this.activeUser = getUserFactory().makeUser(
-          this.activeUserAuthInfo.getUserId(),
-          this.activeUserAuthInfo.getDeviceId(),
-          this.activeUserAuthInfo.getLoggedInProviderType(),
-          this.activeUserAuthInfo.getLoggedInProviderName(),
-          this.activeUserAuthInfo.getUserProfile(),
-          this.activeUserAuthInfo.isLoggedIn());
+      this.activeUser = makeUserFromAuthInfo(activeUserAuthInfo);
     }
 
     if (useTokenRefresher) {
@@ -209,13 +204,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     try {
       final ArrayList<StitchUserT> userSet = new ArrayList<>();
       for (final AuthInfo authInfo : this.allUsersAuthInfo.values()) {
-        userSet.add(getUserFactory().makeUser(
-            authInfo.getUserId(),
-            authInfo.getDeviceId(),
-            authInfo.getLoggedInProviderType(),
-            authInfo.getLoggedInProviderName(),
-            authInfo.getUserProfile(),
-            authInfo.isLoggedIn()));
+        userSet.add(makeUserFromAuthInfo(authInfo));
       }
       return userSet;
     } finally {
@@ -326,24 +315,28 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         throw new StitchClientException(StitchClientErrorCode.USER_NOT_LOGGED_IN);
       }
 
+      // Update the previous activeUserAuthInfo's lastAuthActivity
+      if (activeUserAuthInfo.hasUser()) {
+        allUsersAuthInfo.put(activeUserAuthInfo.getUserId(),
+                activeUserAuthInfo.withNewAuthActivityTime());
+      }
+      final AuthInfo newAuthInfo = authInfo.withNewAuthActivityTime();
+      allUsersAuthInfo.put(authInfo.getUserId(), newAuthInfo);
+
       // persist auth info storage before actually setting auth state so that
       // if the persist call throws, we are not in an inconsistent state
       // with storage
       try {
-        AuthInfo.writeActiveUserAuthInfoToStorage(authInfo, this.storage);
+        AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), this.storage);
+        AuthInfo.writeActiveUserAuthInfoToStorage(newAuthInfo, this.storage);
       } catch (IOException e) {
         throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
       }
 
       final StitchUserT previousUser = this.activeUser;
-      this.activeUserAuthInfo = authInfo;
-      this.activeUser = getUserFactory().makeUser(
-          activeUserAuthInfo.getUserId(),
-          activeUserAuthInfo.getDeviceId(),
-          activeUserAuthInfo.getLoggedInProviderType(),
-          activeUserAuthInfo.getLoggedInProviderName(),
-          activeUserAuthInfo.getUserProfile(),
-          activeUserAuthInfo.isLoggedIn());
+      this.activeUserAuthInfo = newAuthInfo;
+      this.activeUser = makeUserFromAuthInfo(activeUserAuthInfo);
+
       onAuthEvent();
       onActiveUserChanged(this.activeUser, previousUser);
       return this.activeUser;
@@ -459,16 +452,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       }
 
       final AuthInfo authInfoLoggedOut = authInfo.loggedOut();
-      onUserRemoved(
-          getUserFactory().makeUser(
-              authInfoLoggedOut.getUserId(),
-              authInfoLoggedOut.getDeviceId(),
-              authInfoLoggedOut.getLoggedInProviderType(),
-              authInfoLoggedOut.getLoggedInProviderName(),
-              authInfoLoggedOut.getUserProfile(),
-              authInfoLoggedOut.isLoggedIn()
-          )
-      );
+      onUserRemoved(makeUserFromAuthInfo(authInfoLoggedOut));
     } finally {
       authLock.writeLock().unlock();
     }
@@ -603,6 +587,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
       try {
         AuthInfo.writeActiveUserAuthInfoToStorage(activeUserAuthInfo, storage);
+
+        allUsersAuthInfo.put(activeUserAuthInfo.getUserId(), activeUserAuthInfo);
+        AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), this.storage);
       } catch (final IOException e) {
         throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
       }
@@ -679,19 +666,19 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 newAuthInfo.getRefreshToken(),
                 credential.getProviderType(),
                 credential.getProviderName(),
-                null));
+                null, null));
 
     // Provisionally set so we can make a profile request
     activeUserAuthInfo = newAuthInfo;
-    activeUser =
-        getUserFactory()
+    activeUser = getUserFactory()
             .makeUser(
                 activeUserAuthInfo.getUserId(),
                 activeUserAuthInfo.getDeviceId(),
                 credential.getProviderType(),
                 credential.getProviderName(),
                 null,
-                activeUserAuthInfo.isLoggedIn());
+                activeUserAuthInfo.isLoggedIn(),
+                activeUserAuthInfo.getLastAuthActivity());
 
     final StitchUserProfileImpl profile;
     try {
@@ -723,17 +710,23 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       throw ex;
     }
 
+    // Update the old User if there was one
+    if (oldActiveUserInfo.hasUser()) {
+      allUsersAuthInfo.put(oldActiveUserInfo.getUserId(),
+              oldActiveUserInfo.withNewAuthActivityTime());
+    }
+
     // Finally set the info and user
     newAuthInfo =
-        newAuthInfo.merge(
-            new AuthInfo(
-                newAuthInfo.getUserId(),
-                newAuthInfo.getDeviceId(),
-                newAuthInfo.getAccessToken(),
-                newAuthInfo.getRefreshToken(),
-                credential.getProviderType(),
-                credential.getProviderName(),
-                profile));
+            newAuthInfo.merge(
+                    new AuthInfo(
+                            newAuthInfo.getUserId(),
+                            newAuthInfo.getDeviceId(),
+                            newAuthInfo.getAccessToken(),
+                            newAuthInfo.getRefreshToken(),
+                            credential.getProviderType(),
+                            credential.getProviderName(),
+                            profile, new Date()));
 
     final boolean newUserAdded = !this.allUsersAuthInfo.containsKey(newAuthInfo.getUserId());
 
@@ -760,15 +753,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
     // set the active user info to the new auth info and new user with profile
     activeUserAuthInfo = newAuthInfo;
-    activeUser =
-        getUserFactory()
-            .makeUser(
-                activeUserAuthInfo.getUserId(),
-                activeUserAuthInfo.getDeviceId(),
-                credential.getProviderType(),
-                credential.getProviderName(),
-                profile,
-                activeUserAuthInfo.isLoggedIn());
+    activeUser = makeUserFromAuthInfo(newAuthInfo);
 
     if (newUserAdded) {
       onUserAdded(this.activeUser);
@@ -828,14 +813,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
             && unclearedAuthInfo.getRefreshToken() != null) {
           this.allUsersAuthInfo.put(userId, unclearedAuthInfo.loggedOut());
           AuthInfo.writeCurrentUsersToStorage(this.allUsersAuthInfo.values(), storage);
-          loggedOutUser = getUserFactory().makeUser(
-              unclearedAuthInfo.getUserId(),
-              unclearedAuthInfo.getDeviceId(),
-              unclearedAuthInfo.getLoggedInProviderType(),
-              unclearedAuthInfo.getLoggedInProviderName(),
-              unclearedAuthInfo.getUserProfile(),
-              unclearedAuthInfo.isLoggedIn()
-          );
+          loggedOutUser = makeUserFromAuthInfo(unclearedAuthInfo);
+
         } else if (unclearedAuthInfo != null && !unclearedAuthInfo.isLoggedIn()) {
           // if the auth info's tokens are already cleared, there's no need to
           // clear them again
@@ -868,6 +847,16 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     } finally {
       authLock.writeLock().unlock();
     }
+  }
+
+  private StitchUserT makeUserFromAuthInfo(final AuthInfo authInfo) {
+    return this.getUserFactory().makeUser(authInfo.getUserId(),
+            authInfo.getDeviceId(),
+            authInfo.getLoggedInProviderType(),
+            authInfo.getLoggedInProviderName(),
+            authInfo.getUserProfile(),
+            authInfo.isLoggedIn(),
+            authInfo.getLastAuthActivity());
   }
 
   /**
