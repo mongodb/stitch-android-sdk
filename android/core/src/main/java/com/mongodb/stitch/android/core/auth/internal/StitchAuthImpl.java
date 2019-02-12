@@ -201,7 +201,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
         new Callable<Void>() {
           @Override
           public Void call() {
-            listener.onListenerInitialized(StitchAuthImpl.this);
+            listener.onListenerRegistered(StitchAuthImpl.this);
             return null;
           }
         });
@@ -215,7 +215,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     // Trigger the onUserLoggedIn event in case some event happens and
     // this caller would miss out on this event other wise.
     onAuthEvent(listener);
-    listener.onListenerInitialized(this);
+    listener.onListenerRegistered(this);
   }
 
   /**
@@ -258,10 +258,24 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
 
   @Override
   protected void onListenerInitialized() {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onListenerRegistered(StitchAuthImpl.this);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onListenerRegistered(this);
+    }
   }
 
   @Override
-  protected void onActiveUserChanged(StitchUser currentActiveUser, @Nullable StitchUser previousActiveUser) {
+  protected void onActiveUserChanged(@Nullable StitchUser currentActiveUser,
+                                     @Nullable StitchUser previousActiveUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
@@ -286,14 +300,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
           new Callable<Void>() {
             @Override
             public Void call() {
-              listener.onUserCreated(
+              listener.onUserAdded(
                   StitchAuthImpl.this, createdUser);
               return null;
             }
           });
     }
     for (final StitchAuthListener listener : synchronousListeners) {
-      listener.onUserCreated(this, createdUser);
+      listener.onUserAdded(this, createdUser);
     }
   }
 

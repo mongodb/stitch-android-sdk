@@ -116,7 +116,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
             override fun onAuthEvent(auth: StitchAuth?) {
             }
 
-            override fun onListenerInitialized(auth: StitchAuth?) {
+            override fun onListenerRegistered(auth: StitchAuth?) {
                 listenerInitialized?.invoke(auth)
             }
 
@@ -126,7 +126,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
                 activeUserChanged?.invoke(auth, currentActiveUser, previousActiveUser)
             }
 
-            override fun onUserCreated(auth: StitchAuth?, createdUser: StitchUser?) {
+            override fun onUserAdded(auth: StitchAuth?, createdUser: StitchUser?) {
                 userCreated?.invoke(auth, createdUser)
             }
 

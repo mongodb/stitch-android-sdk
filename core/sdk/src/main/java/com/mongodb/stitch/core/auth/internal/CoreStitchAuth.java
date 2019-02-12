@@ -351,7 +351,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       return doLogin(credential, true);
     } finally {
       authLock.unlock();
-      onUserLinked(activeUser);
     }
   }
 
@@ -420,14 +419,15 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
       }
 
+      AuthInfo authInfoLoggedOut = authInfo.loggedOut();
       onUserRemoved(
           getUserFactory().makeUser(
-              authInfo.getUserId(),
-              authInfo.getDeviceId(),
-              authInfo.getLoggedInProviderType(),
-              authInfo.getLoggedInProviderName(),
-              authInfo.getUserProfile(),
-              authInfo.isLoggedIn()
+              authInfoLoggedOut.getUserId(),
+              authInfoLoggedOut.getDeviceId(),
+              authInfoLoggedOut.getLoggedInProviderType(),
+              authInfoLoggedOut.getLoggedInProviderName(),
+              authInfoLoggedOut.getUserProfile(),
+              authInfoLoggedOut.isLoggedIn()
           )
       );
     } finally {
@@ -572,10 +572,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
     final StitchUserT previousUser = activeUser;
     final StitchUserT user = processLoginResponse(credential, response, asLinkRequest);
-    onAuthEvent();
-    onUserLoggedIn(user);
 
-    if (previousUser != null) {
+    if(asLinkRequest) {
+      onUserLinked(user);
+    } else {
+      onUserLoggedIn(user);
       onActiveUserChanged(activeUser, previousUser);
     }
 
