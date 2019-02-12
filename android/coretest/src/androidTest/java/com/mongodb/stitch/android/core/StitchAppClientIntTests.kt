@@ -35,8 +35,6 @@ import java.util.Arrays
 import java.util.Date
 import java.util.Calendar
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
@@ -91,65 +89,6 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         )
         var client = getAppClient(app.first)
 
-        val semaphore = Semaphore(0)
-        // set up a responsive auth listener
-        var authListener = object : StitchAuthListener {
-            var listenerInitialized: ((auth: StitchAuth?) -> Void)? = null
-            var activeUserChanged: ((auth: StitchAuth?,
-                                     currentActiveUser: StitchUser?,
-                                     previousActiveUser: StitchUser?) -> Void)? = null
-            var userCreated: ((auth: StitchAuth?,
-                               createdUser: StitchUser?) -> Void)? = null
-
-            var userLinked: ((auth: StitchAuth?,
-                              linkedUser: StitchUser?) -> Void)? = null
-
-            var userLoggedIn: ((auth: StitchAuth?,
-                                loggedInUser: StitchUser?) -> Void)? = null
-
-            var userLoggedOut: ((auth: StitchAuth?,
-                                 loggedOutUser: StitchUser?) -> Void)? = null
-
-            var userRemoved: ((auth: StitchAuth?,
-                               removedUser: StitchUser?) -> Void)? = null
-
-            override fun onAuthEvent(auth: StitchAuth?) {
-            }
-
-            override fun onListenerRegistered(auth: StitchAuth?) {
-                listenerInitialized?.invoke(auth)
-            }
-
-            override fun onActiveUserChanged(auth: StitchAuth?,
-                                             currentActiveUser: StitchUser?,
-                                             previousActiveUser: StitchUser?) {
-                activeUserChanged?.invoke(auth, currentActiveUser, previousActiveUser)
-            }
-
-            override fun onUserAdded(auth: StitchAuth?, createdUser: StitchUser?) {
-                userCreated?.invoke(auth, createdUser)
-            }
-
-            override fun onUserLinked(auth: StitchAuth?, linkedUser: StitchUser?) {
-                userLinked?.invoke(auth, linkedUser)
-            }
-
-            override fun onUserLoggedIn(auth: StitchAuth?, loggedInUser: StitchUser?) {
-                userLoggedIn?.invoke(auth, loggedInUser)
-            }
-
-            override fun onUserLoggedOut(auth: StitchAuth?, loggedOutUser: StitchUser?) {
-                userLoggedOut?.invoke(auth, loggedOutUser)
-            }
-
-            override fun onUserRemoved(auth: StitchAuth?, removedUser: StitchUser?) {
-                userRemoved?.invoke(auth, removedUser)
-            }
-        }
-
-        client.auth.addAuthListener(authListener)
-        semaphore.tryAcquire(0, 10, TimeUnit.SECONDS)
-        client.auth.removeAuthListener(authListener)
 
         // check storage
         assertFalse(client.auth.isLoggedIn)
@@ -160,8 +99,6 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
             Tasks.await(client.auth.loginWithCredential(
                 AnonymousCredential()
             ))
-        client.auth.addAuthListener(authListener)
-        semaphore.tryAcquire(0, 10, TimeUnit.SECONDS)
         assertNotNull(anonUser)
 
         // check storage
