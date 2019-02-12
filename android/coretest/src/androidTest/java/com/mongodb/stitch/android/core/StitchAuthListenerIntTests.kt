@@ -57,6 +57,41 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    fun testOnAddedUserDispatched() {
+        val app = createApp()
+
+        addProvider(app.second, ProviderConfigs.Anon)
+        addProvider(app.second, config = ProviderConfigs.Userpass(
+            emailConfirmationUrl = "http://emailConfirmURL.com",
+            resetPasswordUrl = "http://resetPasswordURL.com",
+            confirmEmailSubject = "email subject",
+            resetPasswordSubject = "password subject")
+        )
+
+        val client = getAppClient(app.first)
+
+        val countDownLatch = CountDownLatch(1)
+
+        client.auth.addAuthListener(object : StitchAuthListener {
+            override fun onAuthEvent(auth: StitchAuth?) {
+            }
+
+            override fun onUserAdded(auth: StitchAuth?, addedUser: StitchUser?) {
+                assertNotNull(auth)
+                assertNotNull(addedUser)
+                countDownLatch.countDown()
+            }
+        })
+
+        assertFalse(client.auth.isLoggedIn)
+        assertNull(client.auth.user)
+
+        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+
+        assert(countDownLatch.await(10, TimeUnit.SECONDS))
+    }
+
+    @Test
     fun testOnActiveUserChangedDispatched() {
         val app = createApp()
 
@@ -170,7 +205,6 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
 
-
     @Test
     fun testOnUserLinkedDispatched() {
         val app = createApp()
@@ -214,6 +248,35 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
 
         Tasks.await(anonUser.linkWithCredential(
             UserPasswordCredential(email, password)))
+
+        assert(countDownLatch.await(10, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun testOnListenerRegisteredDispatched() {
+        val app = createApp()
+
+        addProvider(app.second, ProviderConfigs.Anon)
+        addProvider(app.second, config = ProviderConfigs.Userpass(
+            emailConfirmationUrl = "http://emailConfirmURL.com",
+            resetPasswordUrl = "http://resetPasswordURL.com",
+            confirmEmailSubject = "email subject",
+            resetPasswordSubject = "password subject")
+        )
+
+        val client = getAppClient(app.first)
+
+        val countDownLatch = CountDownLatch(1)
+
+        client.auth.addAuthListener(object : StitchAuthListener {
+            override fun onAuthEvent(auth: StitchAuth?) {
+            }
+
+            override fun onListenerRegistered(auth: StitchAuth?) {
+                assertNotNull(auth)
+                countDownLatch.countDown()
+            }
+        })
 
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
