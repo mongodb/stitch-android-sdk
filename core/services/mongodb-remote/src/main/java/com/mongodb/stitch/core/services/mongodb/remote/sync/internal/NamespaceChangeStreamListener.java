@@ -170,6 +170,7 @@ public class NamespaceChangeStreamListener implements Closeable {
 
   /**
    * Whether or not the current stream is currently open.
+   *
    * @return true if open, false if not
    */
   public synchronized boolean isOpen() {
@@ -178,6 +179,7 @@ public class NamespaceChangeStreamListener implements Closeable {
 
   /**
    * Open the event stream
+   *
    * @return true if successfully opened, false if not
    */
   boolean openStream() throws InterruptedException {
@@ -196,31 +198,29 @@ public class NamespaceChangeStreamListener implements Closeable {
       return false;
     }
 
+
+    final Document args = new Document();
+    args.put("database", namespace.getDatabaseName());
+    args.put("collection", namespace.getCollectionName());
+
     final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
+    args.put("ids", idsToWatch);
 
-    nsLock.writeLock().lockInterruptibly();
-    try {
-      final Document args = new Document();
-      args.put("database", namespace.getDatabaseName());
-      args.put("collection", namespace.getCollectionName());
+    currentStream =
+        service.streamFunction(
+            "watch",
+            Collections.singletonList(args),
+            ChangeEvent.changeEventCoder);
 
-      args.put("ids", idsToWatch);
-
-      currentStream =
-          service.streamFunction(
-              "watch",
-              Collections.singletonList(args),
-              ChangeEvent.changeEventCoder);
-
-      if (currentStream.isOpen()) {
-        this.nsConfig.setStale(true);
-      }
-
-      return currentStream.isOpen();
-    } finally {
-      logger.info("stream RUNNING");
-      nsLock.writeLock().unlock();
+    final boolean isOpen;
+    if (currentStream != null && currentStream.isOpen()) {
+      this.nsConfig.setStale(true);
+      isOpen = true;
+    } else {
+      isOpen = false;
     }
+
+    return isOpen;
   }
 
   /**
@@ -313,8 +313,9 @@ public class NamespaceChangeStreamListener implements Closeable {
    *
    * @return the latest unprocessed change event for the given document ID, or null if none exists.
    */
-  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
-          final BsonValue documentId
+  public @Nullable
+  ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+      final BsonValue documentId
   ) {
     final ChangeEvent<BsonDocument> event;
     nsLock.readLock().lock();

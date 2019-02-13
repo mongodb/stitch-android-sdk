@@ -371,6 +371,7 @@ class SyncUnitTestHarness : Closeable {
                 networkMonitor.addNetworkStateListener(dataSynchronizer)
 
                 dataSynchronizer.disableSyncThread()
+                dataSynchronizer.disableListeners()
 
                 dataSynchronizer.stop()
 

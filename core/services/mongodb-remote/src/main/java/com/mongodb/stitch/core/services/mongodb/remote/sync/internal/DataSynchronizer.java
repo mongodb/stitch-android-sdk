@@ -109,6 +109,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private InstanceSynchronizationConfig syncConfig;
 
   private boolean syncThreadEnabled = true;
+  private boolean listenersEnabled = true;
   private boolean isConfigured = false;
   private boolean isRunning = false;
   private Thread syncThread;
@@ -391,7 +392,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return;
       }
       instanceChangeStreamListener.stop();
-      instanceChangeStreamListener.start();
+      if (listenersEnabled) {
+        instanceChangeStreamListener.start();
+      }
+
       if (syncThread == null) {
         syncThread = new Thread(new DataSynchronizerRunner(
             new WeakReference<>(this),
@@ -411,6 +415,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     syncLock.lock();
     try {
       syncThreadEnabled = false;
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
+  public void disableListeners() {
+    syncLock.lock();
+    try {
+      listenersEnabled = false;
     } finally {
       syncLock.unlock();
     }
@@ -534,6 +547,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         final Set<BsonValue> unseenIds = nsConfig.getStaleDocumentIds();
         final Set<BsonDocument> latestDocumentsFromStale =
             getLatestDocumentsForStaleFromRemote(nsConfig, unseenIds);
+        logger.info(latestDocumentsFromStale.toString());
+        logger.info(remoteChangeEvents.toString());
+        logger.info(unseenIds.toString());
+
         final Map<BsonValue, BsonDocument> latestDocumentMap = new HashMap<>();
 
         for (final BsonDocument latestDocument : latestDocumentsFromStale) {
@@ -652,7 +669,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     logger.info(String.format(
         Locale.US,
-        "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s processing operation='%s'",
+        "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s processing remote operation='%s'",
         logicalT,
         nsConfig.getNamespace(),
         docConfig.getDocumentId(),
@@ -947,7 +964,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               docConfig.getLastUncommittedChangeEvent();
           logger.info(String.format(
               Locale.US,
-              "t='%d': syncLocalToRemote ns=%s documentId=%s processing operation='%s'",
+              "t='%d': syncLocalToRemote ns=%s documentId=%s processing local operation='%s'",
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId(),
