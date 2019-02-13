@@ -306,9 +306,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   public void reinitialize(final MongoClient localClient) {
     ongoingOperationsGroup.blockAndWait();
-    this.stop();
     this.localClient = localClient;
-    this.initThread = new Thread(() -> {
+
+    initThread = new Thread(() -> {
+      this.stop();
       initialize();
       this.start();
       ongoingOperationsGroup.unblock();

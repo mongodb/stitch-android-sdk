@@ -74,6 +74,9 @@ public abstract class SyncMongoClientFactory {
       }
     }
 
+    client.close();
+    clientFactory.removeClient(instanceKey);
+
     return new File(dbPath).delete();
   }
 }
