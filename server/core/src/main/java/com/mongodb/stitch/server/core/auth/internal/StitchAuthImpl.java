@@ -31,9 +31,9 @@ import com.mongodb.stitch.server.core.auth.StitchUser;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
 
-import org.bson.Document;
-
 import javax.annotation.Nullable;
+
+import org.bson.Document;
 
 public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements StitchAuth {
   private final StitchAppClientInfo appInfo;
@@ -98,33 +98,33 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserAdded(StitchUser createdUser) {
+  protected void onUserAdded(final StitchUser createdUser) {
 
   }
 
   @Override
-  protected void onUserLoggedOut(StitchUser loggedOutUser) {
+  protected void onUserLoggedOut(final StitchUser loggedOutUser) {
 
   }
 
   @Override
-  protected void onUserRemoved(StitchUser removedUser) {
+  protected void onUserRemoved(final StitchUser removedUser) {
 
   }
 
   @Override
-  protected void onUserLoggedIn(StitchUser loggedInUser) {
+  protected void onUserLoggedIn(final StitchUser loggedInUser) {
 
   }
 
   @Override
-  protected void onActiveUserChanged(StitchUser currentActiveUser,
-                                     @Nullable StitchUser previousActiveUser) {
+  protected void onActiveUserChanged(final StitchUser currentActiveUser,
+                                     final @Nullable StitchUser previousActiveUser) {
 
   }
 
   @Override
-  protected void onUserLinked(StitchUser linkedUser) {
+  protected void onUserLinked(final StitchUser linkedUser) {
 
   }
 

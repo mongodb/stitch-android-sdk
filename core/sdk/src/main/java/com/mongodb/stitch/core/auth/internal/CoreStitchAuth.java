@@ -167,7 +167,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * @return whether or not the client is logged in.
    */
   @CheckReturnValue(when = When.NEVER)
-  public boolean isLoggedIn() {
+  public synchronized boolean isLoggedIn() {
     return activeUser != null && activeUser.isLoggedIn();
   }
 
@@ -419,7 +419,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         throw new StitchClientException(StitchClientErrorCode.COULD_NOT_PERSIST_AUTH_INFO);
       }
 
-      AuthInfo authInfoLoggedOut = authInfo.loggedOut();
+      final AuthInfo authInfoLoggedOut = authInfo.loggedOut();
       onUserRemoved(
           getUserFactory().makeUser(
               authInfoLoggedOut.getUserId(),
@@ -573,7 +573,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final StitchUserT previousUser = activeUser;
     final StitchUserT user = processLoginResponse(credential, response, asLinkRequest);
 
-    if(asLinkRequest) {
+    if (asLinkRequest) {
       onUserLinked(user);
     } else {
       onUserLoggedIn(user);
@@ -684,7 +684,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 credential.getProviderName(),
                 profile));
 
-    boolean newUserAdded = this.allUsersAuthInfo.containsKey(newAuthInfo.getUserId());
+    final boolean newUserAdded = this.allUsersAuthInfo.containsKey(newAuthInfo.getUserId());
 
     try {
       AuthInfo.writeActiveUserAuthInfoToStorage(newAuthInfo, storage);

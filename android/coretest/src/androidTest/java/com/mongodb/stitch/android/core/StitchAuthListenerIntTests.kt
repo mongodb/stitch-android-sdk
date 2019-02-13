@@ -111,9 +111,11 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
             override fun onAuthEvent(auth: StitchAuth?) {
             }
 
-            override fun onActiveUserChanged(auth: StitchAuth?,
-                                             currentActiveUser: StitchUser?,
-                                             previousActiveUser: StitchUser?) {
+            override fun onActiveUserChanged(
+                auth: StitchAuth?,
+                currentActiveUser: StitchUser?,
+                previousActiveUser: StitchUser?
+            ) {
                 assertNotNull(auth)
                 assertNotNull(currentActiveUser)
                 assertNotNull(previousActiveUser)
@@ -150,8 +152,10 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
             override fun onAuthEvent(auth: StitchAuth?) {
             }
 
-            override fun onUserLoggedOut(auth: StitchAuth?,
-                                         loggedOutUser: StitchUser?) {
+            override fun onUserLoggedOut(
+                auth: StitchAuth?,
+                loggedOutUser: StitchUser?
+            ) {
                 assertNotNull(auth)
                 assertNotNull(loggedOutUser)
                 countDownLatch.countDown()
@@ -166,7 +170,6 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
         Tasks.await(client.auth.logout())
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
-
 
     @Test
     fun testOnUserRemovedDispatched() {

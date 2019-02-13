@@ -45,8 +45,10 @@ class StitchAdminAuth(
     override fun onAuthEvent() { /* do nothing */
     }
 
-    override fun onActiveUserChanged(currentActiveUser: StitchAdminUser?,
-                                     previousActiveUser: StitchAdminUser?) {
+    override fun onActiveUserChanged(
+        currentActiveUser: StitchAdminUser?,
+        previousActiveUser: StitchAdminUser?
+    ) {
     }
 
     override fun onListenerInitialized() {
@@ -74,7 +76,9 @@ class StitchAdminAuth(
         return document
     }
 
-    public override fun loginWithCredentialInternal(credential: StitchCredential?): StitchAdminUser {
+    public override fun loginWithCredentialInternal(
+        credential: StitchCredential?
+    ): StitchAdminUser {
         return super.loginWithCredentialInternal(credential)
     }
 

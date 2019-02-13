@@ -80,6 +80,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import javax.annotation.Nullable;
 
 import org.bson.Document;
 import org.bson.codecs.DocumentCodec;
@@ -92,7 +93,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
-import javax.annotation.Nullable;
 
 public class CoreStitchAuthUnitTests {
 
@@ -840,24 +840,24 @@ public class CoreStitchAuthUnitTests {
     }
 
     @Override
-    protected void onUserLoggedOut(CoreStitchUserImpl loggedOutUser) {
+    protected void onUserLoggedOut(final CoreStitchUserImpl loggedOutUser) {
     }
 
     @Override
-    protected void onUserRemoved(CoreStitchUserImpl removedUser) {
+    protected void onUserRemoved(final CoreStitchUserImpl removedUser) {
     }
 
     @Override
-    protected void onUserLoggedIn(CoreStitchUserImpl loggedInUser) {
+    protected void onUserLoggedIn(final CoreStitchUserImpl loggedInUser) {
     }
 
     @Override
-    protected void onUserAdded(CoreStitchUserImpl createdUser) {
+    protected void onUserAdded(final CoreStitchUserImpl createdUser) {
     }
 
     @Override
-    protected void onActiveUserChanged(CoreStitchUserImpl currentActiveUser,
-                                       @Nullable CoreStitchUserImpl previousActiveUser) {
+    protected void onActiveUserChanged(final CoreStitchUserImpl currentActiveUser,
+                                       @Nullable final CoreStitchUserImpl previousActiveUser) {
     }
 
     @Override
@@ -865,7 +865,7 @@ public class CoreStitchAuthUnitTests {
     }
 
     @Override
-    protected void onUserLinked(CoreStitchUserImpl linkedUser) {
+    protected void onUserLinked(final CoreStitchUserImpl linkedUser) {
     }
   }
 }

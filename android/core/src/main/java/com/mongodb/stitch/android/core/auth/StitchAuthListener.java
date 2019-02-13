@@ -56,7 +56,6 @@ public interface StitchAuthListener {
   /**
    * Called whenever a user is logged in. This will be called before
    * {@link #onActiveUserChanged} is called.
-   * <p>
    * Note: if an anonymous user was already logged in on the device, and you
    * log in with an {@link com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential},
    * this method will not be called,
@@ -102,7 +101,6 @@ public interface StitchAuthListener {
    * {@link StitchAuth#loginWithCredential}, {@link StitchAuth#switchToUserWithId},
    * {@link StitchAuth#logout}, {@link StitchAuth#logoutUserWithId},
    * {@link StitchAuth#removeUser}, or {@link StitchAuth#removeUserWithId}.
-   * <p>
    * This may also occur on a normal request if a user's session is invalidated
    * and they are forced to log out.
    *

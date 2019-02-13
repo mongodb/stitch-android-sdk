@@ -93,6 +93,9 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
           );
         }
         break;
+      default:
+        // no-op
+        break;
     }
   }
 
@@ -101,6 +104,8 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
     switch (rebindEvent.getType()) {
       case AUTH_EVENT:
         this.onAuthEvent((AuthEvent)rebindEvent);
+        break;
+      default:
         break;
     }
   }

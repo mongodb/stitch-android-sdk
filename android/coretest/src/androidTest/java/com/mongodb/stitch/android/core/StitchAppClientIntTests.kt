@@ -2,9 +2,6 @@ package com.mongodb.stitch.android.core
 
 import android.support.test.runner.AndroidJUnit4
 import com.google.android.gms.tasks.Tasks
-import com.mongodb.stitch.android.core.auth.StitchAuth
-import com.mongodb.stitch.android.core.auth.StitchAuthListener
-import com.mongodb.stitch.android.core.auth.StitchUser
 import com.mongodb.stitch.android.core.auth.providers.userpassword.UserPasswordAuthProviderClient
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.StitchRequestErrorCode
@@ -89,7 +86,6 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         )
         var client = getAppClient(app.first)
 
-
         // check storage
         assertFalse(client.auth.isLoggedIn)
         assertNull(client.auth.user)
@@ -106,10 +102,8 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertEquals(anonUser.loggedInProviderType, AnonymousAuthProvider.TYPE)
 
         // login anonymously again and make sure user ID is the same
-        assertEquals(anonUser.id,
-            Tasks.await(client.auth.loginWithCredential(
-                AnonymousCredential()
-            )).id)
+        assertEquals(
+            anonUser.id, Tasks.await(client.auth.loginWithCredential(AnonymousCredential())).id)
 
         // check storage
         assertTrue(client.auth.isLoggedIn)
@@ -137,9 +131,8 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertNull(client.auth.user)
 
         // log back into the last user
-        Tasks.await(client.auth.loginWithCredential(
-            UserPasswordCredential("test2@10gen.com", "hunter2")
-        ))
+        Tasks.await(
+            client.auth.loginWithCredential(UserPasswordCredential("test2@10gen.com", "hunter2")))
 
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)

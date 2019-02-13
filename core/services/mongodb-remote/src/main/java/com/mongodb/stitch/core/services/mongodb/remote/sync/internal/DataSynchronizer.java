@@ -305,21 +305,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   public void reinitialize(final MongoClient localClient) {
-    syncLock.lock();
     ongoingOperationsGroup.blockAndWait();
-    try {
-      this.stop();
-      this.localClient = localClient;
-      this.initThread = new Thread(() -> {
-        initialize();
-        this.start();
-        ongoingOperationsGroup.unblock();
-      });
+    this.stop();
+    this.localClient = localClient;
+    this.initThread = new Thread(() -> {
+      initialize();
+      this.start();
+      ongoingOperationsGroup.unblock();
+    });
 
-      this.initThread.start();
-    } finally {
-      syncLock.unlock();
-    }
+    this.initThread.start();
   }
 
   /**
@@ -1720,9 +1715,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue... documentIds
   ) {
     this.waitUntilInitialized();
-    final Lock lock =
-        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
-    lock.lock();
+    final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     try {
       ongoingOperationsGroup.enter();
       for (final BsonValue documentId : documentIds) {

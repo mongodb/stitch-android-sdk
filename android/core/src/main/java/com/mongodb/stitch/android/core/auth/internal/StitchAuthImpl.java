@@ -37,9 +37,8 @@ import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import org.bson.Document;
-
 import javax.annotation.Nullable;
+import org.bson.Document;
 
 /**
  * The Android specific authentication component for clients that acts as a {@link StitchAuth} and
@@ -274,8 +273,8 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onActiveUserChanged(@Nullable StitchUser currentActiveUser,
-                                     @Nullable StitchUser previousActiveUser) {
+  protected void onActiveUserChanged(@Nullable final StitchUser currentActiveUser,
+                                     @Nullable final StitchUser previousActiveUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
@@ -294,7 +293,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserAdded(StitchUser createdUser) {
+  protected void onUserAdded(final StitchUser createdUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
@@ -312,7 +311,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserLoggedIn(StitchUser loggedInUser) {
+  protected void onUserLoggedIn(final StitchUser loggedInUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
@@ -330,7 +329,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserRemoved(StitchUser removedUser) {
+  protected void onUserRemoved(final StitchUser removedUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
@@ -347,7 +346,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserLoggedOut(StitchUser loggedOutUser) {
+  protected void onUserLoggedOut(final StitchUser loggedOutUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
@@ -364,7 +363,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   @Override
-  protected void onUserLinked(StitchUser linkedUser) {
+  protected void onUserLinked(final StitchUser linkedUser) {
     for (final StitchAuthListener listener : listeners) {
       dispatcher.dispatchTask(
           new Callable<Void>() {

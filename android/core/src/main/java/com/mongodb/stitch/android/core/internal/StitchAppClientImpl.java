@@ -313,7 +313,7 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
   }
 
   @Override
-  public void onAuthEvent(StitchAuth auth) {
+  public void onAuthEvent(final StitchAuth auth) {
   }
 
   @Override
