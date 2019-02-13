@@ -49,7 +49,7 @@ import org.bson.io.OutputBuffer;
 
 
 class CoreDocumentSynchronizationConfig {
-  private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
+  static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;

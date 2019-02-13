@@ -262,7 +262,7 @@ class SyncUnitTestHarness : Closeable {
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
         override var nextStreamEvent: Event = Event.Builder().withEventName("MOCK").build()
-        private val streamMock = Stream(TestEventStream(this), ResultDecoders.changeEventDecoder(null as Codec<BsonDocument>))
+        private val streamMock = Stream(TestEventStream(this), ResultDecoders.changeEventDecoder(BsonDocumentCodec()))
         override val testDocument = newDoc("count", BsonInt32(1))
         override val testDocumentId: BsonObjectId by lazy { testDocument["_id"] as BsonObjectId }
         override val testDocumentFilter by lazy { BsonDocument("_id", testDocumentId) }
@@ -371,7 +371,7 @@ class SyncUnitTestHarness : Closeable {
                 Mockito.`when`(service.streamFunction(
                     ArgumentMatchers.anyString(),
                     ArgumentMatchers.anyList<Any>(),
-                    ArgumentMatchers.eq(ResultDecoders.changeEventDecoder(null as Codec<BsonDocument>)))
+                    ArgumentMatchers.eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
                 ).thenReturn(streamMock)
 
                 val databaseSpy = Mockito.mock(CoreRemoteMongoDatabaseImpl::class.java)
@@ -628,7 +628,7 @@ class SyncUnitTestHarness : Closeable {
 
         override fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document) {
             Mockito.verify(service, times(times)).streamFunction(
-                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ResultDecoders.changeEventDecoder(null as Codec<BsonDocument>)))
+                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
         }
 
         override fun verifyStartCalled(times: Int) {

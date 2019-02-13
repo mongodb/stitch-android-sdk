@@ -62,6 +62,7 @@ import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
+import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -649,7 +650,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("collection", "collName1");
     expectedArgs.put("ids", expectedIDs);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
-    assertEquals(ResultDecoders.changeEventDecoder(null),
+    assertEquals(ResultDecoders.changeEventDecoder(new BsonDocumentCodec()),
         decoderArgumentCaptor.getValue());
   }
 
@@ -698,6 +699,6 @@ public class CoreRemoteMongoCollectionUnitTests {
         assertEquals(entry.getValue(), capturedValue);
       }
     }
-    assertEquals(ResultDecoders.changeEventDecoder(null), decoderArgumentCaptor.getValue());
+    assertEquals(ResultDecoders.changeEventDecoder(new BsonDocumentCodec()), decoderArgumentCaptor.getValue());
   }
 }

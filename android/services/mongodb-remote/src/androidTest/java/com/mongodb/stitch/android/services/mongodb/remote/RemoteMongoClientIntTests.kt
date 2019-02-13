@@ -457,7 +457,8 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         try {
             Tasks.await(coll.insertOne(rawDoc2))
             assertEquals(2, Tasks.await(coll.count()))
-            Tasks.await(coll.updateMany(BsonDocument(), Document().append("new", "field")))
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                    Document().append("new", "field"))))
 
             val insertEvent = stream.nextEvent()
             assertEquals(OperationType.INSERT, insertEvent.data?.operationType)
@@ -468,8 +469,10 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertNotNull(updateEvent1)
             assertNotNull(updateEvent2)
 
-            assertEquals(OperationType.REPLACE, updateEvent1.data?.operationType)
-            assertEquals(OperationType.REPLACE, updateEvent2.data?.operationType)
+            assertEquals(OperationType.UPDATE, updateEvent1.data?.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.data?.fullDocument);
+            assertEquals(OperationType.UPDATE, updateEvent2.data?.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.data?.fullDocument);
         } finally {
             stream.close()
         }
@@ -500,7 +503,8 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         try {
             Tasks.await(coll.insertOne(rawDoc2))
             assertEquals(2, Tasks.await(coll.count()))
-            Tasks.await(coll.updateMany(BsonDocument(), Document().append("new", "field")))
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                    Document().append("new", "field"))))
 
             val insertEvent = stream.nextEvent()
             assertEquals(OperationType.INSERT, insertEvent.data?.operationType)
@@ -511,8 +515,10 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertNotNull(updateEvent1)
             assertNotNull(updateEvent2)
 
-            assertEquals(OperationType.REPLACE, updateEvent1.data?.operationType)
-            assertEquals(OperationType.REPLACE, updateEvent2.data?.operationType)
+            assertEquals(OperationType.UPDATE, updateEvent1.data?.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.data?.fullDocument);
+            assertEquals(OperationType.UPDATE, updateEvent2.data?.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.data?.fullDocument);
         }
         finally {
             stream.close()
