@@ -52,6 +52,6 @@ public class WatchOperation<DocumentT> {
     return service.streamFunction(
         "watch",
         Collections.singletonList(args),
-        ResultDecoders.changeEventDecoder(fullDocumentCodec);
+        ResultDecoders.changeEventDecoder(fullDocumentCodec));
   }
 }
