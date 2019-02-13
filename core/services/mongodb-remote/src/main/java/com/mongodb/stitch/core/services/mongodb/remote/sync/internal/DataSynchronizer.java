@@ -547,9 +547,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         final Set<BsonValue> unseenIds = nsConfig.getStaleDocumentIds();
         final Set<BsonDocument> latestDocumentsFromStale =
             getLatestDocumentsForStaleFromRemote(nsConfig, unseenIds);
-        logger.info(latestDocumentsFromStale.toString());
-        logger.info(remoteChangeEvents.toString());
-        logger.info(unseenIds.toString());
 
         final Map<BsonValue, BsonDocument> latestDocumentMap = new HashMap<>();
 

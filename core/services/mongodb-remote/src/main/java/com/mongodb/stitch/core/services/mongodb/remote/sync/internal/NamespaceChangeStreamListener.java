@@ -126,8 +126,6 @@ public class NamespaceChangeStreamListener implements Closeable {
     } finally {
       nsLock.writeLock().unlock();
     }
-
-    logger.info("stream STOPPED");
   }
 
   void addWatcher(final Callback<ChangeEvent<BsonDocument>, Object> callback) {
@@ -154,18 +152,22 @@ public class NamespaceChangeStreamListener implements Closeable {
 
   @Override
   public void close() {
-    if (currentStream != null) {
-      try {
-        currentStream.close();
-      } catch (final IOException e) {
-        e.printStackTrace();
-      } finally {
-        currentStream = null;
+    this.nsLock.writeLock().lock();
+    try {
+      if (currentStream != null) {
+        try {
+          currentStream.close();
+        } catch (final IOException e) {
+          e.printStackTrace();
+        } finally {
+          currentStream = null;
+        }
       }
-    }
 
-    clearWatchers();
-    logger.info("stream END");
+      clearWatchers();
+    } finally {
+      this.nsLock.writeLock().unlock();
+    }
   }
 
   /**
@@ -184,42 +186,46 @@ public class NamespaceChangeStreamListener implements Closeable {
    */
   boolean openStream() throws InterruptedException {
     logger.info("stream START");
-    if (!networkMonitor.isConnected()) {
-      logger.info("stream END - Network disconnected");
-      return false;
-    }
-    if (!authMonitor.isLoggedIn()) {
-      logger.info("stream END - Logged out");
-      return false;
-    }
-
-    if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
-      logger.info("stream END - No synchronized documents");
-      return false;
-    }
-
-
-    final Document args = new Document();
-    args.put("database", namespace.getDatabaseName());
-    args.put("collection", namespace.getCollectionName());
-
-    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
-    args.put("ids", idsToWatch);
-
-    currentStream =
-        service.streamFunction(
-            "watch",
-            Collections.singletonList(args),
-            ChangeEvent.changeEventCoder);
-
     final boolean isOpen;
-    if (currentStream != null && currentStream.isOpen()) {
-      this.nsConfig.setStale(true);
-      isOpen = true;
-    } else {
-      isOpen = false;
-    }
+    nsLock.writeLock().lockInterruptibly();
+    try {
+      if (!networkMonitor.isConnected()) {
+        logger.info("stream END - Network disconnected");
+        return false;
+      }
+      if (!authMonitor.isLoggedIn()) {
+        logger.info("stream END - Logged out");
+        return false;
+      }
 
+      if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
+        logger.info("stream END - No synchronized documents");
+        return false;
+      }
+
+
+      final Document args = new Document();
+      args.put("database", namespace.getDatabaseName());
+      args.put("collection", namespace.getCollectionName());
+
+      final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
+      args.put("ids", idsToWatch);
+
+      currentStream =
+          service.streamFunction(
+              "watch",
+              Collections.singletonList(args),
+              ChangeEvent.changeEventCoder);
+
+      if (currentStream != null && currentStream.isOpen()) {
+        this.nsConfig.setStale(true);
+        isOpen = true;
+      } else {
+        isOpen = false;
+      }
+    } finally {
+      nsLock.writeLock().unlock();
+    }
     return isOpen;
   }
 
@@ -263,8 +269,7 @@ public class NamespaceChangeStreamListener implements Closeable {
               + "fetching next event: %s",
           nsConfig.getNamespace(),
           ex), ex);
-      logger.info("stream END");
-      this.close();
+      logger.info("stream END – INTERRUPTED");
       Thread.currentThread().interrupt();
     } catch (final Exception ex) {
       // TODO: Emit error through DataSynchronizer as an ifc
@@ -273,9 +278,8 @@ public class NamespaceChangeStreamListener implements Closeable {
           "NamespaceChangeStreamListener::stream ns=%s exception on fetching next event: %s",
           nsConfig.getNamespace(),
           ex), ex);
-      logger.info("stream END");
+      logger.info("stream END – EXCEPTION");
       final boolean wasInterrupted = Thread.currentThread().isInterrupted();
-      this.close();
       if (wasInterrupted) {
         Thread.currentThread().interrupt();
       }
