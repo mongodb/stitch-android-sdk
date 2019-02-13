@@ -699,6 +699,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         assertEquals(entry.getValue(), capturedValue);
       }
     }
-    assertEquals(ResultDecoders.changeEventDecoder(new BsonDocumentCodec()), decoderArgumentCaptor.getValue());
+    assertEquals(ResultDecoders.changeEventDecoder(new BsonDocumentCodec()),
+        decoderArgumentCaptor.getValue());
   }
 }
