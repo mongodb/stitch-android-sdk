@@ -14,7 +14,6 @@ import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-
 class StitchAuthListenerIntTests : BaseStitchServerIntTest() {
 
     @Test

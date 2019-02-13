@@ -35,11 +35,11 @@ import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderC
 
 import javax.annotation.Nullable;
 
-import org.bson.Document;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
+import org.bson.Document;
 
 public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements StitchAuth {
   private final StitchAppClientInfo appInfo;

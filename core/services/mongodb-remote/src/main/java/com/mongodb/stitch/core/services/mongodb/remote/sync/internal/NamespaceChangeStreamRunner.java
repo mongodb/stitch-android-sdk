@@ -20,7 +20,6 @@ import com.mongodb.MongoInterruptedException;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 
 import org.bson.diagnostics.Logger;

@@ -313,8 +313,7 @@ public class NamespaceChangeStreamListener implements Closeable {
    *
    * @return the latest unprocessed change event for the given document ID, or null if none exists.
    */
-  public @Nullable
-  ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
       final BsonValue documentId
   ) {
     final ChangeEvent<BsonDocument> event;
