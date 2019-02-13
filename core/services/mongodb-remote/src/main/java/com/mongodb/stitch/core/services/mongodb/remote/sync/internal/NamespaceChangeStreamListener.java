@@ -102,6 +102,12 @@ public class NamespaceChangeStreamListener implements Closeable {
    * Stops the background stream thread.
    */
   public void stop() {
+    if (runnerThread == null) {
+      return;
+    }
+
+    runnerThread.interrupt();
+
     nsLock.writeLock().lock();
     try {
       if (runnerThread == null) {
@@ -187,30 +193,31 @@ public class NamespaceChangeStreamListener implements Closeable {
   boolean openStream() throws InterruptedException {
     logger.info("stream START");
     final boolean isOpen;
+
+    if (!networkMonitor.isConnected()) {
+      logger.info("stream END - Network disconnected");
+      return false;
+    }
+    if (!authMonitor.isLoggedIn()) {
+      logger.info("stream END - Logged out");
+      return false;
+    }
+
+    if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
+      logger.info("stream END - No synchronized documents");
+      return false;
+    }
+
+
+    final Document args = new Document();
+    args.put("database", namespace.getDatabaseName());
+    args.put("collection", namespace.getCollectionName());
+
+    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
+    args.put("ids", idsToWatch);
+
     nsLock.writeLock().lockInterruptibly();
     try {
-      if (!networkMonitor.isConnected()) {
-        logger.info("stream END - Network disconnected");
-        return false;
-      }
-      if (!authMonitor.isLoggedIn()) {
-        logger.info("stream END - Logged out");
-        return false;
-      }
-
-      if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
-        logger.info("stream END - No synchronized documents");
-        return false;
-      }
-
-
-      final Document args = new Document();
-      args.put("database", namespace.getDatabaseName());
-      args.put("collection", namespace.getCollectionName());
-
-      final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
-      args.put("ids", idsToWatch);
-
       currentStream =
           service.streamFunction(
               "watch",
@@ -317,7 +324,8 @@ public class NamespaceChangeStreamListener implements Closeable {
    *
    * @return the latest unprocessed change event for the given document ID, or null if none exists.
    */
-  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+  public @Nullable
+  ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
       final BsonValue documentId
   ) {
     final ChangeEvent<BsonDocument> event;
