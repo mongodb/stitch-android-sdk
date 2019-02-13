@@ -181,25 +181,25 @@ public class NamespaceChangeStreamListener implements Closeable {
    * @return true if successfully opened, false if not
    */
   boolean openStream() throws InterruptedException {
+    logger.info("stream START");
+    if (!networkMonitor.isConnected()) {
+      logger.info("stream END - Network disconnected");
+      return false;
+    }
+    if (!authMonitor.isLoggedIn()) {
+      logger.info("stream END - Logged out");
+      return false;
+    }
+
+    if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
+      logger.info("stream END - No synchronized documents");
+      return false;
+    }
+
     final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
 
     nsLock.writeLock().lockInterruptibly();
     try {
-      logger.info("stream START");
-      if (!networkMonitor.isConnected()) {
-        logger.info("stream END - Network disconnected");
-        return false;
-      }
-      if (!authMonitor.isLoggedIn()) {
-        logger.info("stream END - Logged out");
-        return false;
-      }
-
-      if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
-        logger.info("stream END - No synchronized documents");
-        return false;
-      }
-
       final Document args = new Document();
       args.put("database", namespace.getDatabaseName());
       args.put("collection", namespace.getCollectionName());
