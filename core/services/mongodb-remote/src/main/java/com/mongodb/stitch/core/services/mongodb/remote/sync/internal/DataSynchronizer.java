@@ -1716,6 +1716,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   ) {
     this.waitUntilInitialized();
     final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
     try {
       ongoingOperationsGroup.enter();
       for (final BsonValue documentId : documentIds) {
@@ -1725,8 +1726,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       getLocalCollection(namespace).deleteMany(
           new Document("_id", new Document("$in", Arrays.asList(documentIds))));
     } finally {
-      ongoingOperationsGroup.exit();
       lock.unlock();
+      ongoingOperationsGroup.exit();
     }
 
     triggerListeningToNamespace(namespace);
