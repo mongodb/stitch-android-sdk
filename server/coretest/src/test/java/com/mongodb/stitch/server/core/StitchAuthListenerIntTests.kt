@@ -1,26 +1,22 @@
-package com.mongodb.stitch.android.core
+package com.mongodb.stitch.server.core
 
-import android.support.test.runner.AndroidJUnit4
-import com.google.android.gms.tasks.Tasks
-import com.mongodb.stitch.android.core.auth.StitchAuth
-import com.mongodb.stitch.android.core.auth.StitchAuthListener
-import com.mongodb.stitch.android.core.auth.StitchUser
-import com.mongodb.stitch.android.core.auth.providers.userpassword.UserPasswordAuthProviderClient
-import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
+import com.mongodb.stitch.server.core.auth.StitchAuth
+import com.mongodb.stitch.server.core.auth.StitchAuthListener
+import com.mongodb.stitch.server.core.auth.StitchUser
+import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient
+import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
+import org.junit.Assert
 import org.junit.Test
-import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-@RunWith(AndroidJUnit4::class)
-class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
+
+class StitchAuthListenerIntTests : BaseStitchServerIntTest() {
+
     @Test
     fun testOnUserLoggedInDispatched() {
         val app = createApp()
@@ -38,20 +34,17 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
         val countDownLatch = CountDownLatch(1)
 
         client.auth.addAuthListener(object : StitchAuthListener {
-            override fun onAuthEvent(auth: StitchAuth?) {
-            }
-
             override fun onUserLoggedIn(auth: StitchAuth?, loggedInUser: StitchUser?) {
-                assertNotNull(auth)
-                assertNotNull(loggedInUser)
+                Assert.assertNotNull(auth)
+                Assert.assertNotNull(loggedInUser)
                 countDownLatch.countDown()
             }
         })
 
-        assertFalse(client.auth.isLoggedIn)
-        assertNull(client.auth.user)
+        Assert.assertFalse(client.auth.isLoggedIn)
+        Assert.assertNull(client.auth.user)
 
-        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+        client.auth.loginWithCredential(AnonymousCredential())
 
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
@@ -73,20 +66,17 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
         val countDownLatch = CountDownLatch(1)
 
         client.auth.addAuthListener(object : StitchAuthListener {
-            override fun onAuthEvent(auth: StitchAuth?) {
-            }
-
             override fun onUserAdded(auth: StitchAuth?, addedUser: StitchUser?) {
-                assertNotNull(auth)
-                assertNotNull(addedUser)
+                Assert.assertNotNull(auth)
+                Assert.assertNotNull(addedUser)
                 countDownLatch.countDown()
             }
         })
 
-        assertFalse(client.auth.isLoggedIn)
-        assertNull(client.auth.user)
+        Assert.assertFalse(client.auth.isLoggedIn)
+        Assert.assertNull(client.auth.user)
 
-        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+        client.auth.loginWithCredential(AnonymousCredential())
 
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
@@ -116,17 +106,17 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
                 currentActiveUser: StitchUser?,
                 previousActiveUser: StitchUser?
             ) {
-                assertNotNull(auth)
-                assertNotNull(currentActiveUser)
-                assertNotNull(previousActiveUser)
+                Assert.assertNotNull(auth)
+                Assert.assertNotNull(currentActiveUser)
+                Assert.assertNotNull(previousActiveUser)
                 countDownLatch.countDown()
             }
         })
 
-        assertFalse(client.auth.isLoggedIn)
-        assertNull(client.auth.user)
+        Assert.assertFalse(client.auth.isLoggedIn)
+        Assert.assertNull(client.auth.user)
 
-        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+        client.auth.loginWithCredential(AnonymousCredential())
         registerAndLoginWithUserPass(app.second, client, "email@10gen.com", "tester10")
 
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
@@ -156,18 +146,18 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
                 auth: StitchAuth?,
                 loggedOutUser: StitchUser?
             ) {
-                assertNotNull(auth)
-                assertNotNull(loggedOutUser)
+                Assert.assertNotNull(auth)
+                Assert.assertNotNull(loggedOutUser)
                 countDownLatch.countDown()
             }
         })
 
-        assertFalse(client.auth.isLoggedIn)
-        assertNull(client.auth.user)
+        Assert.assertFalse(client.auth.isLoggedIn)
+        Assert.assertNull(client.auth.user)
 
-        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+        client.auth.loginWithCredential(AnonymousCredential())
         registerAndLoginWithUserPass(app.second, client, "email@10gen.com", "tester10")
-        Tasks.await(client.auth.logout())
+        client.auth.logout()
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
 
@@ -188,22 +178,19 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
         val countDownLatch = CountDownLatch(1)
 
         client.auth.addAuthListener(object : StitchAuthListener {
-            override fun onAuthEvent(auth: StitchAuth?) {
-            }
-
             override fun onUserRemoved(auth: StitchAuth?, removedUser: StitchUser?) {
-                assertNotNull(auth)
-                assertNotNull(removedUser)
+                Assert.assertNotNull(auth)
+                Assert.assertNotNull(removedUser)
                 countDownLatch.countDown()
             }
         })
 
-        assertFalse(client.auth.isLoggedIn)
-        assertNull(client.auth.user)
+        Assert.assertFalse(client.auth.isLoggedIn)
+        Assert.assertNull(client.auth.user)
 
-        Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+        client.auth.loginWithCredential(AnonymousCredential())
 
-        Tasks.await(client.auth.removeUser())
+        client.auth.removeUser()
 
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
@@ -229,28 +216,28 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
             }
 
             override fun onUserLinked(auth: StitchAuth?, linkedUser: StitchUser?) {
-                assertNotNull(auth)
-                assertNotNull(linkedUser)
+                Assert.assertNotNull(auth)
+                Assert.assertNotNull(linkedUser)
                 countDownLatch.countDown()
             }
         })
 
-        assertFalse(client.auth.isLoggedIn)
-        assertNull(client.auth.user)
+        Assert.assertFalse(client.auth.isLoggedIn)
+        Assert.assertNull(client.auth.user)
 
         val userPassClient = client.auth.getProviderClient(UserPasswordAuthProviderClient.factory)
 
         val email = "user@10gen.com"
         val password = "password"
-        Tasks.await(userPassClient.registerWithEmail(email, password))
+        userPassClient.registerWithEmail(email, password)
 
         val conf = app.second.userRegistrations.sendConfirmation(email)
-        Tasks.await(userPassClient.confirmUser(conf.token, conf.tokenId))
+        userPassClient.confirmUser(conf.token, conf.tokenId)
 
-        val anonUser = Tasks.await(client.auth.loginWithCredential(AnonymousCredential()))
+        val anonUser = client.auth.loginWithCredential(AnonymousCredential())
 
-        Tasks.await(anonUser.linkWithCredential(
-            UserPasswordCredential(email, password)))
+        anonUser.linkWithCredential(
+            UserPasswordCredential(email, password))
 
         assert(countDownLatch.await(10, TimeUnit.SECONDS))
     }
@@ -272,11 +259,8 @@ class StitchAuthListenerIntTests : BaseStitchAndroidIntTest() {
         val countDownLatch = CountDownLatch(1)
 
         client.auth.addAuthListener(object : StitchAuthListener {
-            override fun onAuthEvent(auth: StitchAuth?) {
-            }
-
             override fun onListenerRegistered(auth: StitchAuth?) {
-                assertNotNull(auth)
+                Assert.assertNotNull(auth)
                 countDownLatch.countDown()
             }
         })

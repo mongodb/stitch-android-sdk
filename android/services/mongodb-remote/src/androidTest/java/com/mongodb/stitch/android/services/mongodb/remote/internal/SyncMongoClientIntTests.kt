@@ -243,7 +243,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     }
 
     override fun removeUser(userId: String) {
-        client.auth.removeUserWithId(userId)
+        Tasks.await(client.auth.removeUserWithId(userId))
     }
 
     override fun currentUserId(): String? {

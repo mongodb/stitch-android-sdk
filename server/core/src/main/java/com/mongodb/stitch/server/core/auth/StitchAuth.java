@@ -121,4 +121,19 @@ public interface StitchAuth {
    * @throws IllegalArgumentException throws if user id not found
    */
   StitchUser switchToUserWithId(final String userId) throws IllegalArgumentException;
+
+  /**
+   * Adds a listener for any important auth event.
+   *
+   * @param listener the listener to add.
+   * @see StitchAuthListener
+   */
+  void addAuthListener(final StitchAuthListener listener);
+
+  /**
+   * Removes a listener.
+   *
+   * @param listener the listener to remove.
+   */
+  void removeAuthListener(final StitchAuthListener listener);
 }

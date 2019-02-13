@@ -719,7 +719,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 credential.getProviderName(),
                 profile));
 
-    final boolean newUserAdded = this.allUsersAuthInfo.containsKey(newAuthInfo.getUserId());
+    final boolean newUserAdded = !this.allUsersAuthInfo.containsKey(newAuthInfo.getUserId());
 
     try {
       AuthInfo.writeActiveUserAuthInfoToStorage(newAuthInfo, storage);

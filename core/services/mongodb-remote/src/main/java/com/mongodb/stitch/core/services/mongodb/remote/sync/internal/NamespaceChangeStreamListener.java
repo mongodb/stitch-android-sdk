@@ -218,6 +218,7 @@ public class NamespaceChangeStreamListener implements Closeable {
 
       return currentStream.isOpen();
     } finally {
+      logger.info("stream RUNNING");
       nsLock.writeLock().unlock();
     }
   }
