@@ -32,6 +32,7 @@ import com.mongodb.stitch.android.core.services.internal.ServiceClientFactory;
 import com.mongodb.stitch.android.core.services.internal.StitchServiceClientImpl;
 import com.mongodb.stitch.core.StitchAppClientConfiguration;
 import com.mongodb.stitch.core.StitchAppClientInfo;
+import com.mongodb.stitch.core.auth.internal.CoreStitchAuth;
 import com.mongodb.stitch.core.internal.CoreStitchAppClient;
 import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.net.StitchAppRequestClientImpl;
@@ -274,8 +275,17 @@ public final class StitchAppClientImpl implements StitchAppClient, AuthMonitor, 
   }
 
   @Override
-  public boolean isLoggedIn() {
-    return getAuth().isLoggedIn();
+  public boolean isLoggedIn() throws InterruptedException {
+    return ((CoreStitchAuth)getAuth()).isLoggedInInterruptibly();
+  }
+
+  @Override
+  public boolean tryIsLoggedIn() {
+    try {
+      return ((CoreStitchAuth)getAuth()).isLoggedInInterruptibly();
+    } catch (InterruptedException e) {
+      return false;
+    }
   }
 
   @Nullable

@@ -122,6 +122,10 @@ class SyncUnitTestHarness : Closeable {
                 return isAuthed
             }
 
+            override fun tryIsLoggedIn(): Boolean {
+                return isAuthed
+            }
+
             override fun getActiveUserId(): String? {
                 return userId
             }

@@ -502,7 +502,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             logicalT));
         return false;
       }
-      if (authMonitor == null || !authMonitor.isLoggedIn()) {
+      if (authMonitor == null || !authMonitor.tryIsLoggedIn()) {
         logger.info(String.format(
             Locale.US,
             "t='%d': doSyncPass END - Logged out",

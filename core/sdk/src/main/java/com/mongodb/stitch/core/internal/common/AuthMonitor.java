@@ -24,8 +24,18 @@ public interface AuthMonitor {
    * logged in.
    *
    * @return whether or not the application client is logged in
+   * @throws InterruptedException will throw interruptibly
    */
-  boolean isLoggedIn();
+  boolean isLoggedIn() throws InterruptedException;
+
+  /**
+   * Get whether or not the application client is currently
+   * logged in.
+   *
+   * @return whether or not the application client is logged in,
+   *         or false if the thread was interrupted
+   */
+  boolean tryIsLoggedIn();
 
   /**
    * Get the active user id from the applications

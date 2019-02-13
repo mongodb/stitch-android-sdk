@@ -108,6 +108,11 @@ public final class TestUtils {
           public String getActiveUserId() {
             return "bound";
           }
+
+          @Override
+          public boolean tryIsLoggedIn() {
+            return true;
+          }
         },
         new ThreadDispatcher());
   }

@@ -167,6 +167,21 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
    * @return whether or not the client is logged in.
    */
   @CheckReturnValue(when = When.NEVER)
+  public boolean isLoggedInInterruptibly() throws InterruptedException {
+    authLock.readLock().lockInterruptibly();
+    try {
+      return activeUser != null && activeUser.isLoggedIn();
+    } finally {
+      authLock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Returns whether or not the client is logged in.
+   *
+   * @return whether or not the client is logged in.
+   */
+  @CheckReturnValue(when = When.NEVER)
   public boolean isLoggedIn() {
     authLock.readLock().lock();
     try {
@@ -282,9 +297,15 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   @Override
   public <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
                                                final Decoder<T> decoder) {
-    if (!isLoggedIn()) {
-      throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
+    try {
+      if (!isLoggedInInterruptibly()) {
+        throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
+      }
+    } catch (InterruptedException e) {
+      System.err.println("Stream authentication was interrupted.");
+      return null;
     }
+
     final String authToken = stitchReq.getUseRefreshToken()
         ? getAuthInfo().getRefreshToken() : getAuthInfo().getAccessToken();
     try {

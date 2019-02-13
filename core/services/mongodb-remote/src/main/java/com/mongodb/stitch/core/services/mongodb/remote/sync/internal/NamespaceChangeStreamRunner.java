@@ -57,14 +57,22 @@ class NamespaceChangeStreamRunner implements Runnable, Closeable {
         try {
           isOpen = listener.openStream();
         } catch (final MongoInterruptedException ex) {
-          logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", ex);
+          logger.error(
+              "NamespaceChangeStreamRunner::run error happened while opening stream:", ex);
+          close();
           return;
         } catch (final InterruptedException e) {
+          close();
           return;
         } catch (final Throwable t) {
-          logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", t);
           if (Thread.currentThread().isInterrupted()) {
+            logger.error(
+                "NamespaceChangeStreamRunner::run error happened while opening stream:", t);
+            close();
             return;
+          } else {
+            logger.error(
+                "NamespaceChangeStreamRunner::run error happened while opening stream:", t);
           }
         }
 
@@ -73,6 +81,7 @@ class NamespaceChangeStreamRunner implements Runnable, Closeable {
             wait(RETRY_SLEEP_MILLIS);
           }
         } catch (final InterruptedException e) {
+          close();
           return;
         }
       }

@@ -120,6 +120,7 @@ public class NamespaceChangeStreamListener implements Closeable {
       while (runnerThread.isAlive()) {
         runnerThread.interrupt();
         try {
+          System.out.println("killing runner");
           runnerThread.join(1000);
         } catch (final Exception e) {
           e.printStackTrace();
@@ -158,22 +159,17 @@ public class NamespaceChangeStreamListener implements Closeable {
 
   @Override
   public void close() {
-    this.nsLock.writeLock().lock();
-    try {
-      if (currentStream != null) {
-        try {
-          currentStream.close();
-        } catch (final IOException e) {
-          e.printStackTrace();
-        } finally {
-          currentStream = null;
-        }
+    if (currentStream != null) {
+      try {
+        currentStream.close();
+      } catch (final IOException e) {
+        e.printStackTrace();
+      } finally {
+        currentStream = null;
       }
-
-      clearWatchers();
-    } finally {
-      this.nsLock.writeLock().unlock();
     }
+
+    clearWatchers();
   }
 
   /**
@@ -193,31 +189,30 @@ public class NamespaceChangeStreamListener implements Closeable {
   boolean openStream() throws InterruptedException {
     logger.info("stream START");
     final boolean isOpen;
+    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
 
     if (!networkMonitor.isConnected()) {
       logger.info("stream END - Network disconnected");
       return false;
     }
-    if (!authMonitor.isLoggedIn()) {
-      logger.info("stream END - Logged out");
-      return false;
-    }
 
-    if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
+    if (idsToWatch.isEmpty()) {
       logger.info("stream END - No synchronized documents");
       return false;
     }
 
-
-    final Document args = new Document();
-    args.put("database", namespace.getDatabaseName());
-    args.put("collection", namespace.getCollectionName());
-
-    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
-    args.put("ids", idsToWatch);
-
     nsLock.writeLock().lockInterruptibly();
     try {
+      if (!authMonitor.isLoggedIn()) {
+        logger.info("stream END - Logged out");
+        return false;
+      }
+
+      final Document args = new Document();
+      args.put("database", namespace.getDatabaseName());
+      args.put("collection", namespace.getCollectionName());
+      args.put("ids", idsToWatch);
+
       currentStream =
           service.streamFunction(
               "watch",
@@ -324,8 +319,7 @@ public class NamespaceChangeStreamListener implements Closeable {
    *
    * @return the latest unprocessed change event for the given document ID, or null if none exists.
    */
-  public @Nullable
-  ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
       final BsonValue documentId
   ) {
     final ChangeEvent<BsonDocument> event;

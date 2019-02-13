@@ -33,7 +33,7 @@ public abstract class SyncMongoClientFactory {
       throw new IllegalArgumentException("StitchAppClient not configured with a data directory");
     }
 
-    final String userId = appInfo.getAuthMonitor().isLoggedIn()
+    final String userId = appInfo.getAuthMonitor().tryIsLoggedIn()
         ? appInfo.getAuthMonitor().getActiveUserId() : "unbound";
     final String instanceKey = String.format(
         "%s-%s_sync_%s_%s", appInfo.getClientAppId(), dataDir, serviceName, userId);

@@ -81,7 +81,6 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
         if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
           this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
               ? appInfo.getAuthMonitor().getActiveUserId() : "";
-
           if (authEvent instanceof AuthEvent.ActiveUserChanged
               && ((AuthEvent.ActiveUserChanged)authEvent).getCurrentActiveUser() != null) {
             // reinitialize the DataSynchronizer entirely.
