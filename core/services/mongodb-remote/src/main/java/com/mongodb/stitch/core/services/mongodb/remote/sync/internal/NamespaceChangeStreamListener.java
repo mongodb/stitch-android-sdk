@@ -282,6 +282,7 @@ public class NamespaceChangeStreamListener implements Closeable {
           ex), ex);
       logger.info("stream END – EXCEPTION");
       final boolean wasInterrupted = Thread.currentThread().isInterrupted();
+      this.close();
       if (wasInterrupted) {
         Thread.currentThread().interrupt();
       }
