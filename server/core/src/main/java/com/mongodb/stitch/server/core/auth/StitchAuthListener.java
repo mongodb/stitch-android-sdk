@@ -18,6 +18,10 @@ package com.mongodb.stitch.server.core.auth;
 
 import javax.annotation.Nullable;
 
+/**
+ * StitchAuthListener allows one to hook into authentication events as they happen in a Stitch app
+ * client.
+ */
 public interface StitchAuthListener {
   /**
    * onAuthEvent is called any time a notable event regarding authentication happens.

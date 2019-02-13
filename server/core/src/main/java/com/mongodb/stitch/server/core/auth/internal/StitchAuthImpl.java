@@ -33,11 +33,11 @@ import com.mongodb.stitch.server.core.auth.StitchUser;
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.internal.NamedAuthProviderClientFactory;
 
-import javax.annotation.Nullable;
-
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
+import javax.annotation.Nullable;
 
 import org.bson.Document;
 
