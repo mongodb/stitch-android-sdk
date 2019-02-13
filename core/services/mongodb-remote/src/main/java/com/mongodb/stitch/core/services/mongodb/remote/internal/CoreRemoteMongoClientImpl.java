@@ -77,13 +77,13 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
           System.err.println("Could not delete database for user id " + userId);
         }
         break;
-      case USER_SWITCHED:
+      case ACTIVE_USER_CHANGED:
         if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
           this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
               ? appInfo.getAuthMonitor().getActiveUserId() : "";
 
-          if (authEvent instanceof AuthEvent.UserSwitched
-              && ((AuthEvent.UserSwitched)authEvent).getCurrentActiveUser() != null) {
+          if (authEvent instanceof AuthEvent.ActiveUserChanged
+              && ((AuthEvent.ActiveUserChanged)authEvent).getCurrentActiveUser() != null) {
             // reinitialize the DataSynchronizer entirely.
             // any auth event will trigger this.
             this.dataSynchronizer.reinitialize(

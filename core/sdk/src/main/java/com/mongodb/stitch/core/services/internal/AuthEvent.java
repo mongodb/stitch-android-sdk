@@ -24,7 +24,7 @@ public abstract class AuthEvent extends RebindEvent {
   public enum Type {
     USER_LOGGED_IN,
     USER_LOGGED_OUT,
-    USER_SWITCHED,
+    ACTIVE_USER_CHANGED,
     USER_REMOVED
   }
 
@@ -62,13 +62,13 @@ public abstract class AuthEvent extends RebindEvent {
     }
   }
 
-  public static class UserSwitched<StitchUserT extends CoreStitchUser> extends AuthEvent {
+  public static class ActiveUserChanged<StitchUserT extends CoreStitchUser> extends AuthEvent {
     private final StitchUserT currentActiveUser;
     @Nullable
     private final StitchUserT previousActiveUser;
 
-    public UserSwitched(final StitchUserT currentActiveUser,
-                        @Nullable final StitchUserT previousActiveUser) {
+    public ActiveUserChanged(@Nullable final StitchUserT currentActiveUser,
+                             @Nullable final StitchUserT previousActiveUser) {
       this.currentActiveUser = currentActiveUser;
       this.previousActiveUser = previousActiveUser;
     }
@@ -84,7 +84,7 @@ public abstract class AuthEvent extends RebindEvent {
 
     @Override
     public Type getAuthEventType() {
-      return Type.USER_SWITCHED;
+      return Type.ACTIVE_USER_CHANGED;
     }
   }
 
