@@ -55,7 +55,6 @@ public class OkHttpEventStream extends EventStreamReader implements EventStream 
   @Override
   public void close() throws IOException {
     this.source.close();
-    this.call.cancel();
   }
 
   @Override

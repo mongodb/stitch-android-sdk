@@ -26,6 +26,7 @@ import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
@@ -46,7 +47,7 @@ import org.bson.Document;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
-public class NamespaceChangeStreamListener {
+public class NamespaceChangeStreamListener implements Closeable {
   private final MongoNamespace namespace;
   private final NamespaceSynchronizationConfig nsConfig;
   private final CoreStitchServiceClient service;
@@ -108,6 +109,8 @@ public class NamespaceChangeStreamListener {
       }
 
       this.cancel();
+      this.close();
+
       while (runnerThread.isAlive()) {
         runnerThread.interrupt();
         try {
@@ -123,6 +126,8 @@ public class NamespaceChangeStreamListener {
     } finally {
       nsLock.writeLock().unlock();
     }
+
+    logger.info("stream STOPPED");
   }
 
   void addWatcher(final Callback<ChangeEvent<BsonDocument>, Object> callback) {
@@ -147,7 +152,8 @@ public class NamespaceChangeStreamListener {
     }
   }
 
-  private void close() {
+  @Override
+  public void close() {
     if (currentStream != null) {
       try {
         currentStream.close();
@@ -159,6 +165,7 @@ public class NamespaceChangeStreamListener {
     }
 
     clearWatchers();
+    logger.info("stream END");
   }
 
   /**
@@ -174,39 +181,45 @@ public class NamespaceChangeStreamListener {
    * @return true if successfully opened, false if not
    */
   boolean openStream() throws InterruptedException {
-    logger.info("stream START");
-    if (!networkMonitor.isConnected()) {
-      logger.info("stream END - Network disconnected");
-      return false;
-    }
-    if (!authMonitor.isLoggedIn()) {
-      logger.info("stream END - Logged out");
-      return false;
-    }
-
-    if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
-      logger.info("stream END - No synchronized documents");
-      return false;
-    }
-
-    final Document args = new Document();
-    args.put("database", namespace.getDatabaseName());
-    args.put("collection", namespace.getCollectionName());
-
     final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
-    args.put("ids", idsToWatch);
 
-    currentStream =
-        service.streamFunction(
-            "watch",
-            Collections.singletonList(args),
-            ChangeEvent.changeEventCoder);
+    nsLock.writeLock().lockInterruptibly();
+    try {
+      logger.info("stream START");
+      if (!networkMonitor.isConnected()) {
+        logger.info("stream END - Network disconnected");
+        return false;
+      }
+      if (!authMonitor.isLoggedIn()) {
+        logger.info("stream END - Logged out");
+        return false;
+      }
 
-    if (currentStream.isOpen()) {
-      this.nsConfig.setStale(true);
+      if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
+        logger.info("stream END - No synchronized documents");
+        return false;
+      }
+
+      final Document args = new Document();
+      args.put("database", namespace.getDatabaseName());
+      args.put("collection", namespace.getCollectionName());
+
+      args.put("ids", idsToWatch);
+
+      currentStream =
+          service.streamFunction(
+              "watch",
+              Collections.singletonList(args),
+              ChangeEvent.changeEventCoder);
+
+      if (currentStream.isOpen()) {
+        this.nsConfig.setStale(true);
+      }
+
+      return currentStream.isOpen();
+    } finally {
+      nsLock.writeLock().unlock();
     }
-
-    return currentStream.isOpen();
   }
 
   /**
@@ -216,6 +229,10 @@ public class NamespaceChangeStreamListener {
     try {
       if (currentStream != null && currentStream.isOpen()) {
         final StitchEvent<ChangeEvent<BsonDocument>> event = currentStream.nextEvent();
+        if (event == null) {
+          return;
+        }
+
         if (event.getError() != null) {
           throw event.getError();
         }
