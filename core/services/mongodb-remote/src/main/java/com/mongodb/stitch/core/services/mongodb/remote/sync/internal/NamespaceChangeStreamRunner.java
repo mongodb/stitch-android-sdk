@@ -87,7 +87,13 @@ class NamespaceChangeStreamRunner implements Runnable, Closeable {
       }
 
       if (isOpen) {
-        listener.storeNextEvent();
+        try {
+          listener.storeNextEvent();
+        } catch (final IllegalStateException e) {
+          logger.info(String.format(
+              "NamespaceChangeStreamRunner::stream %s: ", e.getLocalizedMessage()));
+          return;
+        }
       }
     } while (networkMonitor.isConnected() && !Thread.currentThread().isInterrupted());
   }
