@@ -175,7 +175,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   @Override
   public <T> Stream<T> streamFunction(final String name,
                                       final List<?> args,
-                                      final Decoder<T> decoder) {
+                                      final Decoder<T> decoder) throws InterruptedException {
     return requestClient.openAuthenticatedStream(
         getStreamServiceFunctionRequest(name, args), decoder
     );

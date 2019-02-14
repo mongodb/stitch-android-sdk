@@ -94,8 +94,6 @@ public abstract class EventStreamReader {
         }
         doneOnce = true;
         line = "";
-      } catch (IOException e) {
-        return null;
       }
 
       // If the line is empty (a blank line), Dispatch the event, as defined below.

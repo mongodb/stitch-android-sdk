@@ -28,7 +28,6 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
@@ -120,7 +119,6 @@ public class NamespaceChangeStreamListener implements Closeable {
       while (runnerThread.isAlive()) {
         runnerThread.interrupt();
         try {
-          System.out.println("killing runner");
           runnerThread.join(1000);
         } catch (final Exception e) {
           e.printStackTrace();
@@ -186,7 +184,7 @@ public class NamespaceChangeStreamListener implements Closeable {
    *
    * @return true if successfully opened, false if not
    */
-  boolean openStream() throws InterruptedException {
+  boolean openStream() throws InterruptedException, IOException {
     logger.info("stream START");
     final boolean isOpen;
     final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
@@ -264,13 +262,13 @@ public class NamespaceChangeStreamListener implements Closeable {
           watcher.onComplete(OperationResult.successfulResultOf(event.getData()));
         }
       }
-    } catch (final InterruptedIOException | InterruptedException ex) {
-      logger.error(String.format(
+    } catch (final InterruptedException | IOException ex) {
+      logger.info(String.format(
           Locale.US,
-          "NamespaceChangeStreamListener::stream ns=%s interrupted exception on "
+          "NamespaceChangeStreamListener::stream ns=%s interrupted on "
               + "fetching next event: %s",
           nsConfig.getNamespace(),
-          ex), ex);
+          ex));
       logger.info("stream END – INTERRUPTED");
       Thread.currentThread().interrupt();
     } catch (final Exception ex) {

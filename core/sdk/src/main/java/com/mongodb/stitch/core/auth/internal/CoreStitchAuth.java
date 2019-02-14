@@ -295,15 +295,12 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   @Override
-  public <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
-                                               final Decoder<T> decoder) {
-    try {
-      if (!isLoggedInInterruptibly()) {
-        throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
-      }
-    } catch (InterruptedException e) {
-      System.err.println("Stream authentication was interrupted.");
-      return null;
+  public <T> Stream<T> openAuthenticatedStream(
+      final StitchAuthRequest stitchReq,
+      final Decoder<T> decoder
+  ) throws InterruptedException {
+    if (!isLoggedInInterruptibly()) {
+      throw new StitchClientException(StitchClientErrorCode.MUST_AUTHENTICATE_FIRST);
     }
 
     final String authToken = stitchReq.getUseRefreshToken()
@@ -524,9 +521,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     return newReq.build();
   }
 
-  private <T> Stream<T> handleAuthFailureForStream(final StitchServiceException ex,
-                                                   final StitchAuthRequest req,
-                                                   final Decoder<T> decoder) {
+  private <T> Stream<T> handleAuthFailureForStream(
+      final StitchServiceException ex,
+      final StitchAuthRequest req,
+      final Decoder<T> decoder
+  ) throws InterruptedException {
     if (ex.getErrorCode() != StitchServiceErrorCode.INVALID_SESSION) {
       throw ex;
     }

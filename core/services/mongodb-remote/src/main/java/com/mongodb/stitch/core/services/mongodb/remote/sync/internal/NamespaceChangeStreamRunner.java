@@ -20,6 +20,7 @@ import com.mongodb.MongoInterruptedException;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import java.io.Closeable;
+import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 
 import org.bson.diagnostics.Logger;
@@ -61,13 +62,12 @@ class NamespaceChangeStreamRunner implements Runnable, Closeable {
               "NamespaceChangeStreamRunner::run error happened while opening stream:", ex);
           close();
           return;
-        } catch (final InterruptedException e) {
+        } catch (final InterruptedException | InterruptedIOException e) {
           close();
           return;
         } catch (final Throwable t) {
           if (Thread.currentThread().isInterrupted()) {
-            logger.error(
-                "NamespaceChangeStreamRunner::run error happened while opening stream:", t);
+            logger.info("NamespaceChangeStreamRunner::stream interrupted:");
             close();
             return;
           } else {
