@@ -26,8 +26,8 @@ import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,7 +46,7 @@ import org.bson.Document;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
-public class NamespaceChangeStreamListener {
+public class NamespaceChangeStreamListener implements Closeable {
   private final MongoNamespace namespace;
   private final NamespaceSynchronizationConfig nsConfig;
   private final CoreStitchServiceClient service;
@@ -101,6 +101,12 @@ public class NamespaceChangeStreamListener {
    * Stops the background stream thread.
    */
   public void stop() {
+    if (runnerThread == null) {
+      return;
+    }
+
+    runnerThread.interrupt();
+
     nsLock.writeLock().lock();
     try {
       if (runnerThread == null) {
@@ -108,6 +114,8 @@ public class NamespaceChangeStreamListener {
       }
 
       this.cancel();
+      this.close();
+
       while (runnerThread.isAlive()) {
         runnerThread.interrupt();
         try {
@@ -147,7 +155,8 @@ public class NamespaceChangeStreamListener {
     }
   }
 
-  private void close() {
+  @Override
+  public void close() {
     if (currentStream != null) {
       try {
         currentStream.close();
@@ -163,6 +172,7 @@ public class NamespaceChangeStreamListener {
 
   /**
    * Whether or not the current stream is currently open.
+   *
    * @return true if open, false if not
    */
   public synchronized boolean isOpen() {
@@ -171,42 +181,52 @@ public class NamespaceChangeStreamListener {
 
   /**
    * Open the event stream
+   *
    * @return true if successfully opened, false if not
    */
-  boolean openStream() throws InterruptedException {
+  boolean openStream() throws InterruptedException, IOException {
     logger.info("stream START");
+    final boolean isOpen;
+    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
+
     if (!networkMonitor.isConnected()) {
       logger.info("stream END - Network disconnected");
       return false;
     }
-    if (!authMonitor.isLoggedIn()) {
-      logger.info("stream END - Logged out");
-      return false;
-    }
 
-    if (nsConfig.getSynchronizedDocumentIds().isEmpty()) {
+    if (idsToWatch.isEmpty()) {
       logger.info("stream END - No synchronized documents");
       return false;
     }
 
-    final Document args = new Document();
-    args.put("database", namespace.getDatabaseName());
-    args.put("collection", namespace.getCollectionName());
+    nsLock.writeLock().lockInterruptibly();
+    try {
+      if (!authMonitor.isLoggedIn()) {
+        logger.info("stream END - Logged out");
+        return false;
+      }
 
-    final Set<BsonValue> idsToWatch = nsConfig.getSynchronizedDocumentIds();
-    args.put("ids", idsToWatch);
+      final Document args = new Document();
+      args.put("database", namespace.getDatabaseName());
+      args.put("collection", namespace.getCollectionName());
+      args.put("ids", idsToWatch);
 
-    currentStream =
-        service.streamFunction(
-            "watch",
-            Collections.singletonList(args),
-            ChangeEvent.changeEventCoder);
+      currentStream =
+          service.streamFunction(
+              "watch",
+              Collections.singletonList(args),
+              ChangeEvent.changeEventCoder);
 
-    if (currentStream.isOpen()) {
-      this.nsConfig.setStale(true);
+      if (currentStream != null && currentStream.isOpen()) {
+        this.nsConfig.setStale(true);
+        isOpen = true;
+      } else {
+        isOpen = false;
+      }
+    } finally {
+      nsLock.writeLock().unlock();
     }
-
-    return currentStream.isOpen();
+    return isOpen;
   }
 
   /**
@@ -216,6 +236,10 @@ public class NamespaceChangeStreamListener {
     try {
       if (currentStream != null && currentStream.isOpen()) {
         final StitchEvent<ChangeEvent<BsonDocument>> event = currentStream.nextEvent();
+        if (event == null) {
+          return;
+        }
+
         if (event.getError() != null) {
           throw event.getError();
         }
@@ -238,15 +262,14 @@ public class NamespaceChangeStreamListener {
           watcher.onComplete(OperationResult.successfulResultOf(event.getData()));
         }
       }
-    } catch (final InterruptedIOException | InterruptedException ex) {
-      logger.error(String.format(
+    } catch (final InterruptedException | IOException ex) {
+      logger.info(String.format(
           Locale.US,
-          "NamespaceChangeStreamListener::stream ns=%s interrupted exception on "
+          "NamespaceChangeStreamListener::stream ns=%s interrupted on "
               + "fetching next event: %s",
           nsConfig.getNamespace(),
-          ex), ex);
-      logger.info("stream END");
-      this.close();
+          ex));
+      logger.info("stream END – INTERRUPTED");
       Thread.currentThread().interrupt();
     } catch (final Exception ex) {
       // TODO: Emit error through DataSynchronizer as an ifc
@@ -255,7 +278,7 @@ public class NamespaceChangeStreamListener {
           "NamespaceChangeStreamListener::stream ns=%s exception on fetching next event: %s",
           nsConfig.getNamespace(),
           ex), ex);
-      logger.info("stream END");
+      logger.info("stream END – EXCEPTION");
       final boolean wasInterrupted = Thread.currentThread().isInterrupted();
       this.close();
       if (wasInterrupted) {
@@ -296,7 +319,7 @@ public class NamespaceChangeStreamListener {
    * @return the latest unprocessed change event for the given document ID, or null if none exists.
    */
   public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
-          final BsonValue documentId
+      final BsonValue documentId
   ) {
     final ChangeEvent<BsonDocument> event;
     nsLock.readLock().lock();

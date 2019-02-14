@@ -37,6 +37,7 @@ import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 import org.bson.Document;
 
 /**
@@ -195,6 +196,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     // Trigger the onUserLoggedIn event in case some event happens and
     // this caller would miss out on this event other wise.
     onAuthEvent(listener);
+    dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            listener.onListenerRegistered(StitchAuthImpl.this);
+            return null;
+          }
+        });
   }
 
   public void addSynchronousAuthListener(final StitchAuthListener listener) {
@@ -205,6 +214,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
     // Trigger the onUserLoggedIn event in case some event happens and
     // this caller would miss out on this event other wise.
     onAuthEvent(listener);
+    listener.onListenerRegistered(this);
   }
 
   /**
@@ -231,10 +241,141 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   @Override
   protected void onAuthEvent() {
     for (final StitchAuthListener listener : listeners) {
-      onAuthEvent(listener);
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onAuthEvent(StitchAuthImpl.this);
+              return null;
+            }
+          });
     }
     for (final StitchAuthListener listener : synchronousListeners) {
       listener.onAuthEvent(this);
+    }
+  }
+
+  @Override
+  protected void onListenerInitialized() {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onListenerRegistered(StitchAuthImpl.this);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onListenerRegistered(this);
+    }
+  }
+
+  @Override
+  protected void onActiveUserChanged(@Nullable final StitchUser currentActiveUser,
+                                     @Nullable final StitchUser previousActiveUser) {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onActiveUserChanged(
+                  StitchAuthImpl.this, currentActiveUser, previousActiveUser);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onActiveUserChanged(
+          this, currentActiveUser, previousActiveUser);
+    }
+  }
+
+  @Override
+  protected void onUserAdded(final StitchUser createdUser) {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onUserAdded(
+                  StitchAuthImpl.this, createdUser);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onUserAdded(this, createdUser);
+    }
+  }
+
+  @Override
+  protected void onUserLoggedIn(final StitchUser loggedInUser) {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onUserLoggedIn(
+                  StitchAuthImpl.this, loggedInUser);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onUserLoggedIn(this, loggedInUser);
+    }
+  }
+
+  @Override
+  protected void onUserRemoved(final StitchUser removedUser) {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onUserRemoved(StitchAuthImpl.this, removedUser);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onUserRemoved(this, removedUser);
+    }
+  }
+
+  @Override
+  protected void onUserLoggedOut(final StitchUser loggedOutUser) {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onUserLoggedOut(StitchAuthImpl.this, loggedOutUser);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onUserLoggedOut(this, loggedOutUser);
+    }
+  }
+
+  @Override
+  protected void onUserLinked(final StitchUser linkedUser) {
+    for (final StitchAuthListener listener : listeners) {
+      dispatcher.dispatchTask(
+          new Callable<Void>() {
+            @Override
+            public Void call() {
+              listener.onUserLinked(StitchAuthImpl.this, linkedUser);
+              return null;
+            }
+          });
+    }
+    for (final StitchAuthListener listener : synchronousListeners) {
+      listener.onUserLinked(this, linkedUser);
     }
   }
 }

@@ -47,10 +47,15 @@ public class Stream<T> {
   /**
    * Fetch the next event from a given stream
    * @return the next event
-   * @throws Exception any exception that could occur
+   * @throws IOException any io exception that could occur
    */
-  public StitchEvent<T> nextEvent() throws Exception {
-    return StitchEvent.fromEvent(this.eventStream.nextEvent(), this.decoder);
+  public StitchEvent<T> nextEvent() throws IOException {
+    final Event nextEvent = eventStream.nextEvent();
+    if (nextEvent == null) {
+      return null;
+    }
+
+    return StitchEvent.fromEvent(nextEvent, this.decoder);
   }
 
   /**

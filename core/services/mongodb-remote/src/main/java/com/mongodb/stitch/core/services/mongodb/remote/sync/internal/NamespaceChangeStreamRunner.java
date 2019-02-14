@@ -19,6 +19,8 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 import com.mongodb.MongoInterruptedException;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
+import java.io.Closeable;
+import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 
 import org.bson.diagnostics.Logger;
@@ -26,7 +28,7 @@ import org.bson.diagnostics.Logger;
 /**
  * This runner runs {@link DataSynchronizer#doSyncPass()} on a periodic interval.
  */
-class NamespaceChangeStreamRunner implements Runnable {
+class NamespaceChangeStreamRunner implements Runnable, Closeable {
   private static final Long RETRY_SLEEP_MILLIS = 5000L;
 
   private final WeakReference<NamespaceChangeStreamListener> listenerRef;
@@ -55,13 +57,22 @@ class NamespaceChangeStreamRunner implements Runnable {
       if (!isOpen) {
         try {
           isOpen = listener.openStream();
-        } catch (final MongoInterruptedException | InterruptedException ex) {
-          logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", ex);
+        } catch (final MongoInterruptedException ex) {
+          logger.error(
+              "NamespaceChangeStreamRunner::run error happened while opening stream:", ex);
+          close();
+          return;
+        } catch (final InterruptedException | InterruptedIOException e) {
+          close();
           return;
         } catch (final Throwable t) {
-          logger.error("NamespaceChangeStreamRunner::run error happened while opening stream:", t);
           if (Thread.currentThread().isInterrupted()) {
+            logger.info("NamespaceChangeStreamRunner::stream interrupted:");
+            close();
             return;
+          } else {
+            logger.error(
+                "NamespaceChangeStreamRunner::run error happened while opening stream:", t);
           }
         }
 
@@ -70,13 +81,30 @@ class NamespaceChangeStreamRunner implements Runnable {
             wait(RETRY_SLEEP_MILLIS);
           }
         } catch (final InterruptedException e) {
+          close();
           return;
         }
       }
 
       if (isOpen) {
-        listener.storeNextEvent();
+        try {
+          listener.storeNextEvent();
+        } catch (final IllegalStateException e) {
+          logger.info(String.format(
+              "NamespaceChangeStreamRunner::stream %s: ", e.getLocalizedMessage()));
+          return;
+        }
       }
     } while (networkMonitor.isConnected() && !Thread.currentThread().isInterrupted());
+  }
+
+  @Override
+  public void close() {
+    final NamespaceChangeStreamListener listener = listenerRef.get();
+    if (listener == null) {
+      return;
+    }
+
+    listener.close();
   }
 }

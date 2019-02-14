@@ -72,7 +72,7 @@ class DispatchGroup {
   /**
    * Block the group and wait for the remaining work to complete.
    */
-  void blockAndWait() {
+  synchronized void blockAndWait() {
     isBlocked = true;
     while (count > 0) {
       try {

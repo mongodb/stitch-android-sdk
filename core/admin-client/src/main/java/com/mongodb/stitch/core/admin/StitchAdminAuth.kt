@@ -45,6 +45,30 @@ class StitchAdminAuth(
     override fun onAuthEvent() { /* do nothing */
     }
 
+    override fun onActiveUserChanged(
+        currentActiveUser: StitchAdminUser?,
+        previousActiveUser: StitchAdminUser?
+    ) {
+    }
+
+    override fun onListenerInitialized() {
+    }
+
+    override fun onUserAdded(createdUser: StitchAdminUser?) {
+    }
+
+    override fun onUserLoggedIn(loggedInUser: StitchAdminUser?) {
+    }
+
+    override fun onUserLoggedOut(loggedOutUser: StitchAdminUser?) {
+    }
+
+    override fun onUserRemoved(removedUser: StitchAdminUser?) {
+    }
+
+    override fun onUserLinked(linkedUser: StitchAdminUser?) {
+    }
+
     public override fun getDeviceInfo(): Document {
         val document = Document()
         document[DeviceFields.APP_ID] = "MongoDB Stitch Java/Kotlin Admin Client"
@@ -52,7 +76,9 @@ class StitchAdminAuth(
         return document
     }
 
-    public override fun loginWithCredentialInternal(credential: StitchCredential?): StitchAdminUser {
+    public override fun loginWithCredentialInternal(
+        credential: StitchCredential?
+    ): StitchAdminUser {
         return super.loginWithCredentialInternal(credential)
     }
 

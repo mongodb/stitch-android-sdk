@@ -60,6 +60,10 @@ public abstract class EmbeddedMongoClientFactory {
     return client;
   }
 
+  public synchronized void removeClient(final String key) {
+    instances.remove(key);
+  }
+
   public synchronized void close() {
     for (final MongoClient instance : instances.values()) {
       instance.close();
