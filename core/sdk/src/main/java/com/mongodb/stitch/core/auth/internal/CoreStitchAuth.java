@@ -355,10 +355,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   protected StitchUserT loginWithCredentialInternal(final StitchCredential credential) {
     authLock.writeLock().lock();
     try {
-      if (!isLoggedIn()) {
-        return doLogin(credential, false);
-      }
-
       if (credential.getProviderCapabilities().getReusesExistingSession()) {
         for (final AuthInfo authInfo : this.allUsersAuthInfo.values()) {
           if (authInfo.getLoggedInProviderType().equals(credential.getProviderType())) {
@@ -753,7 +749,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     } catch (final IOException e) {
       // Back out of setting authInfo with this new user
       activeUserAuthInfo = oldActiveUserInfo;
-      activeUser = null;
+      activeUser = oldActiveUser;
 
       // this replaces auth info from the list of all users if
       // if the new auth info is not the same user as the older user
