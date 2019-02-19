@@ -130,7 +130,7 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, id2)
 
-        // verify orderingcore
+        // verify ordering
         assertEquals(client.auth.listUsers().size, 3)
         assertEquals(client.auth.listUsers()[0].id, anonUser.id)
         assertEquals(client.auth.listUsers()[1].id, emailUserId)
@@ -145,7 +145,6 @@ class StitchAppClientIntTests : BaseStitchServerIntTest() {
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, id2)
         assertNotNull(client.auth.user!!.lastAuthActivity)
-
 
         // verify ordering is preserved
         assertEquals(client.auth.listUsers().size, 3)
