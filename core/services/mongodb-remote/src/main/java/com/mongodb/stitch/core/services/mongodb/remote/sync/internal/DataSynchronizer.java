@@ -88,6 +88,7 @@ import org.bson.diagnostics.Loggers;
  * and a remote MongoDB (via Stitch). It also expose CRUD operations to interact with synchronized
  * documents.
  */
+//TODO: API24 replace deprecated forEach calls with forEach(Consumer)
 public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   public static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
@@ -2088,7 +2089,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           event = ChangeEvents.changeEventForLocalUpdate(
               namespace,
               BsonUtils.getDocumentId(documentAfterUpdate),
-              ChangeEvent.UpdateDescription.diff(documentBeforeUpdate, documentAfterUpdate),
+              UpdateDescription.diff(documentBeforeUpdate, documentAfterUpdate),
               documentAfterUpdate,
               true);
         }
@@ -2222,7 +2223,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 event = ChangeEvents.changeEventForLocalUpdate(
                     namespace,
                     documentId,
-                    ChangeEvent.UpdateDescription.diff(beforeDocument, afterDocument),
+                    UpdateDescription.diff(beforeDocument, afterDocument),
                     afterDocument,
                     true);
               }
