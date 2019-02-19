@@ -32,6 +32,7 @@ import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -108,7 +109,7 @@ public class CoreStitchServiceUnitTests {
   }
 
   @Test
-  public void testStreamFunction() {
+  public void testStreamFunction() throws InterruptedException, IOException {
     final String serviceName = "svc1";
     final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
     final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);

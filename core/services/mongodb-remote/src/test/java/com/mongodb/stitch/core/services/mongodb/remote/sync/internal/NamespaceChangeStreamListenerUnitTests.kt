@@ -41,7 +41,7 @@ class NamespaceChangeStreamListenerUnitTests {
         // assert the stream does not open since we have no document ids
         ctx.isLoggedIn = true
         assertFalse(namespaceChangeStreamListener.openStream())
-        verify(nsConfigMock, times(1)).synchronizedDocumentIds
+        verify(nsConfigMock, times(3)).synchronizedDocumentIds
 
         // assert and verify that our stream has opened, and that the streamFunction
         // method has been called with the appropriate arguments. verify that we have

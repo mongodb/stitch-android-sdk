@@ -121,6 +121,10 @@ class SyncUnitTestHarness : Closeable {
                 return isAuthed
             }
 
+            override fun tryIsLoggedIn(): Boolean {
+                return isAuthed
+            }
+
             override fun getActiveUserId(): String? {
                 return userId
             }
@@ -344,15 +348,20 @@ class SyncUnitTestHarness : Closeable {
                 }
             }
 
-            Mockito.spy(DataSynchronizer(
-                    instanceKey,
-                    service,
-                    localClient,
-                    remoteClient,
-                    networkMonitor,
-                    authMonitor,
-                    ThreadDispatcher()
-            ))
+            var ds = DataSynchronizer(
+                instanceKey,
+                service,
+                localClient,
+                remoteClient,
+                networkMonitor,
+                authMonitor,
+                ThreadDispatcher()
+            )
+            ds.waitUntilInitialized()
+            ds = Mockito.spy(ds)
+
+            ds.waitUntilInitialized()
+            ds
         }
 
         private var eventSemaphore: Semaphore? = null
@@ -365,6 +374,7 @@ class SyncUnitTestHarness : Closeable {
                 networkMonitor.addNetworkStateListener(dataSynchronizer)
 
                 dataSynchronizer.disableSyncThread()
+                dataSynchronizer.disableListeners()
 
                 dataSynchronizer.stop()
 

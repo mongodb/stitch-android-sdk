@@ -33,5 +33,5 @@ public interface StitchAuthRequestClient {
                                final CodecRegistry codecRegistry);
 
   <T> Stream<T> openAuthenticatedStream(final StitchAuthRequest stitchReq,
-                                        final Decoder<T> decoder);
+                                        final Decoder<T> decoder) throws InterruptedException;
 }

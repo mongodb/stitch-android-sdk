@@ -187,6 +187,7 @@ class DataSynchronizerUnitTests {
         // reset
         ctx = harness.freshTestContext()
         ctx.mockInsertException(duplicateInsertException)
+        println("inserting test doc")
         ctx.insertTestDocument()
 
         // accept the local event this time, which will insert the local doc.
@@ -1847,6 +1848,7 @@ class DataSynchronizerUnitTests {
         val ctx = harness.freshTestContext(false)
 
         ctx.dataSynchronizer.reinitialize(ctx.localClient)
+        ctx.dataSynchronizer.waitUntilInitialized()
 
         ctx.verifyStopCalled(1)
 
@@ -1909,8 +1911,6 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
 
-        verify(ctx.collectionMock, times(1)).find(any())
-
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
         assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
@@ -1938,8 +1938,6 @@ class DataSynchronizerUnitTests {
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
         ctx.waitForEvents()
-
-        verify(ctx.collectionMock, times(1)).find(any())
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()

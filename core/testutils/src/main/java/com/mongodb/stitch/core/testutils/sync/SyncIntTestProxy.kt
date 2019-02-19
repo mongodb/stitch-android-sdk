@@ -1782,6 +1782,14 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertNull(coll.find(doc1Filter).firstOrNull())
         assertEquals(docToInsertUser2, coll.find(doc2Filter).firstOrNull())
         assertNull(coll.find(doc3Filter).firstOrNull())
+
+        syncTestRunner.removeUser(syncTestRunner.userId2)
+
+        syncTestRunner.reloginUser2()
+
+        assertNull(coll.find(doc1Filter).firstOrNull())
+        assertNull(coll.find(doc2Filter).firstOrNull())
+        assertNull(coll.find(doc3Filter).firstOrNull())
     }
 
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {

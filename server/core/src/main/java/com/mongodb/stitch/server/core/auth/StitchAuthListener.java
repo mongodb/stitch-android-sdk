@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.android.core.auth;
+package com.mongodb.stitch.server.core.auth;
 
 import javax.annotation.Nullable;
 
@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
  * client.
  */
 public interface StitchAuthListener {
-
   /**
    * onAuthEvent is called any time a notable event regarding authentication happens.
    * Some of these events are:

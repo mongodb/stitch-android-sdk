@@ -34,8 +34,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -78,6 +80,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import javax.annotation.Nullable;
 
 import org.bson.Document;
 import org.bson.codecs.DocumentCodec;
@@ -90,18 +93,19 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
+
 public class CoreStitchAuthUnitTests {
 
   @Test
   public void testLoginWithCredentialBlocking() {
     final StitchRequestClient requestClient = getMockedRequestClient();
     final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
-    final StitchAuth auth = new StitchAuth(
+    final StitchAuth auth = spy(new StitchAuth(
         requestClient,
         routes,
-        new MemoryStorage());
+        new MemoryStorage()));
 
-    final CoreStitchUser user =
+    final CoreStitchUserImpl user =
         auth.loginWithCredentialInternal(new AnonymousCredential());
 
     final ApiCoreUserProfile profile = getTestUserProfile();
@@ -129,22 +133,24 @@ public class CoreStitchAuthUnitTests {
         .withPath(routes.getProfileRoute())
         .withHeaders(headers);
     assertEquals(expectedRequest2.build(), reqArgs.getAllValues().get(1));
+
+    verify(auth, times(1)).onUserLoggedIn(eq(user));
   }
 
   @Test
   public void testLinkUserWithCredentialBlocking() {
     final StitchRequestClient requestClient = getMockedRequestClient();
     final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
-    final StitchAuth auth = new StitchAuth(
+    final StitchAuth auth = spy(new StitchAuth(
         requestClient,
         routes,
-        new MemoryStorage());
+        new MemoryStorage()));
 
-    final CoreStitchUser user =
+    final CoreStitchUserImpl user =
         auth.loginWithCredentialInternal(new AnonymousCredential());
     verify(requestClient, times(2)).doRequest(any(StitchRequest.class));
 
-    final CoreStitchUser linkedUser =
+    final CoreStitchUserImpl linkedUser =
         auth.linkUserWithCredentialInternal(
             user,
             new UserPasswordCredential("foo@foo.com", "bar"));
@@ -175,6 +181,8 @@ public class CoreStitchAuthUnitTests {
         .withPath(routes.getProfileRoute())
         .withHeaders(headers2);
     assertEquals(expectedRequest2.build(), reqArgs.getAllValues().get(3));
+
+    verify(auth, times(1)).onUserLinked(eq(linkedUser));
   }
 
   @Test
@@ -197,24 +205,36 @@ public class CoreStitchAuthUnitTests {
   public void testLogoutBlocking() {
     final StitchRequestClient requestClient = getMockedRequestClient();
     final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
-    final StitchAuth auth = new StitchAuth(
+    final StitchAuth auth = spy(new StitchAuth(
         requestClient,
         routes,
-        new MemoryStorage());
+        new MemoryStorage()));
 
     assertFalse(auth.isLoggedIn());
 
-    final CoreStitchUser user1 =
+    final CoreStitchUserImpl user1 =
         auth.loginWithCredentialInternal(new AnonymousCredential());
-    final CoreStitchUser user2 =
+
+    verify(auth, times(1)).onUserLoggedIn(eq(user1));
+
+    final CoreStitchUserImpl user2 =
         auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
-    final CoreStitchUser user3 =
+
+    verify(auth, times(1)).onUserLoggedIn(eq(user2));
+    verify(auth, times(1)).onActiveUserChanged(eq(user2), eq(user1));
+
+    final CoreStitchUserImpl user3 =
         auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
+
+    verify(auth, times(1)).onUserLoggedIn(eq(user3));
+    verify(auth, times(1)).onActiveUserChanged(eq(user3), eq(user2));
 
     assertEquals(auth.listUsers().get(2), user3);
     assertTrue(auth.isLoggedIn());
 
     auth.logoutInternal();
+
+    verify(auth, times(1)).onUserLoggedOut(eq(user3));
 
     // assert that though one user is logged out, three users are still listed, and their profiles
     // are all non-null
@@ -239,6 +259,7 @@ public class CoreStitchAuthUnitTests {
 
     assertFalse(auth.isLoggedIn());
     auth.switchToUserWithId(user2.getId());
+    verify(auth, times(1)).onActiveUserChanged(eq(user2), eq(null));
     auth.logoutInternal();
 
     verify(requestClient, times(8)).doRequest(reqArgs.capture());
@@ -283,24 +304,25 @@ public class CoreStitchAuthUnitTests {
   public void testRemoveBlocking() {
     final StitchRequestClient requestClient = getMockedRequestClient();
     final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
-    final StitchAuth auth = new StitchAuth(
+    final StitchAuth auth = spy(new StitchAuth(
         requestClient,
         routes,
-        new MemoryStorage());
+        new MemoryStorage()));
 
     assertFalse(auth.isLoggedIn());
 
-    final CoreStitchUser user1 =
+    final CoreStitchUserImpl user1 =
         auth.loginWithCredentialInternal(new AnonymousCredential());
-    final CoreStitchUser user2 =
+    final CoreStitchUserImpl user2 =
         auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there"));
-    final CoreStitchUser user3 =
+    final CoreStitchUserImpl user3 =
         auth.loginWithCredentialInternal(new UserPasswordCredential("bye", "there"));
 
     assertEquals(auth.listUsers().get(2), user3);
     assertTrue(auth.isLoggedIn());
 
     auth.removeUserInternal();
+    verify(auth, times(1)).onUserRemoved(user3);
 
     // assert that though one user is logged out, two users are still listed
     assertEquals(auth.listUsers().size(), 2);
@@ -321,6 +343,7 @@ public class CoreStitchAuthUnitTests {
     // assert that switching to a user, and removing self works
     assertFalse(auth.isLoggedIn());
     auth.switchToUserWithId(user2.getId());
+    verify(auth, times(1)).onActiveUserChanged(eq(user2), eq(null));
     assertTrue(auth.isLoggedIn());
 
     auth.removeUserInternal();
@@ -335,6 +358,8 @@ public class CoreStitchAuthUnitTests {
 
     // assert that we can remove the user without switching to it
     auth.removeUserWithIdInternal(user1.getId());
+    verify(auth, times(1)).onUserRemoved(user1);
+
     assertEquals(auth.listUsers().size(), 0);
 
     assertFalse(auth.isLoggedIn());
@@ -344,6 +369,8 @@ public class CoreStitchAuthUnitTests {
 
     assertEquals(
         user2, auth.loginWithCredentialInternal(new UserPasswordCredential("hi", "there")));
+
+    verify(auth, times(2)).onUserLoggedIn(user2);
 
     assertEquals(auth.listUsers().size(), 1);
     assertEquals(auth.listUsers().get(0), user2);
@@ -718,39 +745,45 @@ public class CoreStitchAuthUnitTests {
   public void testSwitchUser() {
     final StitchRequestClient requestClient = getMockedRequestClient();
     final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
-    final StitchAuth auth = new StitchAuth(
+    final StitchAuth auth = spy(new StitchAuth(
         requestClient,
         routes,
-        new MemoryStorage());
+        new MemoryStorage()));
 
     try {
       auth.switchToUserWithId("not_a_user_id");
       fail("should have thrown error due to missing key");
     } catch (StitchClientException e) {
+      verify(auth, times(0)).onActiveUserChanged(any(), any());
       assertEquals(StitchClientErrorCode.USER_NOT_FOUND, e.getErrorCode());
     }
 
-    final CoreStitchUser user =
+    final CoreStitchUserImpl user =
         auth.loginWithCredentialInternal(new UserPasswordCredential("greetings ", "friend"));
 
     // can switch to self
     assertEquals(user, auth.switchToUserWithId(user.getId()));
     assertEquals(user, auth.getUser());
+    verify(auth, times(1)).onActiveUserChanged(eq(user), eq(user));
 
-    final CoreStitchUser user2 =
+    final CoreStitchUserImpl user2 =
         auth.loginWithCredentialInternal(new UserPasswordCredential("hello ", "friend"));
 
     assertEquals(user2, auth.getUser());
     assertNotEquals(user, auth.getUser());
+    verify(auth, times(1)).onActiveUserChanged(eq(user2), eq(user));
 
     // can switch back to old user
     assertEquals(user, auth.switchToUserWithId(user.getId()));
     assertEquals(user, auth.getUser());
+    verify(auth, times(1)).onActiveUserChanged(eq(user), eq(user2));
 
     // switch back to second user after logging out
     auth.logoutInternal();
     assertEquals(2, auth.listUsers().size());
     assertEquals(user2, auth.switchToUserWithId(user2.getId()));
+    verify(auth, times(1)).onUserLoggedOut(eq(user));
+    verify(auth, times(1)).onActiveUserChanged(eq(user2), eq(null));
 
     // assert that we can't switch to a logged out user
     try {
@@ -759,8 +792,6 @@ public class CoreStitchAuthUnitTests {
     } catch (StitchClientException e) {
       assertEquals(StitchClientErrorCode.USER_NOT_LOGGED_IN, e.getErrorCode());
     }
-
-
   }
 
   @Test
@@ -794,16 +825,47 @@ public class CoreStitchAuthUnitTests {
     @Override
     protected StitchUserFactory<CoreStitchUserImpl> getUserFactory() {
       return (String id,
-          String deviceId,
-          String loggedInProviderType,
-          String loggedInProviderName,
-          StitchUserProfileImpl userProfile,
-          boolean isLoggedIn) ->
+              String deviceId,
+              String loggedInProviderType,
+              String loggedInProviderName,
+              StitchUserProfileImpl userProfile,
+              boolean isLoggedIn) ->
           new CoreStitchUserImpl(
-              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, isLoggedIn) {};
+              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, isLoggedIn) {
+          };
     }
 
     @Override
-    protected void onAuthEvent() {}
+    protected void onAuthEvent() {
+    }
+
+    @Override
+    protected void onUserLoggedOut(final CoreStitchUserImpl loggedOutUser) {
+    }
+
+    @Override
+    protected void onUserRemoved(final CoreStitchUserImpl removedUser) {
+    }
+
+    @Override
+    protected void onUserLoggedIn(final CoreStitchUserImpl loggedInUser) {
+    }
+
+    @Override
+    protected void onUserAdded(final CoreStitchUserImpl createdUser) {
+    }
+
+    @Override
+    protected void onActiveUserChanged(final CoreStitchUserImpl currentActiveUser,
+                                       @Nullable final CoreStitchUserImpl previousActiveUser) {
+    }
+
+    @Override
+    protected void onListenerInitialized() {
+    }
+
+    @Override
+    protected void onUserLinked(final CoreStitchUserImpl linkedUser) {
+    }
   }
 }

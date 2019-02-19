@@ -34,6 +34,7 @@ import com.mongodb.stitch.core.testutils.sync.SyncIntTestRunner
 import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser
+import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
@@ -228,12 +229,21 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         return SyncMethods(coll.sync())
     }
 
+    override fun reloginUser2() {
+        Tasks.await(
+            client.auth.loginWithCredential(UserPasswordCredential("test1@10gen.com", "password")))
+    }
+
     override fun listUsers(): List<CoreStitchUser> {
         return client.auth.listUsers()
     }
 
     override fun switchUser(userId: String) {
         client.auth.switchToUserWithId(userId)
+    }
+
+    override fun removeUser(userId: String) {
+        Tasks.await(client.auth.removeUserWithId(userId))
     }
 
     override fun currentUserId(): String? {
@@ -327,6 +337,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     @Test
     override fun testConfigure() {
+        testProxy.testConfigure()
     }
 
     @Test

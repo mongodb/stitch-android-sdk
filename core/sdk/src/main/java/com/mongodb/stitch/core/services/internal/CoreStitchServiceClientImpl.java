@@ -175,7 +175,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   @Override
   public <T> Stream<T> streamFunction(final String name,
                                       final List<?> args,
-                                      final Decoder<T> decoder) {
+                                      final Decoder<T> decoder) throws InterruptedException {
     return requestClient.openAuthenticatedStream(
         getStreamServiceFunctionRequest(name, args), decoder
     );
@@ -199,7 +199,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   }
 
   @Override
-  public void onRebindEvent() {
+  public void onRebindEvent(final RebindEvent rebindEvent) {
     final Iterator<WeakReference<StitchServiceBinder>> iterator = this.serviceBinders.iterator();
     while (iterator.hasNext()) {
       final WeakReference<StitchServiceBinder> weakReference = iterator.next();
@@ -207,7 +207,7 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
       if (binder == null) {
         this.serviceBinders.remove(weakReference);
       } else {
-        binder.onRebindEvent();
+        binder.onRebindEvent(rebindEvent);
       }
     }
   }
