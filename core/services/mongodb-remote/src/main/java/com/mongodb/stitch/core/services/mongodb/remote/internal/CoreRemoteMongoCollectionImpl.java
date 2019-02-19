@@ -34,6 +34,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreSyncImp
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncOperations;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -381,7 +382,8 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
    * @return the stream of change events.
    */
   @Override
-  public Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids) {
+  public Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
+      throws InterruptedException, IOException {
     final BsonValue[] transformedIds = new BsonValue[ids.length];
 
     for (int i = 0; i < ids.length; i++) {
@@ -398,7 +400,8 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
    */
   @Override
   @SuppressWarnings("unchecked")
-  public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids) {
+  public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+      throws InterruptedException, IOException {
     return operations.watch(new HashSet<BsonValue>(Arrays.asList(ids)), documentClass)
         .execute(service);
   }

@@ -46,6 +46,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -614,7 +615,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testWatchBsonValueIDs() {
+  public void testWatchBsonValueIDs() throws IOException, InterruptedException {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client =
@@ -656,7 +657,7 @@ public class CoreRemoteMongoCollectionUnitTests {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testWatchObjectIdIDs() {
+  public void testWatchObjectIdIDs() throws IOException, InterruptedException {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
     final CoreRemoteMongoClient client =

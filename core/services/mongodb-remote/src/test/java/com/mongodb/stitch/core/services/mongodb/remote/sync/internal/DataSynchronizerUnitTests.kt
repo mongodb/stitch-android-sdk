@@ -1596,6 +1596,7 @@ class DataSynchronizerUnitTests {
         // which doesn't exist to resolve the conflict
         val findMock = mock(CoreRemoteFindIterableImpl::class.java)
         `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
+        @Suppress("UNCHECKED_CAST")
         `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
         // sync, creating a conflict. because remote has an empty version,
         // there will be a conflict on the next L2R pass that we will resolve
@@ -1859,6 +1860,7 @@ class DataSynchronizerUnitTests {
         assertFalse(ctx.dataSynchronizer.isRunning)
     }
 
+    @Test
     fun testMissingDocument() {
         val ctx = harness.freshTestContext()
 
@@ -1868,14 +1870,16 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
-        ctx.waitForDataSynchronizerStreams();
+        ctx.waitForDataSynchronizerStreams()
 
         ctx.doSyncPass()
 
         val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
+        @Suppress("UNCHECKED_CAST")
         `when`(mockEmptyFindResult
                 .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
-                .thenReturn(HashSet<Any>())
+                .thenReturn(HashSet())
+        @Suppress("UNCHECKED_CAST")
         `when`(ctx.collectionMock.find(any()))
                 .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
 
@@ -1901,9 +1905,11 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
+        @Suppress("UNCHECKED_CAST")
         `when`(mockEmptyFindResult
                 .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
-                .thenReturn(HashSet<Any>())
+                .thenReturn(HashSet())
+        @Suppress("UNCHECKED_CAST")
         `when`(ctx.collectionMock.find(any()))
                 .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
 
@@ -1929,9 +1935,11 @@ class DataSynchronizerUnitTests {
         ctx.doSyncPass()
 
         val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
+        @Suppress("UNCHECKED_CAST")
         `when`(mockEmptyFindResult
                 .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
-                .thenReturn(HashSet<Any>())
+                .thenReturn(HashSet())
+        @Suppress("UNCHECKED_CAST")
         `when`(ctx.collectionMock.find(any()))
                 .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
 

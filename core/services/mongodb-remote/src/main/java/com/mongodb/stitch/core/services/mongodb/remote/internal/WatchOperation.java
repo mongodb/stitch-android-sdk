@@ -21,6 +21,7 @@ import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
 
@@ -43,7 +44,8 @@ public class WatchOperation<DocumentT> {
     this.fullDocumentCodec = fullDocumentCodec;
   }
 
-  public Stream<ChangeEvent<DocumentT>> execute(final CoreStitchServiceClient service) {
+  public Stream<ChangeEvent<DocumentT>> execute(final CoreStitchServiceClient service)
+      throws InterruptedException, IOException {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());

@@ -173,5 +173,10 @@ public class ResultDecoders {
       // can't use .equals without opening a can of worms
       return other.codec.getClass() == this.codec.getClass();
     }
+
+    @Override
+    public int hashCode() {
+      return this.codec.hashCode();
+    }
   }
 }

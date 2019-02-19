@@ -30,6 +30,7 @@ import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.bson.BsonValue;
@@ -290,7 +291,8 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return the stream of change events.
    */
   @Override
-  public Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids) {
+  public Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
+    throws InterruptedException, IOException {
     return proxy.watch(ids);
   }
 
@@ -300,7 +302,8 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return the stream of change events.
    */
   @Override
-  public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids) {
+  public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+      throws InterruptedException, IOException {
     return proxy.watch(ids);
   }
 }

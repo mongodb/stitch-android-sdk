@@ -25,6 +25,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
+
+import java.io.IOException;
 import java.util.List;
 
 import org.bson.BsonValue;
@@ -251,12 +253,12 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids unique object identifiers of the IDs to watch.
    * @return the stream of change events.
    */
-  Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids);
+  Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids) throws InterruptedException, IOException;
 
   /**
    * Watches specified IDs in a collection.
    * @param ids the ids to watch.
    * @return the stream of change events.
    */
-  Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids);
+  Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids) throws InterruptedException, IOException;
 }

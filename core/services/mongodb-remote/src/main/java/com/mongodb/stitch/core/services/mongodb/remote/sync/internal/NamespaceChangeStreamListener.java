@@ -50,7 +50,7 @@ import org.bson.codecs.Codec;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
-public class NamespaceChangeStreamListener {
+public class NamespaceChangeStreamListener implements Closeable {
   private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
   private final MongoNamespace namespace;
@@ -217,7 +217,7 @@ public class NamespaceChangeStreamListener {
       args.put("collection", namespace.getCollectionName());
       args.put("ids", idsToWatch);
 
-    currentStream =
+      currentStream =
         service.streamFunction(
             "watch",
             Collections.singletonList(args),

@@ -14,6 +14,7 @@ import org.mockito.Mockito.mock
 
 class NamespaceSynchronizationConfigUnitTests {
     @Test
+    @Suppress("UNCHECKED_CAST")
     fun testToBsonDocumentRoundTrip() {
         val namespace = newNamespace()
 

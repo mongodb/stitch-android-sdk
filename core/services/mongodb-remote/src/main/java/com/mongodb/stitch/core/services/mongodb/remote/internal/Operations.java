@@ -28,7 +28,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -37,13 +36,11 @@ import org.bson.BsonValue;
 import org.bson.codecs.CollectibleCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
 
 public class Operations<DocumentT> {
   private final MongoNamespace namespace;
   private final Class<DocumentT> documentClass;
   private final CodecRegistry codecRegistry;
-  private Collection<ObjectId> ids;
 
   protected Operations(
       final MongoNamespace namespace,
