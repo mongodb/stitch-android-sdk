@@ -52,6 +52,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -65,6 +66,7 @@ import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.types.ObjectId;
@@ -649,9 +651,9 @@ public class CoreRemoteMongoCollectionUnitTests {
     final Document expectedArgs = new Document();
     expectedArgs.put("database", "dbName1");
     expectedArgs.put("collection", "collName1");
-    expectedArgs.put("ids", expectedIDs);
+    expectedArgs.put("ids", new HashSet<>(Arrays.asList(expectedIDs)));
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
-    assertEquals(ResultDecoders.changeEventDecoder(new BsonDocumentCodec()),
+    assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
         decoderArgumentCaptor.getValue());
   }
 
@@ -689,18 +691,14 @@ public class CoreRemoteMongoCollectionUnitTests {
     final Document expectedArgs = new Document();
     expectedArgs.put("database", "dbName1");
     expectedArgs.put("collection", "collName1");
-    expectedArgs.put("ids", Arrays.stream(expectedIDs).map(o -> new BsonObjectId(o))
-        .collect(Collectors.toList()).toArray(new BsonValue[0]));
+    expectedArgs.put("ids", Arrays.stream(expectedIDs).map(BsonObjectId::new)
+        .collect(Collectors.toSet()));
 
-    for (final Map.Entry entry : expectedArgs.entrySet()) {
+    for (final Map.Entry<String, Object> entry : expectedArgs.entrySet()) {
       final Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
-      if (entry.getValue().getClass() == BsonValue[].class) {
-        assertArrayEquals((BsonValue[])entry.getValue(), (BsonValue[])capturedValue);
-      } else {
-        assertEquals(entry.getValue(), capturedValue);
-      }
+      assertEquals(entry.getValue(), capturedValue);
     }
-    assertEquals(ResultDecoders.changeEventDecoder(new BsonDocumentCodec()),
+    assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
         decoderArgumentCaptor.getValue());
   }
 }

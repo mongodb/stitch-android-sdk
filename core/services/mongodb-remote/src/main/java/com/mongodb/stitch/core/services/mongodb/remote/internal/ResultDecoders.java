@@ -171,6 +171,8 @@ public class ResultDecoders {
 
       // caveat: if someone writes a stateful codec then this logic won't hold up, but we
       // can't use .equals without opening a can of worms
+      System.err.println("FOOOO(this): " + this.codec.getClass().getCanonicalName());
+      System.err.println("FOOOO(othr): " + other.codec.getClass().getCanonicalName());
       return other.codec.getClass() == this.codec.getClass();
     }
 
