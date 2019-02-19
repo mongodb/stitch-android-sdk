@@ -88,7 +88,6 @@ import org.bson.diagnostics.Loggers;
  * and a remote MongoDB (via Stitch). It also expose CRUD operations to interact with synchronized
  * documents.
  */
-//TODO: API24 replace deprecated forEach calls with forEach(Consumer)
 public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   public static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
