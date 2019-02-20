@@ -54,7 +54,8 @@ class HttpServiceClientIntTests : BaseStitchAndroidIntTest() {
         cookies["bob"] = "barker"
         val form = HashMap<String, String>()
         val headers = HashMap<String, Collection<String>>()
-        headers["myHeader"] = listOf("value1", "value2")
+        headers["Myheader"] = listOf("value1", "value2")
+        headers["Accept-Encoding"] = listOf("none")
 
         var badRequest = HttpRequest.Builder()
                 .withUrl(badUrl)
