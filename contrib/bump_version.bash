@@ -103,7 +103,7 @@ echo "uploading to bintray..."
 ./gradlew bintrayUpload
 
 echo "pushing to docs..."
-./gradlew allJavadocs -Panalytics
+./contrib/generate_docs.sh analytics
 
 if ! which aws; then
    echo "aws CLI not found. see: https://docs.aws.amazon.com/cli/latest/userguide/installing.html"
