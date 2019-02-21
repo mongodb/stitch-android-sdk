@@ -17,7 +17,6 @@
 package com.mongodb.stitch.server.services.mongodb.remote;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;

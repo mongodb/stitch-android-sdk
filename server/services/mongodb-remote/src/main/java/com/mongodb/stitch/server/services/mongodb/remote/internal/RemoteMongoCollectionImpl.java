@@ -17,7 +17,6 @@
 package com.mongodb.stitch.server.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
@@ -294,7 +293,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    */
   @Override
   public ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final ObjectId... ids)
-    throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     return new PassthroughChangeStream<>(proxy.watch(ids));
   }
 
