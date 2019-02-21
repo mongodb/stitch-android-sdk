@@ -24,7 +24,6 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteAggregateIterabl
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
 import com.mongodb.stitch.android.services.mongodb.remote.Sync;
-import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
@@ -356,22 +355,24 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   public Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final ObjectId... ids) {
     return dispatcher.dispatchTask(
         new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>>() {
-      @Override
-      public ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT> call() throws Exception {
-        return new AsyncChangeStream<DocumentT>(proxy.watch(ids), dispatcher);
+        @Override
+        public ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT> call() throws Exception {
+          return new AsyncChangeStream<DocumentT>(proxy.watch(ids), dispatcher);
+        }
       }
-    });
+    );
   }
 
   @Override
   public Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final BsonValue... ids) {
     return dispatcher.dispatchTask(
         new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>>() {
-      @Override
-      public ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT> call() throws Exception {
-        return new AsyncChangeStream<DocumentT>(proxy.watch(ids), dispatcher);
+        @Override
+        public ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT> call() throws Exception {
+          return new AsyncChangeStream<DocumentT>(proxy.watch(ids), dispatcher);
+        }
       }
-    });
+    );
   }
 
   @Override
