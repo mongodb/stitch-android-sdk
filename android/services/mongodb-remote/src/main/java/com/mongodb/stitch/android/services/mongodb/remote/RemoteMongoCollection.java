@@ -20,12 +20,14 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
+
 import java.util.List;
 
 import org.bson.BsonValue;
@@ -253,14 +255,14 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids unique object identifiers of the IDs to watch.
    * @return the stream of change events.
    */
-  Task<Stream<ChangeEvent<DocumentT>>> watch(final ObjectId... ids);
+  Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final ObjectId... ids);
 
   /**
    * Watches specified IDs in a collection.
    * @param ids the ids to watch.
    * @return the stream of change events.
    */
-  Task<Stream<ChangeEvent<DocumentT>>> watch(final BsonValue... ids);
+  Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final BsonValue... ids);
 
   /**
    * A set of synchronization related operations on this collection.

@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
+
 import java.util.List;
 import java.util.Set;
 
@@ -37,11 +39,11 @@ public interface CoreSync<DocumentT> {
    *                        and remote events.
    * @param changeEventListener the event listener to invoke when a change event happens for the
    *                         document.
-   * @param errorListener the error listener to invoke when an irrecoverable error occurs
+   * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
    */
   void configure(@Nonnull final ConflictHandler<DocumentT> conflictHandler,
                  @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                 @Nullable final ErrorListener errorListener);
+                 @Nullable final ExceptionListener exceptionListener);
 
   /**
    * Requests that the given document _id be synchronized.

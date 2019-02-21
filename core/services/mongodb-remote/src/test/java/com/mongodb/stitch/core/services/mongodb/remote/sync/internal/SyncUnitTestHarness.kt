@@ -15,6 +15,7 @@ import com.mongodb.stitch.core.internal.net.Stream
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
@@ -22,7 +23,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.*
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
@@ -199,8 +199,8 @@ class SyncUnitTestHarness : Closeable {
         private fun newErrorListener(
             emitErrorSemaphore: Semaphore? = null,
             expectedDocumentId: BsonValue? = null
-        ): ErrorListener {
-            open class TestErrorListener : ErrorListener {
+        ): ExceptionListener {
+            open class TestExceptionListener : ExceptionListener {
                 override fun onError(actualDocumentId: BsonValue?, error: Exception?) {
                     if (expectedDocumentId != null) {
                         Assert.assertEquals(expectedDocumentId, actualDocumentId)
@@ -209,7 +209,7 @@ class SyncUnitTestHarness : Closeable {
                     emitErrorSemaphore?.release()
                 }
             }
-            return Mockito.spy(TestErrorListener())
+            return Mockito.spy(TestExceptionListener())
         }
 
         private fun newConflictHandler(

@@ -23,7 +23,6 @@ import com.mongodb.Block;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
@@ -212,46 +211,41 @@ class NamespaceSynchronizationConfig
     return documentCodec;
   }
 
-  CoreDocumentSynchronizationConfig addSynchronizedDocument(
-      final MongoNamespace namespace,
+  boolean addSynchronizedDocument(
       final BsonValue documentId
   ) {
 
     final CoreDocumentSynchronizationConfig newConfig;
 
     final CoreDocumentSynchronizationConfig existingConfig = getSynchronizedDocument(documentId);
-    if (existingConfig == null) {
-      newConfig = new CoreDocumentSynchronizationConfig(
-          docsColl,
-          namespace,
-          documentId);
-    } else {
-      newConfig = new CoreDocumentSynchronizationConfig(
-          docsColl,
-          existingConfig);
+    if (existingConfig != null) {
+      return false;
     }
+
+    newConfig = new CoreDocumentSynchronizationConfig(docsColl, namespace, documentId);
 
     nsLock.writeLock().lock();
     try {
-      docsColl.replaceOne(
-          getDocFilter(newConfig.getNamespace(), newConfig.getDocumentId()),
-          newConfig,
-          new ReplaceOptions().upsert(true));
+      docsColl.insertOne(newConfig);
       syncedDocuments.put(documentId, newConfig);
-      return newConfig;
+      return true;
     } finally {
       nsLock.writeLock().unlock();
     }
   }
 
-  public void removeSynchronizedDocument(final BsonValue documentId) {
+  public boolean removeSynchronizedDocument(final BsonValue documentId) {
     nsLock.writeLock().lock();
     try {
-      docsColl.deleteOne(getDocFilter(namespace, documentId));
-      syncedDocuments.remove(documentId);
+      if (syncedDocuments.containsKey(documentId)) {
+        docsColl.deleteOne(getDocFilter(namespace, documentId));
+        syncedDocuments.remove(documentId);
+        return true;
+      }
     } finally {
       nsLock.writeLock().unlock();
     }
+    return false;
   }
 
   public ConflictHandler getConflictHandler() {

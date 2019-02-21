@@ -43,6 +43,7 @@ import com.mongodb.stitch.core.internal.common.Dispatcher;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
@@ -51,7 +52,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoC
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -116,7 +116,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private final Lock listenersLock;
   private final Dispatcher eventDispatcher;
 
-  private ErrorListener errorListener;
+  private ExceptionListener exceptionListener;
   private Thread initThread;
   private DispatchGroup ongoingOperationsGroup;
 
@@ -346,7 +346,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public <T> void configure(@Nonnull final MongoNamespace namespace,
                             @Nullable final ConflictHandler<T> conflictHandler,
                             @Nullable final ChangeEventListener<T> changeEventListener,
-                            @Nullable final ErrorListener errorListener,
+                            @Nullable final ExceptionListener exceptionListener,
                             @Nonnull final Codec<T> codec) {
     this.waitUntilInitialized();
 
@@ -358,7 +358,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return;
     }
 
-    this.errorListener = errorListener;
+    this.exceptionListener = exceptionListener;
 
     this.syncConfig.getNamespaceConfig(namespace).configure(
         conflictHandler,
@@ -1351,7 +1351,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private void emitError(final CoreDocumentSynchronizationConfig docConfig,
                          final String msg,
                          final Exception ex) {
-    if (this.errorListener != null) {
+    if (this.exceptionListener != null) {
       final Exception dispatchException;
       if (ex == null) {
         dispatchException = new DataSynchronizerException(msg);
@@ -1359,7 +1359,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         dispatchException = ex;
       }
       this.eventDispatcher.dispatch(() -> {
-        errorListener.onError(docConfig.getDocumentId(), dispatchException);
+        exceptionListener.onError(docConfig.getDocumentId(), dispatchException);
         return null;
       });
     }
@@ -1702,14 +1702,17 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue... documentIds
   ) {
     this.waitUntilInitialized();
+    boolean added = false;
 
     try {
       ongoingOperationsGroup.enter();
       for (final BsonValue documentId : documentIds) {
-        syncConfig.addSynchronizedDocument(namespace, documentId);
+        added = added || syncConfig.addSynchronizedDocument(namespace, documentId);
       }
 
-      triggerListeningToNamespace(namespace);
+      if (added) {
+        triggerListeningToNamespace(namespace);
+      }
     } finally {
       ongoingOperationsGroup.exit();
     }
@@ -1729,20 +1732,26 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
     final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
+    boolean removed = false;
     try {
       ongoingOperationsGroup.enter();
+
       for (final BsonValue documentId : documentIds) {
-        syncConfig.removeSynchronizedDocument(namespace, documentId);
+        removed = removed || syncConfig.removeSynchronizedDocument(namespace, documentId);
       }
 
-      getLocalCollection(namespace).deleteMany(
-          new Document("_id", new Document("$in", Arrays.asList(documentIds))));
+      if (removed) {
+        getLocalCollection(namespace).deleteMany(
+            new Document("_id", new Document("$in", Arrays.asList(documentIds))));
+      }
     } finally {
       lock.unlock();
       ongoingOperationsGroup.exit();
     }
 
-    triggerListeningToNamespace(namespace);
+    if (removed) {
+      triggerListeningToNamespace(namespace);
+    }
   }
 
   /**
@@ -1930,7 +1939,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         getLocalCollection(namespace).insertOne(docForStorage);
         documentId = BsonUtils.getDocumentId(docForStorage);
         event = ChangeEvents.changeEventForLocalInsert(namespace, docForStorage, true);
-        final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
+        final CoreDocumentSynchronizationConfig config = syncConfig.addAndGetSynchronizedDocument(
             namespace,
             documentId
         );
@@ -1973,7 +1982,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           final BsonValue documentId = BsonUtils.getDocumentId(document);
           final ChangeEvent<BsonDocument> event =
               ChangeEvents.changeEventForLocalInsert(namespace, document, true);
-          final CoreDocumentSynchronizationConfig config = syncConfig.addSynchronizedDocument(
+          final CoreDocumentSynchronizationConfig config = syncConfig.addAndGetSynchronizedDocument(
               namespace,
               documentId
           );
@@ -2080,7 +2089,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // else this is an update
         if (documentBeforeUpdate == null && updateOptions.isUpsert()) {
           triggerNamespace = true;
-          config = syncConfig.addSynchronizedDocument(namespace, documentId);
+          config = syncConfig.addAndGetSynchronizedDocument(namespace, documentId);
           event = ChangeEvents.changeEventForLocalInsert(namespace, documentAfterUpdate, true);
         } else {
           triggerNamespace = false;
@@ -2215,7 +2224,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               // treat the upsert as an insert, as far as sync is concerned
               // else treat it as a standard update
               if (beforeDocument == null && updateOptions.isUpsert()) {
-                config = syncConfig.addSynchronizedDocument(namespace, documentId);
+                config = syncConfig.addAndGetSynchronizedDocument(namespace, documentId);
                 event = ChangeEvents.changeEventForLocalInsert(namespace, afterDocument, true);
               } else {
                 config = syncConfig.getSynchronizedDocument(namespace, documentId);

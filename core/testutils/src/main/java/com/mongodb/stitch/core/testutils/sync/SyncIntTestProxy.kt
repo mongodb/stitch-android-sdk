@@ -8,11 +8,11 @@ import com.mongodb.stitch.core.admin.services.rules.rule
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
@@ -902,7 +902,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
                 hasChangeEventListenerBeenInvoked = true
                 changeEventListenerSemaphore.release()
             },
-            ErrorListener { _, _ -> }
+                ExceptionListener { _, _ -> }
         )
 
         waitForAllStreamsOpen()
@@ -1021,7 +1021,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         coll.configure(
             failingConflictHandler,
             null,
-            ErrorListener { _, _ -> errorEmittedSem.release() })
+                ExceptionListener { _, _ -> errorEmittedSem.release() })
 
         remoteColl.insertOne(docToInsert)
 
@@ -1279,8 +1279,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             },
             ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
             },
-            ErrorListener { _, _ ->
-            })
+                ExceptionListener { _, _ ->
+                })
 
         // insert an initial doc
         val testDoc = Document("hello", "world")

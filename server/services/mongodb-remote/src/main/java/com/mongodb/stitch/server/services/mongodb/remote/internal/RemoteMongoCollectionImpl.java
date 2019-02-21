@@ -19,6 +19,7 @@ package com.mongodb.stitch.server.services.mongodb.remote.internal;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -26,6 +27,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
+import com.mongodb.stitch.server.services.mongodb.remote.PassthroughChangeStream;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
@@ -291,9 +293,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return the stream of change events.
    */
   @Override
-  public Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
+  public ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final ObjectId... ids)
     throws InterruptedException, IOException {
-    return proxy.watch(ids);
+    return new PassthroughChangeStream<>(proxy.watch(ids));
   }
 
   /**
@@ -302,8 +304,8 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return the stream of change events.
    */
   @Override
-  public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+  public ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final BsonValue... ids)
       throws InterruptedException, IOException {
-    return proxy.watch(ids);
+    return new PassthroughChangeStream<>(proxy.watch(ids));
   }
 }

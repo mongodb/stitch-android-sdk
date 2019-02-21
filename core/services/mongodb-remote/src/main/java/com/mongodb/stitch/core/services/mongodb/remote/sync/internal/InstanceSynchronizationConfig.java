@@ -130,18 +130,27 @@ class InstanceSynchronizationConfig
     return getNamespaceConfig(namespace).getSynchronizedDocument(documentId);
   }
 
-  public CoreDocumentSynchronizationConfig addSynchronizedDocument(
+  public boolean addSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    return getNamespaceConfig(namespace).addSynchronizedDocument(namespace, documentId);
+    return getNamespaceConfig(namespace).addSynchronizedDocument(documentId);
   }
 
-  public void removeSynchronizedDocument(
+  public CoreDocumentSynchronizationConfig addAndGetSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    getNamespaceConfig(namespace).removeSynchronizedDocument(documentId);
+    final NamespaceSynchronizationConfig nsConfig = getNamespaceConfig(namespace);
+    nsConfig.addSynchronizedDocument(documentId);
+    return nsConfig.getSynchronizedDocument(documentId);
+  }
+
+  public boolean removeSynchronizedDocument(
+      final MongoNamespace namespace,
+      final BsonValue documentId
+  ) {
+    return getNamespaceConfig(namespace).removeSynchronizedDocument(documentId);
   }
 
   /**

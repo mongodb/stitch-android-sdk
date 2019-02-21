@@ -19,6 +19,7 @@ package com.mongodb.stitch.server.services.mongodb.remote;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -252,13 +253,19 @@ public interface RemoteMongoCollection<DocumentT> {
    * of non-{@link BsonValue} instances of {@link ObjectId}.
    * @param ids unique object identifiers of the IDs to watch.
    * @return the stream of change events.
+   * @throws InterruptedException if the operation is interrupted.
+   * @throws IOException if the operation fails.
    */
-  Stream<ChangeEvent<DocumentT>> watch(final ObjectId... ids) throws InterruptedException, IOException;
+  ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final ObjectId... ids)
+      throws InterruptedException, IOException;
 
   /**
    * Watches specified IDs in a collection.
    * @param ids the ids to watch.
    * @return the stream of change events.
+   * @throws InterruptedException if the operation is interrupted.
+   * @throws IOException if the operation fails.
    */
-  Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids) throws InterruptedException, IOException;
+  ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final BsonValue... ids)
+      throws InterruptedException, IOException;
 }

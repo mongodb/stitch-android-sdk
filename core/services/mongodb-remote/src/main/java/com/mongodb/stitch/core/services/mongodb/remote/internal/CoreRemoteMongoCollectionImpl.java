@@ -402,8 +402,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   @SuppressWarnings("unchecked")
   public Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
       throws InterruptedException, IOException {
-    return operations.watch(new HashSet<BsonValue>(Arrays.asList(ids)), documentClass)
-        .execute(service);
+    return operations.watch(new HashSet<>(Arrays.asList(ids)), documentClass).execute(service);
   }
 
   @Override

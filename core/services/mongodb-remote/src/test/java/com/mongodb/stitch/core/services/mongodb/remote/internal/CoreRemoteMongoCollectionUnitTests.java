@@ -20,7 +20,6 @@ import static com.mongodb.stitch.core.services.mongodb.remote.internal.TestUtils
 import static com.mongodb.stitch.core.services.mongodb.remote.internal.TestUtils.getCollection;
 import static com.mongodb.stitch.core.services.mongodb.remote.internal.TestUtils.getDatabase;
 import static com.mongodb.stitch.core.testutils.Assert.assertThrows;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -64,7 +63,6 @@ import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
-import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.configuration.CodecRegistries;

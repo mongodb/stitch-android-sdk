@@ -20,9 +20,9 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.google.android.gms.tasks.Task;
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
@@ -48,11 +48,11 @@ public interface Sync<DocumentT> {
    *                         and remote events.
    * @param changeEventListener the event listener to invoke when a change event happens for the
    *                         document.
-   * @param errorListener the error listener to invoke when an irrecoverable error occurs
+   * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
    */
   void configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
                  @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                 @Nullable final ErrorListener errorListener);
+                 @Nullable final ExceptionListener exceptionListener);
 
   /**
    * Requests that the given document _id be synchronized.
@@ -64,7 +64,7 @@ public interface Sync<DocumentT> {
    * Requests that the given document _ids be synchronized.
    * @param ids the document _ids to synchronize.
    */
-  void syncMany(final BsonValue... ids);
+  void   syncMany(final BsonValue... ids);
 
   /**
    * Stops synchronizing the given document _id. Any uncommitted writes will be lost.
