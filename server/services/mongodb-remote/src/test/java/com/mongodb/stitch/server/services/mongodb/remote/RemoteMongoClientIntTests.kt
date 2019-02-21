@@ -12,7 +12,6 @@ import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
-import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.testutils.CustomType
 import com.mongodb.stitch.server.core.StitchAppClient
 import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl
@@ -435,18 +434,18 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
                     BsonDocument().append("new", BsonString("field"))))
 
             val insertEvent = stream.nextEvent()
-            assertEquals(OperationType.INSERT, insertEvent.data?.operationType)
-            assertEquals(rawDoc2, insertEvent.data?.fullDocument)
+            assertEquals(OperationType.INSERT, insertEvent.operationType)
+            assertEquals(rawDoc2, insertEvent.fullDocument)
             val updateEvent1 = stream.nextEvent()
             val updateEvent2 = stream.nextEvent()
 
             assertNotNull(updateEvent1)
             assertNotNull(updateEvent2)
 
-            assertEquals(OperationType.UPDATE, updateEvent1.data?.operationType)
-            assertEquals(rawDoc1.append("new", "field"), updateEvent1.data?.fullDocument);
-            assertEquals(OperationType.UPDATE, updateEvent2.data?.operationType)
-            assertEquals(rawDoc2.append("new", "field"), updateEvent2.data?.fullDocument);
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
         } finally {
             stream.close()
         }
@@ -480,18 +479,18 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
                     BsonDocument().append("new", BsonString("field"))))
 
             val insertEvent = stream.nextEvent()
-            assertEquals(OperationType.INSERT, insertEvent.data?.operationType)
-            assertEquals(rawDoc2, insertEvent.data?.fullDocument)
+            assertEquals(OperationType.INSERT, insertEvent.operationType)
+            assertEquals(rawDoc2, insertEvent.fullDocument)
             val updateEvent1 = stream.nextEvent()
             val updateEvent2 = stream.nextEvent()
 
             assertNotNull(updateEvent1)
             assertNotNull(updateEvent2)
 
-            assertEquals(OperationType.UPDATE, updateEvent1.data?.operationType)
-            assertEquals(rawDoc1.append("new", "field"), updateEvent1.data?.fullDocument);
-            assertEquals(OperationType.UPDATE, updateEvent2.data?.operationType)
-            assertEquals(rawDoc2.append("new", "field"), updateEvent2.data?.fullDocument);
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
         }
         finally {
             stream.close()
