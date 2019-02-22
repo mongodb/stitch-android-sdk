@@ -20,6 +20,7 @@ import com.mongodb.stitch.core.auth.StitchUserIdentity;
 import com.mongodb.stitch.core.auth.StitchUserProfile;
 import com.mongodb.stitch.core.auth.UserType;
 
+import java.util.Date;
 import java.util.List;
 
 public interface CoreStitchUser {
@@ -36,6 +37,8 @@ public interface CoreStitchUser {
   StitchUserProfile getProfile();
 
   List<? extends StitchUserIdentity> getIdentities();
+
+  Date getLastAuthActivity();
 
   boolean isLoggedIn();
 }

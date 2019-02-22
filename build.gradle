@@ -122,6 +122,16 @@ subprojects {
                 name "Adam Chelminski"
                 email "adam.chelminski@mongodb.com"
             }
+            developer {
+                id "tkaye407"
+                name "Tyler Kaye"
+                email "tyler.kaye@mongodb.com"
+            }
+            developer {
+                id "dkaminsky"
+                name "Doug Kaminsky"
+                email "douglas.kaminsky@mongodb.com"
+            }
         }
         scm {
             url "https://github.com/mongodb/stitch-android-sdk"

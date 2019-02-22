@@ -29,7 +29,7 @@ public final class ApiAuthInfo extends AuthInfo {
       @JsonProperty(Fields.DEVICE_ID) final String deviceId,
       @JsonProperty(Fields.ACCESS_TOKEN) final String accessToken,
       @JsonProperty(Fields.REFRESH_TOKEN) final String refreshToken) {
-    super(userId, deviceId, accessToken, refreshToken, null, null, null);
+    super(userId, deviceId, accessToken, refreshToken, null, null, null, null);
   }
 
   @JsonProperty(Fields.USER_ID)
