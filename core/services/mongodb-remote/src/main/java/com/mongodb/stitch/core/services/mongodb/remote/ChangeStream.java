@@ -27,10 +27,10 @@ import org.bson.BsonValue;
 /**
  * User-level abstraction for a stream returning {@link ChangeEvent}s from the server.
  *
- * @param <UserT> The type returned to users of this API when the next event is requested.
+ * @param <EventT> The type returned to users of this API when the next event is requested.
  * @param <DocumentT> The type of the full document on the underlying change event.
  */
-public abstract class ChangeStream<UserT, DocumentT> implements Closeable {
+public abstract class ChangeStream<EventT, DocumentT> implements Closeable {
   private final Stream<ChangeEvent<DocumentT>> stream;
 
   private ExceptionListener exceptionListener = null;
@@ -58,7 +58,7 @@ public abstract class ChangeStream<UserT, DocumentT> implements Closeable {
    * @return The next event.
    * @throws IOException If the underlying stream throws an {@link IOException}
    */
-  public abstract UserT nextEvent() throws IOException;
+  public abstract EventT nextEvent() throws IOException;
 
   /**
    * Indicates whether or not the change stream is currently open.

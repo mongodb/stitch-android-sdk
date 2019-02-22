@@ -22,7 +22,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
  * ExceptionListener receives non-network related errors that occur.
  */
 @Deprecated
-public interface ErrorListener extends
-    ExceptionListener {
+public interface ErrorListener extends ExceptionListener {
   // Empty extension for backward compatibility until removal
 }

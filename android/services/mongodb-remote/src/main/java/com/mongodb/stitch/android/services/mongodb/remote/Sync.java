@@ -64,7 +64,7 @@ public interface Sync<DocumentT> {
    * Requests that the given document _ids be synchronized.
    * @param ids the document _ids to synchronize.
    */
-  void   syncMany(final BsonValue... ids);
+  void syncMany(final BsonValue... ids);
 
   /**
    * Stops synchronizing the given document _id. Any uncommitted writes will be lost.

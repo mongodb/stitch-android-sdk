@@ -1707,7 +1707,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     try {
       ongoingOperationsGroup.enter();
       for (final BsonValue documentId : documentIds) {
-        added = added || syncConfig.addSynchronizedDocument(namespace, documentId);
+        added = syncConfig.addSynchronizedDocument(namespace, documentId) || added;
       }
 
       if (added) {
@@ -1737,7 +1737,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       ongoingOperationsGroup.enter();
 
       for (final BsonValue documentId : documentIds) {
-        removed = removed || syncConfig.removeSynchronizedDocument(namespace, documentId);
+        removed = syncConfig.removeSynchronizedDocument(namespace, documentId) || removed;
       }
 
       if (removed) {
