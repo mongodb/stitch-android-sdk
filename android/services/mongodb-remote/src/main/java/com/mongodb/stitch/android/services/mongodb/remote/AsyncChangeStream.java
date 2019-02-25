@@ -50,6 +50,11 @@ public class AsyncChangeStream<DocumentT> extends
     this.dispatcher = dispatcher;
   }
 
+  /**
+   * Returns a {@link Task} whose resolution gives the next event from the underlying stream.
+   * @return task providing the next event
+   * @throws IOException
+   */
   @Override
   public Task<ChangeEvent<DocumentT>> nextEvent() throws IOException {
     return dispatcher.dispatchTask(new Callable<ChangeEvent<DocumentT>>() {
@@ -62,6 +67,9 @@ public class AsyncChangeStream<DocumentT> extends
         }
         if (nextEvent.getError() != null) {
           dispatchError(nextEvent);
+          return null;
+        }
+        if (nextEvent.getData() == null) {
           return null;
         }
 
