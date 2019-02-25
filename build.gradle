@@ -454,6 +454,14 @@ rootProject.gradle.projectsEvaluated {
         options.group "Server SDK", serverPackages.join(':')
         options.group "Core SDK", corePackages.join(':')
 
+        if (project.hasProperty("analytics")) {
+            println "Building with analytics."
+            options.header = new File(configDir, 'header.html').text
+            options.addBooleanOption("-allow-script-in-comments", true)
+        } else {
+            println "Building without analytics. Use -Panalytics to enable analytics."
+        }
+
         String androidDocsDir = ""
         subprojects {
             project.tasks.withType(Javadoc).each { javadocTask ->
