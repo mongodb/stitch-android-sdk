@@ -21,6 +21,7 @@ import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
@@ -102,6 +103,63 @@ public interface CoreRemoteMongoCollection<DocumentT> {
    * @return the number of documents in the collection
    */
   long count(final Bson filter, final RemoteCountOptions options);
+
+  /**
+   * Finds a document in the collection
+   *
+   * @return the resulting document
+   */
+  DocumentT findOne();
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type
+   * @return the resulting document
+   */
+  <ResultT> ResultT findOne(final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @return the resulting document
+   */
+  DocumentT findOne(final Bson filter);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  <ResultT> ResultT findOne(final Bson filter, final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOptions struct
+   * @return the resulting document
+   */
+  DocumentT findOne(final Bson filter, final RemoteFindOptions options);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  <ResultT> ResultT findOne(
+          final Bson filter,
+          final RemoteFindOptions options,
+          final Class<ResultT> resultClass);
 
   /**
    * Finds all documents in the collection.
