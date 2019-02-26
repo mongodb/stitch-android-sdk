@@ -34,7 +34,9 @@ import static org.mockito.Mockito.when;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.CollectionDecoder;
+import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -43,13 +45,17 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
@@ -58,8 +64,10 @@ import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.types.ObjectId;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -603,5 +611,92 @@ public class CoreRemoteMongoCollectionUnitTests {
         .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.updateMany(new Document(), new Document()),
         IllegalArgumentException.class);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testWatchBsonValueIDs() throws IOException, InterruptedException {
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
+    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(
+            service,
+            getClientInfo(),
+            ServerEmbeddedMongoClientFactory.getInstance());
+    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
+
+    final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
+
+    doReturn(mockStream).when(service).streamFunction(any(), any(), any(Decoder.class));
+
+    final BsonValue[] expectedIDs = new BsonValue[] {new BsonString("foobar"),
+        new BsonObjectId(),
+        new BsonDocument()};
+    coll.watch(expectedIDs);
+
+    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<Decoder<ChangeEvent>> decoderArgumentCaptor =
+        ArgumentCaptor.forClass(Decoder.class);
+    verify(service)
+        .streamFunction(
+            funcNameArg.capture(),
+            funcArgsArg.capture(),
+            decoderArgumentCaptor.capture());
+
+    assertEquals("watch", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    final Document expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("ids", new HashSet<>(Arrays.asList(expectedIDs)));
+    assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
+    assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
+        decoderArgumentCaptor.getValue());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testWatchObjectIdIDs() throws IOException, InterruptedException {
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
+    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(
+            service,
+            getClientInfo(),
+            ServerEmbeddedMongoClientFactory.getInstance());
+    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
+
+    final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
+
+    doReturn(mockStream).when(service).streamFunction(any(), any(), any(Decoder.class));
+
+    final ObjectId[] expectedIDs = new ObjectId[] {new ObjectId(), new ObjectId(), new ObjectId()};
+    coll.watch(expectedIDs);
+
+    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<Decoder<ChangeEvent>> decoderArgumentCaptor =
+        ArgumentCaptor.forClass(Decoder.class);
+    verify(service)
+        .streamFunction(
+            funcNameArg.capture(),
+            funcArgsArg.capture(),
+            decoderArgumentCaptor.capture());
+
+    assertEquals("watch", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    final Document expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("ids", Arrays.stream(expectedIDs).map(BsonObjectId::new)
+        .collect(Collectors.toSet()));
+
+    for (final Map.Entry<String, Object> entry : expectedArgs.entrySet()) {
+      final Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
+      assertEquals(entry.getValue(), capturedValue);
+    }
+    assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
+        decoderArgumentCaptor.getValue());
   }
 }

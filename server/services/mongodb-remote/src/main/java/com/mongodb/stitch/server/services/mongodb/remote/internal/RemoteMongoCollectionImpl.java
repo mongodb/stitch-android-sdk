@@ -17,6 +17,8 @@
 package com.mongodb.stitch.server.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -24,13 +26,18 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
+import com.mongodb.stitch.server.services.mongodb.remote.PassthroughChangeStream;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
 
+import java.io.IOException;
 import java.util.List;
+
+import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 public final class RemoteMongoCollectionImpl<DocumentT>
     implements RemoteMongoCollection<DocumentT> {
@@ -277,5 +284,27 @@ public final class RemoteMongoCollectionImpl<DocumentT>
       final RemoteUpdateOptions updateOptions
   ) {
     return proxy.updateMany(filter, update, updateOptions);
+  }
+
+  /**
+   * Watches specified IDs in a collection.
+   * @param ids unique object identifiers of the IDs to watch.
+   * @return the stream of change events.
+   */
+  @Override
+  public ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final ObjectId... ids)
+      throws InterruptedException, IOException {
+    return new PassthroughChangeStream<>(proxy.watch(ids));
+  }
+
+  /**
+   * Watches specified IDs in a collection.
+   * @param ids the ids to watch.
+   * @return the stream of change events.
+   */
+  @Override
+  public ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final BsonValue... ids)
+      throws InterruptedException, IOException {
+    return new PassthroughChangeStream<>(proxy.watch(ids));
   }
 }

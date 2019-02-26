@@ -16,7 +16,7 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import org.bson.BsonValue;
 

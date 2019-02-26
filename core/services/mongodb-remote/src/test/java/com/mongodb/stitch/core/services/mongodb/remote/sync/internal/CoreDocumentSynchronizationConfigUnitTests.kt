@@ -94,7 +94,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
     fun testToBsonDocumentRoundTrip() {
         var config = CoreDocumentSynchronizationConfig(coll, namespace, id)
         val expectedTestVersion = BsonDocument("dummy", BsonString("version"))
-        val expectedEvent = ChangeEvent.changeEventForLocalDelete(namespace, id, false)
+        val expectedEvent = ChangeEvents.changeEventForLocalDelete(namespace, id, false)
         config.setSomePendingWrites(
             1,
             expectedTestVersion,

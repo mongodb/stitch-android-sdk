@@ -26,9 +26,13 @@ import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
 import org.bson.BsonDocument;
+import org.bson.BsonValue;
 import org.bson.codecs.CollectibleCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -161,6 +165,12 @@ public class Operations<DocumentT> {
         toBsonDocument(filter, documentClass, codecRegistry),
         toBsonDocument(update, documentClass, codecRegistry))
         .upsert(updateOptions.isUpsert());
+  }
+
+  <ResultT> WatchOperation<ResultT> watch(
+                       final Set<BsonValue> ids,
+                       final Class<ResultT> resultClass) {
+    return new WatchOperation<>(namespace, ids, codecRegistry.get(resultClass));
   }
 
   private List<BsonDocument> toBsonDocumentList(final List<? extends Bson> bsonList) {
