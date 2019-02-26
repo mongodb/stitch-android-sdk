@@ -21,7 +21,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.1'
         classpath 'org.edaniels.gradle.plugin:coveralls-gradle-plugin:2.8.2'
     }
 }
