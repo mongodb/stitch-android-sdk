@@ -69,9 +69,9 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     private class SyncMethods(private val sync: Sync<Document>) : ProxySyncMethods {
         override fun configure(
-                conflictResolver: ConflictHandler<Document?>,
-                changeEventListener: ChangeEventListener<Document>?,
-                exceptionListener: ExceptionListener?
+            conflictResolver: ConflictHandler<Document?>,
+            changeEventListener: ChangeEventListener<Document>?,
+            exceptionListener: ExceptionListener?
         ) {
             sync.configure(conflictResolver, changeEventListener, exceptionListener)
         }

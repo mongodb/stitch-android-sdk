@@ -19,9 +19,9 @@ import org.bson.conversions.Bson
  */
 interface ProxySyncMethods {
     fun configure(
-            conflictResolver: ConflictHandler<Document?>,
-            changeEventListener: ChangeEventListener<Document>?,
-            exceptionListener: ExceptionListener?
+        conflictResolver: ConflictHandler<Document?>,
+        changeEventListener: ChangeEventListener<Document>?,
+        exceptionListener: ExceptionListener?
     )
 
     fun syncOne(id: BsonValue)

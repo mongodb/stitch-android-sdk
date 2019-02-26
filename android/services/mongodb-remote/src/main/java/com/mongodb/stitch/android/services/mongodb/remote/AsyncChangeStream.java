@@ -53,7 +53,7 @@ public class AsyncChangeStream<DocumentT> extends
   /**
    * Returns a {@link Task} whose resolution gives the next event from the underlying stream.
    * @return task providing the next event
-   * @throws IOException
+   * @throws IOException if the underlying stream throws an {@link IOException}
    */
   @Override
   public Task<ChangeEvent<DocumentT>> nextEvent() throws IOException {

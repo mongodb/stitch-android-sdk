@@ -5,7 +5,6 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
-import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders
 import org.bson.BsonArray
 import org.bson.BsonBoolean
 import org.bson.BsonDocument

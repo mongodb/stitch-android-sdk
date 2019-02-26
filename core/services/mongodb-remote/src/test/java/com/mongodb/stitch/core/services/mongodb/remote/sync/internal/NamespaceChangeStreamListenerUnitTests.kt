@@ -1,7 +1,6 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.stitch.core.internal.net.Event
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonObjectId
 import org.bson.Document

@@ -6,7 +6,6 @@ import com.mongodb.stitch.core.internal.common.AuthMonitor
 import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.internal.common.ThreadDispatcher
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.compareEvents
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument

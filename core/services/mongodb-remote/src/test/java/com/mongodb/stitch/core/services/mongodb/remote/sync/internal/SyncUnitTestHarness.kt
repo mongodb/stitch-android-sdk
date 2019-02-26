@@ -19,7 +19,11 @@ import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
-import com.mongodb.stitch.core.services.mongodb.remote.internal.*
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
+import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoDatabaseImpl
+import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
@@ -71,9 +75,9 @@ class SyncUnitTestHarness : Closeable {
             var exceptionToThrow: Exception? = null
         ) : ConflictHandler<BsonDocument> {
             override fun resolveConflict(
-                    documentId: BsonValue?,
-                    localEvent: ChangeEvent<BsonDocument>?,
-                    remoteEvent: ChangeEvent<BsonDocument>?
+                documentId: BsonValue?,
+                localEvent: ChangeEvent<BsonDocument>?,
+                remoteEvent: ChangeEvent<BsonDocument>?
             ): BsonDocument? {
                 if (exceptionToThrow != null) {
                     throw exceptionToThrow!!
@@ -239,8 +243,8 @@ class SyncUnitTestHarness : Closeable {
         override val instanceKey: String = "${Random().nextInt()}"
     ) : DataSynchronizerTestContext {
         open class TestChangeEventListener(
-                private val expectedEvent: ChangeEvent<BsonDocument>?,
-                var emitEventSemaphore: Semaphore?
+            private val expectedEvent: ChangeEvent<BsonDocument>?,
+            var emitEventSemaphore: Semaphore?
         ) : ChangeEventListener<BsonDocument> {
             val eventAccumulator = mutableListOf<ChangeEvent<BsonDocument>>()
             var totalEventsToAccumulate = 0
@@ -615,9 +619,9 @@ class SyncUnitTestHarness : Closeable {
         }
 
         override fun verifyConflictHandlerCalledForActiveDoc(
-                times: Int,
-                expectedLocalConflictEvent: ChangeEvent<BsonDocument>?,
-                expectedRemoteConflictEvent: ChangeEvent<BsonDocument>?
+            times: Int,
+            expectedLocalConflictEvent: ChangeEvent<BsonDocument>?,
+            expectedRemoteConflictEvent: ChangeEvent<BsonDocument>?
         ) {
             val localChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
             val remoteChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)

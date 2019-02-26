@@ -24,11 +24,16 @@ import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import java.util.*
 
 class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
@@ -491,8 +496,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
             assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
             assertEquals(OperationType.UPDATE, updateEvent2.operationType)
             assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
-        }
-        finally {
+        } finally {
             stream.close()
         }
     }

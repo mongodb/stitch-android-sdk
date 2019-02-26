@@ -131,9 +131,9 @@ interface DataSynchronizerTestContext : Closeable {
      * Verify the conflict handler was called for the test document.
      */
     fun verifyConflictHandlerCalledForActiveDoc(
-            times: Int,
-            expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
-            expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null
+        times: Int,
+        expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
+        expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null
     )
 
     /**

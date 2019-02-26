@@ -4,7 +4,6 @@ import com.mongodb.client.model.CountOptions
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
@@ -20,7 +19,6 @@ import org.bson.BsonString
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.Document
-import org.bson.conversions.Bson
 import org.junit.After
 
 import org.junit.Assert.assertEquals

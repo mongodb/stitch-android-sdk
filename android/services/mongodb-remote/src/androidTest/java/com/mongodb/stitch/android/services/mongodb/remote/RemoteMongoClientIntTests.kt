@@ -519,8 +519,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
             assertEquals(OperationType.UPDATE, updateEvent2.operationType)
             assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
-        }
-        finally {
+        } finally {
             stream.close()
         }
     }
