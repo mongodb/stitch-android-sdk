@@ -28,6 +28,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
@@ -41,6 +42,8 @@ import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+
+import javax.xml.transform.Result;
 
 public final class RemoteMongoCollectionImpl<DocumentT>
     implements RemoteMongoCollection<DocumentT> {
@@ -139,6 +142,107 @@ public final class RemoteMongoCollectionImpl<DocumentT>
       }
     });
   }
+
+
+  /**
+   * Finds a document in the collection
+   *
+   * @return  a task containing the result of the find one operation
+   */
+  public Task<DocumentT> findOne() {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOne();
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type
+   * @return a task containing the result of the find one operation
+   */
+  public <ResultT> Task<ResultT> findOne(final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOne(resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @return  a task containing the result of the find one operation
+   */
+  public Task<DocumentT> findOne(final Bson filter) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOne(filter);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  public <ResultT> Task<ResultT> findOne(final Bson filter, final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOne(filter, resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOptions struct
+   * @return  a task containing the result of the find one operation
+   */
+  public Task<DocumentT> findOne(final Bson filter, final RemoteFindOptions options) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOne(filter, options);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  public <ResultT> Task<ResultT> findOne(
+          final Bson filter,
+          final RemoteFindOptions options,
+          final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOne(filter, options, resultClass);
+      }
+    });
+  }
+
 
   /**
    * Finds all documents in the collection.

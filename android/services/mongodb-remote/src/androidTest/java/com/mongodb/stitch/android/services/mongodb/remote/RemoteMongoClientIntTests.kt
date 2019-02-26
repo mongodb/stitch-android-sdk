@@ -15,6 +15,7 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
 import com.mongodb.stitch.core.testutils.CustomType
 import org.bson.BsonDocument
@@ -36,6 +37,7 @@ import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.*
 import java.util.concurrent.ExecutionException
 
 @RunWith(AndroidJUnit4::class)
@@ -130,6 +132,65 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
             assertEquals(StitchServiceErrorCode.MONGODB_ERROR, svcEx.errorCode)
         }
     }
+
+    @Test
+    fun testFindOne() {
+        val coll = getTestColl()
+        var iter = coll.find()
+        assertFalse(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
+        assertNull(Tasks.await(iter.first()))
+
+        val doc1 = Document("hello", "world1")
+        val doc2 = Document("hello", "world2")
+        val doc3 = Document("hello", "world3")
+
+        // Test findOne() on empty collection with no filter and no options
+        // assertNull(Tasks.await(coll.findOne()));
+
+        // Insert a document into the collection
+        Tasks.await(coll.insertOne(doc1))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Test findOne() with no filter and no options
+        assertEquals(withoutId(Tasks.await(coll.findOne())), withoutId(doc1))
+
+        // Test findOne() with filter and no options
+        val result = Tasks.await(coll.findOne(Document("hello", "world1")))
+        assertEquals(withoutId(result), withoutId(doc1))
+
+        // Test findOne() with filter that does not match any documents and no options
+        // assertNull(Tasks.await(coll.findOne(Document("hello", "worldDNE"))))
+
+        // Insert 2 more documents into the collection
+        Tasks.await(coll.insertMany(Arrays.asList(doc2, doc3)))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        // test findOne() with projection and sort options
+        val projection = Document("hello", 1)
+        projection["_id"] = 0
+        val result2 = Tasks.await(coll.findOne(Document(), RemoteFindOptions()
+                .limit(2)
+                .projection(projection)
+                .sort(Document("hello", 1))))
+        assertEquals(result2, withoutId(doc1))
+
+        val result3 = Tasks.await(coll.findOne(Document(), RemoteFindOptions()
+                .limit(2)
+                .projection(projection)
+                .sort(Document("hello", -1))))
+        assertEquals(result3, withoutId(doc3))
+
+        // test findOne() properly fails
+        try {
+            Tasks.await(coll.findOne(Document("\$who", 1)))
+            fail()
+        } catch (ex: ExecutionException) {
+            assertTrue(ex.cause is StitchServiceException)
+            val svcEx = ex.cause as StitchServiceException
+            assertEquals(StitchServiceErrorCode.MONGODB_ERROR, svcEx.errorCode)
+        }
+    }
+
 
     @Test
     fun testFind() {
