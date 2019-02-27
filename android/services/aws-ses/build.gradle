@@ -9,8 +9,8 @@ ext.pomDisplayName = "Android AWS SES Service"
 buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:3.3.0'
-        classpath 'digital.wup:android-maven-publish:3.3.0'
-        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
+        classpath 'digital.wup:android-maven-publish:3.6.2'
+        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
     }
