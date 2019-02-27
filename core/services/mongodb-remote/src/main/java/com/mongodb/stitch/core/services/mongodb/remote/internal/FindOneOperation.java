@@ -16,17 +16,15 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
+
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 
 import java.util.Collections;
 import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
-import org.bson.conversions.Bson;
-
-import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 public class FindOneOperation<T> implements Operation<T> {
 

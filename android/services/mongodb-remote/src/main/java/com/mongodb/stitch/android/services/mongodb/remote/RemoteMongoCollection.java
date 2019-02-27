@@ -132,7 +132,7 @@ public interface RemoteMongoCollection<DocumentT> {
   Task<Long> count(final Bson filter, final RemoteCountOptions options);
 
   /**
-   * Finds a document in the collection
+   * Finds a document in the collection.
    *
    * @return  a task containing the result of the find one operation
    */

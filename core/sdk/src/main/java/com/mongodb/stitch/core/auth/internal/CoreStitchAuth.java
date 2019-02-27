@@ -249,8 +249,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                                       final Decoder<T> resultDecoder) {
     final Response response = doAuthenticatedRequest(stitchReq);
     try {
-      String bodyStr = IoUtils.readAllToString(response.getBody());
-
+      final String bodyStr = IoUtils.readAllToString(response.getBody());
       if (bodyStr.equals("{\"$undefined\":true}")) {
         return null;
       }
@@ -282,7 +281,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final Response response = doAuthenticatedRequest(stitchReq);
 
     try {
-      String bodyStr = IoUtils.readAllToString(response.getBody());
+      final String bodyStr = IoUtils.readAllToString(response.getBody());
+      if (bodyStr.equals("{\"$undefined\":true}")) {
+        return null;
+      }
+
       return BsonUtils.parseValue(bodyStr, resultClass, codecRegistry);
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);

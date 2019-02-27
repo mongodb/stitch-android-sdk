@@ -43,8 +43,6 @@ import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 
-import javax.xml.transform.Result;
-
 public final class RemoteMongoCollectionImpl<DocumentT>
     implements RemoteMongoCollection<DocumentT> {
 
