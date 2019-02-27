@@ -1,7 +1,6 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoBulkWriteException
-import com.mongodb.MongoClientException
 import com.mongodb.MongoWriteException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions
@@ -131,7 +130,7 @@ class CoreSyncUnitTests {
     @Test
     fun testFindOne() {
         val ctx = harness.freshTestContext()
-        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
+        val (coreSync, _) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
 
         val doc1 = BsonDocument("hello", BsonString("world1"))
         val doc2 = BsonDocument("hello", BsonString("world2"))

@@ -125,7 +125,7 @@ public interface CoreSync<DocumentT> {
   long count(final Bson filter, final SyncCountOptions options);
 
   /**
-   * Finds a document in the collection
+   * Finds a document in the collection.
    *
    * @return the resulting document
    */

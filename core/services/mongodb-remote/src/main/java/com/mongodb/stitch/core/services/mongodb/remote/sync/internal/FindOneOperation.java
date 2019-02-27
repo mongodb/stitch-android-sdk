@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
+
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
@@ -23,8 +25,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
 import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
-
-import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 class FindOneOperation<T> implements Operation<T> {
 
