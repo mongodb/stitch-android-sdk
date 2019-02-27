@@ -37,7 +37,6 @@ import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.Arrays
 import java.util.concurrent.ExecutionException
 
 @RunWith(AndroidJUnit4::class)
@@ -173,7 +172,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         assertNull(Tasks.await(coll.findOne(Document("hello", "worldDNE"))))
 
         // Insert 2 more documents into the collection
-        Tasks.await(coll.insertMany(Arrays.asList(doc2, doc3)))
+        Tasks.await(coll.insertMany(listOf(doc2, doc3)))
         assertEquals(3, Tasks.await(coll.count()))
 
         // test findOne() with projection and sort options
