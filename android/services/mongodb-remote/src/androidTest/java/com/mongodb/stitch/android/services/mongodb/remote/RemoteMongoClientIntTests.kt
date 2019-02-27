@@ -22,8 +22,12 @@ import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
 import org.bson.Document
+import org.bson.codecs.BsonUndefinedCodec
+import org.bson.codecs.DecoderContext
+import org.bson.codecs.DocumentCodec
 import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
+import org.bson.json.JsonReader
 import org.bson.types.ObjectId
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -134,6 +138,19 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    fun testParseUndefined() {
+        val foo = "{\"\$undefined\":true}"
+        val codec = DocumentCodec()//BsonUndefinedCodec()
+
+        val bsonReader = JsonReader(foo)
+        bsonReader.readBsonType()
+
+        val result = codec.decode(bsonReader, DecoderContext.builder().build());
+
+        System.err.println(result)
+    }
+
+    @Test
     fun testFindOne() {
         val coll = getTestColl()
         var iter = coll.find()
@@ -145,7 +162,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         val doc3 = Document("hello", "world3")
 
         // Test findOne() on empty collection with no filter and no options
-        // assertNull(Tasks.await(coll.findOne()));
+        assertNull(Tasks.await(coll.findOne()));
 
         // Insert a document into the collection
         Tasks.await(coll.insertOne(doc1))
@@ -159,7 +176,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         assertEquals(withoutId(result), withoutId(doc1))
 
         // Test findOne() with filter that does not match any documents and no options
-        // assertNull(Tasks.await(coll.findOne(Document("hello", "worldDNE"))))
+        assertNull(Tasks.await(coll.findOne(Document("hello", "worldDNE"))))
 
         // Insert 2 more documents into the collection
         Tasks.await(coll.insertMany(Arrays.asList(doc2, doc3)))

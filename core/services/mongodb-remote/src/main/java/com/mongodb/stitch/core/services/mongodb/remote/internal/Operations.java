@@ -74,10 +74,6 @@ public class Operations<DocumentT> {
       sort =  BsonUtils.toBsonDocumentOrNull(options.getSort(), documentClass, codecRegistry);
     }
 
-    System.out.println("TK HEY");
-    System.out.println(resultClass);
-    System.out.println(codecRegistry);
-    System.out.println(codecRegistry.get(resultClass));
     return new FindOneOperation<>(
             namespace,
             filter.toBsonDocument(documentClass, codecRegistry),
