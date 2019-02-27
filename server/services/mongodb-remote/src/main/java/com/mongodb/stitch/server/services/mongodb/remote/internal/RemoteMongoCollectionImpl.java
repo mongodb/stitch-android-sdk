@@ -21,6 +21,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
@@ -113,6 +114,75 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    */
   public long count(final Bson filter, final RemoteCountOptions options) {
     return proxy.count(filter, options);
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @return  a task containing the result of the find one operation
+   */
+  public DocumentT findOne() {
+    return proxy.findOne();
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type
+   * @return a task containing the result of the find one operation
+   */
+  public <ResultT> ResultT findOne(final Class<ResultT> resultClass) {
+    return proxy.findOne(resultClass);
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @return  a task containing the result of the find one operation
+   */
+  public DocumentT findOne(final Bson filter) {
+    return proxy.findOne(filter);
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  public <ResultT> ResultT findOne(final Bson filter, final Class<ResultT> resultClass) {
+    return proxy.findOne(filter, resultClass);
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOptions struct
+   * @return  a task containing the result of the find one operation
+   */
+  public DocumentT findOne(final Bson filter, final RemoteFindOptions options) {
+    return proxy.findOne(filter, options);
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  public <ResultT> ResultT findOne(
+          final Bson filter,
+          final RemoteFindOptions options,
+          final Class<ResultT> resultClass) {
+    return proxy.findOne(filter, options, resultClass);
   }
 
   /**

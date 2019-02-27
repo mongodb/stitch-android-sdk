@@ -136,7 +136,8 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         }
     }
 
-    @Test
+    // Remove this before merging obviously
+    /* @Test
     fun testParseUndefined() {
         var foo = "{\"\$undefined\":true}"
         val codec = DocumentCodec()
@@ -147,14 +148,11 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         val result = codec.decode(bsonReader, DecoderContext.builder().build())
 
         System.err.println(result)
-    }
+    } */
 
     @Test
     fun testFindOne() {
         val coll = getTestColl()
-        var iter = coll.find()
-        assertFalse(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
-        assertNull(Tasks.await(iter.first()))
 
         val doc1 = Document("hello", "world1")
         val doc2 = Document("hello", "world2")
