@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
@@ -184,6 +185,39 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   @Override
   public SyncDeleteResult deleteMany(final Bson filter) {
     return syncOperations.deleteMany(filter).execute(service);
+  }
+
+  @Override
+  public DocumentT findOne() {
+    return this.findOne(new BsonDocument(), new RemoteFindOptions(), documentClass);
+  }
+
+  @Override
+  public DocumentT findOne(final Bson filter) {
+    return this.findOne(filter, new RemoteFindOptions(), documentClass);
+  }
+
+  @Override
+  public DocumentT findOne(final Bson filter, final RemoteFindOptions options) {
+    return this.findOne(filter, options, documentClass);
+  }
+
+  @Override
+  public <ResultT> ResultT findOne(final Class<ResultT> resultClass) {
+    return this.findOne(new BsonDocument(), new RemoteFindOptions(), resultClass);
+  }
+
+  @Override
+  public <ResultT> ResultT findOne(final Bson filter, final Class<ResultT> resultClass) {
+    return this.findOne(filter, new RemoteFindOptions(), resultClass);
+  }
+
+  @Override
+  public <ResultT> ResultT findOne(
+          final Bson filter,
+          final RemoteFindOptions options,
+          final Class<ResultT> resultClass) {
+    return this.syncOperations.findOne(filter, options, resultClass).execute(service);
   }
 
   @Override

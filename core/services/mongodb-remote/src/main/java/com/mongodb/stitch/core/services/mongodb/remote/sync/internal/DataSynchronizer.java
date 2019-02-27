@@ -50,6 +50,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
@@ -1874,6 +1875,32 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       ongoingOperationsGroup.enter();
       return getLocalCollection(namespace).countDocuments(filter, options);
     } finally {
+      ongoingOperationsGroup.exit();
+    }
+  }
+
+  public <T> T findOne(
+          final MongoNamespace namespace,
+          final BsonDocument filter,
+          final BsonDocument projection,
+          final BsonDocument sort,
+          final Class<T> resultClass,
+          final CodecRegistry codecRegistry
+  ) {
+    this.waitUntilInitialized();
+
+    ongoingOperationsGroup.enter();
+    final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      return getLocalCollection(namespace, resultClass, codecRegistry)
+              .find(filter)
+              .limit(1)
+              .projection(projection)
+              .sort(sort)
+              .first();
+    } finally {
+      lock.unlock();
       ongoingOperationsGroup.exit();
     }
   }

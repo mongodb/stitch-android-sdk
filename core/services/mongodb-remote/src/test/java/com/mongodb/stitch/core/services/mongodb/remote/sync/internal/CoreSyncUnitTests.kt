@@ -1,6 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.MongoBulkWriteException
+import com.mongodb.MongoClientException
 import com.mongodb.MongoWriteException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions
@@ -125,6 +126,49 @@ class CoreSyncUnitTests {
         assertEquals(1, coreSync.count(BsonDocument(), SyncCountOptions().limit(1)))
 
         verify(ctx.dataSynchronizer, times(3)).count(eq(ctx.namespace), any(), any())
+    }
+
+    @Test
+    fun testFindOne() {
+        val ctx = harness.freshTestContext()
+        val (coreSync, syncOperations) = harness.createCoreSyncWithContext(ctx, BsonDocument::class.java)
+
+        val doc1 = BsonDocument("hello", BsonString("world1"))
+        val doc2 = BsonDocument("hello", BsonString("world2"))
+        val doc3 = BsonDocument("hello", BsonString("world3"))
+
+        // Test findOne() on empty collection with no filter and no options
+        assertNull(coreSync.findOne())
+
+        // Insert a document into the collection
+        coreSync.insertOne(doc1)
+        assertEquals(1, coreSync.count())
+
+        // Test findOne() with no filter and no options
+        assertEquals(doc1, SyncUnitTestHarness.withoutSyncVersion(coreSync.findOne()))
+
+        // Test findOne() with filter and no options
+        assertEquals(doc1, SyncUnitTestHarness.withoutSyncVersion(coreSync.findOne(doc1)))
+
+        // Test findOne() with filter that does not match any documents and no options
+        assertNull(coreSync.findOne(BsonDocument("hello", BsonString("worldDNE"))))
+
+        // Insert 2 more documents into the collection
+        coreSync.insertMany(listOf(doc2, doc3))
+        assertEquals(3, coreSync.count())
+
+        // test findOne() with projection and sort options
+        val projection = BsonDocument("hello", BsonInt32(1))
+        projection["_id"] = BsonInt32(0)
+        var sort = BsonDocument("hello", BsonInt32(1))
+        var options = RemoteFindOptions().limit(10).projection(projection).sort(sort)
+
+        assertEquals(BsonString("world1"), coreSync.findOne(BsonDocument(), options)["hello"])
+
+        sort = BsonDocument("hello", BsonInt32(-1))
+        options = options.sort(sort)
+
+        assertEquals(BsonString("world3"), coreSync.findOne(BsonDocument(), options)["hello"])
     }
 
     @Test

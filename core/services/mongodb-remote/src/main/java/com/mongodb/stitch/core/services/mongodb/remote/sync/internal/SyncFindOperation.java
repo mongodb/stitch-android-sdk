@@ -22,7 +22,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.Operation;
 import java.util.Collection;
 import org.bson.BsonDocument;
 
-class SyncFindOperation<T> implements Operation<Collection<T>> {
+class  SyncFindOperation<T> implements Operation<Collection<T>> {
 
   private final MongoNamespace namespace;
   private final Class<T> resultClass;
