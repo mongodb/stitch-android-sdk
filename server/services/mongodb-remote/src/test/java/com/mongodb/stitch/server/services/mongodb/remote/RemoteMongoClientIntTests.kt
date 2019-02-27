@@ -35,7 +35,7 @@ import org.junit.Assert.fail
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import java.util.*
+import java.util.Arrays
 
 class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
@@ -158,7 +158,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         assertNull(coll.findOne(Document("hello", "worldDNE")))
 
         // Insert 2 more documents into the collection
-       coll.insertMany(Arrays.asList(doc2, doc3))
+        coll.insertMany(Arrays.asList(doc2, doc3))
         assertEquals(3, coll.count())
 
         // test findOne() with projection and sort options

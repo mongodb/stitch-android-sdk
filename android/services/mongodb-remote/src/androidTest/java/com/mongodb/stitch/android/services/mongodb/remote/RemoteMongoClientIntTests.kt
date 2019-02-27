@@ -22,11 +22,8 @@ import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
 import org.bson.Document
-import org.bson.codecs.DecoderContext
-import org.bson.codecs.DocumentCodec
 import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
-import org.bson.json.JsonReader
 import org.bson.types.ObjectId
 import org.junit.After
 import org.junit.Assert.assertEquals
