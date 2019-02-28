@@ -18,12 +18,12 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncAggregateIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
@@ -63,12 +63,12 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   @Override
   public void configure(@Nonnull final ConflictHandler<DocumentT> conflictHandler,
                         @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                        @Nullable final ErrorListener errorListener) {
+                        @Nullable final ExceptionListener exceptionListener) {
     this.dataSynchronizer.configure(
         namespace,
         conflictHandler,
         changeEventListener,
-        errorListener,
+        exceptionListener,
         this.service.getCodecRegistry().get(documentClass)
     );
   }

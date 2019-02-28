@@ -18,17 +18,21 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 
 import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonReader;
 import org.bson.BsonValue;
 import org.bson.codecs.BsonDocumentCodec;
+import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 
@@ -37,7 +41,9 @@ public class ResultDecoders {
   public static final Decoder<RemoteUpdateResult> updateResultDecoder = new UpdateResultDecoder();
 
   private static final class UpdateResultDecoder implements Decoder<RemoteUpdateResult> {
-    public RemoteUpdateResult decode(final BsonReader reader, final DecoderContext decoderContext) {
+    public RemoteUpdateResult decode(
+        final BsonReader reader,
+        final DecoderContext decoderContext) {
       final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
       keyPresent(Fields.MATCHED_COUNT_FIELD, document);
       keyPresent(Fields.MODIFIED_COUNT_FIELD, document);
@@ -63,7 +69,9 @@ public class ResultDecoders {
   public static final Decoder<RemoteDeleteResult> deleteResultDecoder = new DeleteResultDecoder();
 
   private static final class DeleteResultDecoder implements Decoder<RemoteDeleteResult> {
-    public RemoteDeleteResult decode(final BsonReader reader, final DecoderContext decoderContext) {
+    public RemoteDeleteResult decode(
+        final BsonReader reader,
+        final DecoderContext decoderContext) {
       final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
       keyPresent(Fields.DELETED_COUNT_FIELD, document);
       return new RemoteDeleteResult(document.getNumber(Fields.DELETED_COUNT_FIELD).longValue());
@@ -113,6 +121,62 @@ public class ResultDecoders {
 
     private static final class Fields {
       static final String INSERTED_IDS_FIELD = "insertedIds";
+    }
+  }
+
+  @SuppressWarnings("unused")
+  public static <DocumentT> Decoder<ChangeEvent<DocumentT>>
+      changeEventDecoder(final Codec<DocumentT> codec) {
+    return new ChangeEventDecoder<>(codec);
+  }
+
+  private static final class ChangeEventDecoder<DocumentT> implements
+      Decoder<ChangeEvent<DocumentT>> {
+    private final Codec<DocumentT> codec;
+
+    ChangeEventDecoder(final Codec<DocumentT> codec) {
+      this.codec = codec;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public ChangeEvent<DocumentT> decode(
+        final BsonReader reader,
+        final DecoderContext decoderContext
+    ) {
+      final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
+      final ChangeEvent<BsonDocument> rawChangeEvent = ChangeEvent.fromBsonDocument(document);
+
+      if (codec == null || codec.getClass().equals(BsonDocumentCodec.class)) {
+        return (ChangeEvent<DocumentT>)rawChangeEvent;
+      }
+      return new ChangeEvent<>(
+          rawChangeEvent.getId(),
+          rawChangeEvent.getOperationType(),
+          rawChangeEvent.getFullDocument() == null ? null : codec.decode(
+              rawChangeEvent.getFullDocument().asBsonReader(),
+              DecoderContext.builder().build()),
+          rawChangeEvent.getNamespace(),
+          rawChangeEvent.getDocumentKey(),
+          rawChangeEvent.getUpdateDescription(),
+          rawChangeEvent.hasUncommittedWrites());
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+      if (obj == null || obj.getClass() != ChangeEventDecoder.class) {
+        return false;
+      }
+      final ChangeEventDecoder<?> other = (ChangeEventDecoder) obj;
+
+      // caveat: if someone writes a stateful codec then this logic won't hold up, but we
+      // can't use .equals without opening a can of worms
+      return other.codec.getClass() == this.codec.getClass();
+    }
+
+    @Override
+    public int hashCode() {
+      return this.codec.hashCode();
     }
   }
 }

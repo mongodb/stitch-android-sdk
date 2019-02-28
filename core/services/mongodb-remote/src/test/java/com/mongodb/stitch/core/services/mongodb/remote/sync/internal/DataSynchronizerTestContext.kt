@@ -6,6 +6,7 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.internal.net.Event
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
@@ -69,6 +70,11 @@ interface DataSynchronizerTestContext : Closeable {
      * Reconfigure the dataSynchronizer.
      */
     fun reconfigure()
+
+    /**
+     * Wait for the data synchronizer to open streams.
+     */
+    fun waitForDataSynchronizerStreams()
 
     /**
      * Wait for an error to be emitted.

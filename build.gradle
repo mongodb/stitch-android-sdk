@@ -122,6 +122,16 @@ subprojects {
                 name "Adam Chelminski"
                 email "adam.chelminski@mongodb.com"
             }
+            developer {
+                id "tkaye407"
+                name "Tyler Kaye"
+                email "tyler.kaye@mongodb.com"
+            }
+            developer {
+                id "dkaminsky"
+                name "Doug Kaminsky"
+                email "douglas.kaminsky@mongodb.com"
+            }
         }
         scm {
             url "https://github.com/mongodb/stitch-android-sdk"
@@ -443,6 +453,14 @@ rootProject.gradle.projectsEvaluated {
         options.group "Android SDK", androidPackages.join(':')
         options.group "Server SDK", serverPackages.join(':')
         options.group "Core SDK", corePackages.join(':')
+
+        if (project.hasProperty("analytics")) {
+            println "Building with analytics."
+            options.header = new File(configDir, 'header.html').text
+            options.addBooleanOption("-allow-script-in-comments", true)
+        } else {
+            println "Building without analytics. Use -Panalytics to enable analytics."
+        }
 
         String androidDocsDir = ""
         subprojects {

@@ -19,10 +19,13 @@ package com.mongodb.stitch.android.services.mongodb.remote.internal;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
+import com.mongodb.stitch.android.services.mongodb.remote.AsyncChangeStream;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
 import com.mongodb.stitch.android.services.mongodb.remote.Sync;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
@@ -30,10 +33,14 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
+
 import java.util.List;
 import java.util.concurrent.Callable;
+
+import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 public final class RemoteMongoCollectionImpl<DocumentT>
     implements RemoteMongoCollection<DocumentT> {
@@ -342,6 +349,30 @@ public final class RemoteMongoCollectionImpl<DocumentT>
         return proxy.updateMany(filter, update, updateOptions);
       }
     });
+  }
+
+  @Override
+  public Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final ObjectId... ids) {
+    return dispatcher.dispatchTask(
+        new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>>() {
+        @Override
+        public ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT> call() throws Exception {
+          return new AsyncChangeStream<DocumentT>(proxy.watch(ids), dispatcher);
+        }
+      }
+    );
+  }
+
+  @Override
+  public Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final BsonValue... ids) {
+    return dispatcher.dispatchTask(
+        new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>>() {
+        @Override
+        public ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT> call() throws Exception {
+          return new AsyncChangeStream<DocumentT>(proxy.watch(ids), dispatcher);
+        }
+      }
+    );
   }
 
   @Override

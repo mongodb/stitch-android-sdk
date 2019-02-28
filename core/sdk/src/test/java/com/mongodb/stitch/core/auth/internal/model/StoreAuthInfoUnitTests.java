@@ -25,6 +25,7 @@ import com.mongodb.stitch.core.auth.internal.models.StoreAuthInfo;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,11 +57,13 @@ public class StoreAuthInfoUnitTests {
     data.put("min_age", minAge);
     data.put("max_age", maxAge);
 
+    final Date currentDate = new Date();
+
     final StitchUserProfileImpl mockProfile =
         new StitchUserProfileImpl(UserType.SERVER, data, Collections.singletonList(identity));
 
     final StoreAuthInfo storeAuthInfo =
-        new StoreAuthInfo("foo", "bar", "baz", "qux", "quux", "corge", mockProfile);
+        new StoreAuthInfo("foo", "bar", "baz", "qux", "quux", "corge", mockProfile, currentDate);
 
     final String rawInfo = StitchObjectMapper.getInstance().writeValueAsString(storeAuthInfo);
 
@@ -70,6 +73,7 @@ public class StoreAuthInfoUnitTests {
     assertEquals(doc.get("device_id"), "bar");
     assertEquals(doc.get("access_token"), "baz");
     assertEquals(doc.get("refresh_token"), "qux");
+    assertEquals(doc.get("last_auth_activity"), currentDate.getTime());
 
     assertEquals(doc.get("logged_in_provider_type"), "quux");
     assertEquals(doc.get("logged_in_provider_name"), "corge");

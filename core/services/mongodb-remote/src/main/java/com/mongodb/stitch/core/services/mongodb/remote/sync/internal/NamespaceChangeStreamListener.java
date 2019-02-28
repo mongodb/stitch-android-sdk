@@ -25,6 +25,8 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -43,10 +45,14 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.Document;
+import org.bson.codecs.BsonDocumentCodec;
+import org.bson.codecs.Codec;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 
 public class NamespaceChangeStreamListener implements Closeable {
+  private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
+
   private final MongoNamespace namespace;
   private final NamespaceSynchronizationConfig nsConfig;
   private final CoreStitchServiceClient service;
@@ -212,10 +218,10 @@ public class NamespaceChangeStreamListener implements Closeable {
       args.put("ids", idsToWatch);
 
       currentStream =
-          service.streamFunction(
-              "watch",
-              Collections.singletonList(args),
-              ChangeEvent.changeEventCoder);
+        service.streamFunction(
+            "watch",
+            Collections.singletonList(args),
+            ResultDecoders.changeEventDecoder(BSON_DOCUMENT_CODEC));
 
       if (currentStream != null && currentStream.isOpen()) {
         this.nsConfig.setStale(true);

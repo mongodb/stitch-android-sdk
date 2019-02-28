@@ -814,11 +814,38 @@ public class CoreStitchAuthUnitTests {
     assertEquals(auth.listUsers(), Arrays.asList(user, user2));
   }
 
+  @Test
+  public void testMultiUserPersistence() {
+    final StitchRequestClient requestClient = getMockedRequestClient();
+    final StitchAuthRoutes routes = new StitchAppRoutes("my_app-12345").getAuthRoutes();
+
+    final MemoryStorage memStore = new MemoryStorage();
+    StitchAuth auth = new StitchAuth(requestClient, routes, memStore);
+
+    final CoreStitchUser user = auth.loginWithCredentialInternal(new AnonymousCredential());
+
+    // Restart Auth
+    auth = new StitchAuth(requestClient, routes, memStore);
+
+    assertTrue(auth.listUsers().stream().allMatch(Predicate.isEqual(user)));
+    assertEquals(auth.getUser(), user);
+    assertNotNull(auth.getUser().getLastAuthActivity());
+
+    // logout of user
+    auth.logoutUserWithIdInternal(auth.getUser().getId());
+
+    // restart auth
+    auth = new StitchAuth(requestClient, routes, memStore);
+
+    assertNull(auth.getUser());
+    assertTrue(auth.listUsers().stream().allMatch(Predicate.isEqual(user)));
+  }
+
   protected static class StitchAuth extends CoreStitchAuth<CoreStitchUserImpl> {
     StitchAuth(
-        final StitchRequestClient requestClient,
-        final StitchAuthRoutes authRoutes,
-        final Storage storage) {
+            final StitchRequestClient requestClient,
+            final StitchAuthRoutes authRoutes,
+            final Storage storage) {
       super(requestClient, authRoutes, storage, false);
     }
 
@@ -829,10 +856,10 @@ public class CoreStitchAuthUnitTests {
               String loggedInProviderType,
               String loggedInProviderName,
               StitchUserProfileImpl userProfile,
-              boolean isLoggedIn) ->
-          new CoreStitchUserImpl(
-              id, deviceId, loggedInProviderType, loggedInProviderName, userProfile, isLoggedIn) {
-          };
+              boolean isLoggedIn,
+              Date lastAuthActivity) ->
+              new CoreStitchUserImpl(id, deviceId, loggedInProviderType,
+                      loggedInProviderName, userProfile, isLoggedIn, lastAuthActivity) {};
     }
 
     @Override

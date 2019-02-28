@@ -24,10 +24,10 @@ import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.android.services.mongodb.remote.Sync;
 import com.mongodb.stitch.android.services.mongodb.remote.SyncAggregateIterable;
 import com.mongodb.stitch.android.services.mongodb.remote.SyncFindIterable;
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
@@ -56,8 +56,8 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   @Override
   public void configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
                         @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                        @Nullable final ErrorListener errorListener) {
-    this.proxy.configure(conflictHandler, changeEventListener, errorListener);
+                        @Nullable final ExceptionListener exceptionListener) {
+    this.proxy.configure(conflictHandler, changeEventListener, exceptionListener);
   }
 
   @Override

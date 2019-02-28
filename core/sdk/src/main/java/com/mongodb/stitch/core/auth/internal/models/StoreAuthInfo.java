@@ -22,6 +22,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mongodb.stitch.core.auth.internal.AuthInfo;
 import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl;
 
+import java.util.Date;
+
 /**
  * An {@link AuthInfo} for local persistence.
  */
@@ -41,6 +43,7 @@ public final class StoreAuthInfo extends AuthInfo {
    * @param loggedInProviderType the type of provider used to log in the current user.
    * @param loggedInProviderName the name of the provider used to log in the current user.
    * @param userProfile profile information about the user.
+   * @param lastAuthActivity time since the Unix Epoch of the last auth event for this user
    */
   @JsonCreator
   public StoreAuthInfo(
@@ -50,7 +53,8 @@ public final class StoreAuthInfo extends AuthInfo {
       @JsonProperty(Fields.REFRESH_TOKEN) final String refreshToken,
       @JsonProperty(Fields.LOGGED_IN_PROVIDER_TYPE) final String loggedInProviderType,
       @JsonProperty(Fields.LOGGED_IN_PROVIDER_NAME) final String loggedInProviderName,
-      @JsonProperty(Fields.USER_PROFILE) final StoreCoreUserProfile userProfile) {
+      @JsonProperty(Fields.USER_PROFILE) final StoreCoreUserProfile userProfile,
+      @JsonProperty(Fields.LAST_AUTH_ACTIVITY) final Date lastAuthActivity) {
     super(
         userId,
         deviceId,
@@ -58,7 +62,8 @@ public final class StoreAuthInfo extends AuthInfo {
         refreshToken,
         loggedInProviderType,
         loggedInProviderName,
-        userProfile);
+        userProfile,
+        lastAuthActivity);
   }
 
   /**
@@ -71,6 +76,7 @@ public final class StoreAuthInfo extends AuthInfo {
    * @param loggedInProviderType the type of provider used to log in the current user.
    * @param loggedInProviderName the name of the provider used to log in the current user.
    * @param userProfile profile information about the user.
+   * @param lastAuthActivity time since the Unix Epoch of the last auth event for this user
    */
   public StoreAuthInfo(
       final String userId,
@@ -79,7 +85,8 @@ public final class StoreAuthInfo extends AuthInfo {
       final String refreshToken,
       final String loggedInProviderType,
       final String loggedInProviderName,
-      final StitchUserProfileImpl userProfile) {
+      final StitchUserProfileImpl userProfile,
+      final Date lastAuthActivity) {
     super(
         userId,
         deviceId,
@@ -87,7 +94,8 @@ public final class StoreAuthInfo extends AuthInfo {
         refreshToken,
         loggedInProviderType,
         loggedInProviderName,
-        userProfile);
+        userProfile,
+        lastAuthActivity);
   }
 
   @JsonProperty(Fields.USER_ID)
@@ -128,6 +136,11 @@ public final class StoreAuthInfo extends AuthInfo {
     return new StoreCoreUserProfile(getUserProfile());
   }
 
+  @JsonProperty(Fields.LAST_AUTH_ACTIVITY)
+  private Date getLastAuthActivityValue() {
+    return getLastAuthActivity();
+  }
+
   private static class Fields {
     private static final String USER_ID = "user_id";
     private static final String DEVICE_ID = "device_id";
@@ -136,5 +149,6 @@ public final class StoreAuthInfo extends AuthInfo {
     private static final String LOGGED_IN_PROVIDER_TYPE = "logged_in_provider_type";
     private static final String LOGGED_IN_PROVIDER_NAME = "logged_in_provider_name";
     private static final String USER_PROFILE = "user_profile";
+    private static final String LAST_AUTH_ACTIVITY = "last_auth_activity";
   }
 }

@@ -100,6 +100,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         // check storage
         assertTrue(client.auth.isLoggedIn)
         assertEquals(anonUser.loggedInProviderType, AnonymousAuthProvider.TYPE)
+        assertNotNull(client.auth.user!!.lastAuthActivity)
 
         // login anonymously again and make sure user ID is the same
         assertEquals(
@@ -152,6 +153,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
         assertTrue(client.auth.isLoggedIn)
         assertEquals(client.auth.user!!.loggedInProviderType, UserPasswordAuthProvider.TYPE)
         assertEquals(client.auth.user?.id, id2)
+        assertNotNull(client.auth.user!!.lastAuthActivity)
 
         // verify ordering is preserved
         assertEquals(client.auth.listUsers().size, 3)

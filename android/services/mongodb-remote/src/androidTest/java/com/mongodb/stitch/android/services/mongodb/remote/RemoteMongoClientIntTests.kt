@@ -13,9 +13,13 @@ import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.BsonUtils
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
 import com.mongodb.stitch.core.testutils.CustomType
+import org.bson.BsonDocument
+import org.bson.BsonInt32
+import org.bson.BsonString
 import org.bson.Document
 import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
@@ -69,7 +73,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
             roles = listOf(RuleCreator.MongoDb.Role(
                 read = true, write = true
             )),
-            schema = RuleCreator.MongoDb.Schema())
+            schema = RuleCreator.MongoDb.Schema().copy(properties = Document()))
 
         addRule(svc.second, rule)
 
@@ -429,6 +433,95 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
                 listOf(Document("\$match", Document())), CustomType::class.java)
         assertTrue(Tasks.await(Tasks.await(iter.iterator()).hasNext()))
         assertEquals(expected, Tasks.await(Tasks.await(iter.iterator()).next()))
+    }
+
+    @Test
+    fun testWatchBsonValueIDs() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        Tasks.await(coll.insertOne(rawDoc1))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val streamTask = coll.watch(BsonInt32(1), BsonString("foo"))
+        val stream = Tasks.await(streamTask)
+
+        try {
+            Tasks.await(coll.insertOne(rawDoc2))
+            assertEquals(2, Tasks.await(coll.count()))
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                    Document().append("new", "field"))))
+
+            val insertEvent = Tasks.await(stream.nextEvent())
+            assertEquals(OperationType.INSERT, insertEvent.operationType)
+            assertEquals(rawDoc2, insertEvent.fullDocument)
+            val updateEvent1 = Tasks.await(stream.nextEvent())
+            val updateEvent2 = Tasks.await(stream.nextEvent())
+
+            assertNotNull(updateEvent1)
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun testWatchObjectIdIDs() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val objectId1 = ObjectId()
+        val objectId2 = ObjectId()
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = objectId2
+        rawDoc2["happy"] = "day"
+
+        Tasks.await(coll.insertOne(rawDoc1))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val streamTask = coll.watch(objectId1, objectId2)
+        val stream = Tasks.await(streamTask)
+
+        try {
+            Tasks.await(coll.insertOne(rawDoc2))
+            assertEquals(2, Tasks.await(coll.count()))
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                    Document().append("new", "field"))))
+
+            val insertEvent = Tasks.await(stream.nextEvent())
+            assertEquals(OperationType.INSERT, insertEvent.operationType)
+            assertEquals(rawDoc2, insertEvent.fullDocument)
+            val updateEvent1 = Tasks.await(stream.nextEvent())
+            val updateEvent2 = Tasks.await(stream.nextEvent())
+
+            assertNotNull(updateEvent1)
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
     }
 
     private fun withoutIds(documents: Collection<Document>): Collection<Document> {

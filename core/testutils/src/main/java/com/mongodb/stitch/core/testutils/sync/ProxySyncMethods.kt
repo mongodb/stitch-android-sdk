@@ -1,8 +1,8 @@
 package com.mongodb.stitch.core.testutils.sync
 
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult
@@ -21,7 +21,7 @@ interface ProxySyncMethods {
     fun configure(
         conflictResolver: ConflictHandler<Document?>,
         changeEventListener: ChangeEventListener<Document>?,
-        errorListener: ErrorListener?
+        exceptionListener: ExceptionListener?
     )
 
     fun syncOne(id: BsonValue)

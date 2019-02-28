@@ -13,13 +13,13 @@ import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult
@@ -71,9 +71,9 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         override fun configure(
             conflictResolver: ConflictHandler<Document?>,
             changeEventListener: ChangeEventListener<Document>?,
-            errorListener: ErrorListener?
+            exceptionListener: ExceptionListener?
         ) {
-            sync.configure(conflictResolver, changeEventListener, errorListener)
+            sync.configure(conflictResolver, changeEventListener, exceptionListener)
         }
 
         override fun syncOne(id: BsonValue) {

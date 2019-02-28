@@ -2,7 +2,6 @@ package com.mongodb.stitch.server.services.mongodb.remote
 
 import com.mongodb.Block
 import com.mongodb.MongoNamespace
-import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
@@ -10,10 +9,16 @@ import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.BsonUtils
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
 import com.mongodb.stitch.core.testutils.CustomType
+import com.mongodb.stitch.server.core.StitchAppClient
 import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl
+import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
+import org.bson.BsonDocument
+import org.bson.BsonInt32
+import org.bson.BsonString
 import org.bson.Document
 import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
@@ -50,6 +55,19 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         Assume.assumeTrue("no MongoDB URI in properties; skipping test", getMongoDbUri().isNotEmpty())
         super.setup()
 
+        val rule = RuleCreator.MongoDb(
+                database = dbName,
+                collection = collName,
+                roles = listOf(RuleCreator.MongoDb.Role(
+                        read = true, write = true
+                )),
+                schema = RuleCreator.MongoDb.Schema().copy(properties = Document()))
+        val client = createStitchClientForAppWithRule(rule)
+
+        mongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
+    }
+
+    private fun createStitchClientForAppWithRule(rule: RuleCreator): StitchAppClient {
         val app = createApp()
         addProvider(app.second, ProviderConfigs.Anon)
         val svc = addService(
@@ -57,19 +75,12 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
                 "mongodb",
                 "mongodb1",
                 ServiceConfigs.Mongo(getMongoDbUri()))
-
-        val rule = RuleCreator.MongoDb(
-            database = dbName,
-            collection = collName,
-            roles = listOf(RuleCreator.MongoDb.Role(
-                read = true, write = true
-            )),
-            schema = RuleCreator.MongoDb.Schema())
         addRule(svc.second, rule)
 
         val client = getAppClient(app.first)
         client.auth.loginWithCredential(AnonymousCredential())
-        mongoClientOpt = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
+
+        return client
     }
 
     @After
@@ -401,6 +412,93 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
                 listOf(Document("\$match", Document())), CustomType::class.java)
         assertTrue(iter.iterator().hasNext())
         assertEquals(expected, iter.iterator().next())
+    }
+
+    @Test
+    fun testWatchBsonValueIDs() {
+        val coll = getTestColl()
+        assertEquals(0, coll.count())
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        coll.insertOne(rawDoc1)
+        assertEquals(1, coll.count())
+
+        val stream = coll.watch(BsonInt32(1), BsonString("foo"))
+
+        try {
+            coll.insertOne(rawDoc2)
+            assertEquals(2, coll.count())
+            coll.updateMany(BsonDocument(), Document().append("\$set",
+                    BsonDocument().append("new", BsonString("field"))))
+
+            val insertEvent = stream.nextEvent()
+            assertEquals(OperationType.INSERT, insertEvent.operationType)
+            assertEquals(rawDoc2, insertEvent.fullDocument)
+            val updateEvent1 = stream.nextEvent()
+            val updateEvent2 = stream.nextEvent()
+
+            assertNotNull(updateEvent1)
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun testWatchObjectIdIDs() {
+        val coll = getTestColl()
+        assertEquals(0, coll.count())
+
+        val objectId1 = ObjectId()
+        val objectId2 = ObjectId()
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = objectId2
+        rawDoc2["happy"] = "day"
+
+        coll.insertOne(rawDoc1)
+        assertEquals(1, coll.count())
+
+        val stream = coll.watch(objectId1, objectId2)
+
+        try {
+            coll.insertOne(rawDoc2)
+            assertEquals(2, coll.count())
+            coll.updateMany(BsonDocument(), Document().append("\$set",
+                    BsonDocument().append("new", BsonString("field"))))
+
+            val insertEvent = stream.nextEvent()
+            assertEquals(OperationType.INSERT, insertEvent.operationType)
+            assertEquals(rawDoc2, insertEvent.fullDocument)
+            val updateEvent1 = stream.nextEvent()
+            val updateEvent2 = stream.nextEvent()
+
+            assertNotNull(updateEvent1)
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
     }
 
     private fun withoutIds(documents: Collection<Document>): Collection<Document> {

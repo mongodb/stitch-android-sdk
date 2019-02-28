@@ -327,7 +327,7 @@ tasks:
             cd stitch-java-sdk
             echo "running android tests"
             echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
-            ./gradlew connectedAndroidTest --info --continue --warning-mode=all --stacktrace  < /dev/null
+            ./gradlew connectedAndroidTest jacocoTestReport --info --continue --warning-mode=all --stacktrace  < /dev/null
       - func: "publish_coveralls"
 
   - name: run_android_tests_with_proguard
@@ -371,7 +371,6 @@ tasks:
           echo "running android tests"
           echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
           ./gradlew connectedAndroidTest -PwithProguardMinification --info --continue --warning-mode=all --stacktrace  < /dev/null
-    - func: "publish_coveralls"
 
   - name: finalize_coverage
     depends_on:
