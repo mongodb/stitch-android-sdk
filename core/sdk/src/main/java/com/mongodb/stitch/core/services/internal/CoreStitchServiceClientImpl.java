@@ -207,20 +207,31 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
 
   @Override
   public void onRebindEvent(final RebindEvent rebindEvent) {
-    final Iterator<WeakReference<Stream<?>>> streamIterator =
-        this.allocatedStreams.keySet().iterator();
-    while (streamIterator.hasNext()) {
-      final WeakReference<Stream<?>> weakReference = streamIterator.next();
-      final Stream<?> stream = weakReference.get();
-      if (stream == null) {
-        this.allocatedStreams.remove(weakReference);
-      } else {
-        if (stream.isOpen()) {
-          stream.cancel();
-          try {
-            stream.close();
-          } catch (IOException e) {
-            e.printStackTrace();
+    boolean isActiveUserChange = false;
+    switch (rebindEvent.getType()) {
+      case AUTH_EVENT:
+        isActiveUserChange = ((AuthEvent) rebindEvent).getAuthEventType() ==
+            AuthEvent.Type.ACTIVE_USER_CHANGED;
+        break;
+      default:
+        break;
+    }
+    if (isActiveUserChange) {
+      final Iterator<WeakReference<Stream<?>>> streamIterator =
+          this.allocatedStreams.keySet().iterator();
+      while (streamIterator.hasNext()) {
+        final WeakReference<Stream<?>> weakReference = streamIterator.next();
+        final Stream<?> stream = weakReference.get();
+        if (stream == null) {
+          this.allocatedStreams.remove(weakReference);
+        } else {
+          if (stream.isOpen()) {
+            stream.cancel();
+            try {
+              stream.close();
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
           }
         }
       }
