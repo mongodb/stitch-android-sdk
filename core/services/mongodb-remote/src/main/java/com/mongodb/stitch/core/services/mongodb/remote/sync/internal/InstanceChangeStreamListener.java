@@ -21,7 +21,6 @@ import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
 import javax.annotation.Nonnull;
