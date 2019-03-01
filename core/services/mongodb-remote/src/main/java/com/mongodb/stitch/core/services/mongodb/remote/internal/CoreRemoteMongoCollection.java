@@ -354,6 +354,99 @@ public interface CoreRemoteMongoCollection<DocumentT> {
           final Class<ResultT> resultClass);
 
   /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @return the resulting document
+   */
+  DocumentT findOneAndReplace(final Bson filter, final Bson replacement);
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  <ResultT> ResultT findOneAndReplace(final Bson filter,
+                                      final Bson replacement,
+                                      final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return the resulting document
+   */
+  DocumentT findOneAndReplace(final Bson filter,
+                              final Bson replacement,
+                              final RemoteFindOneAndModifyOptions options);
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  <ResultT> ResultT findOneAndReplace(
+          final Bson filter,
+          final Bson replacement,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @return the resulting document
+   */
+  DocumentT findOneAndDelete(final Bson filter);
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  <ResultT> ResultT findOneAndDelete(final Bson filter,
+                                     final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return the resulting document
+   */
+  DocumentT findOneAndDelete(final Bson filter,
+                             final RemoteFindOneAndModifyOptions options);
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  <ResultT> ResultT findOneAndDelete(
+          final Bson filter,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass);
+
+  /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
    * of non-{@link BsonValue} instances of {@link ObjectId}.
    * @param ids unique object identifiers of the IDs to watch.

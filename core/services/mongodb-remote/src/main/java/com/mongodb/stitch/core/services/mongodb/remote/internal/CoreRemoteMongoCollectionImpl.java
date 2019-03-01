@@ -531,6 +531,155 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
             resultClass).execute(service);
   }
 
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @return the resulting document
+   */
+  public DocumentT findOneAndReplace(final Bson filter, final Bson replacement) {
+    return operations.findOneAndModify(
+            "findOneAndReplace",
+            filter,
+            replacement,
+            new RemoteFindOneAndModifyOptions(),
+            documentClass).execute(service);
+  }
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  public <ResultT> ResultT findOneAndReplace(final Bson filter,
+                                      final Bson replacement,
+                                      final Class<ResultT> resultClass) {
+    return operations.findOneAndModify(
+            "findOneAndReplace",
+            filter,
+            replacement,
+            new RemoteFindOneAndModifyOptions(),
+            resultClass).execute(service);
+  }
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return the resulting document
+   */
+  public DocumentT findOneAndReplace(final Bson filter,
+                              final Bson replacement,
+                              final RemoteFindOneAndModifyOptions options) {
+    return operations.findOneAndModify(
+            "findOneAndReplace",
+            filter,
+            replacement,
+            options,
+            documentClass).execute(service);
+  }
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  public <ResultT> ResultT findOneAndReplace(
+          final Bson filter,
+          final Bson replacement,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass) {
+    return operations.findOneAndModify(
+            "findOneAndReplace",
+            filter,
+            replacement,
+            options,
+            resultClass).execute(service);
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @return the resulting document
+   */
+  public DocumentT findOneAndDelete(final Bson filter) {
+    return operations.findOneAndModify(
+            "findOneAndDelete",
+            filter,
+            new BsonDocument(),
+            new RemoteFindOneAndModifyOptions(),
+            documentClass).execute(service);
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  public <ResultT> ResultT findOneAndDelete(final Bson filter,
+                                     final Class<ResultT> resultClass) {
+    return operations.findOneAndModify(
+            "findOneAndDelete",
+            filter,
+            new BsonDocument(),
+            new RemoteFindOneAndModifyOptions(),
+            resultClass).execute(service);
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return the resulting document
+   */
+  public DocumentT findOneAndDelete(final Bson filter,
+                             final RemoteFindOneAndModifyOptions options) {
+    return operations.findOneAndModify(
+            "findOneAndDelete",
+            filter,
+            new BsonDocument(),
+            options,
+            documentClass).execute(service);
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  public <ResultT> ResultT findOneAndDelete(
+          final Bson filter,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass) {
+    return operations.findOneAndModify(
+            "findOneAndDelete",
+            filter,
+            new BsonDocument(),
+            options,
+            resultClass).execute(service);
+  }
+
 
   /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
