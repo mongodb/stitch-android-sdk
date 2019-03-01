@@ -40,6 +40,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
@@ -686,6 +687,127 @@ public class CoreRemoteMongoCollectionUnitTests {
         .when(service).callFunction(any(), any(), any(Decoder.class));
     assertThrows(() -> coll.updateMany(new Document(), new Document()),
         IllegalArgumentException.class);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testFindOneAndUpdate() {
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
+    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
+    final CoreRemoteMongoClient client =
+            CoreRemoteClientFactory.getClient(
+                    service,
+                    getClientInfo(),
+                    ServerEmbeddedMongoClientFactory.getInstance());
+    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
+
+    final Document doc1 = new Document("one", 2);
+    doReturn(doc1).when(service).callFunction(any(), any(), any(Decoder.class));
+
+    // Test simple findOneAndUpdate
+    Document result = coll.findOneAndUpdate(new Document(), new Document());
+    assertEquals(result, doc1);
+
+    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
+            ArgumentCaptor.forClass(Decoder.class);
+    verify(service)
+            .callFunction(
+                    funcNameArg.capture(),
+                    funcArgsArg.capture(),
+                    resultClassArg.capture());
+
+    assertEquals("findOneAndUpdate", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    Document expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("filter", new BsonDocument());
+    expectedArgs.put("update", new BsonDocument());
+    assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
+    assertEquals(DocumentCodec.class, resultClassArg.getValue().getClass());
+
+    // Test more complicated findOne()
+    final BsonDocument expectedFilter  = new BsonDocument("one", new BsonInt32(23));
+    final BsonDocument expectedUpdate  = new BsonDocument("$inc",
+                                              new BsonDocument("num", new BsonInt32(1)));
+    final BsonDocument expectedSort    = new BsonDocument("field1", new BsonInt32(1));
+    final BsonDocument expectedProject = new BsonDocument("field2", new BsonInt32(-1));
+    RemoteFindOneAndModifyOptions options = new RemoteFindOneAndModifyOptions()
+            .projection(expectedProject)
+            .sort(expectedSort)
+            .upsert(true)
+            .returnNewDocument(true);
+    result = coll.findOneAndUpdate(expectedFilter, expectedUpdate, options);
+    assertEquals(result, doc1);
+;
+    verify(service, times(2))
+            .callFunction(
+                    funcNameArg.capture(),
+                    funcArgsArg.capture(),
+                    resultClassArg.capture());
+
+    assertEquals("findOneAndUpdate", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("filter", expectedFilter);
+    expectedArgs.put("update", expectedUpdate);
+    expectedArgs.put("projection", expectedProject);
+    expectedArgs.put("sort", expectedSort);
+    expectedArgs.put("upsert", true);
+    expectedArgs.put("returnNewDocument", true);
+    assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
+    assertEquals(DocumentCodec.class, resultClassArg.getValue().getClass());
+
+    // One more example with some fields
+    options = new RemoteFindOneAndModifyOptions()
+            .projection(expectedProject)
+            .upsert(true)
+            .returnNewDocument(false);
+    result = coll.findOneAndUpdate(expectedFilter, expectedUpdate, options);
+    assertEquals(result, doc1);
+
+    verify(service, times(3))
+            .callFunction(
+                    funcNameArg.capture(),
+                    funcArgsArg.capture(),
+                    resultClassArg.capture());
+
+    assertEquals("findOneAndUpdate", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("filter", expectedFilter);
+    expectedArgs.put("update", expectedUpdate);
+    expectedArgs.put("projection", expectedProject);
+    expectedArgs.put("upsert", true);
+    assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
+    assertEquals(DocumentCodec.class, resultClassArg.getValue().getClass());
+
+    // Should properly return null
+    doReturn(null).when(service).callFunction(any(), any(), any(Decoder.class));
+    result = coll.findOneAndUpdate(new Document(), new Document());
+    assertEquals(result, null);
+
+    // Test custom class
+    doReturn(1).when(service).callFunction(any(), any(), any(Decoder.class));
+    final int res = coll.findOneAndUpdate(expectedFilter, expectedUpdate, Integer.class);
+    assertEquals(1, res);
+
+    // Should pass along errors
+    doThrow(new IllegalArgumentException("whoops"))
+            .when(service).callFunction(any(), any(), any(Decoder.class));
+    assertThrows(() -> coll.findOneAndUpdate(new Document(), new Document()),
+            IllegalArgumentException.class);
+    assertThrows(() -> coll.findOneAndUpdate(
+            new Document(),
+            new Document(),
+            new RemoteFindOneAndModifyOptions()),
+            IllegalArgumentException.class);
   }
 
   @Test
