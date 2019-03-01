@@ -20,7 +20,6 @@ import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
 
 import java.util.Collections;
 import org.bson.BsonDocument;
@@ -48,7 +47,7 @@ public class FindOneAndModifyOperation<T> implements Operation<T> {
    * @param update the update to apply to the resulting document.
    * @param project the projection operation to apply to the returned document.
    * @param sort the sort to use on the query before selecting the first document.
-   * @param decoder the decoder for the result documents.
+   * @param decoder the decoder for the result documents.Operations.java
    *
    */
   FindOneAndModifyOperation(

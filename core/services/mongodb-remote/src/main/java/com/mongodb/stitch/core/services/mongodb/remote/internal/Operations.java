@@ -201,12 +201,12 @@ public class Operations<DocumentT> {
           final Class<ResultT> resultClass
   ) {
 
-    BsonDocument projection = BsonUtils.toBsonDocumentOrNull(
+    final BsonDocument projection = BsonUtils.toBsonDocumentOrNull(
             options.getProjection(),
             documentClass,
             codecRegistry);
 
-    BsonDocument sort = BsonUtils.toBsonDocumentOrNull(
+    final BsonDocument sort = BsonUtils.toBsonDocumentOrNull(
             options.getSort(),
             documentClass,
             codecRegistry);
