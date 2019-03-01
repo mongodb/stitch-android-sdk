@@ -133,9 +133,10 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     // Remove this before merging obviously
-    /* @Test
+    /*  @Test
     fun testParseUndefined() {
-        var foo = "{\"\$undefined\":true}"
+        //var foo = "{\"\$undefined\":true}"
+        var foo = null
         val codec = DocumentCodec()
 
         val bsonReader = JsonReader(foo)
