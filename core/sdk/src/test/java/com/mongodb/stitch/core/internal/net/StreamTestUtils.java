@@ -46,8 +46,8 @@ public final class StreamTestUtils {
   }
 
   private static <T> Stream<T> doCreateStream(final Decoder<T> decoder,
-                                            final boolean open,
-                                            final String... streamContent)
+                                              final boolean open,
+                                              final String... streamContent)
       throws IOException {
     final EventStream eventStream = Mockito.mock(EventStream.class);
 

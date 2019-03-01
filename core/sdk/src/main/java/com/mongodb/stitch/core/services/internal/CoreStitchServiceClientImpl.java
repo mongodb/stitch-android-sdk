@@ -207,34 +207,14 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
 
   @Override
   public void onRebindEvent(final RebindEvent rebindEvent) {
-    boolean isActiveUserChange = false;
     switch (rebindEvent.getType()) {
       case AUTH_EVENT:
-        isActiveUserChange = ((AuthEvent) rebindEvent).getAuthEventType() ==
-            AuthEvent.Type.ACTIVE_USER_CHANGED;
+        if (((AuthEvent) rebindEvent).getAuthEventType() == AuthEvent.Type.ACTIVE_USER_CHANGED) {
+          closeAllocatedStreams();
+        }
         break;
       default:
         break;
-    }
-    if (isActiveUserChange) {
-      final Iterator<WeakReference<Stream<?>>> streamIterator =
-          this.allocatedStreams.keySet().iterator();
-      while (streamIterator.hasNext()) {
-        final WeakReference<Stream<?>> weakReference = streamIterator.next();
-        final Stream<?> stream = weakReference.get();
-        if (stream == null) {
-          this.allocatedStreams.remove(weakReference);
-        } else {
-          if (stream.isOpen()) {
-            stream.cancel();
-            try {
-              stream.close();
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
-          }
-        }
-      }
     }
     final Iterator<WeakReference<StitchServiceBinder>> serviceBinderIterator =
         this.serviceBinders.keySet().iterator();
@@ -245,6 +225,27 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
         this.serviceBinders.remove(weakReference);
       } else {
         binder.onRebindEvent(rebindEvent);
+      }
+    }
+  }
+
+  private void closeAllocatedStreams() {
+    final Iterator<WeakReference<Stream<?>>> streamIterator =
+        this.allocatedStreams.keySet().iterator();
+    while (streamIterator.hasNext()) {
+      final WeakReference<Stream<?>> weakReference = streamIterator.next();
+      final Stream<?> stream = weakReference.get();
+      if (stream == null) {
+        this.allocatedStreams.remove(weakReference);
+      } else {
+        if (stream.isOpen()) {
+          stream.cancel();
+          try {
+            stream.close();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
       }
     }
   }
