@@ -252,6 +252,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   public <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq,
                                       final Decoder<T> resultDecoder) {
     final Response response = doAuthenticatedRequest(stitchReq);
+    System.err.println(stitchReq.getBody().toString());
     try {
       final String bodyStr = IoUtils.readAllToString(response.getBody());
       final JsonReader bsonReader = new JsonReader(bodyStr);
@@ -261,7 +262,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         return null;
       }
       return resultDecoder.decode(bsonReader, DecoderContext.builder().build());
-
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }

@@ -16,6 +16,7 @@ import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
 import com.mongodb.stitch.core.testutils.CustomType
 import org.bson.BsonDocument
@@ -436,6 +437,136 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
 
         try {
             Tasks.await(coll.updateMany(Document("\$who", 1), Document()))
+            fail()
+        } catch (ex: ExecutionException) {
+            assertTrue(ex.cause is StitchServiceException)
+            val svcEx = ex.cause as StitchServiceException
+            assertEquals(StitchServiceErrorCode.MONGODB_ERROR, svcEx.errorCode)
+        }
+    }
+
+    @Test
+    fun testFindOneAndUpdate() {
+        val coll = getTestColl()
+
+        val sampleDoc = Document("hello", "world1")
+        sampleDoc["num"] = 2
+
+        // Collection should start out empty
+        // This also tests the null return format
+        assertNull(Tasks.await(coll.findOneAndUpdate(Document(), Document())))
+
+        // Insert a sample Document
+        Tasks.await(coll.insertOne(sampleDoc))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Sample call to findOneAndUpdate() where we get the previous document back
+        var sampleUpdate = Document("\$set", Document("hello", "hellothere"))
+        sampleUpdate["\$inc"] = Document("num", 1)
+        assertEquals(withoutId(sampleDoc), withoutId(Tasks.await(
+                coll.findOneAndUpdate(Document("hello", "world1"), sampleUpdate))))
+        assertEquals(1, Tasks.await(coll.count()))
+
+
+        // Make sure the update took place
+        var expectedDoc = Document("hello", "hellothere")
+        expectedDoc["num"] = 3
+        assertEquals(withoutId(expectedDoc), withoutId(Tasks.await(coll.find().first())))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Call findOneAndUpdate() again but get the new document
+        sampleUpdate.remove("\$set")
+        expectedDoc["num"] = 4
+        assertEquals(withoutId(expectedDoc), withoutId(Tasks.await(coll.findOneAndUpdate(
+                Document("hello", "hellothere"),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions().returnNewDocument(true)))
+        ))
+        assertEquals(1, Tasks.await(coll.count()))
+
+
+        // Test null behaviour again with a filter that should not match any documents
+        assertNull(Tasks.await(coll.findOneAndUpdate(Document("hello", "zzzzz"), Document())))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val doc1 = Document("hello", "world1")
+        doc1["num"] = 1
+
+        val doc2 = Document("hello", "world2")
+        doc2["num"] = 2
+
+        val doc3 = Document("hello", "world3")
+        doc3["num"] = 3
+
+        // Test the upsert option where it should not actually be invoked
+        assertEquals(doc1, withoutId(Tasks.await(coll.findOneAndUpdate(
+                Document("hello", "hellothere"),
+                Document("\$set", doc1),
+                RemoteFindOneAndModifyOptions()
+                        .returnNewDocument(true)
+                        .upsert(true)
+        ))))
+        assertEquals(1, Tasks.await(coll.count()))
+        assertEquals(withoutId(doc1), withoutId(Tasks.await(coll.find().first())))
+
+        // Test the upsert option where the server should perform upsert and return new document
+        assertEquals(doc2, withoutId(Tasks.await(coll.findOneAndUpdate(
+                Document("hello", "hellothere"),
+                Document("\$set", doc2),
+                RemoteFindOneAndModifyOptions()
+                        .returnNewDocument(true)
+                        .upsert(true)
+        ))))
+        assertEquals(2, Tasks.await(coll.count()))
+
+        // Test the upsert option where the server should perform upsert and return old document
+        // The old document should be empty
+        assertNull(Tasks.await(coll.findOneAndUpdate(
+                Document("hello", "hellothere"),
+                Document("\$set", doc3),
+                RemoteFindOneAndModifyOptions()
+                        .upsert(true)
+        )))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        // Test sort and project
+        assertEquals(listOf(doc1, doc2, doc3),
+                withoutIds(Tasks.await<MutableList<Document>>(coll.find().into(mutableListOf()))))
+
+        val sampleProject = Document("hello", 1)
+        sampleProject["_id"] = 0
+
+        assertEquals(Document("hello", "world1"), withoutId(Tasks.await(coll.findOneAndUpdate(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", 1))
+        ))))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        assertEquals(Document("hello", "world3"), withoutId(Tasks.await(coll.findOneAndUpdate(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", -1))
+        ))))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        // Test proper failure
+        try {
+            Tasks.await(coll.findOneAndUpdate(Document(), Document("\$who", 1)))
+            fail()
+        } catch (ex: ExecutionException) {
+            assertTrue(ex.cause is StitchServiceException)
+            val svcEx = ex.cause as StitchServiceException
+            assertEquals(StitchServiceErrorCode.MONGODB_ERROR, svcEx.errorCode)
+        }
+
+        try {
+            Tasks.await(coll.findOneAndUpdate(Document(), Document("\$who", 1),
+                    RemoteFindOneAndModifyOptions().upsert(true)))
             fail()
         } catch (ex: ExecutionException) {
             assertTrue(ex.cause is StitchServiceException)
