@@ -87,7 +87,74 @@ public class CoreStitchServiceUnitTests {
   }
 
   @Test
-  public void testRebindServiceClosesStreams() throws InterruptedException, IOException {
+  public void testRebindServiceDoesNotCloseStreamsOnLoginEvent()
+      throws InterruptedException, IOException {
+    final List<Stream<?>> streams = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
+    }
+
+    doReturn(streams.get(0), streams.subList(1, streams.size()).toArray())
+        .when(requestClient).openAuthenticatedStream(any(), any());
+
+    for (int i = 0; i < streams.size(); i++) {
+      underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+    }
+
+    underTest.onRebindEvent(new AuthEvent.UserLoggedIn<>(null));
+
+    for (int i = 0; i < streams.size(); i++) {
+      verify(streams.get(i), times(0)).close();
+    }
+  }
+
+  @Test
+  public void testRebindServiceDoesNotCloseStreamsOnLogoutEvent()
+      throws InterruptedException, IOException {
+    final List<Stream<?>> streams = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
+    }
+
+    doReturn(streams.get(0), streams.subList(1, streams.size()).toArray())
+        .when(requestClient).openAuthenticatedStream(any(), any());
+
+    for (int i = 0; i < streams.size(); i++) {
+      underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+    }
+
+    underTest.onRebindEvent(new AuthEvent.UserLoggedOut<>(null));
+
+    for (int i = 0; i < streams.size(); i++) {
+      verify(streams.get(i), times(0)).close();
+    }
+  }
+
+  @Test
+  public void testRebindServiceDoesNotCloseStreamsOnRemoveEvent()
+      throws InterruptedException, IOException {
+    final List<Stream<?>> streams = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
+    }
+
+    doReturn(streams.get(0), streams.subList(1, streams.size()).toArray())
+        .when(requestClient).openAuthenticatedStream(any(), any());
+
+    for (int i = 0; i < streams.size(); i++) {
+      underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+    }
+
+    underTest.onRebindEvent(new AuthEvent.UserRemoved<>(null));
+
+    for (int i = 0; i < streams.size(); i++) {
+      verify(streams.get(i), times(0)).close();
+    }
+  }
+
+  @Test
+  public void testRebindServiceClosesStreamsOnActiveUserChange()
+      throws InterruptedException, IOException {
     final List<Stream<?>> streams = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
