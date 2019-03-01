@@ -467,7 +467,6 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
                 coll.findOneAndUpdate(Document("hello", "world1"), sampleUpdate))))
         assertEquals(1, Tasks.await(coll.count()))
 
-
         // Make sure the update took place
         var expectedDoc = Document("hello", "hellothere")
         expectedDoc["num"] = 3
@@ -483,7 +482,6 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
                 RemoteFindOneAndModifyOptions().returnNewDocument(true)))
         ))
         assertEquals(1, Tasks.await(coll.count()))
-
 
         // Test null behaviour again with a filter that should not match any documents
         assertNull(Tasks.await(coll.findOneAndUpdate(Document("hello", "zzzzz"), Document())))

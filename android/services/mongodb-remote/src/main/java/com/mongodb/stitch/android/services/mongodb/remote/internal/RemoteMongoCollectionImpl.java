@@ -433,6 +433,28 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   /**
+   * Update all documents in the collection according to the specified arguments.
+   *
+   * @param filter        a document describing the query filter, which may not be null.
+   * @param update        a document describing the update, which may not be null. The update to
+   *                      apply must include only update operators.
+   * @param updateOptions the options to apply to the update operation
+   * @return a task containing the result of the update many operation
+   */
+  public Task<RemoteUpdateResult> updateMany(
+          final Bson filter,
+          final Bson update,
+          final RemoteUpdateOptions updateOptions
+  ) {
+    return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
+      @Override
+      public RemoteUpdateResult call() {
+        return proxy.updateMany(filter, update, updateOptions);
+      }
+    });
+  }
+
+  /**
    * Finds a document in the collection and performs the given update.
    *
    * @param filter the query filter
@@ -506,28 +528,6 @@ public final class RemoteMongoCollectionImpl<DocumentT>
       @Override
       public ResultT call() {
         return proxy.findOneAndUpdate(filter, update, options, resultClass);
-      }
-    });
-  }
-
-  /**
-   * Update all documents in the collection according to the specified arguments.
-   *
-   * @param filter        a document describing the query filter, which may not be null.
-   * @param update        a document describing the update, which may not be null. The update to
-   *                      apply must include only update operators.
-   * @param updateOptions the options to apply to the update operation
-   * @return a task containing the result of the update many operation
-   */
-  public Task<RemoteUpdateResult> updateMany(
-      final Bson filter,
-      final Bson update,
-      final RemoteUpdateOptions updateOptions
-  ) {
-    return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
-      @Override
-      public RemoteUpdateResult call() {
-        return proxy.updateMany(filter, update, updateOptions);
       }
     });
   }

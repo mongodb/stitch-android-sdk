@@ -22,6 +22,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
@@ -355,6 +356,64 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   ) {
     return proxy.updateMany(filter, update, updateOptions);
   }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @param update the update document
+   * @return the resulting document
+   */
+  public DocumentT findOneAndUpdate(final Bson filter, final Bson update) {
+    return proxy.findOneAndUpdate(filter, update);
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param update      the update document
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  public <ResultT> ResultT findOneAndUpdate(final Bson filter,
+                                            final Bson update,
+                                            final Class<ResultT> resultClass) {
+    return proxy.findOneAndUpdate(filter, update, resultClass);
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @param update the update document
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return the resulting document
+   */
+  public DocumentT findOneAndUpdate(final Bson filter,
+                                    final Bson update,
+                                    final RemoteFindOneAndModifyOptions options) {
+    return proxy.findOneAndUpdate(filter, update, options);
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param update      the update document
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return the resulting document
+   */
+  public <ResultT> ResultT findOneAndUpdate(final Bson filter,
+                                            final Bson update,
+                                            final RemoteFindOneAndModifyOptions options,
+                                            final Class<ResultT> resultClass) {
+    return proxy.findOneAndUpdate(filter, update, options, resultClass);
+  }
+
 
   /**
    * Watches specified IDs in a collection.
