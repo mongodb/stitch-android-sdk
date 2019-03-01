@@ -24,11 +24,14 @@ import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
 
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import javax.annotation.Nullable;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
@@ -40,7 +43,8 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   private final StitchServiceRoutes serviceRoutes;
   private final String serviceName;
   private final CodecRegistry codecRegistry;
-  private final List<WeakReference<StitchServiceBinder>> serviceBinders;
+  private final ConcurrentMap<WeakReference<StitchServiceBinder>, Boolean> serviceBinders;
+  private final ConcurrentMap<WeakReference<Stream<?>>, Boolean> allocatedStreams;
 
   public CoreStitchServiceClientImpl(
       final StitchAuthRequestClient requestClient,
@@ -61,7 +65,8 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
     this.serviceRoutes = routes;
     this.serviceName = name;
     this.codecRegistry = codecRegistry;
-    this.serviceBinders = new ArrayList<>();
+    this.serviceBinders = new ConcurrentHashMap<>();
+    this.allocatedStreams = new ConcurrentHashMap<>();
   }
 
   private StitchAuthRequest getStreamServiceFunctionRequest(
@@ -176,9 +181,11 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
   public <T> Stream<T> streamFunction(final String name,
                                       final List<?> args,
                                       final Decoder<T> decoder) throws InterruptedException {
-    return requestClient.openAuthenticatedStream(
+    final Stream<T> newStream = requestClient.openAuthenticatedStream(
         getStreamServiceFunctionRequest(name, args), decoder
     );
+    this.allocatedStreams.put(new WeakReference<>(newStream), Boolean.TRUE);
+    return newStream;
   }
 
   public CodecRegistry getCodecRegistry() {
@@ -195,14 +202,33 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
 
   @Override
   public void bind(final StitchServiceBinder binder) {
-    this.serviceBinders.add(new WeakReference<>(binder));
+    this.serviceBinders.put(new WeakReference<>(binder), Boolean.TRUE);
   }
 
   @Override
   public void onRebindEvent(final RebindEvent rebindEvent) {
-    final Iterator<WeakReference<StitchServiceBinder>> iterator = this.serviceBinders.iterator();
-    while (iterator.hasNext()) {
-      final WeakReference<StitchServiceBinder> weakReference = iterator.next();
+    final Iterator<WeakReference<Stream<?>>> streamIterator =
+        this.allocatedStreams.keySet().iterator();
+    while (streamIterator.hasNext()) {
+      final WeakReference<Stream<?>> weakReference = streamIterator.next();
+      final Stream<?> stream = weakReference.get();
+      if (stream == null) {
+        this.allocatedStreams.remove(weakReference);
+      } else {
+        if (stream.isOpen()) {
+          stream.cancel();
+          try {
+            stream.close();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
+      }
+    }
+    final Iterator<WeakReference<StitchServiceBinder>> serviceBinderIterator =
+        this.serviceBinders.keySet().iterator();
+    while (serviceBinderIterator.hasNext()) {
+      final WeakReference<StitchServiceBinder> weakReference = serviceBinderIterator.next();
       final StitchServiceBinder binder = weakReference.get();
       if (binder == null) {
         this.serviceBinders.remove(weakReference);
