@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -21,20 +22,26 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ErrorListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
-  private Button button1;
-  private Button button2;
+  private Button addSingleDocButton;
+  private Button addManyDocsButton;
+  private Button clearDocsButton;
+
+  private EditText etManyDocs;
   private TextView label;
 
   private StitchAppClient stitchAppClient;
@@ -59,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
               @Override
               public void onEvent(BsonValue documentId, ChangeEvent<Document> event) {
                 Log.i(TAG, String.format("Got event for doc %s: %s", documentId, event));
+                updateLabels();
               }
             },
             new ErrorListener() {
@@ -100,6 +108,45 @@ public class MainActivity extends AppCompatActivity {
     });
   }
 
+  private void syncManyDocuments(final int numberOfDocs) {
+    final StitchUser user = stitchAppClient.getAuth().getUser();
+    if (user == null) {
+      return;
+    }
+
+    final ArrayList<Document> docsToInsert = new ArrayList<>();
+
+    for (int i = 0; i < numberOfDocs; ++i) {
+      final Document docToInsert = new Document()
+          .append("_id", new ObjectId())
+          .append("owner_id", stitchAppClient.getAuth().getUser().getId())
+          .append("message", String.format(Locale.US, "%d", (new Random()).nextInt()));
+
+      docsToInsert.add(docToInsert);
+    }
+
+    syncedColl.insertMany(docsToInsert).addOnCompleteListener(new OnCompleteListener<SyncInsertManyResult>() {
+      @Override
+      public void onComplete(@NonNull Task<SyncInsertManyResult> task) {
+        updateLabels();
+      }
+    });
+  }
+
+  private void clearAllDocuments() {
+    final StitchUser user = stitchAppClient.getAuth().getUser();
+    if (user == null) {
+      return;
+    }
+
+    syncedColl.deleteMany(new Document()).addOnCompleteListener(new OnCompleteListener<SyncDeleteResult>() {
+      @Override
+      public void onComplete(@NonNull Task<SyncDeleteResult> task) {
+        updateLabels();
+      }
+    });
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -112,15 +159,32 @@ public class MainActivity extends AppCompatActivity {
     stitchAppClient = Stitch.getDefaultAppClient();
     initializeSync();
 
-    button1 = findViewById(R.id.button);
-    button2 = findViewById(R.id.button2);
+    addSingleDocButton = findViewById(R.id.button);
+    addManyDocsButton = findViewById(R.id.button3);
+    clearDocsButton = findViewById(R.id.button2);
+    etManyDocs = findViewById(R.id.numInput);
 
     label = findViewById(R.id.textView);
 
-    button1.setOnClickListener(new View.OnClickListener() {
+    addSingleDocButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
         syncNewDocument();
+      }
+    });
+
+    addManyDocsButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        final int numberOfDocsToInsert = Integer.decode(etManyDocs.getText().toString());
+        syncManyDocuments(numberOfDocsToInsert);
+      }
+    });
+
+    clearDocsButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        clearAllDocuments();
       }
     });
   }

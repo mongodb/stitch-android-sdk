@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -70,7 +71,8 @@ public class NamespaceChangeStreamListener implements Closeable {
       final NamespaceSynchronizationConfig nsConfig,
       final CoreStitchServiceClient service,
       final NetworkMonitor networkMonitor,
-      final AuthMonitor authMonitor
+      final AuthMonitor authMonitor,
+      final ReadWriteLock nsLock
   ) {
     this.namespace = namespace;
     this.nsConfig = nsConfig;
@@ -78,7 +80,7 @@ public class NamespaceChangeStreamListener implements Closeable {
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
     this.events = new HashMap<>();
-    this.nsLock = new ReentrantReadWriteLock();
+    this.nsLock = nsLock;
     this.logger =
         Loggers.getLogger(
             String.format("NamespaceChangeStreamListener-%s", namespace.toString()));

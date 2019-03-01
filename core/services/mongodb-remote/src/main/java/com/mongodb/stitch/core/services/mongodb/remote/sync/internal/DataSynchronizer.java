@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.Nonnull;
@@ -537,6 +538,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     // 2. Run remote to local (R2L) sync routine
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
+      // lock the NamespaceChangeStreamListener for this namespace to prevent a new stream from
+      // opening for this namespace during this sync pass.
+      final ReadWriteLock streamerLock = instanceChangeStreamListener
+          .getLockForNamespace(nsConfig.getNamespace());
+
+      streamerLock.writeLock().lock();
       nsConfig.getLock().writeLock().lock();
       try {
         final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
@@ -631,6 +638,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         }
       } finally {
         nsConfig.getLock().writeLock().unlock();
+        streamerLock.writeLock().unlock();
       }
     }
 
