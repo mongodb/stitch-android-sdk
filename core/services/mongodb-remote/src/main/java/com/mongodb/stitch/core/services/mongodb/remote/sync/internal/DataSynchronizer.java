@@ -57,6 +57,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -2772,17 +2773,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private Set<BsonDocument> getLatestDocumentsForStaleFromRemote(
       final NamespaceSynchronizationConfig nsConfig,
       final Set<BsonValue> staleIds) {
+
     final BsonArray ids = new BsonArray();
-    for (final BsonValue bsonValue : staleIds) {
-      ids.add(new BsonDocument("_id", bsonValue));
-    }
+    Collections.addAll(ids, staleIds.toArray(new BsonValue[0]));
 
     if (ids.size() == 0) {
       return new HashSet<>();
     }
 
     return this.getRemoteCollection(nsConfig.getNamespace()).find(
-        new Document("$or", ids)
+        new Document("_id", new Document("$in", ids))
     ).into(new HashSet<>());
   }
 
