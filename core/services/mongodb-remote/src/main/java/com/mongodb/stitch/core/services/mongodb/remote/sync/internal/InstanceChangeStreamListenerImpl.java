@@ -25,6 +25,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -38,7 +40,7 @@ import org.bson.BsonValue;
 final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamListener {
 
   private final Map<MongoNamespace, NamespaceChangeStreamListener> nsStreamers;
-  private final Map<MongoNamespace, ReadWriteLock> nsListenerLocks;
+  private final ConcurrentMap<MongoNamespace, ReadWriteLock> nsListenerLocks;
   private final ReadWriteLock instanceLock;
   private final InstanceSynchronizationConfig instanceConfig;
   private final CoreStitchServiceClient service;
@@ -56,7 +58,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
     this.nsStreamers = new HashMap<>();
-    this.nsListenerLocks = new HashMap<>();
+    this.nsListenerLocks = new ConcurrentHashMap<>();
     this.instanceLock = new ReentrantReadWriteLock();
   }
 
