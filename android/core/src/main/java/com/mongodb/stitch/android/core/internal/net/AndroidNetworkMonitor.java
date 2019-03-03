@@ -67,11 +67,14 @@ public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkM
     asyncTask.execute();
   }
 
-  private static class NetworkStateChangedTask extends AsyncTask<Void, Void, Void> {
+  private static final class NetworkStateChangedTask extends AsyncTask<Void, Void, Void> {
     private final Set<StateListener> listeners;
     private final PendingResult pendingResult;
 
-    private NetworkStateChangedTask(final PendingResult result, Set<StateListener> listeners) {
+    private NetworkStateChangedTask(
+        final PendingResult result,
+        final Set<StateListener> listeners
+    ) {
       this.pendingResult = result;
       this.listeners = listeners;
     }
