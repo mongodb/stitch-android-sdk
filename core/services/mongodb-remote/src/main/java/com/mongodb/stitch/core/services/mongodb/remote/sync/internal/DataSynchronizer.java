@@ -955,6 +955,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final ReadWriteLock streamerLock = instanceChangeStreamListener
           .getLockForNamespace(nsConfig.getNamespace());
 
+      streamerLock.writeLock().lock();
       nsConfig.getLock().writeLock().lock();
       try {
         final CoreRemoteMongoCollection<BsonDocument> remoteColl =
