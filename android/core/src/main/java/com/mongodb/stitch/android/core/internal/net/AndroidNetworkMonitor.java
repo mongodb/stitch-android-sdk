@@ -21,6 +21,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
+
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import java.util.HashSet;
@@ -56,9 +58,36 @@ public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkM
 
   @Override
   public void onReceive(final Context context, final Intent intent) {
-    final Set<StateListener> listenersCopy = new HashSet<>(listeners);
-    for (final StateListener listener : listenersCopy) {
-      listener.onNetworkStateChanged();
+    // Dispatch our network change callback to a background thread,
+    // since our listeners may block the main thread.
+    // See https://developer.android.com/guide/components/broadcasts#effects-process-state
+    final PendingResult pendingResult = goAsync();
+    final NetworkStateChangedTask asyncTask =
+        new NetworkStateChangedTask(pendingResult, new HashSet<>(listeners));
+    asyncTask.execute();
+  }
+
+  private static class NetworkStateChangedTask extends AsyncTask<Void, Void, Void> {
+    private final Set<StateListener> listeners;
+    private final PendingResult pendingResult;
+
+    private NetworkStateChangedTask(final PendingResult result, Set<StateListener> listeners) {
+      this.pendingResult = result;
+      this.listeners = listeners;
+    }
+
+    @Override
+    protected Void doInBackground(final Void... v) {
+      for (final StateListener listener: listeners) {
+        listener.onNetworkStateChanged();
+      }
+      return null;
+    }
+
+    @Override
+    protected void onPostExecute(final Void v) {
+      super.onPostExecute(v);
+      pendingResult.finish();
     }
   }
 }

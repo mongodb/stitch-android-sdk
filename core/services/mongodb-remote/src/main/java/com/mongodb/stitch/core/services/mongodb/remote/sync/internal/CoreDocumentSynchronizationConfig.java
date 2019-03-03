@@ -141,6 +141,15 @@ class CoreDocumentSynchronizationConfig {
     }
   }
 
+  public void setStaleNoDb(final boolean stale) {
+    docLock.writeLock().lock();
+    try {
+      isStale = stale;
+    } finally {
+      docLock.writeLock().unlock();
+    }
+  }
+
   /**
    * A document that is paused no longer has remote updates applied to it.
    * Any local updates to this document cause it to be thawed. An example of pausing a document
