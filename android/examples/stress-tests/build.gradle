@@ -6,7 +6,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:3.3.0'
         classpath 'digital.wup:android-maven-publish:3.3.0'
-        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.2'
+        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.4'
     }
 }
 
