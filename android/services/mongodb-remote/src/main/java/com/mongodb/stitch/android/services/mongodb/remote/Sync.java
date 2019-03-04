@@ -59,12 +59,18 @@ public interface Sync<DocumentT> {
   /**
    * Requests that the given document _id be synchronized.
    * @param id the document _id to synchronize.
+   *
+   * @return a Task that completes when the specified document ID is configured as synced. The
+   *         actual document may not be in sync until the next sync pass.
    */
   Task<Void> syncOne(final BsonValue id);
 
   /**
    * Requests that the given document _ids be synchronized.
    * @param ids the document _ids to synchronize.
+   *
+   * @return a Task that completes when the specified document IDs are configured as synced. The
+   *         actual document may not be in sync with the remote until the next sync pass.
    */
   Task<Void> syncMany(final BsonValue... ids);
 
@@ -72,6 +78,10 @@ public interface Sync<DocumentT> {
    * Stops synchronizing the given document _id. Any uncommitted writes will be lost.
    *
    * @param id the _id of the document to desynchronize.
+   *
+   * @return a Task that completes when the specified document ID is no longer configured as
+   *         synced. The document will be removed from the local collection, but it will not be
+   *         necessarily deleted from the remote collection.
    */
   Task<Void> desyncOne(final BsonValue id);
 
@@ -79,6 +89,10 @@ public interface Sync<DocumentT> {
    * Stops synchronizing the given document _ids. Any uncommitted writes will be lost.
    *
    * @param ids the _ids of the documents to desynchronize.
+   *
+   * @return a Task that completes when the specified document ID is no longer configured as
+   *         synced. The documents will be removed from the local collection, but they are not
+   *         necessarily deleted from the remote collection.
    */
   Task<Void> desyncMany(final BsonValue... ids);
 

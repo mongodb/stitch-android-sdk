@@ -2652,6 +2652,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return isRunning;
   }
 
+  /**
+   * Whether or not the DataSynchronizer is configured.
+   *
+   * @return true if configured, false if not
+   */
+  public boolean isConfigured() {
+    return isConfigured;
+  }
+
   public boolean areAllStreamsOpen() {
     syncLock.lock();
     try {
