@@ -973,7 +973,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     final BsonDocument expectedFilter  = new BsonDocument("one", new BsonInt32(23));
     final BsonDocument expectedSort    = new BsonDocument("field1", new BsonInt32(1));
     final BsonDocument expectedProject = new BsonDocument("field2", new BsonInt32(-1));
-    RemoteFindOneAndModifyOptions options = new RemoteFindOneAndModifyOptions()
+    final RemoteFindOneAndModifyOptions options = new RemoteFindOneAndModifyOptions()
             .projection(expectedProject)
             .sort(expectedSort)
             .upsert(true)

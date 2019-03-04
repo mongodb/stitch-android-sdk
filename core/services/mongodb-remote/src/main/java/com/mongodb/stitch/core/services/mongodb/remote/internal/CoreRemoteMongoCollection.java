@@ -404,7 +404,7 @@ public interface CoreRemoteMongoCollection<DocumentT> {
           final Class<ResultT> resultClass);
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter the query filter
    * @return the resulting document
@@ -412,7 +412,7 @@ public interface CoreRemoteMongoCollection<DocumentT> {
   DocumentT findOneAndDelete(final Bson filter);
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter      the query filter
    * @param resultClass the class to decode each document into
@@ -423,7 +423,7 @@ public interface CoreRemoteMongoCollection<DocumentT> {
                                      final Class<ResultT> resultClass);
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter the query filter
    * @param options A RemoteFindOneAndModifyOptions struct
@@ -433,7 +433,7 @@ public interface CoreRemoteMongoCollection<DocumentT> {
                              final RemoteFindOneAndModifyOptions options);
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter      the query filter
    * @param options     A RemoteFindOneAndModifyOptions struct

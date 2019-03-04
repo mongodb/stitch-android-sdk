@@ -347,8 +347,8 @@ public interface RemoteMongoCollection<DocumentT> {
    * @return a task containing the resulting document
    */
   <ResultT> Task<ResultT> findOneAndUpdate(final Bson filter,
-                                     final Bson update,
-                                     final Class<ResultT> resultClass);
+                                           final Bson update,
+                                           final Class<ResultT> resultClass);
 
   /**
    * Finds a document in the collection and performs the given update.
@@ -359,8 +359,8 @@ public interface RemoteMongoCollection<DocumentT> {
    * @return a task containing the resulting document
    */
   Task<DocumentT> findOneAndUpdate(final Bson filter,
-                             final Bson update,
-                             final RemoteFindOneAndModifyOptions options);
+                                   final Bson update,
+                                   final RemoteFindOneAndModifyOptions options);
 
   /**
    * Finds a document in the collection and performs the given update.
@@ -378,6 +378,98 @@ public interface RemoteMongoCollection<DocumentT> {
           final RemoteFindOneAndModifyOptions options,
           final Class<ResultT> resultClass);
 
+  /**
+   * Finds a document in the collection and replaces it with the given document.
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @return a task containing the resulting document
+   */
+  Task<DocumentT> findOneAndReplace(final Bson filter, final Bson replacement);
+
+  /**
+   * Finds a document in the collection and replaces it with the given document.
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  <ResultT> Task<ResultT> findOneAndReplace(final Bson filter,
+                                            final Bson replacement,
+                                            final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection and replaces it with the given document.
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return a task containing the resulting document
+   */
+  Task<DocumentT> findOneAndReplace(final Bson filter,
+                                    final Bson replacement,
+                                    final RemoteFindOneAndModifyOptions options);
+
+  /**
+   * Finds a document in the collection and replaces it with the given document.
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  <ResultT> Task<ResultT> findOneAndReplace(
+          final Bson filter,
+          final Bson replacement,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter the query filter
+   * @return a task containing the resulting document
+   */
+  Task<DocumentT> findOneAndDelete(final Bson filter);
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  <ResultT> Task<ResultT> findOneAndDelete(final Bson filter,
+                                           final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return a task containing the resulting document
+   */
+  Task<DocumentT> findOneAndDelete(final Bson filter,
+                                   final RemoteFindOneAndModifyOptions options);
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  <ResultT> Task<ResultT> findOneAndDelete(
+          final Bson filter,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass);
 
   /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case

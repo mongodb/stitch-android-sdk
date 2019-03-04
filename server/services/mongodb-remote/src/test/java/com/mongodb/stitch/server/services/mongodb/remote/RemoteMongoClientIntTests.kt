@@ -560,6 +560,213 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
     }
 
     @Test
+    fun testFindOneAndReplace() {
+        val coll = getTestColl()
+
+        val sampleDoc = Document("hello", "world1")
+        sampleDoc["num"] = 2
+
+        // Collection should start out empty
+        // This also tests the null return format
+        assertNull(coll.findOneAndReplace(Document(), Document()))
+
+        // Insert a sample Document
+        coll.insertOne(sampleDoc)
+        assertEquals(1, coll.count())
+
+        // Sample call to findOneAndReplace() where we get the previous document back
+        var sampleUpdate = Document("hello", "world2")
+        sampleUpdate["num"] = 2
+        assertEquals(withoutId(sampleDoc), withoutId(
+                coll.findOneAndReplace(Document("hello", "world1"), sampleUpdate)))
+        assertEquals(1, coll.count())
+
+        // Make sure the update took place
+        var expectedDoc = Document("hello", "world2")
+        expectedDoc["num"] = 2
+        // TODO: Put in findOne()
+        // assertEquals(withoutId(expectedDoc), withoutId(coll.find().first()))
+        assertEquals(1, coll.count())
+
+        // Call findOneAndReplace() again but get the new document
+        sampleUpdate = Document("hello", "world3")
+        sampleUpdate["num"] = 3
+        assertEquals(withoutId(sampleUpdate), withoutId(coll.findOneAndReplace(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions().returnNewDocument(true))
+        ))
+        assertEquals(1, coll.count())
+
+        // Test null behaviour again with a filter that should not match any documents
+        assertNull(coll.findOneAndReplace(Document("hello", "zzzzz"), Document()))
+        assertEquals(1, coll.count())
+
+        val doc4 = Document("hello", "world4")
+        doc4["num"] = 4
+
+        val doc5 = Document("hello", "world5")
+        doc5["num"] = 5
+
+        val doc6 = Document("hello", "world6")
+        doc6["num"] = 6
+
+        // Test the upsert option where it should not actually be invoked
+        sampleUpdate = Document("hello", "world4")
+        sampleUpdate["num"] = 4
+        assertEquals(withoutId(doc4), withoutId(coll.findOneAndReplace(
+                Document("hello", "world3"),
+                doc4,
+                RemoteFindOneAndModifyOptions()
+                        .returnNewDocument(true)
+                        .upsert(true)
+        )))
+        assertEquals(1, coll.count())
+        // TODO: Put in findOne()
+        // assertEquals(withoutId(doc4), withoutId(coll.find().first()))
+
+        // Test the upsert option where the server should perform upsert and return new document
+        assertEquals(withoutId(doc5), withoutId(coll.findOneAndReplace(
+                Document("hello", "hellothere"),
+                doc5,
+                RemoteFindOneAndModifyOptions()
+                        .returnNewDocument(true)
+                        .upsert(true)
+        )))
+        assertEquals(2, coll.count())
+
+        // Test the upsert option where the server should perform upsert and return old document
+        // The old document should be empty
+        assertNull(coll.findOneAndReplace(
+                Document("hello", "hellothere"),
+                doc6,
+                RemoteFindOneAndModifyOptions()
+                        .upsert(true)
+        ))
+        assertEquals(3, coll.count())
+
+        // Test sort and project
+        assertEquals(listOf(doc4, doc5, doc6),
+                withoutIds(coll.find().into(mutableListOf())))
+
+        val sampleProject = Document("hello", 1)
+        sampleProject["_id"] = 0
+
+        sampleUpdate = Document("hello", "world0")
+        sampleUpdate["num"] = 0
+
+        assertEquals(Document("hello", "world4"), withoutId(coll.findOneAndReplace(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", 1))
+        )))
+        assertEquals(3, coll.count())
+
+        assertEquals(Document("hello", "world6"), withoutId(coll.findOneAndReplace(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", -1))
+        )))
+        assertEquals(3, coll.count())
+
+        // Test proper failure
+        try {
+            coll.findOneAndReplace(Document(), Document("\$who", 1))
+            fail()
+        } catch (ex: StitchServiceException) {
+            assertEquals(StitchServiceErrorCode.INVALID_PARAMETER, ex.errorCode)
+        }
+
+        try {
+            coll.findOneAndReplace(Document(), Document("\$who", 1),
+                    RemoteFindOneAndModifyOptions().upsert(true))
+            fail()
+        } catch (ex: StitchServiceException) {
+            assertEquals(StitchServiceErrorCode.INVALID_PARAMETER, ex.errorCode)
+        }
+    }
+
+    @Test
+    fun testFindOneAndDelete() {
+        val coll = getTestColl()
+
+        val sampleDoc = Document("hello", "world1")
+        sampleDoc["num"] = 1
+
+        // Collection should start out empty
+        // This also tests the null return format
+        assertNull(coll.findOneAndDelete(Document()))
+
+        // Insert a sample Document
+        coll.insertOne(sampleDoc)
+        assertEquals(1, coll.count())
+
+        // Sample call to findOneAndDelete() where we delete the only doc in the collection
+        assertEquals(withoutId(sampleDoc), withoutId(
+                coll.findOneAndDelete(Document())))
+
+        // There should be no documents in the collection now
+        assertEquals(0, coll.count())
+
+        // Insert a sample Document
+        coll.insertOne(sampleDoc)
+        assertEquals(1, coll.count())
+
+        // Call findOneAndDelete() again but this time with a filter
+        assertEquals(withoutId(sampleDoc), withoutId(coll.findOneAndDelete(
+                Document("hello", "world1"))
+        ))
+
+        // There should be no documents in the collection now
+        assertEquals(0, coll.count())
+
+        // Insert a sample Document
+        coll.insertOne(sampleDoc)
+        assertEquals(1, coll.count())
+
+        // Test null behaviour again with a filter that should not match any documents
+        assertNull(coll.findOneAndDelete(Document("hello", "zzzzz")))
+        assertEquals(1, coll.count())
+
+        val doc2 = Document("hello", "world2")
+        doc2["num"] = 2
+
+        val doc3 = Document("hello", "world3")
+        doc3["num"] = 3
+
+        // Insert new documents
+        coll.insertMany(listOf(doc2, doc3))
+        assertEquals(3, coll.count())
+
+        // Test sort and project
+        assertEquals(withoutIds(listOf(sampleDoc, doc2, doc3)),
+                withoutIds(coll.find().into(mutableListOf())))
+
+        val sampleProject = Document("hello", 1)
+        sampleProject["_id"] = 0
+
+        assertEquals(Document("hello", "world3"), withoutId(coll.findOneAndDelete(
+                Document(),
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", -1))
+        )))
+        assertEquals(2, coll.count())
+
+        assertEquals(Document("hello", "world1"), withoutId(coll.findOneAndDelete(
+                Document(),
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", 1))
+        )))
+        assertEquals(1, coll.count())
+    }
+
+    @Test
     fun testWithDocument() {
         var coll = getTestColl().withDocumentClass(CustomType::class.java)
         assertEquals(CustomType::class.java, coll.documentClass)

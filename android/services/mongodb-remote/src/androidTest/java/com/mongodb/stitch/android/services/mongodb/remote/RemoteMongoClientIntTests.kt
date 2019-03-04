@@ -574,6 +574,215 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    fun testFindOneAndReplace() {
+        val coll = getTestColl()
+
+        val sampleDoc = Document("hello", "world1")
+        sampleDoc["num"] = 2
+
+        // Collection should start out empty
+        // This also tests the null return format
+        assertNull(Tasks.await(coll.findOneAndReplace(Document(), Document())))
+
+        // Insert a sample Document
+        Tasks.await(coll.insertOne(sampleDoc))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Sample call to findOneAndReplace() where we get the previous document back
+        var sampleUpdate = Document("hello", "world2")
+        sampleUpdate["num"] = 2
+        assertEquals(withoutId(sampleDoc), withoutId(Tasks.await(
+                coll.findOneAndReplace(Document("hello", "world1"), sampleUpdate))))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Make sure the update took place
+        var expectedDoc = Document("hello", "world2")
+        expectedDoc["num"] = 2
+        assertEquals(withoutId(expectedDoc), withoutId(Tasks.await(coll.find().first())))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Call findOneAndReplace() again but get the new document
+        sampleUpdate = Document("hello", "world3")
+        sampleUpdate["num"] = 3
+        assertEquals(withoutId(sampleUpdate), withoutId(Tasks.await(coll.findOneAndReplace(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions().returnNewDocument(true)))
+        ))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Test null behaviour again with a filter that should not match any documents
+        assertNull(Tasks.await(coll.findOneAndReplace(Document("hello", "zzzzz"), Document())))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val doc4 = Document("hello", "world4")
+        doc4["num"] = 4
+
+        val doc5 = Document("hello", "world5")
+        doc5["num"] = 5
+
+        val doc6 = Document("hello", "world6")
+        doc6["num"] = 6
+
+        // Test the upsert option where it should not actually be invoked
+        sampleUpdate = Document("hello", "world4")
+        sampleUpdate["num"] = 4
+        assertEquals(withoutId(doc4), withoutId(Tasks.await(coll.findOneAndReplace(
+                Document("hello", "world3"),
+                doc4,
+                RemoteFindOneAndModifyOptions()
+                        .returnNewDocument(true)
+                        .upsert(true)
+        ))))
+        assertEquals(1, Tasks.await(coll.count()))
+        assertEquals(withoutId(doc4), withoutId(Tasks.await(coll.find().first())))
+
+        // Test the upsert option where the server should perform upsert and return new document
+        assertEquals(withoutId(doc5), withoutId(Tasks.await(coll.findOneAndReplace(
+                Document("hello", "hellothere"),
+                doc5,
+                RemoteFindOneAndModifyOptions()
+                        .returnNewDocument(true)
+                        .upsert(true)
+        ))))
+        assertEquals(2, Tasks.await(coll.count()))
+
+        // Test the upsert option where the server should perform upsert and return old document
+        // The old document should be empty
+        assertNull(Tasks.await(coll.findOneAndReplace(
+                Document("hello", "hellothere"),
+                doc6,
+                RemoteFindOneAndModifyOptions()
+                        .upsert(true)
+        )))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        // Test sort and project
+        assertEquals(listOf(doc4, doc5, doc6),
+                withoutIds(Tasks.await<MutableList<Document>>(coll.find().into(mutableListOf()))))
+
+        val sampleProject = Document("hello", 1)
+        sampleProject["_id"] = 0
+
+        sampleUpdate = Document("hello", "world0")
+        sampleUpdate["num"] = 0
+
+        assertEquals(Document("hello", "world4"), withoutId(Tasks.await(coll.findOneAndReplace(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", 1))
+        ))))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        assertEquals(Document("hello", "world6"), withoutId(Tasks.await(coll.findOneAndReplace(
+                Document(),
+                sampleUpdate,
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", -1))
+        ))))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        // Test proper failure
+        try {
+            Tasks.await(coll.findOneAndReplace(Document(), Document("\$who", 1)))
+            fail()
+        } catch (ex: ExecutionException) {
+            assertTrue(ex.cause is StitchServiceException)
+            val svcEx = ex.cause as StitchServiceException
+            assertEquals(StitchServiceErrorCode.INVALID_PARAMETER, svcEx.errorCode)
+        }
+
+        try {
+            Tasks.await(coll.findOneAndReplace(Document(), Document("\$who", 1),
+                    RemoteFindOneAndModifyOptions().upsert(true)))
+            fail()
+        } catch (ex: ExecutionException) {
+            assertTrue(ex.cause is StitchServiceException)
+            val svcEx = ex.cause as StitchServiceException
+            assertEquals(StitchServiceErrorCode.INVALID_PARAMETER, svcEx.errorCode)
+        }
+    }
+
+    @Test
+    fun testFindOneAndDelete() {
+        val coll = getTestColl()
+
+        val sampleDoc = Document("hello", "world1")
+        sampleDoc["num"] = 1
+
+        // Collection should start out empty
+        // This also tests the null return format
+        assertNull(Tasks.await(coll.findOneAndDelete(Document())))
+
+        // Insert a sample Document
+        Tasks.await(coll.insertOne(sampleDoc))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Sample call to findOneAndDelete() where we delete the only doc in the collection
+        assertEquals(withoutId(sampleDoc), withoutId(Tasks.await(
+                coll.findOneAndDelete(Document()))))
+
+        // There should be no documents in the collection now
+        assertEquals(0, Tasks.await(coll.count()))
+
+        // Insert a sample Document
+        Tasks.await(coll.insertOne(sampleDoc))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Call findOneAndDelete() again but this time with a filter
+        assertEquals(withoutId(sampleDoc), withoutId(Tasks.await(coll.findOneAndDelete(
+                Document("hello", "world1")))
+        ))
+
+        // There should be no documents in the collection now
+        assertEquals(0, Tasks.await(coll.count()))
+
+        // Insert a sample Document
+        Tasks.await(coll.insertOne(sampleDoc))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        // Test null behaviour again with a filter that should not match any documents
+        assertNull(Tasks.await(coll.findOneAndDelete(Document("hello", "zzzzz"))))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val doc2 = Document("hello", "world2")
+        doc2["num"] = 2
+
+        val doc3 = Document("hello", "world3")
+        doc3["num"] = 3
+
+        // Insert new documents
+        Tasks.await(coll.insertMany(listOf(doc2, doc3)))
+        assertEquals(3, Tasks.await(coll.count()))
+
+        // Test sort and project
+        assertEquals(withoutIds(listOf(sampleDoc, doc2, doc3)),
+                withoutIds(Tasks.await<MutableList<Document>>(coll.find().into(mutableListOf()))))
+
+        val sampleProject = Document("hello", 1)
+        sampleProject["_id"] = 0
+
+        assertEquals(Document("hello", "world3"), withoutId(Tasks.await(coll.findOneAndDelete(
+                Document(),
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", -1))
+        ))))
+        assertEquals(2, Tasks.await(coll.count()))
+
+        assertEquals(Document("hello", "world1"), withoutId(Tasks.await(coll.findOneAndDelete(
+                Document(),
+                RemoteFindOneAndModifyOptions()
+                        .projection(sampleProject)
+                        .sort(Document("num", 1))
+        ))))
+        assertEquals(1, Tasks.await(coll.count()))
+    }
+
+    @Test
     fun testWithDocument() {
         var coll = getTestColl().withDocumentClass(CustomType::class.java)
         assertEquals(CustomType::class.java, coll.documentClass)

@@ -557,8 +557,8 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
    * @return the resulting document
    */
   public <ResultT> ResultT findOneAndReplace(final Bson filter,
-                                      final Bson replacement,
-                                      final Class<ResultT> resultClass) {
+                                             final Bson replacement,
+                                             final Class<ResultT> resultClass) {
     return operations.findOneAndModify(
             "findOneAndReplace",
             filter,
@@ -576,8 +576,8 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
    * @return the resulting document
    */
   public DocumentT findOneAndReplace(final Bson filter,
-                              final Bson replacement,
-                              final RemoteFindOneAndModifyOptions options) {
+                                     final Bson replacement,
+                                     final RemoteFindOneAndModifyOptions options) {
     return operations.findOneAndModify(
             "findOneAndReplace",
             filter,
@@ -610,7 +610,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   }
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter the query filter
    * @return the resulting document
@@ -625,7 +625,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   }
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter      the query filter
    * @param resultClass the class to decode each document into
@@ -633,7 +633,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
    * @return the resulting document
    */
   public <ResultT> ResultT findOneAndDelete(final Bson filter,
-                                     final Class<ResultT> resultClass) {
+                                            final Class<ResultT> resultClass) {
     return operations.findOneAndModify(
             "findOneAndDelete",
             filter,
@@ -643,14 +643,14 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   }
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter the query filter
    * @param options A RemoteFindOneAndModifyOptions struct
    * @return the resulting document
    */
   public DocumentT findOneAndDelete(final Bson filter,
-                             final RemoteFindOneAndModifyOptions options) {
+                                    final RemoteFindOneAndModifyOptions options) {
     return operations.findOneAndModify(
             "findOneAndDelete",
             filter,
@@ -660,7 +660,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   }
 
   /**
-   * Finds a document in the collection and performs the given update.
+   * Finds a document in the collection and delete it.
    *
    * @param filter      the query filter
    * @param options     A RemoteFindOneAndModifyOptions struct
