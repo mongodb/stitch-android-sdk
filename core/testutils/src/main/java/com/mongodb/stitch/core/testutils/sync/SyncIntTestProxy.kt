@@ -816,7 +816,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         waitUntilConfigured()
         streamAndSync() // resolves the conflict
 
-
         // assert the update was reflected locally. reconfigure again.
         expectedDocument["foo"] = 2
         assertEquals(expectedDocument, coll.find(doc1Filter).first()!!)
@@ -1820,7 +1819,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     }
 
     private fun waitUntilConfigured() {
-        while(!syncTestRunner.dataSynchronizer.isConfigured) {
+        while (!syncTestRunner.dataSynchronizer.isConfigured) {
             println("waiting for DataSynchronizer to be configured before doing sync pass")
             Thread.sleep(1000)
         }

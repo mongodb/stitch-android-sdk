@@ -538,7 +538,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * later relayed remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
    */
   private void syncRemoteToLocal() throws InterruptedException {
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': syncRemoteToLocal START",
         logicalT));
@@ -649,7 +649,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
     }
 
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': syncRemoteToLocal END",
         logicalT));
@@ -940,7 +940,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
    */
   private void syncLocalToRemote() {
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': syncLocalToRemote START",
         logicalT));
@@ -1356,7 +1356,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
     }
 
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': syncLocalToRemote END",
         logicalT));
