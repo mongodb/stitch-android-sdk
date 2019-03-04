@@ -23,6 +23,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.core.auth.StitchUser;
@@ -35,7 +36,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictR
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Random;
+import java.util.Set;
 
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -81,11 +84,11 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void updateLabels() {
-    label.setText(String.format(
+    syncedColl.getSyncedIds().addOnSuccessListener(syncedIds -> label.setText(String.format(
         Locale.US,
         "# of synced docs: %d",
-        syncedColl.getSyncedIds().size()
-    ));
+        syncedIds.size()
+    )));
   }
 
   private void syncNewDocument() {

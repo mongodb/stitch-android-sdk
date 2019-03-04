@@ -76,8 +76,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             sync.configure(conflictResolver, changeEventListener, exceptionListener)
         }
 
-        override fun syncOne(id: BsonValue) {
-            sync.syncOne(id)
+        override fun syncOne(id: BsonValue): Void? {
+            return Tasks.await(sync.syncOne(id))
         }
 
         override fun count(filter: Bson): Long {
@@ -112,12 +112,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             return Tasks.await(sync.deleteMany(filter))
         }
 
-        override fun desyncOne(id: BsonValue) {
-            sync.desyncOne(id)
+        override fun desyncOne(id: BsonValue): Void? {
+            return Tasks.await(sync.desyncOne(id))
         }
 
         override fun getSyncedIds(): Set<BsonValue> {
-            return sync.syncedIds
+            return Tasks.await(sync.syncedIds)
         }
 
         override fun find(filter: Bson): Iterable<Document?> {
@@ -125,11 +125,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         }
 
         override fun resumeSyncForDocument(documentId: BsonValue): Boolean {
-            return sync.resumeSyncForDocument(documentId)
+            return Tasks.await(sync.resumeSyncForDocument(documentId))
         }
 
         override fun getPausedDocumentIds(): Set<BsonValue> {
-            return sync.pausedDocumentIds
+            return Tasks.await(sync.pausedDocumentIds)
         }
     }
 

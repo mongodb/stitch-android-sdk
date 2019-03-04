@@ -43,7 +43,9 @@ import org.bson.conversions.Bson;
  */
 public interface Sync<DocumentT> {
   /**
-   * Set the conflict handler and and change event listener on this collection.
+   * Set the conflict handler and and change event listener on this collection. This will start
+   * a background sync thread, and should be called before any CRUD operations are attempted.
+   *
    * @param conflictHandler the conflict resolver to invoke when a conflict happens between local
    *                         and remote events.
    * @param changeEventListener the event listener to invoke when a change event happens for the
@@ -58,34 +60,34 @@ public interface Sync<DocumentT> {
    * Requests that the given document _id be synchronized.
    * @param id the document _id to synchronize.
    */
-  void syncOne(final BsonValue id);
+  Task<Void> syncOne(final BsonValue id);
 
   /**
    * Requests that the given document _ids be synchronized.
    * @param ids the document _ids to synchronize.
    */
-  void syncMany(final BsonValue... ids);
+  Task<Void> syncMany(final BsonValue... ids);
 
   /**
    * Stops synchronizing the given document _id. Any uncommitted writes will be lost.
    *
    * @param id the _id of the document to desynchronize.
    */
-  void desyncOne(final BsonValue id);
+  Task<Void> desyncOne(final BsonValue id);
 
   /**
    * Stops synchronizing the given document _ids. Any uncommitted writes will be lost.
    *
    * @param ids the _ids of the documents to desynchronize.
    */
-  void desyncMany(final BsonValue... ids);
+  Task<Void> desyncMany(final BsonValue... ids);
 
   /**
    * Returns the set of synchronized document ids in a namespace.
    *
    * @return the set of synchronized document ids in a namespace.
    */
-  Set<BsonValue> getSyncedIds();
+  Task<Set<BsonValue>> getSyncedIds();
 
   /**
    * Return the set of synchronized document _ids in a namespace
@@ -93,7 +95,7 @@ public interface Sync<DocumentT> {
    *
    * @return the set of paused document _ids in a namespace
    */
-  Set<BsonValue> getPausedDocumentIds();
+  Task<Set<BsonValue>> getPausedDocumentIds();
 
   /**
    * A document that is paused no longer has remote updates applied to it.
@@ -104,7 +106,7 @@ public interface Sync<DocumentT> {
    * @return true if successfully resumed, false if the document
    *         could not be found or there was an error resuming
    */
-  boolean resumeSyncForDocument(@NonNull final BsonValue documentId);
+  Task<Boolean> resumeSyncForDocument(@NonNull final BsonValue documentId);
 
   /**
    * Counts the number of documents in the collection that have been synchronized with the remote.

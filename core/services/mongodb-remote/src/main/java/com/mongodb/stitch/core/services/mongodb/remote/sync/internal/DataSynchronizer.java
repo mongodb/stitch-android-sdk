@@ -611,8 +611,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     latestDocumentMap.get(docId),
                     false
                 ));
-
-            docConfig.setStaleNoDb(false);
           }
         }
 

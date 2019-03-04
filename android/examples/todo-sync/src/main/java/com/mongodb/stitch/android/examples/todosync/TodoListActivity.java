@@ -31,6 +31,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.mongodb.stitch.android.core.Stitch;
@@ -214,9 +215,11 @@ public class TodoListActivity extends AppCompatActivity {
           invalidateOptionsMenu();
           Toast.makeText(TodoListActivity.this, "Logged in", Toast.LENGTH_SHORT).show();
 
-          if (lists.sync().getSyncedIds().isEmpty()) {
-            lists.sync().insertOne(new Document("_id", userId));
-          }
+          lists.sync().getSyncedIds().addOnSuccessListener(syncedIds -> {
+            if (syncedIds.isEmpty()) {
+              lists.sync().insertOne(new Document("_id", userId));
+            }
+          });
         })
         .addOnFailureListener(e -> {
           invalidateOptionsMenu();
@@ -300,7 +303,6 @@ public class TodoListActivity extends AppCompatActivity {
           if (!localTask.isSuccessful()) {
             return Tasks.forResult(Collections.emptyList());
           }
-          final Set<BsonValue> syncedIds = items.sync().getSyncedIds();
           final Map<ObjectId, TodoItem> localItems = new HashMap<>();
           for (final TodoItem item : localTask.getResult()) {
             localItems.put(item.getId(), item);
