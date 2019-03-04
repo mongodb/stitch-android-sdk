@@ -20,46 +20,177 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
-import com.mongodb.stitch.core.internal.net.Event;
-import com.mongodb.stitch.core.internal.net.EventStream;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
 import com.mongodb.stitch.core.internal.net.Stream;
+import com.mongodb.stitch.core.internal.net.StreamTestUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.IntegerCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.internal.Base64;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 public class CoreStitchServiceUnitTests {
+  private static final String TEST_SERVICE_NAME = "svc1";
+
+  private StitchAuthRequestClient requestClient;
+  private StitchServiceRoutes routes;
+  private CoreStitchServiceClient underTest;
+
+  @Before
+  public void setUp() {
+    requestClient = Mockito.mock(StitchAuthRequestClient.class);
+    routes = new StitchServiceRoutes("foo");
+
+    underTest = new CoreStitchServiceClientImpl(
+        requestClient,
+        routes,
+        TEST_SERVICE_NAME,
+        BsonUtils.DEFAULT_CODEC_REGISTRY);
+  }
+
+  @Test
+  public void testRebindServiceInvokesBinderCallbacks() {
+    final StitchServiceBinder binder1 = mock(StitchServiceBinder.class);
+    final StitchServiceBinder binder2 = mock(StitchServiceBinder.class);
+
+    underTest.bind(binder1);
+    underTest.bind(binder2);
+
+    final AuthEvent event = new AuthEvent.ActiveUserChanged(null, null);
+    underTest.onRebindEvent(event);
+
+    verify(binder1).onRebindEvent(eq(event));
+    verify(binder2).onRebindEvent(eq(event));
+  }
+
+  @Test
+  public void testRebindServiceDoesNotCloseStreamsOnLoginEvent()
+      throws InterruptedException, IOException {
+    final List<Stream<?>> streams = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
+    }
+
+    doReturn(streams.get(0), streams.subList(1, streams.size()).toArray())
+        .when(requestClient).openAuthenticatedStream(any(), any());
+
+    for (int i = 0; i < streams.size(); i++) {
+      underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+    }
+
+    underTest.onRebindEvent(new AuthEvent.UserLoggedIn<>(null));
+
+    for (int i = 0; i < streams.size(); i++) {
+      verify(streams.get(i), times(0)).close();
+    }
+  }
+
+  @Test
+  public void testRebindServiceDoesNotCloseStreamsOnLogoutEvent()
+      throws InterruptedException, IOException {
+    final List<Stream<?>> streams = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
+    }
+
+    doReturn(streams.get(0), streams.subList(1, streams.size()).toArray())
+        .when(requestClient).openAuthenticatedStream(any(), any());
+
+    for (int i = 0; i < streams.size(); i++) {
+      underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+    }
+
+    underTest.onRebindEvent(new AuthEvent.UserLoggedOut<>(null));
+
+    for (int i = 0; i < streams.size(); i++) {
+      verify(streams.get(i), times(0)).close();
+    }
+  }
+
+  @Test
+  public void testRebindServiceDoesNotCloseStreamsOnRemoveEvent()
+      throws InterruptedException, IOException {
+    final List<Stream<?>> streams = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
+    }
+
+    doReturn(streams.get(0), streams.subList(1, streams.size()).toArray())
+        .when(requestClient).openAuthenticatedStream(any(), any());
+
+    for (int i = 0; i < streams.size(); i++) {
+      underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+    }
+
+    underTest.onRebindEvent(new AuthEvent.UserRemoved<>(null));
+
+    for (int i = 0; i < streams.size(); i++) {
+      verify(streams.get(i), times(0)).close();
+    }
+  }
+
+  @Test
+  public void testRebindServiceClosesStreamsOnActiveUserChange()
+      throws InterruptedException, IOException {
+    final List<Stream<?>> streams = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      streams.add(Mockito.spy(StreamTestUtils.createStream(new IntegerCodec(), String.valueOf(i))));
+    }
+
+    doReturn(streams.get(0), streams.subList(1, streams.size()).toArray())
+        .when(requestClient).openAuthenticatedStream(any(), any());
+
+    for (int i = 0; i < streams.size(); i++) {
+      underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+    }
+
+    underTest.onRebindEvent(new AuthEvent.ActiveUserChanged(null, null));
+
+    for (int i = 0; i < streams.size(); i++) {
+      verify(streams.get(i), times(1)).close();
+    }
+  }
+
+  @Test
+  public void testRebindServiceSkipsClosingClosedStreams()
+        throws InterruptedException, IOException {
+    final Stream<?> stream =
+        Mockito.spy(StreamTestUtils.createClosedStream(new IntegerCodec(), String.valueOf(42)));
+
+    doReturn(stream).when(requestClient).openAuthenticatedStream(any(), any());
+
+    underTest.streamFunction("fn", Collections.EMPTY_LIST, null);
+
+    underTest.onRebindEvent(new AuthEvent.ActiveUserChanged(null, null));
+
+    verify(stream, times(0)).close();
+  }
 
   @Test
   public void testCallFunction() {
-    final String serviceName = "svc1";
-    final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
-    final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
-    final CoreStitchServiceClient coreStitchService =
-        new CoreStitchServiceClientImpl(
-            requestClient,
-            routes,
-            serviceName,
-            BsonUtils.DEFAULT_CODEC_REGISTRY);
-
     doReturn(42)
         .when(requestClient)
         .doAuthenticatedRequest(
@@ -75,13 +206,13 @@ public class CoreStitchServiceUnitTests {
     final List<Integer> args = Arrays.asList(1, 2, 3);
     final Document expectedRequestDoc = new Document();
     expectedRequestDoc.put("name", funcName);
-    expectedRequestDoc.put("service", serviceName);
+    expectedRequestDoc.put("service", TEST_SERVICE_NAME);
     expectedRequestDoc.put("arguments", args);
 
     assertEquals(
-        42, (int) coreStitchService.callFunction(
+        42, (int) underTest.callFunction(
                 funcName, args, null, new IntegerCodec()));
-    assertEquals(42, (int) coreStitchService.callFunction(
+    assertEquals(42, (int) underTest.callFunction(
             funcName, args, null, Integer.class));
 
     final ArgumentCaptor<StitchAuthDocRequest> reqArgument =
@@ -110,37 +241,7 @@ public class CoreStitchServiceUnitTests {
 
   @Test
   public void testStreamFunction() throws InterruptedException, IOException {
-    final String serviceName = "svc1";
-    final StitchServiceRoutes routes = new StitchServiceRoutes("foo");
-    final StitchAuthRequestClient requestClient = Mockito.mock(StitchAuthRequestClient.class);
-    final CoreStitchServiceClient coreStitchService =
-        new CoreStitchServiceClientImpl(
-            requestClient,
-            routes,
-            serviceName,
-            BsonUtils.DEFAULT_CODEC_REGISTRY);
-
-    final Stream<Integer> stream = new Stream<>(new EventStream() {
-      @Override
-      public Event nextEvent() {
-        return new Event.Builder().withData("42").build();
-      }
-
-      @Override
-      public boolean isOpen() {
-        return false;
-      }
-
-      @Override
-      public void close() {
-
-      }
-
-      @Override
-      public void cancel() {
-
-      }
-    }, new IntegerCodec());
+    final Stream<Integer> stream = StreamTestUtils.createStream(new IntegerCodec(), "42");
 
     doReturn(stream)
         .when(requestClient)
@@ -151,11 +252,11 @@ public class CoreStitchServiceUnitTests {
     final List<Integer> args = Arrays.asList(1, 2, 3);
     final Document expectedRequestDoc = new Document();
     expectedRequestDoc.put("name", funcName);
-    expectedRequestDoc.put("service", serviceName);
+    expectedRequestDoc.put("service", TEST_SERVICE_NAME);
     expectedRequestDoc.put("arguments", args);
 
     assertEquals(
-        stream, coreStitchService.streamFunction(
+        stream, underTest.streamFunction(
             funcName, args, new IntegerCodec()));
 
     final ArgumentCaptor<StitchAuthRequest> reqArgument =
