@@ -779,7 +779,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // reconfigure sync and the same way. do a sync pass.
         powerCycleDevice()
         coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-        waitUntilConfigured()
         val sem = watchForEvents(syncTestRunner.namespace)
         streamAndSync()
 
@@ -793,7 +792,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
         powerCycleDevice()
         coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-        waitUntilConfigured()
 
         // update the document locally. assert its success, after reconfiguration.
         result = coll.updateOne(doc1Filter, Document("\$inc", Document("foo", 1)))
@@ -804,7 +802,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // reconfigure again.
         powerCycleDevice()
         coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-        waitUntilConfigured()
 
         // sync.
         streamAndSync() // does nothing with no conflict handler
@@ -813,7 +810,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // reconfigure again.
         assertEquals(1, coll.getSyncedIds().size)
         coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-        waitUntilConfigured()
         streamAndSync() // resolves the conflict
 
         // assert the update was reflected locally. reconfigure again.
@@ -821,7 +817,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertEquals(expectedDocument, coll.find(doc1Filter).first()!!)
         powerCycleDevice()
         coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-        waitUntilConfigured()
 
         // sync. assert that the update was reflected remotely
         streamAndSync()
@@ -1112,9 +1107,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
             throw IllegalStateException("failure")
         }, null, null)
-
-        // this is necessary so that the next sync pass isn't a no-op
-        waitUntilConfigured()
 
         streamAndSync()
         Assert.assertNull(coll.find(doc1Filter).firstOrNull())
@@ -1816,13 +1808,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             }
         })
         return sem
-    }
-
-    private fun waitUntilConfigured() {
-        while (!syncTestRunner.dataSynchronizer.isConfigured) {
-            println("waiting for DataSynchronizer to be configured before doing sync pass")
-            Thread.sleep(1000)
-        }
     }
 
     private fun waitForAllStreamsOpen() {

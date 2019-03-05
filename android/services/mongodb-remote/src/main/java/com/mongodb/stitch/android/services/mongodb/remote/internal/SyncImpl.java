@@ -54,10 +54,10 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
-                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                        @Nullable final ExceptionListener exceptionListener) {
-    this.dispatcher.dispatchTask(new Callable<Void>() {
+  public Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
+                              @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                              @Nullable final ExceptionListener exceptionListener) {
+    return this.dispatcher.dispatchTask(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         SyncImpl.this.proxy.configure(conflictHandler, changeEventListener, exceptionListener);

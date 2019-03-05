@@ -72,8 +72,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             conflictResolver: ConflictHandler<Document?>,
             changeEventListener: ChangeEventListener<Document>?,
             exceptionListener: ExceptionListener?
-        ) {
-            sync.configure(conflictResolver, changeEventListener, exceptionListener)
+        ): Void? {
+            return Tasks.await(
+                sync.configure(conflictResolver, changeEventListener, exceptionListener)
+            )
         }
 
         override fun syncOne(id: BsonValue): Void? {

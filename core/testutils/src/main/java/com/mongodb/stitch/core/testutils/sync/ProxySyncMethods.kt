@@ -22,7 +22,7 @@ interface ProxySyncMethods {
         conflictResolver: ConflictHandler<Document?>,
         changeEventListener: ChangeEventListener<Document>?,
         exceptionListener: ExceptionListener?
-    )
+    ): Void?
 
     fun syncOne(id: BsonValue): Void?
 

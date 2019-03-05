@@ -51,17 +51,21 @@ public interface Sync<DocumentT> {
    * @param changeEventListener the event listener to invoke when a change event happens for the
    *                         document.
    * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
+   *
+   * @return A Task that completes when Mobile Sync is configured, and the background sync thread
+   *         has started.
    */
-  void configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
-                 @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                 @Nullable final ExceptionListener exceptionListener);
+  Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
+                       @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                       @Nullable final ExceptionListener exceptionListener);
 
   /**
    * Requests that the given document _id be synchronized.
    * @param id the document _id to synchronize.
    *
    * @return a Task that completes when the specified document ID is configured as synced. The
-   *         actual document may not be in sync until the next sync pass.
+   *         actual document may not be in sync with the remote collection until the next sync
+   *         pass.
    */
   Task<Void> syncOne(final BsonValue id);
 
@@ -70,7 +74,8 @@ public interface Sync<DocumentT> {
    * @param ids the document _ids to synchronize.
    *
    * @return a Task that completes when the specified document IDs are configured as synced. The
-   *         actual document may not be in sync with the remote until the next sync pass.
+   *         actual documents may not be in sync with the remote collection until the next sync
+   *         pass.
    */
   Task<Void> syncMany(final BsonValue... ids);
 
