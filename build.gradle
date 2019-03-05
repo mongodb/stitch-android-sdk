@@ -462,6 +462,11 @@ rootProject.gradle.projectsEvaluated {
             println "Building without analytics. Use -Panalytics to enable analytics."
         }
 
+        options.doclet = "CodeExampleManifestDoclet"
+        options.docletpath new File(rootDir, "contrib/doclet/bin/")
+        options.addStringOption("examplesPath", "contrib/docs-examples/")
+        options.addStringOption("manifestPath", "build/docs/examplesManifest.json")
+
         String androidDocsDir = ""
         subprojects {
             project.tasks.withType(Javadoc).each { javadocTask ->
