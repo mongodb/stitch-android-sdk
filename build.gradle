@@ -164,6 +164,7 @@ subprojects {
 
             javadoc {
                 title = "$project.name $version"
+                options.addStringOption("source", "8")
                 options.author true
                 options.author = true
                 options.version = true
@@ -230,6 +231,7 @@ subprojects {
                 exclude '**/R.html', '**/R.*.html', '**/index.html', '**/*.kt', '**/test*/**'
 
                 title = "$project.name $version"
+                options.addStringOption("source", "8")
                 options.author true
                 options.author = true
                 options.version = true
