@@ -25,9 +25,12 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
@@ -37,6 +40,7 @@ import org.bson.BsonValue;
 final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamListener {
 
   private final Map<MongoNamespace, NamespaceChangeStreamListener> nsStreamers;
+  private final ConcurrentMap<MongoNamespace, ReadWriteLock> nsListenerLocks;
   private final ReadWriteLock instanceLock;
   private final InstanceSynchronizationConfig instanceConfig;
   private final CoreStitchServiceClient service;
@@ -54,6 +58,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     this.networkMonitor = networkMonitor;
     this.authMonitor = authMonitor;
     this.nsStreamers = new HashMap<>();
+    this.nsListenerLocks = new ConcurrentHashMap<>();
     this.instanceLock = new ReentrantReadWriteLock();
   }
 
@@ -167,7 +172,8 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
               instanceConfig.getNamespaceConfig(namespace),
               service,
               networkMonitor,
-              authMonitor);
+              authMonitor,
+              getLockForNamespace(namespace));
       this.nsStreamers.put(namespace, streamer);
     } finally {
       this.instanceLock.writeLock().unlock();
@@ -214,6 +220,22 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
       return new HashMap<>();
     }
     return streamer.getEvents();
+  }
+
+  public @Nonnull ReadWriteLock getLockForNamespace(final MongoNamespace namespace) {
+    this.instanceLock.readLock().lock();
+    ReadWriteLock streamerLock;
+    try {
+      streamerLock = nsListenerLocks.get(namespace);
+      if (streamerLock == null) {
+        streamerLock = new ReentrantReadWriteLock();
+        nsListenerLocks.put(namespace, streamerLock);
+      }
+
+      return streamerLock;
+    } finally {
+      this.instanceLock.readLock().unlock();
+    }
   }
 
   /**
