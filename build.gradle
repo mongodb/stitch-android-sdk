@@ -467,6 +467,9 @@ rootProject.gradle.projectsEvaluated {
         options.addStringOption("examplesPath", "contrib/docs-examples/")
         options.addStringOption("manifestPath", "build/docs/examplesManifest.json")
 
+        // Appease 'unnamed module' error on javadoc 11.0.2+
+        options.addStringOption("source", "8")
+
         String androidDocsDir = ""
         subprojects {
             project.tasks.withType(Javadoc).each { javadocTask ->
