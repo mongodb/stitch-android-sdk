@@ -24,6 +24,8 @@ interface ProxySyncMethods {
         exceptionListener: ExceptionListener?
     )
 
+    fun syncMany(vararg id: BsonValue)
+
     fun syncOne(id: BsonValue)
 
     fun desyncOne(id: BsonValue)

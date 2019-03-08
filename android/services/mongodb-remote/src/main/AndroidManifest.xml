@@ -1,2 +1,4 @@
-<manifest package="com.mongodb.stitch.android.services.mongodb.remote">
+<manifest package="com.mongodb.stitch.android.services.mongodb.remote"
+          xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:usesCleartextTraffic="true" />
 </manifest>

@@ -38,6 +38,7 @@ import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredentia
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
+import org.bson.types.Binary
 import org.bson.types.ObjectId
 import org.junit.After
 import org.junit.Assert
@@ -78,6 +79,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
         override fun syncOne(id: BsonValue) {
             sync.syncOne(id)
+        }
+
+        override fun syncMany(vararg id: BsonValue) {
+            sync.syncMany(*id)
         }
 
         override fun count(filter: Bson): Long {
@@ -248,6 +253,42 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     override fun currentUserId(): String? {
         return client.auth.user?.id
+    }
+
+    @Test
+    fun testSyncMany_Performance() {
+        val now = System.currentTimeMillis()
+
+        val array: List<Byte> = (0..1900).map { 0.toByte() }
+        val docs = (0..5000).map { Document("bin", Binary(array.toByteArray())) }
+        val ids = docs.chunked(1000).map {
+            remoteMethods().insertMany(it).insertedIds.map { it.value }
+        }.flatten()
+
+        syncMethods().syncMany(*ids.toTypedArray())
+
+        println("sync many took ${(System.currentTimeMillis() - now)/1000} seconds")
+    }
+
+    @Test
+    fun testInitSync_Performance() {
+        val now = System.currentTimeMillis()
+
+        val array: List<Byte> = (0..1900).map { 0.toByte() }
+        val docs = (0..5000).map { Document("bin", Binary(array.toByteArray())) }
+        val ids = docs.chunked(1000).map {
+            remoteMethods().insertMany(it).insertedIds.map { it.value }
+        }.flatten()
+
+        syncMethods().syncMany(*ids.toTypedArray())
+
+
+        println("sync many took ${(System.currentTimeMillis() - now)/1000} seconds")
+    }
+
+    @Test
+    override fun testInitSyncPerf() {
+        testProxy.testInitSyncPerf()
     }
 
     @Test
