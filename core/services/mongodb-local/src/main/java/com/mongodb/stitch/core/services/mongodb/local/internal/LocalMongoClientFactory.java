@@ -19,7 +19,11 @@ package com.mongodb.stitch.core.services.mongodb.local.internal;
 import com.mongodb.client.MongoClient;
 import com.mongodb.stitch.core.StitchAppClientInfo;
 
-public abstract class LocalMongoClientFactory {
+public final class LocalMongoClientFactory {
+  private LocalMongoClientFactory() {
+    // prevent random instantiation
+  }
+
   public static MongoClient getClient(
       final StitchAppClientInfo appInfo,
       final EmbeddedMongoClientFactory clientFactory

@@ -25,17 +25,19 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nonnull;
 
 public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkMonitor {
 
   private final ConnectivityManager connManager;
-  private final Set<StateListener> listeners;
+  private final ConcurrentMap<StateListener, Boolean> listeners;
 
   public AndroidNetworkMonitor(final ConnectivityManager connManager) {
     this.connManager = connManager;
-    this.listeners = new HashSet<>();
+    this.listeners = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -45,18 +47,18 @@ public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkM
   }
 
   @Override
-  public synchronized void addNetworkStateListener(@Nonnull final StateListener listener) {
-    listeners.add(listener);
+  public void addNetworkStateListener(@Nonnull final StateListener listener) {
+    listeners.put(listener, Boolean.TRUE);
   }
 
   @Override
-  public synchronized void removeNetworkStateListener(@Nonnull final StateListener listener) {
+  public void removeNetworkStateListener(@Nonnull final StateListener listener) {
     listeners.remove(listener);
   }
 
   @Override
   public void onReceive(final Context context, final Intent intent) {
-    final Set<StateListener> listenersCopy = new HashSet<>(listeners);
+    final Set<StateListener> listenersCopy = new HashSet<>(listeners.keySet());
     for (final StateListener listener : listenersCopy) {
       listener.onNetworkStateChanged();
     }
