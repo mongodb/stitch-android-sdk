@@ -25,6 +25,7 @@ import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.auth.StitchCredential;
 import com.mongodb.stitch.core.auth.internal.models.ApiCoreUserProfile;
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousAuthProvider;
+import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.IoUtils;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
@@ -351,7 +352,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       if (credential.getProviderCapabilities().getReusesExistingSession()) {
         for (final AuthInfo authInfo : this.allUsersAuthInfo.values()) {
           if (authInfo.getLoggedInProviderType().equals(credential.getProviderType())) {
-            return switchToUserWithId(authInfo.getUserId());
+            if (authInfo.isLoggedIn()) {
+              return switchToUserWithId(authInfo.getUserId());
+            }
+            removeUserWithIdInternal(authInfo.getUserId());
           }
         }
       }
