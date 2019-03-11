@@ -1839,14 +1839,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     try {
       ongoingOperationsGroup.enter();
-      final Lock lock =
-          this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
-      lock.lock();
-      try {
-        return getLocalCollection(namespace).countDocuments(filter, options);
-      } finally {
-        lock.unlock();
-      }
+      return getLocalCollection(namespace).countDocuments(filter, options);
     } finally {
       ongoingOperationsGroup.exit();
     }
@@ -1919,13 +1912,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
 
     ongoingOperationsGroup.enter();
-    final Lock lock =
-        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
-    lock.lock();
     try {
       return getLocalCollection(namespace).aggregate(pipeline, resultClass);
     } finally {
-      lock.unlock();
       ongoingOperationsGroup.exit();
     }
   }
