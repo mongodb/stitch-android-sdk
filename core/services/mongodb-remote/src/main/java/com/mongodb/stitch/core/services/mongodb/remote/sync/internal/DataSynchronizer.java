@@ -20,15 +20,21 @@ import com.mongodb.Block;
 import com.mongodb.Function;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
+import com.mongodb.WriteConcern;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.CountOptions;
+import com.mongodb.client.model.DeleteManyModel;
+import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.FindOneAndReplaceOptions;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
+import com.mongodb.client.model.ReplaceOneModel;
+import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.WriteModel;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.lang.NonNull;
@@ -57,6 +63,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -65,8 +72,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -89,6 +98,37 @@ import org.bson.diagnostics.Loggers;
  * documents.
  */
 public class DataSynchronizer implements NetworkMonitor.StateListener {
+  class BatchOps {
+    final List<WriteModel<BsonDocument>> bulkWriteModels;
+    final List<CoreDocumentSynchronizationConfig> configs;
+    final List<ChangeEvent<BsonDocument>> changeEvents;
+
+    BatchOps(final CoreDocumentSynchronizationConfig config,
+             final WriteModel<BsonDocument> writeModel) {
+      this();
+      if (writeModel != null) {
+        this.bulkWriteModels.add(writeModel);
+      }
+      if (config != null) {
+        this.configs.add(config);
+      }
+    }
+
+    BatchOps() {
+      this.bulkWriteModels = new ArrayList<>();
+      this.configs = new ArrayList<>();
+      this.changeEvents = new ArrayList<>();
+    }
+
+    BatchOps merge(@Nullable final BatchOps batchOps) {
+      if (batchOps != null) {
+        this.bulkWriteModels.addAll(batchOps.bulkWriteModels);
+        this.configs.addAll(batchOps.configs);
+      }
+
+      return this;
+    }
+  }
 
   public static final String DOCUMENT_VERSION_FIELD = "__stitch_sync_version";
 
@@ -515,6 +555,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           Locale.US,
           "t='%d': doSyncPass END",
           logicalT));
+    } catch (InterruptedException e) {
+      logger.info(String.format(
+          Locale.US,
+          "t='%d': doSyncPass INTERRUPTED",
+          logicalT));
+      return false;
     } finally {
       syncLock.unlock();
     }
@@ -529,7 +575,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * latest documents with the remote. Any conflicts that occur will be resolved locally and
    * later relayed remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
    */
-  private void syncRemoteToLocal() {
+  private void syncRemoteToLocal() throws InterruptedException {
     logger.info(String.format(
         Locale.US,
         "t='%d': syncRemoteToLocal START",
@@ -537,7 +583,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     // 2. Run remote to local (R2L) sync routine
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
+      // lock the NamespaceChangeStreamListener for this namespace to prevent a new stream from
+      // opening for this namespace during this sync pass.
+      final ReadWriteLock streamerLock = instanceChangeStreamListener
+          .getLockForNamespace(nsConfig.getNamespace());
+
+      streamerLock.writeLock().lock();
       nsConfig.getLock().writeLock().lock();
+
       try {
         final Map<BsonValue, ChangeEvent<BsonDocument>> remoteChangeEvents =
             getEventsForNamespace(nsConfig.getNamespace());
@@ -552,10 +605,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           latestDocumentMap.put(latestDocument.get("_id"), latestDocument);
         }
 
+        final BatchOps batchOps = new BatchOps();
+
         // a. For each unprocessed change event
         for (final Map.Entry<BsonValue, ChangeEvent<BsonDocument>> eventEntry :
             remoteChangeEvents.entrySet()) {
-          logger.info(String.format(
+          logger.debug(String.format(
               Locale.US,
               "t='%d': syncRemoteToLocal consuming event of type: %s",
               logicalT,
@@ -573,8 +628,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
           unseenIds.remove(docConfig.getDocumentId());
           latestDocumentMap.remove(docConfig.getDocumentId());
-          syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue());
+          batchOps.merge(syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue()));
         }
+
 
         // For synchronized documents that had no unprocessed change event, but were marked as
         // stale, synthesize a remote replace event to replace the local stale document with the
@@ -588,7 +644,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           }
 
           if (latestDocumentMap.containsKey(docId)) {
-            syncRemoteChangeEventToLocal(
+            batchOps.merge(syncRemoteChangeEventToLocal(
                 nsConfig,
                 docConfig,
                 ChangeEvents.changeEventForLocalReplace(
@@ -596,11 +652,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     docId,
                     latestDocumentMap.get(docId),
                     false
-                ));
-
-            docConfig.setStale(false);
+                ))
+            );
           }
         }
+
+        nsConfig.setStale(false);
 
         // For synchronized documents that had no unprocessed change event, and did not have a
         // latest version when stale documents were queried, synthesize a remote delete event to
@@ -618,19 +675,44 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             continue;
           }
 
-          syncRemoteChangeEventToLocal(
+          batchOps.merge(syncRemoteChangeEventToLocal(
               nsConfig,
               docConfig,
               ChangeEvents.changeEventForLocalDelete(
                   nsConfig.getNamespace(),
                   unseenId,
                   docConfig.hasUncommittedWrites()
-              ));
+              )));
 
           docConfig.setStale(false);
         }
+
+        final List<ReplaceOneModel<CoreDocumentSynchronizationConfig>> configModels
+            = new ArrayList<>();
+
+        for (CoreDocumentSynchronizationConfig config : batchOps.configs) {
+          configModels.add(
+              new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
+                  nsConfig.getNamespace(), config.getDocumentId()
+              ), config)
+          );
+        }
+
+        long now = System.currentTimeMillis();
+        if (batchOps.bulkWriteModels.size() > 0) {
+          System.out.println("$_performance_metrics: beginning bulk write for local models");
+          getLocalCollection(nsConfig.getNamespace()).bulkWrite(batchOps.bulkWriteModels);
+          System.out.println("$_performance_metrics: bulk write for local models took " + ((System.currentTimeMillis() - now) / 1000) + " seconds");
+        }
+        if (batchOps.configs.size() > 0) {
+          now = System.currentTimeMillis();
+          System.out.println("$_performance_metrics: beginning bulk write for config models");
+          nsConfig.getDocsColl().bulkWrite(configModels);
+          System.out.println("$_performance_metrics: bulk write for config models took " + ((System.currentTimeMillis() - now) / 1000) + " seconds");
+        }
       } finally {
         nsConfig.getLock().writeLock().unlock();
+        streamerLock.writeLock().unlock();
       }
     }
 
@@ -647,22 +729,23 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param docConfig         the document configuration related to the event.
    * @param remoteChangeEvent the remote change event to synchronize into the local database.
    */
-  private void syncRemoteChangeEventToLocal(
+  @CheckReturnValue
+  private @Nullable BatchOps syncRemoteChangeEventToLocal(
       final NamespaceSynchronizationConfig nsConfig,
       final CoreDocumentSynchronizationConfig docConfig,
       final ChangeEvent<BsonDocument> remoteChangeEvent
   ) {
     if (docConfig.hasUncommittedWrites() && docConfig.getLastResolution() == logicalT) {
-      logger.info(String.format(
+      logger.debug(String.format(
           Locale.US,
           "t='%d': syncRemoteChangeEventToLocal have writes for %s but happened at same t; "
               + "waiting until next pass",
           logicalT,
           docConfig.getDocumentId()));
-      return;
+      return null;
     }
 
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s processing remote operation='%s'",
         logicalT,
@@ -675,7 +758,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       currentRemoteVersionInfo = DocumentVersionInfo
           .getRemoteVersionInfo(remoteChangeEvent.getFullDocument());
     } catch (final Exception e) {
-      desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
           String.format(
               Locale.US,
@@ -685,14 +767,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId()));
-      return;
+      return desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
     }
 
 
     if (currentRemoteVersionInfo.hasVersion()
         && currentRemoteVersionInfo.getVersion().getSyncProtocolVersion() != 1) {
-      desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
-
       emitError(docConfig,
               String.format(
                       Locale.US,
@@ -703,8 +783,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       nsConfig.getNamespace(),
                       docConfig.getDocumentId(),
                       currentRemoteVersionInfo.getVersion().getSyncProtocolVersion()));
-
-      return;
+      return desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
     }
 
     // ii. If the version info for the unprocessed change event has the same GUID as the local
@@ -713,14 +792,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //     been applied to the local collection.
     if (docConfig.hasCommittedVersion(currentRemoteVersionInfo)) {
       // Skip this event since we generated it.
-      logger.info(String.format(
+      logger.debug(String.format(
           Locale.US,
           "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote change event was "
               + "generated by us; dropping the event",
           logicalT,
           nsConfig.getNamespace(),
           docConfig.getDocumentId()));
-      return;
+      return null;
     }
 
 
@@ -731,7 +810,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         case REPLACE:
         case UPDATE:
         case INSERT:
-          logger.info(String.format(
+          logger.debug(String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s replacing local with "
                   + "remote document with new version as there are no local pending writes: %s",
@@ -739,24 +818,22 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               nsConfig.getNamespace(),
               docConfig.getDocumentId(),
               remoteChangeEvent.getFullDocument()));
-          replaceOrUpsertOneFromRemote(
+          return replaceOrUpsertOneFromRemote(
               nsConfig.getNamespace(),
               docConfig.getDocumentId(),
               remoteChangeEvent.getFullDocument(),
               DocumentVersionInfo.getDocumentVersionDoc(remoteChangeEvent.getFullDocument()));
-          return;
         case DELETE:
-          logger.info(String.format(
+          logger.debug(String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s deleting local as "
                   + "there are no local pending writes",
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId()));
-          deleteOneFromRemote(
+          return deleteOneFromRemote(
               nsConfig.getNamespace(),
               docConfig.getDocumentId());
-          return;
         default:
           emitError(docConfig,
               String.format(
@@ -767,7 +844,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   nsConfig.getNamespace(),
                   docConfig.getDocumentId(),
                   remoteChangeEvent.getOperationType().toString()));
-          return;
+          return null;
       }
     }
 
@@ -785,15 +862,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //    with no version indicates a document that may have been committed by another client not
     //    adhering to the mobile sync protocol.
     if (!lastKnownLocalVersionInfo.hasVersion() || !currentRemoteVersionInfo.hasVersion()) {
-      logger.info(String.format(
+      logger.debug(String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote or local have an "
                       + "empty version but a write is pending; raising conflict",
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId()));
-      resolveConflict(nsConfig.getNamespace(), docConfig, remoteChangeEvent);
-      return;
+      return resolveConflict(nsConfig.getNamespace(), docConfig, remoteChangeEvent);
     }
 
     // 2. Check if the GUID of the two versions are the same.
@@ -805,18 +881,18 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (remoteVersion.versionCounter <= localVersion.versionCounter) {
         // i. drop the event if the version counter of the remote event less than or equal to the
         // version counter of the local document
-        logger.info(String.format(
+        logger.debug(String.format(
                 Locale.US,
                 "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote change event "
                         + "is stale; dropping the event",
                 logicalT,
                 nsConfig.getNamespace(),
                 docConfig.getDocumentId()));
-        return;
+        return null;
       } else {
         // ii. raise a conflict if the version counter of the remote event is greater than the
         //     version counter of the local document
-        logger.info(String.format(
+        logger.debug(String.format(
                 Locale.US,
                 "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote event version "
                         + "has higher counter than local version but a write is pending; "
@@ -824,11 +900,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 logicalT,
                 nsConfig.getNamespace(),
                 docConfig.getDocumentId()));
-        resolveConflict(
+        return resolveConflict(
                 nsConfig.getNamespace(),
                 docConfig,
                 remoteChangeEvent);
-        return;
       }
     }
 
@@ -842,7 +917,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       // i. If the document is not found with a remote lookup, this means the document was
       //    deleted remotely, so raise a conflict using a synthesized delete event as the remote
       //    change event.
-      logger.info(String.format(
+      logger.debug(String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote event version "
                       + "stale and latest document lookup indicates a remote delete occurred, but "
@@ -850,14 +925,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId()));
-      resolveConflict(
+      return resolveConflict(
               nsConfig.getNamespace(),
               docConfig,
               ChangeEvents.changeEventForLocalDelete(
                       nsConfig.getNamespace(),
                       docConfig.getDocumentId(),
                       docConfig.hasUncommittedWrites()));
-      return;
     }
 
 
@@ -866,7 +940,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       newestRemoteVersionInfo = DocumentVersionInfo
           .getRemoteVersionInfo(newestRemoteDocument);
     } catch (final Exception e) {
-      desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
       emitError(docConfig,
           String.format(
               Locale.US,
@@ -876,7 +949,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId()));
-      return;
+      return desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
     }
 
     // ii. If the current GUID of the remote document (as determined by this lookup) is equal
@@ -886,14 +959,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             && newestRemoteVersionInfo.getVersion().getInstanceId()
                     .equals(localVersion.instanceId)) {
 
-      logger.info(String.format(
+      logger.debug(String.format(
               Locale.US,
               "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
                       + "indicates that this is a stale event; dropping the event",
               logicalT,
               nsConfig.getNamespace(),
               docConfig.getDocumentId()));
-      return;
+      return null;
 
     }
 
@@ -901,7 +974,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     //      document, raise a conflict using a synthesized replace event as the remote change
     //      event. This means the remote document is a legitimately new document and we should
     //      handle the conflict.
-    logger.info(String.format(
+    logger.debug(String.format(
             Locale.US,
             "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
                     + "indicates a remote replace occurred, but a local write is pending; raising "
@@ -909,7 +982,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             logicalT,
             nsConfig.getNamespace(),
             docConfig.getDocumentId()));
-    resolveConflict(
+    return resolveConflict(
             nsConfig.getNamespace(),
             docConfig,
             ChangeEvents.changeEventForLocalReplace(
@@ -925,7 +998,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * remotely on a subsequent iteration of {@link DataSynchronizer#doSyncPass()}.
    */
   private void syncLocalToRemote() {
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': syncLocalToRemote START",
         logicalT));
@@ -933,10 +1006,18 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // 1. Run local to remote (L2R) sync routine
     // Search for modifications in each namespace.
     for (final NamespaceSynchronizationConfig nsConfig : syncConfig) {
+      // lock the NamespaceChangeStreamListener for this namespace to prevent a new stream from
+      // opening for this namespace during this sync pass.
+      final ReadWriteLock streamerLock = instanceChangeStreamListener
+          .getLockForNamespace(nsConfig.getNamespace());
+
+      streamerLock.writeLock().lock();
       nsConfig.getLock().writeLock().lock();
       try {
         final CoreRemoteMongoCollection<BsonDocument> remoteColl =
             getRemoteCollection(nsConfig.getNamespace());
+
+        final BatchOps batchOps = new BatchOps();
 
         // a. For each document that has local writes pending
         for (final CoreDocumentSynchronizationConfig docConfig : nsConfig) {
@@ -944,7 +1025,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             continue;
           }
           if (docConfig.getLastResolution() == logicalT) {
-            logger.info(String.format(
+            logger.debug(String.format(
                 Locale.US,
                 "t='%d': syncLocalToRemote ns=%s documentId=%s has writes from current logicalT; "
                     + "waiting until next pass",
@@ -957,7 +1038,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           // i. Retrieve the change event for this local document in the local config metadata
           final ChangeEvent<BsonDocument> localChangeEvent =
               docConfig.getLastUncommittedChangeEvent();
-          logger.info(String.format(
+          logger.debug(String.format(
               Locale.US,
               "t='%d': syncLocalToRemote ns=%s documentId=%s processing local operation='%s'",
               logicalT,
@@ -992,7 +1073,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               unprocessedEventVersion = DocumentVersionInfo
                   .getRemoteVersionInfo(unprocessedRemoteEvent.getFullDocument());
             } catch (final Exception e) {
-              desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+              batchOps.merge(desyncDocumentsFromRemote(nsConfig.getNamespace(),
+                  docConfig.getDocumentId()));
               emitError(docConfig,
                   String.format(
                       Locale.US,
@@ -1010,7 +1092,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             //    greater than the local version counter, or if both versions are empty.
             if (!docConfig.hasCommittedVersion(unprocessedEventVersion)) {
               isConflicted = true;
-              logger.info(String.format(
+              logger.debug(String.format(
                   Locale.US,
                   "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
                       + "unprocessed change event for document; raising conflict",
@@ -1055,7 +1137,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   }
 
                   // ii. Otherwise record that a conflict has occurred.
-                  logger.info(String.format(
+                  logger.debug(String.format(
                       Locale.US,
                       "t='%d': syncLocalToRemote ns=%s documentId=%s duplicate key exception on "
                           + "insert; raising conflict",
@@ -1111,7 +1193,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 // c. If no documents are matched, record that a conflict has occurred.
                 if (result.getMatchedCount() == 0) {
                   isConflicted = true;
-                  logger.info(String.format(
+                  logger.debug(String.format(
                       Locale.US,
                       "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
                           + "replaced document or document deleted; raising conflict",
@@ -1141,7 +1223,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         && localUpdateDescription.getUpdatedFields().isEmpty()) {
                   // if the translated update is empty, then this update is a noop, and we
                   // shouldn't update because it would improperly update the version information.
-                  logger.info(String.format(
+                  logger.debug(String.format(
                           Locale.US,
                           "t='%d': syncLocalToRemote ns=%s documentId=%s local change event "
                                   + "update description is empty for UPDATE; dropping the event",
@@ -1207,7 +1289,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 if (result.getMatchedCount() == 0) {
                   // c. If no documents are matched, record that a conflict has occurred.
                   isConflicted = true;
-                  logger.info(String.format(
+                  logger.debug(String.format(
                       Locale.US,
                       "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
                           + "updated document or document deleted; raising conflict",
@@ -1247,7 +1329,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   remoteDocumentFetched = true;
                   if (remoteDocument != null) {
                     isConflicted = true;
-                    logger.info(String.format(
+                    logger.debug(String.format(
                         Locale.US,
                         "t='%d': syncLocalToRemote ns=%s documentId=%s version different on "
                             + "removed document; raising conflict",
@@ -1257,10 +1339,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   } else {
                     // d. Desynchronize the document if there is no conflict, or if fetching a
                     // remote document after the conflict is raised returns no remote document.
-                    desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                    batchOps.merge(
+                        desyncDocumentsFromRemote(nsConfig.getNamespace(),
+                            docConfig.getDocumentId()));
                   }
                 } else {
-                  desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId());
+                  batchOps.merge(
+                    desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId()));
                 }
                 break;
               }
@@ -1283,7 +1368,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             nextVersion = null;
           }
 
-          logger.info(String.format(
+          logger.debug(String.format(
               Locale.US,
               "t='%d': syncLocalToRemote ns=%s documentId=%s conflict=%s",
               logicalT,
@@ -1323,18 +1408,24 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       docConfig.getDocumentId(),
                       remoteDocument);
             }
-            resolveConflict(
+            batchOps.merge(resolveConflict(
                 nsConfig.getNamespace(),
                 docConfig,
-                remoteChangeEvent);
+                remoteChangeEvent));
           }
+        }
+        if (batchOps.bulkWriteModels.size() > 0) {
+          getLocalCollection(nsConfig.getNamespace()).bulkWrite(
+              batchOps.bulkWriteModels
+          );
         }
       } finally {
         nsConfig.getLock().writeLock().unlock();
+        streamerLock.writeLock().unlock();
       }
     }
 
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': syncLocalToRemote END",
         logicalT));
@@ -1382,7 +1473,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *                    state.
    * @param remoteEvent the remote change event that is conflicting.
    */
-  private void resolveConflict(
+  @CheckReturnValue
+  private BatchOps resolveConflict(
       final MongoNamespace namespace,
       final CoreDocumentSynchronizationConfig docConfig,
       final ChangeEvent<BsonDocument> remoteEvent
@@ -1395,10 +1487,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           logicalT,
           namespace,
           docConfig.getDocumentId()));
-      return;
+      return null;
     }
 
-    logger.info(String.format(
+    logger.debug(String.format(
         Locale.US,
         "t='%d': resolveConflict ns=%s documentId=%s resolving conflict between localOp=%s "
             + "remoteOp=%s",
@@ -1440,7 +1532,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               docConfig.getDocumentId(),
               ex),
           ex);
-      return;
+      return null;
     }
 
     final BsonDocument remoteVersion;
@@ -1455,7 +1547,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             .getRemoteVersionInfo(remoteEvent.getFullDocument());
         remoteVersion = remoteVersionInfo.getVersionDoc();
       } catch (final Exception e) {
-        desyncDocumentsFromRemote(namespace, docConfig.getDocumentId());
         emitError(docConfig,
             String.format(
                 Locale.US,
@@ -1465,7 +1556,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 logicalT,
                 namespace,
                 docConfig.getDocumentId()));
-        return;
+        return desyncDocumentsFromRemote(namespace, docConfig.getDocumentId());
       }
     }
 
@@ -1476,7 +1567,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     // a. If the resolved document is null:
     if (resolvedDocument == null) {
-      logger.info(String.format(
+      logger.debug(String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s deleting local and remote with remote "
               + "version acknowledged",
@@ -1487,11 +1578,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (acceptRemote) {
         // i. If the remote event was a DELETE, delete the document locally, desynchronize the
         //    document, and emit a change event for the deletion.
-        deleteOneFromRemote(namespace, docConfig.getDocumentId());
+        return deleteOneFromRemote(namespace, docConfig.getDocumentId());
       } else {
         // ii. Otherwise, delete the document locally, mark that there are pending writes for this
         //     document, and emit a change event for the deletion.
-        deleteOneFromResolution(namespace, docConfig.getDocumentId(), remoteVersion);
+        return deleteOneFromResolution(namespace, docConfig.getDocumentId(), remoteVersion);
       }
     } else {
       // b. If the resolved document is not null:
@@ -1503,7 +1594,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               resolvedDocument,
               syncConfig.getNamespaceConfig(namespace).getDocumentCodec());
 
-      logger.info(String.format(
+      logger.debug(String.format(
           Locale.US,
           "t='%d': resolveConflict ns=%s documentId=%s replacing local with resolved document "
                   + "with remote version acknowledged: %s",
@@ -1515,7 +1606,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // i. If the remote document is equal to the resolved document, replace the document
         //    locally, mark the document as having no pending writes, and emit a REPLACE change
         //    event if the document had not existed prior, or UPDATE if it had.
-        replaceOrUpsertOneFromRemote(
+        return replaceOrUpsertOneFromRemote(
             namespace,
             docConfig.getDocumentId(),
             docForStorage,
@@ -1524,7 +1615,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         // ii. Otherwise, replace the local document with the resolved document locally, mark that
         //     there are pending writes for this document, and emit an UPDATE change event, or a
         //     DELETE change event (if the remoteEvent's operation type was DELETE).
-        updateOrUpsertOneFromResolution(
+        return updateOrUpsertOneFromResolution(
             namespace,
             docConfig.getDocumentId(),
             docForStorage,
@@ -1702,15 +1793,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonValue... documentIds
   ) {
     this.waitUntilInitialized();
-    boolean added = false;
 
     try {
       ongoingOperationsGroup.enter();
-      for (final BsonValue documentId : documentIds) {
-        added = syncConfig.addSynchronizedDocument(namespace, documentId) || added;
-      }
 
-      if (added) {
+      if (syncConfig.addSynchronizedDocuments(namespace, documentIds)) {
         triggerListeningToNamespace(namespace);
       }
     } finally {
@@ -1725,7 +1812,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace  the namespace to put the document in.
    * @param documentIds the _ids of the documents.
    */
-  public void desyncDocumentsFromRemote(
+  @CheckReturnValue
+  public BatchOps desyncDocumentsFromRemote(
       final MongoNamespace namespace,
       final BsonValue... documentIds
   ) {
@@ -1739,11 +1827,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       for (final BsonValue documentId : documentIds) {
         removed = syncConfig.removeSynchronizedDocument(namespace, documentId) || removed;
       }
-
-      if (removed) {
-        getLocalCollection(namespace).deleteMany(
-            new Document("_id", new Document("$in", Arrays.asList(documentIds))));
-      }
     } finally {
       lock.unlock();
       ongoingOperationsGroup.exit();
@@ -1751,7 +1834,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     if (removed) {
       triggerListeningToNamespace(namespace);
+      return new BatchOps(
+          null, new DeleteManyModel<>(new Document("_id", new Document("$in", Arrays.asList(documentIds))))
+      );
     }
+
+    return null;
   }
 
   /**
@@ -2263,7 +2351,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param documentId the _id of the document.
    * @param document   the replacement document.
    */
-  private void updateOrUpsertOneFromResolution(
+  @CheckReturnValue
+  private BatchOps updateOrUpsertOneFromResolution(
       final MongoNamespace namespace,
       final BsonValue documentId,
       final BsonDocument document,
@@ -2274,55 +2363,76 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
+    final CoreDocumentSynchronizationConfig config;
+    final BsonDocument docForStorage;
     try {
-      final CoreDocumentSynchronizationConfig config =
+      config =
           syncConfig.getSynchronizedDocument(namespace, documentId);
       if (config == null) {
-        return;
+        return null;
       }
-
-      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
-      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
-      final BsonDocument documentBeforeUpdate = localCollection
-          .find(getDocumentIdFilter(documentId)).first();
-      if (documentBeforeUpdate != null) {
-        undoCollection.insertOne(documentBeforeUpdate);
-      }
+//
+//      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+//      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+//      final BsonDocument documentBeforeUpdate = localCollection
+//          .find(getDocumentIdFilter(documentId)).first();
+//      if (documentBeforeUpdate != null) {
+//        undoCollection.insertOne(documentBeforeUpdate);
+//      }
 
       // Remove forbidden fields from the resolved document before it will updated/upserted in the
       // local collection.
-      final BsonDocument docForStorage = sanitizeDocument(document);
+      docForStorage = sanitizeDocument(document);
 
-      final BsonDocument documentAfterUpdate = localCollection
-          .findOneAndReplace(
-              getDocumentIdFilter(documentId),
-              docForStorage,
-              new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
+//      final BsonDocument documentAfterUpdate = localCollection
+//          .findOneAndReplace(
+//              getDocumentIdFilter(documentId),
+//              docForStorage,
+//              new FindOneAndReplaceOptions().upsert(true).returnDocument(ReturnDocument.AFTER));
 
       if (remoteEvent.getOperationType() == OperationType.DELETE) {
-        event = ChangeEvents.changeEventForLocalInsert(namespace, documentAfterUpdate, true);
+//        event = ChangeEvents.changeEventForLocalInsert(namespace, documentAfterUpdate, true);
+          event = ChangeEvents.changeEventForLocalInsert(namespace, docForStorage, true);
       } else {
         event = ChangeEvents.changeEventForLocalUpdate(
             namespace,
             documentId,
-            UpdateDescription.diff(
-                    sanitizeDocument(remoteEvent.getFullDocument()),
-                    documentAfterUpdate),
+            null,
+//            UpdateDescription.diff(
+//                    sanitizeDocument(remoteEvent.getFullDocument()),
+//                    documentAfterUpdate),
             docForStorage,
             true);
       }
-      config.setSomePendingWrites(
+      config.setSomePendingWritesNoDB(
           logicalT,
           atVersion,
           event);
-      if (documentBeforeUpdate != null) {
-        undoCollection.deleteOne(getDocumentIdFilter(documentId));
-      }
+//      if (documentBeforeUpdate != null) {
+//        undoCollection.deleteOne(getDocumentIdFilter(documentId));
+//      }
     } finally {
       lock.unlock();
     }
     emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
+    return new BatchOps(
+        config, new ReplaceOneModel<>(getDocumentIdFilter(documentId), docForStorage));
   }
+
+
+
+//  class SyncWriteModel {
+//    final CoreDocumentSynchronizationConfig config;
+//    final WriteModel<BsonDocument> writeModel;
+//
+//    SyncWriteModel(
+//        final CoreDocumentSynchronizationConfig config,
+//        final WriteModel<BsonDocument> writeModel
+//    ) {
+//      this.config = config;
+//      this.writeModel = writeModel;
+//    }
+//  }
 
   /**
    * Replaces a single synchronized document by its given id with the given full document
@@ -2332,7 +2442,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param documentId the _id of the document.
    * @param remoteDocument   the replacement document.
    */
-  private void replaceOrUpsertOneFromRemote(
+  @CheckReturnValue
+  private BatchOps replaceOrUpsertOneFromRemote(
       final MongoNamespace namespace,
       final BsonValue documentId,
       final BsonDocument remoteDocument,
@@ -2342,41 +2453,48 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
+    final BsonDocument docForStorage;
+    final CoreDocumentSynchronizationConfig config;
     try {
-      final CoreDocumentSynchronizationConfig config =
-          syncConfig.getSynchronizedDocument(namespace, documentId);
+      config = syncConfig.getSynchronizedDocument(namespace, documentId);
       if (config == null) {
-        return;
+        return null;
       }
 
-      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
-      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
-      final BsonDocument documentBeforeUpdate = localCollection
-          .find(getDocumentIdFilter(documentId)).first();
-      if (documentBeforeUpdate != null) {
-        undoCollection.insertOne(documentBeforeUpdate);
-      }
+//      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+//      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+//      final BsonDocument documentBeforeUpdate = localCollection
+//          .find(getDocumentIdFilter(documentId)).first();
+//      if (documentBeforeUpdate != null) {
+//        undoCollection.insertOne(documentBeforeUpdate);
+//      }
 
       // Since we are accepting the remote document as the resolution to the conflict, it may
       // contain version information. Clone the document and remove forbidden fields from it before
       // storing it in the collection.
-      final BsonDocument docForStorage = sanitizeDocument(remoteDocument);
+      docForStorage = sanitizeDocument(remoteDocument);
 
-      localCollection
-          .findOneAndReplace(
-              getDocumentIdFilter(documentId),
-              docForStorage,
-              new FindOneAndReplaceOptions().upsert(true));
-      config.setPendingWritesComplete(atVersion);
-      if (documentBeforeUpdate != null) {
-        undoCollection.deleteOne(getDocumentIdFilter(documentId));
-      }
+//      localCollection
+//          .findOneAndReplace(
+//              getDocumentIdFilter(documentId),
+//              docForStorage,
+//              new FindOneAndReplaceOptions().upsert(true));
+      config.setPendingWritesCompleteNoDB(atVersion);
+//      if (documentBeforeUpdate != null) {
+//        undoCollection.deleteOne(getDocumentIdFilter(documentId));
+//      }
 
       event = ChangeEvents.changeEventForLocalReplace(namespace, documentId, docForStorage, false);
     } finally {
       lock.unlock();
     }
     emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
+    return new BatchOps(
+        config,
+        new ReplaceOneModel<>(
+            getDocumentIdFilter(documentId),
+            docForStorage,
+            new ReplaceOptions().upsert(true)));
   }
 
   /**
@@ -2425,7 +2543,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         if (config.getLastUncommittedChangeEvent() != null
             && config.getLastUncommittedChangeEvent().getOperationType()
             == OperationType.INSERT) {
-          desyncDocumentsFromRemote(config.getNamespace(), config.getDocumentId());
+          localCollection.bulkWrite(
+          desyncDocumentsFromRemote(config.getNamespace(), config.getDocumentId()).bulkWriteModels);
           undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
           return result;
         }
@@ -2492,7 +2611,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           if (config.getLastUncommittedChangeEvent() != null
               && config.getLastUncommittedChangeEvent().getOperationType()
               == OperationType.INSERT) {
-            desyncDocumentsFromRemote(config.getNamespace(), config.getDocumentId());
+            localCollection.bulkWrite(
+                desyncDocumentsFromRemote(config.getNamespace(),
+                    config.getDocumentId()).bulkWriteModels);
             undoCollection.deleteOne(getDocumentIdFilter(documentId));
             continue;
           }
@@ -2520,7 +2641,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
    */
-  private void deleteOneFromResolution(
+  @CheckReturnValue
+  private @Nullable BatchOps deleteOneFromResolution(
       final MongoNamespace namespace,
       final BsonValue documentId,
       final BsonDocument atVersion
@@ -2529,32 +2651,35 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
+    final CoreDocumentSynchronizationConfig config;
     try {
-      final CoreDocumentSynchronizationConfig config =
-          syncConfig.getSynchronizedDocument(namespace, documentId);
+      config = syncConfig.getSynchronizedDocument(namespace, documentId);
       if (config == null) {
-        return;
+        return null;
       }
 
-      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
-      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
-      final BsonDocument documentToDelete = localCollection
-          .find(getDocumentIdFilter(documentId)).first();
-      if (documentToDelete != null) {
-        undoCollection.insertOne(documentToDelete);
-      }
-      localCollection
-          .deleteOne(getDocumentIdFilter(documentId));
+//      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+//      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
+//      final BsonDocument documentToDelete = localCollection
+//          .find(getDocumentIdFilter(documentId)).first();
+//      if (documentToDelete != null) {
+//        undoCollection.insertOne(documentToDelete);
+//      }
+
+
       event = ChangeEvents.changeEventForLocalDelete(namespace, documentId, true);
-      config.setSomePendingWrites(
-          logicalT, atVersion, event);
-      if (documentToDelete != null) {
-        undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
-      }
+      config.setSomePendingWritesNoDB(logicalT, atVersion, event);
+//      if (documentToDelete != null) {
+//        undoCollection.deleteOne(getDocumentIdFilter(documentToDelete));
+//      }
+
+
     } finally {
       lock.unlock();
     }
+
     emitEvent(documentId, event);
+    return new BatchOps(config, new DeleteOneModel<>(getDocumentIdFilter(documentId)));
   }
 
   /**
@@ -2564,35 +2689,36 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
    */
-  private void deleteOneFromRemote(
+  @CheckReturnValue @Nullable
+  private BatchOps deleteOneFromRemote(
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
     final Lock lock =
         this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
+    final CoreDocumentSynchronizationConfig config;
     try {
-      final CoreDocumentSynchronizationConfig config =
+      config =
           syncConfig.getSynchronizedDocument(namespace, documentId);
       if (config == null) {
-        return;
+        return null;
       }
       final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
       final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
       final BsonDocument documentToDelete = localCollection
           .find(getDocumentIdFilter(documentId)).first();
       if (documentToDelete == null) {
-        desyncDocumentsFromRemote(namespace, documentId);
-        return;
+        return desyncDocumentsFromRemote(namespace, documentId);
       }
       undoCollection.insertOne(documentToDelete);
       localCollection.deleteOne(getDocumentIdFilter(documentId));
-      desyncDocumentsFromRemote(namespace, documentId);
       undoCollection.deleteOne(getDocumentIdFilter(documentId));
     } finally {
       lock.unlock();
     }
     emitEvent(documentId, ChangeEvents.changeEventForLocalDelete(namespace, documentId, false));
+    return desyncDocumentsFromRemote(namespace, documentId);
   }
 
   private void triggerListeningToNamespace(final MongoNamespace namespace) {
@@ -2725,7 +2851,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace the namespace referring to the local collection.
    * @return the local collection representing the given namespace for raw document operations.
    */
-  private MongoCollection<BsonDocument> getLocalCollection(final MongoNamespace namespace) {
+  MongoCollection<BsonDocument> getLocalCollection(final MongoNamespace namespace) {
     return getLocalCollection(
         namespace,
         BsonDocument.class,
@@ -2764,17 +2890,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private Set<BsonDocument> getLatestDocumentsForStaleFromRemote(
       final NamespaceSynchronizationConfig nsConfig,
       final Set<BsonValue> staleIds) {
+
     final BsonArray ids = new BsonArray();
-    for (final BsonValue bsonValue : staleIds) {
-      ids.add(new BsonDocument("_id", bsonValue));
-    }
+    Collections.addAll(ids, staleIds.toArray(new BsonValue[0]));
 
     if (ids.size() == 0) {
       return new HashSet<>();
     }
 
     return this.getRemoteCollection(nsConfig.getNamespace()).find(
-        new Document("$or", ids)
+        new Document("_id", new Document("$in", ids))
     ).into(new HashSet<>());
   }
 

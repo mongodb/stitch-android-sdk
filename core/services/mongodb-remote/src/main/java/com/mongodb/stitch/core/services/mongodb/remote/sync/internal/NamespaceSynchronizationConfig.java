@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -141,6 +142,10 @@ class NamespaceSynchronizationConfig
     }
   }
 
+  public MongoCollection<CoreDocumentSynchronizationConfig> getDocsColl() {
+    return docsColl;
+  }
+
   boolean isConfigured() {
     nsLock.readLock().lock();
     try {
@@ -196,12 +201,28 @@ class NamespaceSynchronizationConfig
   Set<BsonValue> getStaleDocumentIds() {
     nsLock.readLock().lock();
     try {
-      final DistinctIterable<BsonValue> staleDocIds = this.docsColl.distinct(
-          CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD,
-          new BsonDocument(
-              CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE, BsonBoolean.TRUE),
-          BsonValue.class);
-      return staleDocIds.into(new HashSet<>());
+      if (this.namespacesColl.count(
+          getNsFilter(getNamespace())
+              .append(ConfigCodec.Fields.IS_STALE, new BsonBoolean(true))
+      ) != 0) {
+        // If the entire namespace is stale, return all the document ids in the namespace that
+        // are not paused.
+        final DistinctIterable<BsonValue> unpausedStaleDocIds = this.docsColl.distinct(
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD,
+            getNsFilter(getNamespace()).append(
+                CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_PAUSED, BsonBoolean.FALSE),
+            BsonValue.class);
+        return unpausedStaleDocIds.into(new HashSet<>());
+      } else {
+        // Return just the stale documents that have been marked stale because they were
+        // individually unpaused and marked as stale.
+        final DistinctIterable<BsonValue> staleDocIds = this.docsColl.distinct(
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD,
+            getNsFilter(getNamespace()).append(
+                CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE, BsonBoolean.TRUE),
+            BsonValue.class);
+        return staleDocIds.into(new HashSet<>());
+      }
     } finally {
       nsLock.readLock().unlock();
     }
@@ -209,6 +230,32 @@ class NamespaceSynchronizationConfig
 
   Codec getDocumentCodec() {
     return documentCodec;
+  }
+
+  boolean addSynchronizedDocuments(
+      final BsonValue... documentIds
+  ) {
+    Map<BsonValue, CoreDocumentSynchronizationConfig> configs = new HashMap<>();
+    for (final BsonValue documentId : documentIds) {
+      if (getSynchronizedDocument(documentId) == null) {
+        configs.put(
+            documentId,
+            new CoreDocumentSynchronizationConfig(docsColl, namespace, documentId));
+      }
+    }
+
+    if (configs.size() > 0) {
+      nsLock.writeLock().lock();
+      try {
+        docsColl.insertMany(new ArrayList<>(configs.values()));
+        syncedDocuments.putAll(configs);
+        return true;
+      } finally {
+        nsLock.writeLock().unlock();
+      }
+    }
+
+    return false;
   }
 
   boolean addSynchronizedDocument(
@@ -260,12 +307,28 @@ class NamespaceSynchronizationConfig
   void setStale(final boolean stale) throws InterruptedException {
     nsLock.writeLock().lockInterruptibly();
     try {
-      docsColl.updateMany(
+      namespacesColl.updateOne(
           getNsFilter(getNamespace()),
           new BsonDocument("$set",
               new BsonDocument(
-                  CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE,
-                  new BsonBoolean(stale))));
+                  ConfigCodec.Fields.IS_STALE,
+                  new BsonBoolean(stale)
+              )));
+
+      // if we're setting stale to be false, also mark any documents that were individually marked
+      // as stale to not stale
+      if (!stale) {
+        docsColl.updateMany(
+            getNsFilter(getNamespace())
+                .append(
+                    CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE,
+                    BsonBoolean.TRUE),
+            new BsonDocument("$set",
+                new BsonDocument(
+                    CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE,
+                    BsonBoolean.FALSE))
+        );
+      }
     } catch (IllegalStateException e) {
       // eat this
     } finally {
@@ -348,6 +411,7 @@ class NamespaceSynchronizationConfig
     static class Fields {
       static final String NAMESPACE_FIELD = "namespace";
       static final String SCHEMA_VERSION_FIELD = "schema_version";
+      static final String IS_STALE = "is_stale";
     }
   }
 }

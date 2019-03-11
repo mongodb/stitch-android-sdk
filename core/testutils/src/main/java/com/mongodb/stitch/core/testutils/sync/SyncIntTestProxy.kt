@@ -54,9 +54,11 @@ import java.util.concurrent.atomic.AtomicInteger
 class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     private fun measure(title: String, block: () -> Unit) {
         val now = System.currentTimeMillis()
+        log("starting $title at $now")
 
         block()
 
+        log("ended $title at ${System.currentTimeMillis()}")
         log("$title took ${(System.currentTimeMillis() - now)/1000} seconds")
     }
 
@@ -75,7 +77,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
             ExceptionListener { _, _ -> })
 
         val array: List<Byte> = (0..1899).map { 0.toByte() }
-        val docs = (0..999).map { Document("bin", Binary(array.toByteArray())) }
+        val docs = (0..29999).map { Document("bin", Binary(array.toByteArray())) }
 
         var i = 0
         val ids = docs.chunked(1000).map {
@@ -89,7 +91,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         }
 
         this.measure("sync pass") {
-            streamAndSync()
+            syncTestRunner.dataSynchronizer.doSyncPass()
         }
 
         log("all done")

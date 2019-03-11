@@ -164,6 +164,7 @@ subprojects {
 
             javadoc {
                 title = "$project.name $version"
+                options.addStringOption("source", "8")
                 options.author true
                 options.author = true
                 options.version = true
@@ -230,6 +231,7 @@ subprojects {
                 exclude '**/R.html', '**/R.*.html', '**/index.html', '**/*.kt', '**/test*/**'
 
                 title = "$project.name $version"
+                options.addStringOption("source", "8")
                 options.author true
                 options.author = true
                 options.version = true
@@ -461,6 +463,14 @@ rootProject.gradle.projectsEvaluated {
         } else {
             println "Building without analytics. Use -Panalytics to enable analytics."
         }
+
+        options.doclet = "CodeExampleManifestDoclet"
+        options.docletpath new File(rootDir, "contrib/doclet/bin/")
+        options.addStringOption("examplesPath", "contrib/docs-examples/")
+        options.addStringOption("manifestPath", "build/docs/examplesManifest.json")
+
+        // Appease 'unnamed module' error on javadoc 11.0.2+
+        options.addStringOption("source", "8")
 
         String androidDocsDir = ""
         subprojects {

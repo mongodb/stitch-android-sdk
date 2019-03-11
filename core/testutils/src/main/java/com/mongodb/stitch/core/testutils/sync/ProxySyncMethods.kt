@@ -22,13 +22,13 @@ interface ProxySyncMethods {
         conflictResolver: ConflictHandler<Document?>,
         changeEventListener: ChangeEventListener<Document>?,
         exceptionListener: ExceptionListener?
-    )
+    ): Void?
 
     fun syncMany(vararg id: BsonValue)
 
-    fun syncOne(id: BsonValue)
+    fun syncOne(id: BsonValue): Void?
 
-    fun desyncOne(id: BsonValue)
+    fun desyncOne(id: BsonValue): Void?
 
     fun getSyncedIds(): Set<BsonValue>
 

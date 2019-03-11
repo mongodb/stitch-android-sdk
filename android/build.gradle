@@ -32,7 +32,8 @@ subprojects {
                     if (file.exists()) {
                         properties.load(project.rootProject.file('local.properties').newDataInputStream())
                     }
-                    testInstrumentationRunnerArgument "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://10.0.2.2:9090")
+                    testInstrumentationRunnerArgument "test.stitch.baseURL",
+                            properties.getProperty("test.stitch.baseURL", "http://10.1.14.181:9090")
                 }
                 lintOptions {
                     disable 'InvalidPackage'

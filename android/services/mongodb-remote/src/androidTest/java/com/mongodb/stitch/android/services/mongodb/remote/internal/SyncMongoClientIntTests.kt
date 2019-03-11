@@ -73,16 +73,18 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             conflictResolver: ConflictHandler<Document?>,
             changeEventListener: ChangeEventListener<Document>?,
             exceptionListener: ExceptionListener?
-        ) {
-            sync.configure(conflictResolver, changeEventListener, exceptionListener)
+        ): Void? {
+            return Tasks.await(
+                sync.configure(conflictResolver, changeEventListener, exceptionListener)
+            )
         }
 
-        override fun syncOne(id: BsonValue) {
-            sync.syncOne(id)
+        override fun syncOne(id: BsonValue): Void? {
+            return Tasks.await(sync.syncOne(id))
         }
 
         override fun syncMany(vararg id: BsonValue) {
-            sync.syncMany(*id)
+            Tasks.await(sync.syncMany(*id))
         }
 
         override fun count(filter: Bson): Long {
@@ -117,12 +119,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             return Tasks.await(sync.deleteMany(filter))
         }
 
-        override fun desyncOne(id: BsonValue) {
-            sync.desyncOne(id)
+        override fun desyncOne(id: BsonValue): Void? {
+            return Tasks.await(sync.desyncOne(id))
         }
 
         override fun getSyncedIds(): Set<BsonValue> {
-            return sync.syncedIds
+            return Tasks.await(sync.syncedIds)
         }
 
         override fun find(filter: Bson): Iterable<Document?> {
@@ -130,11 +132,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         }
 
         override fun resumeSyncForDocument(documentId: BsonValue): Boolean {
-            return sync.resumeSyncForDocument(documentId)
+            return Tasks.await(sync.resumeSyncForDocument(documentId))
         }
 
         override fun getPausedDocumentIds(): Set<BsonValue> {
-            return sync.pausedDocumentIds
+            return Tasks.await(sync.pausedDocumentIds)
         }
     }
 
@@ -256,39 +258,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     }
 
     @Test
-    fun testSyncMany_Performance() {
-        val now = System.currentTimeMillis()
-
-        val array: List<Byte> = (0..1900).map { 0.toByte() }
-        val docs = (0..5000).map { Document("bin", Binary(array.toByteArray())) }
-        val ids = docs.chunked(1000).map {
-            remoteMethods().insertMany(it).insertedIds.map { it.value }
-        }.flatten()
-
-        syncMethods().syncMany(*ids.toTypedArray())
-
-        println("sync many took ${(System.currentTimeMillis() - now)/1000} seconds")
-    }
-
-    @Test
-    fun testInitSync_Performance() {
-        val now = System.currentTimeMillis()
-
-        val array: List<Byte> = (0..1900).map { 0.toByte() }
-        val docs = (0..5000).map { Document("bin", Binary(array.toByteArray())) }
-        val ids = docs.chunked(1000).map {
-            remoteMethods().insertMany(it).insertedIds.map { it.value }
-        }.flatten()
-
-        syncMethods().syncMany(*ids.toTypedArray())
-
-
-        println("sync many took ${(System.currentTimeMillis() - now)/1000} seconds")
-    }
-
-    @Test
     override fun testInitSyncPerf() {
-        testProxy.testInitSyncPerf()
+//        testProxy.testInitSyncPerf()
     }
 
     @Test

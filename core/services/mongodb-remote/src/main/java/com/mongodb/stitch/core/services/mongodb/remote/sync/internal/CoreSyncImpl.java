@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.client.model.WriteModel;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
@@ -85,12 +86,16 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
 
   @Override
   public void desyncOne(final BsonValue id) {
-    this.dataSynchronizer.desyncDocumentsFromRemote(namespace, id);
+    this.dataSynchronizer.getLocalCollection(namespace).bulkWrite(
+        this.dataSynchronizer.desyncDocumentsFromRemote(namespace, id).bulkWriteModels
+    );
   }
 
   @Override
   public void desyncMany(final BsonValue... ids) {
-    this.dataSynchronizer.desyncDocumentsFromRemote(namespace, ids);
+    this.dataSynchronizer.getLocalCollection(namespace).bulkWrite(
+        this.dataSynchronizer.desyncDocumentsFromRemote(namespace, ids).bulkWriteModels
+    );
   }
 
   @Override
