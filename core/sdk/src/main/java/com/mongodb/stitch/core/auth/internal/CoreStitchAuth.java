@@ -351,7 +351,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       if (credential.getProviderCapabilities().getReusesExistingSession()) {
         for (final AuthInfo authInfo : this.allUsersAuthInfo.values()) {
           if (authInfo.getLoggedInProviderType().equals(credential.getProviderType())) {
-            return switchToUserWithId(authInfo.getUserId());
+            if (authInfo.isLoggedIn()) {
+              return switchToUserWithId(authInfo.getUserId());
+            }
+            removeUserWithIdInternal(authInfo.getUserId());
           }
         }
       }
