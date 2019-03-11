@@ -21,7 +21,9 @@ import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
@@ -89,6 +91,17 @@ interface InstanceChangeStreamListener {
    */
   Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(
       final MongoNamespace namespace);
+
+  /**
+   * Returns the lock for the NamespaceChangeStreamListener for a given namespace. If no listener
+   * exists yet for this namespace, a lock will still be provided, and it will be the lock used
+   * when that NamespaceChangeStreamListener is created. This lock should be taken if the stream
+   * needs to be prevented from opening or processing events
+   *
+   * @param namespace the namespace to get a lock for.
+   * @return a ReadWriteLock for the given namespace
+   */
+  @Nonnull ReadWriteLock getLockForNamespace(final MongoNamespace namespace);
 
   /**
    * If there is an unprocessed change event for a particular document ID, fetch it from the
