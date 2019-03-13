@@ -36,7 +36,7 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
     }
 
     override fun getStitchBaseURL(): String {
-        return "http://10.1.14.181:9090"
+        return "http://10.0.2.2:9090"
     }
 
     fun getAppClient(app: AppResponse): StitchAppClient {

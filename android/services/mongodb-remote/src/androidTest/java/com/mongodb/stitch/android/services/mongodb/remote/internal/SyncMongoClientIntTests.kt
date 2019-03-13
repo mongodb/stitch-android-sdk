@@ -259,7 +259,7 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     @Test
     override fun testInitSyncPerf() {
-        testProxy.testInitSyncPerf()
+//        testProxy.testInitSyncPerf()
     }
 
     @Test

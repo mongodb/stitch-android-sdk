@@ -25,10 +25,14 @@ import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nonnull;
 
+import org.bson.BsonArray;
 import org.bson.BsonBinary;
 import org.bson.BsonBinaryReader;
 import org.bson.BsonBinaryWriter;
@@ -40,6 +44,7 @@ import org.bson.BsonReader;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
+import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
@@ -109,6 +114,17 @@ class CoreDocumentSynchronizationConfig {
     final BsonDocument filter = new BsonDocument();
     filter.put(ConfigCodec.Fields.NAMESPACE_FIELD, new BsonString(namespace.toString()));
     filter.put(ConfigCodec.Fields.DOCUMENT_ID_FIELD, documentId);
+    return filter;
+  }
+
+  static BsonDocument getDocsFilter(
+      @Nonnull final MongoNamespace namespace,
+      @Nonnull final BsonValue... documentIds
+  ) {
+    final BsonDocument filter = new BsonDocument();
+    filter.put(ConfigCodec.Fields.NAMESPACE_FIELD, new BsonString(namespace.toString()));
+    filter.put(ConfigCodec.Fields.DOCUMENT_ID_FIELD,
+        new BsonDocument("$in", new BsonArray(Arrays.asList(documentIds))));
     return filter;
   }
 

@@ -82,7 +82,6 @@ import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
-import org.bson.BsonObjectId;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.Codec;
@@ -100,11 +99,12 @@ import org.bson.diagnostics.Loggers;
 public class DataSynchronizer implements NetworkMonitor.StateListener {
   class BatchOps {
     final List<WriteModel<BsonDocument>> bulkWriteModels;
-    final List<CoreDocumentSynchronizationConfig> configs;
-    final List<ChangeEvent<BsonDocument>> changeEvents;
+    final List<WriteModel<CoreDocumentSynchronizationConfig>> configs;
+    final Set<BsonValue> ids;
 
-    BatchOps(final CoreDocumentSynchronizationConfig config,
-             final WriteModel<BsonDocument> writeModel) {
+    BatchOps(final WriteModel<CoreDocumentSynchronizationConfig> config,
+             final WriteModel<BsonDocument> writeModel,
+             final BsonValue... ids) {
       this();
       if (writeModel != null) {
         this.bulkWriteModels.add(writeModel);
@@ -112,12 +112,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (config != null) {
         this.configs.add(config);
       }
+      this.ids.addAll(Arrays.asList(ids));
     }
 
     BatchOps() {
       this.bulkWriteModels = new ArrayList<>();
       this.configs = new ArrayList<>();
-      this.changeEvents = new ArrayList<>();
+      this.ids = new HashSet<>();
     }
 
     BatchOps merge(@Nullable final BatchOps batchOps) {
@@ -127,6 +128,33 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       return this;
+    }
+
+    void commitAndClear(final MongoNamespace namespace,
+                        final MongoCollection<CoreDocumentSynchronizationConfig> docsColl) {
+      MongoCollection<BsonDocument> localCollection =
+          getLocalCollection(namespace);
+
+      List<BsonDocument> oldDocs = localCollection.find(
+          new Document("_id", new Document("$in", ids))
+      ).into(new ArrayList<>());
+      if (oldDocs.size() > 0) {
+        getUndoCollection(namespace).insertMany(oldDocs);
+      }
+      if (this.bulkWriteModels.size() > 0) {
+        localCollection.bulkWrite(this.bulkWriteModels);
+      }
+      if (this.configs.size() > 0) {
+        docsColl.bulkWrite(configs);
+      }
+      if (oldDocs.size() > 0) {
+        getUndoCollection(namespace).deleteMany(
+            new Document("_id", new Document("$in", ids))
+        );
+      }
+
+      this.bulkWriteModels.clear();
+      this.configs.clear();
     }
   }
 
@@ -687,42 +715,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           docConfig.setStale(false);
         }
 
-        final List<ReplaceOneModel<CoreDocumentSynchronizationConfig>> configModels
-            = new ArrayList<>();
-
-        for (CoreDocumentSynchronizationConfig config : batchOps.configs) {
-          configModels.add(
-              new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
-                  nsConfig.getNamespace(), config.getDocumentId()
-              ), config, new ReplaceOptions().upsert(true))
-          );
-        }
-
-        final List<BsonValue> ids = new ArrayList<>();
-        for (CoreDocumentSynchronizationConfig config : batchOps.configs) {
-          ids.add(config.getDocumentId());
-        }
-
-        MongoCollection<BsonDocument> localCollection =
-            getLocalCollection(nsConfig.getNamespace());
-
-        List<BsonDocument> oldDocs = localCollection.find(
-            new Document("_id", new Document("$in", ids))
-        ).into(new ArrayList<>());
-        if (oldDocs.size() > 0) {
-          getUndoCollection(nsConfig.getNamespace()).insertMany(oldDocs);
-        }
-        if (batchOps.bulkWriteModels.size() > 0) {
-          localCollection.bulkWrite(batchOps.bulkWriteModels);
-        }
-        if (batchOps.configs.size() > 0) {
-          nsConfig.getDocsColl().bulkWrite(configModels);
-        }
-        if (oldDocs.size() > 0) {
-          getUndoCollection(nsConfig.getNamespace()).deleteMany(
-              new Document("_id", new Document("$in", ids))
-          );
-        }
+        batchOps.commitAndClear(nsConfig.getNamespace(), nsConfig.getDocsColl());
       } finally {
         nsConfig.getLock().writeLock().unlock();
         streamerLock.writeLock().unlock();
@@ -1405,7 +1398,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 committedEvent.getUpdateDescription(),
                 false));
 
-            docConfig.setPendingWritesComplete(nextVersion);
+
+            docConfig.setPendingWritesCompleteNoDB(nextVersion);
+
+            if (committedEvent.getOperationType() != OperationType.DELETE) {
+              batchOps.configs.add(
+                  new ReplaceOneModel<>
+                      (CoreDocumentSynchronizationConfig.getDocFilter(
+                          nsConfig.getNamespace(), docConfig.getDocumentId()),
+                        docConfig));
+            }
           } else {
             // v. Otherwise, invoke the collection-level conflict handler with the local change
             // event and the remote change event (synthesized by doing a lookup of the document or
@@ -1427,11 +1429,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 remoteChangeEvent));
           }
         }
-        if (batchOps.bulkWriteModels.size() > 0) {
-          getLocalCollection(nsConfig.getNamespace()).bulkWrite(
-              batchOps.bulkWriteModels
-          );
-        }
+        batchOps.commitAndClear(nsConfig.getNamespace(), nsConfig.getDocsColl());
       } finally {
         nsConfig.getLock().writeLock().unlock();
         streamerLock.writeLock().unlock();
@@ -1833,22 +1831,22 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.waitUntilInitialized();
     final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
-    boolean removed = false;
+    final DeleteManyModel<CoreDocumentSynchronizationConfig> configsToDelete;
     try {
-      ongoingOperationsGroup.enter();
-
-      for (final BsonValue documentId : documentIds) {
-        removed = syncConfig.removeSynchronizedDocument(namespace, documentId) || removed;
-      }
+      configsToDelete =
+          syncConfig.removeSynchronizedDocuments(namespace, documentIds);
     } finally {
       lock.unlock();
       ongoingOperationsGroup.exit();
     }
 
-    if (removed) {
+    if (configsToDelete != null) {
       return new BatchOps(
-          null, new DeleteManyModel<>(
-              new Document("_id", new Document("$in", Arrays.asList(documentIds))))
+          configsToDelete,
+          new DeleteManyModel<>(
+              new Document("_id", new Document("$in", Arrays.asList(documentIds)))
+          ),
+          documentIds
       );
     }
 
@@ -2414,23 +2412,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
     emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
     return new BatchOps(
-        config, new ReplaceOneModel<>(getDocumentIdFilter(documentId), docForStorage, new ReplaceOptions().upsert(true)));
+        new ReplaceOneModel<>(
+            CoreDocumentSynchronizationConfig.getDocFilter(
+              namespace, config.getDocumentId()
+            ), config, new ReplaceOptions().upsert(true)),
+        new ReplaceOneModel<>(
+            getDocumentIdFilter(documentId),
+            docForStorage,
+            new ReplaceOptions().upsert(true)),
+        documentId);
   }
-
-
-
-//  class SyncWriteModel {
-//    final CoreDocumentSynchronizationConfig config;
-//    final WriteModel<BsonDocument> writeModel;
-//
-//    SyncWriteModel(
-//        final CoreDocumentSynchronizationConfig config,
-//        final WriteModel<BsonDocument> writeModel
-//    ) {
-//      this.config = config;
-//      this.writeModel = writeModel;
-//    }
-//  }
 
   /**
    * Replaces a single synchronized document by its given id with the given full document
@@ -2470,11 +2461,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
     return new BatchOps(
-        config,
+        new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
+            namespace, config.getDocumentId()
+        ), config, new ReplaceOptions().upsert(true)),
         new ReplaceOneModel<>(
             getDocumentIdFilter(documentId),
             docForStorage,
-            new ReplaceOptions().upsert(true)));
+            new ReplaceOptions().upsert(true)),
+        documentId);
   }
 
   /**
@@ -2524,7 +2518,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             && config.getLastUncommittedChangeEvent().getOperationType()
             == OperationType.INSERT) {
           localCollection.bulkWrite(
-          desyncDocumentsFromRemote(config.getNamespace(), config.getDocumentId()).bulkWriteModels);
+            desyncDocumentsFromRemote(
+                config.getNamespace(), config.getDocumentId()).bulkWriteModels);
+
           triggerListeningToNamespace(namespace);
           undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
           return result;
@@ -2647,7 +2643,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
 
     emitEvent(documentId, event);
-    return new BatchOps(config, new DeleteOneModel<>(getDocumentIdFilter(documentId)));
+    return new BatchOps(
+        new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
+          namespace, config.getDocumentId()
+        ), config, new ReplaceOptions().upsert(true)),
+        new DeleteOneModel<>(getDocumentIdFilter(documentId)),
+        documentId);
   }
 
   /**
@@ -2662,26 +2663,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
-    final Lock lock =
-        this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
     final CoreDocumentSynchronizationConfig config;
     try {
-      config =
-          syncConfig.getSynchronizedDocument(namespace, documentId);
+      config = syncConfig.getSynchronizedDocument(namespace, documentId);
       if (config == null) {
         return null;
       }
-      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
-      final MongoCollection<BsonDocument> undoCollection = getUndoCollection(namespace);
-      final BsonDocument documentToDelete = localCollection
-          .find(getDocumentIdFilter(documentId)).first();
-      if (documentToDelete == null) {
-        return desyncDocumentsFromRemote(namespace, documentId);
-      }
-      undoCollection.insertOne(documentToDelete);
-      localCollection.deleteOne(getDocumentIdFilter(documentId));
-      undoCollection.deleteOne(getDocumentIdFilter(documentId));
     } finally {
       lock.unlock();
     }
