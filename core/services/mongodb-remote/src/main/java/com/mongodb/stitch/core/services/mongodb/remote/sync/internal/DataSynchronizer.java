@@ -121,13 +121,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       this.ids = new HashSet<>();
     }
 
-    BatchOps merge(@Nullable final BatchOps batchOps) {
+    void merge(@Nullable final BatchOps batchOps) {
       if (batchOps != null) {
         this.bulkWriteModels.addAll(batchOps.bulkWriteModels);
         this.configs.addAll(batchOps.configs);
+        this.ids.addAll(batchOps.ids);
       }
-
-      return this;
     }
 
     void commitAndClear(final MongoNamespace namespace,
