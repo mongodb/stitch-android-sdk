@@ -6,7 +6,7 @@ pushd "$(dirname "$0")"
 
 USER=`whoami`
 
-./generate_docs.sh
+./generate_docs.sh "$1"
 
 if ! which aws; then
     echo "aws CLI not found. see: https://docs.aws.amazon.com/cli/latest/userguide/installing.html"
