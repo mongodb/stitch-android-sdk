@@ -1400,7 +1400,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
 
             docConfig.setPendingWritesCompleteNoDB(nextVersion);
-
             if (committedEvent.getOperationType() != OperationType.DELETE) {
               batchOps.configs.add(
                   new ReplaceOneModel<>
@@ -2415,7 +2414,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         new ReplaceOneModel<>(
             CoreDocumentSynchronizationConfig.getDocFilter(
               namespace, config.getDocumentId()
-            ), config, new ReplaceOptions().upsert(true)),
+            ), config),
         new ReplaceOneModel<>(
             getDocumentIdFilter(documentId),
             docForStorage,
@@ -2463,7 +2462,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return new BatchOps(
         new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
             namespace, config.getDocumentId()
-        ), config, new ReplaceOptions().upsert(true)),
+        ), config),
         new ReplaceOneModel<>(
             getDocumentIdFilter(documentId),
             docForStorage,
@@ -2486,9 +2485,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       ongoingOperationsGroup.enter();
       final ChangeEvent<BsonDocument> event;
       final DeleteResult result;
-      final Lock lock =
-          this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
-      lock.lock();
+      final NamespaceSynchronizationConfig nsConfig =
+          this.syncConfig.getNamespaceConfig(namespace);
+      nsConfig.getLock().writeLock().lock();
       try {
         final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
         final BsonDocument docToDelete = localCollection
@@ -2517,10 +2516,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         if (config.getLastUncommittedChangeEvent() != null
             && config.getLastUncommittedChangeEvent().getOperationType()
             == OperationType.INSERT) {
-          localCollection.bulkWrite(
-            desyncDocumentsFromRemote(
-                config.getNamespace(), config.getDocumentId()).bulkWriteModels);
-
+          final BatchOps batchOps = desyncDocumentsFromRemote(
+              config.getNamespace(), config.getDocumentId());
+          batchOps.commitAndClear(namespace, nsConfig.getDocsColl());
           triggerListeningToNamespace(namespace);
           undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
           return result;
@@ -2529,7 +2527,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         config.setSomePendingWrites(logicalT, event);
         undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
       } finally {
-        lock.unlock();
+        nsConfig.getLock().writeLock().unlock();
       }
       emitEvent(BsonUtils.getDocumentId(event.getDocumentKey()), event);
       return result;
@@ -2646,7 +2644,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return new BatchOps(
         new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
           namespace, config.getDocumentId()
-        ), config, new ReplaceOptions().upsert(true)),
+        ), config),
         new DeleteOneModel<>(getDocumentIdFilter(documentId)),
         documentId);
   }
