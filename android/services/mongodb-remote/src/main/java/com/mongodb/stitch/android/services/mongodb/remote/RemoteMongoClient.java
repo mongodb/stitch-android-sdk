@@ -22,7 +22,19 @@ import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoCl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
 
 /**
- * The remote MongoClient used for working with data in MongoDB remotely via Stitch.
+ * The RemoteMongoClient is the entry point for working with data in MongoDB
+ * remotely via Stitch.
+ * <p>
+ * An instance can be retrieved using {@link com.mongodb.stitch.android.core.StitchAppClient#getServiceClient}
+ * with this class's {@link factory}.
+ * </p><p>
+ * Before using the database, you will have to log in using {@link com.mongodb.stitch.android.core.auth.StitchAuth}.
+ * </p><p>
+ * Once logged in, you can access the database with {@link getDatabase}.
+ * </p>
+ * @see com.mongodb.stitch.android.core.StitchAppClient
+ * @see com.mongodb.stitch.android.core.auth.StitchAuth
+ * @see RemoteMongoDatabase
  */
 public interface RemoteMongoClient {
 
