@@ -1347,10 +1347,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     batchOps.merge(
                         desyncDocumentsFromRemote(nsConfig.getNamespace(),
                             docConfig.getDocumentId()));
+                    triggerListeningToNamespace(nsConfig.getNamespace());
                   }
                 } else {
                   batchOps.merge(
                     desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId()));
+                  triggerListeningToNamespace(nsConfig.getNamespace());
                 }
                 break;
               }
