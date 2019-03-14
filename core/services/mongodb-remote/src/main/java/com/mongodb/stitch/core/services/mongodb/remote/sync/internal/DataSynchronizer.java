@@ -2814,7 +2814,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace the namespace referring to the local collection.
    * @return the local collection representing the given namespace for raw document operations.
    */
-  MongoCollection<BsonDocument> getLocalCollection(final MongoNamespace namespace) {
+  private MongoCollection<BsonDocument> getLocalCollection(final MongoNamespace namespace) {
     return getLocalCollection(
         namespace,
         BsonDocument.class,
