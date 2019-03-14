@@ -60,6 +60,7 @@ import java.util.Random
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
 
 class SyncUnitTestHarness : Closeable {
     companion object {
@@ -759,7 +760,8 @@ class SyncUnitTestHarness : Closeable {
             nsConfigMock,
             (context as DataSynchronizerTestContextImpl).service,
             context.networkMonitor,
-            context.authMonitor)
+            context.authMonitor,
+            ReentrantReadWriteLock())
 
         return namespaceChangeStreamListener to nsConfigMock
     }

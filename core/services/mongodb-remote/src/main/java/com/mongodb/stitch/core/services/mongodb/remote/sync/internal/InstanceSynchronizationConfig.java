@@ -64,11 +64,27 @@ class InstanceSynchronizationConfig
         Indexes.ascending(
             NamespaceSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD),
         new IndexOptions().unique(true));
+
     this.docsColl.createIndex(
         Indexes.ascending(
             CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD,
             CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD),
         new IndexOptions().unique(true));
+
+    // used to scan for stale documents when the namespace is marked as not stale,
+    this.docsColl.createIndex(
+        Indexes.ascending(
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD,
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE,
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD));
+
+    // used to scan for unpaused documents when the whole namespace is marked as stale
+    this.docsColl.createIndex(
+        Indexes.ascending(
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD,
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_PAUSED,
+            CoreDocumentSynchronizationConfig.ConfigCodec.Fields.DOCUMENT_ID_FIELD)
+    );
 
     this.instanceLock = new ReentrantReadWriteLock();
 

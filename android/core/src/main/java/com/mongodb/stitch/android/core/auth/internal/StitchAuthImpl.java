@@ -34,9 +34,10 @@ import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.internal.StitchUserFactory;
 import com.mongodb.stitch.core.internal.common.Storage;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import javax.annotation.Nullable;
 import org.bson.Document;
 
@@ -50,12 +51,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   /**
    * A set of auth listeners that should be dispatched to asynchronously
    */
-  private final Set<StitchAuthListener> listeners = new HashSet<>();
+  private final ConcurrentMap<StitchAuthListener, Boolean> listeners =
+      new ConcurrentHashMap<>();
   /**
    * A set of auth listeners that should be dispatched to synchronously.
    * For internal use.
    */
-  private final Set<StitchAuthListener> synchronousListeners = new HashSet<>();
+  private final ConcurrentMap<StitchAuthListener, Boolean> synchronousListeners =
+      new ConcurrentHashMap<>();
 
   /**
    * Constructs a {@link StitchAuthImpl}.
@@ -189,9 +192,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
    * @see StitchAuthListener
    */
   public void addAuthListener(final StitchAuthListener listener) {
-    synchronized (this) {
-      listeners.add(listener);
-    }
+    listeners.put(listener, Boolean.TRUE);
 
     // Trigger the onUserLoggedIn event in case some event happens and
     // this caller would miss out on this event other wise.
@@ -207,9 +208,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   }
 
   public void addSynchronousAuthListener(final StitchAuthListener listener) {
-    synchronized (this) {
-      synchronousListeners.add(listener);
-    }
+    synchronousListeners.put(listener, Boolean.TRUE);
 
     // Trigger the onUserLoggedIn event in case some event happens and
     // this caller would miss out on this event other wise.
@@ -222,7 +221,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
    *
    * @see StitchAuthListener
    */
-  public synchronized void removeAuthListener(final StitchAuthListener listener) {
+  public void removeAuthListener(final StitchAuthListener listener) {
     listeners.remove(listener);
   }
 
@@ -240,7 +239,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
 
   @Override
   protected void onAuthEvent() {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -250,14 +249,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onAuthEvent(this);
     }
   }
 
   @Override
   protected void onListenerInitialized() {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -267,7 +266,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onListenerRegistered(this);
     }
   }
@@ -275,7 +274,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
   @Override
   protected void onActiveUserChanged(@Nullable final StitchUser currentActiveUser,
                                      @Nullable final StitchUser previousActiveUser) {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -286,7 +285,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onActiveUserChanged(
           this, currentActiveUser, previousActiveUser);
     }
@@ -294,7 +293,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
 
   @Override
   protected void onUserAdded(final StitchUser createdUser) {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -305,14 +304,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onUserAdded(this, createdUser);
     }
   }
 
   @Override
   protected void onUserLoggedIn(final StitchUser loggedInUser) {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -323,14 +322,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onUserLoggedIn(this, loggedInUser);
     }
   }
 
   @Override
   protected void onUserRemoved(final StitchUser removedUser) {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -340,14 +339,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onUserRemoved(this, removedUser);
     }
   }
 
   @Override
   protected void onUserLoggedOut(final StitchUser loggedOutUser) {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -357,14 +356,14 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onUserLoggedOut(this, loggedOutUser);
     }
   }
 
   @Override
   protected void onUserLinked(final StitchUser linkedUser) {
-    for (final StitchAuthListener listener : listeners) {
+    for (final StitchAuthListener listener : listeners.keySet()) {
       dispatcher.dispatchTask(
           new Callable<Void>() {
             @Override
@@ -374,7 +373,7 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
             }
           });
     }
-    for (final StitchAuthListener listener : synchronousListeners) {
+    for (final StitchAuthListener listener : synchronousListeners.keySet()) {
       listener.onUserLinked(this, linkedUser);
     }
   }

@@ -25,7 +25,10 @@ import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedM
  * The LocalMongoDbService is used to access {@link LocalMongoDbService#clientFactory} which
  * provides MongoClients used for local storage using the embedded MongoDB platform.
  */
-public final class LocalMongoDbService extends LocalMongoClientFactory {
+public final class LocalMongoDbService {
+  private LocalMongoDbService() {
+    // prevent instantiation
+  }
 
   public static final ServiceClientFactory<MongoClient> clientFactory =
       (service, appInfo) -> LocalMongoClientFactory.getClient(

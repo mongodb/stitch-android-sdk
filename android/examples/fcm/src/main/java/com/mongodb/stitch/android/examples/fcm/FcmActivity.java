@@ -45,6 +45,7 @@ public class FcmActivity extends AppCompatActivity {
   private static final String TAG = FcmActivity.class.getSimpleName();
   private static final String GOOGLE_APP_ID = "<GOOGLE_APP_ID>";
   private static final String FCM_SENDER_ID = "<FCM_SENDER_ID>";
+  private static final String GCM_SERVICE_NAME = "gcm";
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -107,7 +108,7 @@ public class FcmActivity extends AppCompatActivity {
 
     // get the push client
     final FcmServicePushClient pushClient =
-        client.getPush().getClient(FcmServicePushClient.factory, "gcm");
+        client.getPush().getClient(FcmServicePushClient.factory, GCM_SERVICE_NAME);
 
     pushClient.register(FirebaseInstanceId.getInstance().getToken())
         .addOnCompleteListener(new OnCompleteListener<Void>() {
@@ -132,7 +133,7 @@ public class FcmActivity extends AppCompatActivity {
 
     // get the push client
     final FcmServicePushClient pushClient =
-        client.getPush().getClient(FcmServicePushClient.factory, "gcm");
+        client.getPush().getClient(FcmServicePushClient.factory, GCM_SERVICE_NAME);
 
     pushClient.deregister().addOnCompleteListener(new OnCompleteListener<Void>() {
       @Override
@@ -154,7 +155,8 @@ public class FcmActivity extends AppCompatActivity {
   public void sendToNews(final View view) {
     // get a client
     final StitchAppClient client = Stitch.getDefaultAppClient();
-    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.factory, "gcm");
+    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.factory,
+        GCM_SERVICE_NAME);
     fcmClient.sendMessageTo("/topics/news", new FcmSendMessageRequest.Builder()
         .withPriority(FcmSendMessagePriority.HIGH)
         .withNotification(new FcmSendMessageNotification.Builder()
@@ -166,7 +168,8 @@ public class FcmActivity extends AppCompatActivity {
   public void sendToSelf(final View view) {
     // get a client
     final StitchAppClient client = Stitch.getDefaultAppClient();
-    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.factory, "gcm");
+    final FcmServiceClient fcmClient = client.getServiceClient(FcmServiceClient.factory,
+        GCM_SERVICE_NAME);
     fcmClient.sendMessageToUsers(
         Collections.singletonList(Objects.requireNonNull(client.getAuth().getUser()).getId()),
         new FcmSendMessageRequest.Builder()

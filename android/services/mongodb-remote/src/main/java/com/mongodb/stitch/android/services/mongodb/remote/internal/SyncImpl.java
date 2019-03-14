@@ -54,45 +54,90 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public void configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
-                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                        @Nullable final ExceptionListener exceptionListener) {
-    this.proxy.configure(conflictHandler, changeEventListener, exceptionListener);
+  public Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
+                              @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                              @Nullable final ExceptionListener exceptionListener) {
+    return this.dispatcher.dispatchTask(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        SyncImpl.this.proxy.configure(conflictHandler, changeEventListener, exceptionListener);
+        return null;
+      }
+    });
   }
 
   @Override
-  public void syncOne(final BsonValue id) {
-    proxy.syncOne(id);
+  public Task<Void> syncOne(final BsonValue id) {
+    return this.dispatcher.dispatchTask(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        proxy.syncOne(id);
+        return null;
+      }
+    });
   }
 
   @Override
-  public void syncMany(final BsonValue... ids) {
-    proxy.syncMany(ids);
+  public Task<Void> syncMany(final BsonValue... ids) {
+    return this.dispatcher.dispatchTask(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        proxy.syncMany(ids);
+        return null;
+      }
+    });
   }
 
   @Override
-  public void desyncOne(final BsonValue id) {
-    proxy.desyncOne(id);
+  public Task<Void> desyncOne(final BsonValue id) {
+    return this.dispatcher.dispatchTask(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        proxy.desyncOne(id);
+        return null;
+      }
+    });
   }
 
   @Override
-  public void desyncMany(final BsonValue... ids) {
-    proxy.desyncMany(ids);
+  public Task<Void> desyncMany(final BsonValue... ids) {
+    return this.dispatcher.dispatchTask(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        proxy.desyncMany(ids);
+        return null;
+      }
+    });
   }
 
   @Override
-  public Set<BsonValue> getSyncedIds() {
-    return this.proxy.getSyncedIds();
+  public Task<Set<BsonValue>> getSyncedIds() {
+    return this.dispatcher.dispatchTask(new Callable<Set<BsonValue>>() {
+      @Override
+      public Set<BsonValue> call() throws Exception {
+        return SyncImpl.this.proxy.getSyncedIds();
+      }
+    });
   }
 
   @Override
-  public Set<BsonValue> getPausedDocumentIds() {
-    return this.proxy.getPausedDocumentIds();
+  public Task<Set<BsonValue>> getPausedDocumentIds() {
+    return this.dispatcher.dispatchTask(new Callable<Set<BsonValue>>() {
+      @Override
+      public Set<BsonValue> call() throws Exception {
+        return SyncImpl.this.proxy.getPausedDocumentIds();
+      }
+    });
   }
 
   @Override
-  public boolean resumeSyncForDocument(@NonNull final BsonValue documentId) {
-    return this.proxy.resumeSyncForDocument(documentId);
+  public Task<Boolean> resumeSyncForDocument(@NonNull final BsonValue documentId) {
+    return this.dispatcher.dispatchTask(new Callable<Boolean>() {
+      @Override
+      public Boolean call() throws Exception {
+        return SyncImpl.this.proxy.resumeSyncForDocument(documentId);
+      }
+    });
   }
 
   @Override

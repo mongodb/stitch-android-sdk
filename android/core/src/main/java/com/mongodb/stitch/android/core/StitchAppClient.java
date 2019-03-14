@@ -30,9 +30,22 @@ import org.bson.codecs.Decoder;
 import org.bson.codecs.configuration.CodecRegistry;
 
 /**
- * StitchAppClient is the main class used to work with Stitch. It allows one to log into Stitch,
- * call functions, and get clients for different services like local and remote MongoDB, AWS,
- * and HTTP.
+ * StitchAppClient is the main class used to work with Stitch.
+ * <p>
+ * Obtain an instance of this class from the {@link Stitch} singleton.
+ * </p><p>
+ * User login is possible with the {@link StitchAuth} from {@link getAuth}.
+ * </p><p>
+ * Use {@link callFunction} to call <a href="https://docs.mongodb.com/stitch/functions/" target=".">Stitch Functions</a>.
+ * </p><p>
+ * This class can also access different <a href="https://docs.mongodb.com/stitch/services/" target=".">services</a>
+ * like local and remote MongoDB, AWS, and HTTP. Use the {@link com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient}
+ * service via {@link getServiceClient} for reading and writing on a remote database.
+ * </p>
+ *
+ * @see Stitch
+ * @see StitchAuth
+ * @see com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
  */
 public interface StitchAppClient extends Closeable {
 

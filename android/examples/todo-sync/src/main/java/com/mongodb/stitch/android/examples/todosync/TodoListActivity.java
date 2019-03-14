@@ -50,7 +50,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.bson.BsonObjectId;
 import org.bson.BsonRegularExpression;
@@ -214,9 +213,11 @@ public class TodoListActivity extends AppCompatActivity {
           invalidateOptionsMenu();
           Toast.makeText(TodoListActivity.this, "Logged in", Toast.LENGTH_SHORT).show();
 
-          if (lists.sync().getSyncedIds().isEmpty()) {
-            lists.sync().insertOne(new Document("_id", userId));
-          }
+          lists.sync().getSyncedIds().addOnSuccessListener(syncedIds -> {
+            if (syncedIds.isEmpty()) {
+              lists.sync().insertOne(new Document("_id", userId));
+            }
+          });
         })
         .addOnFailureListener(e -> {
           invalidateOptionsMenu();
@@ -300,7 +301,6 @@ public class TodoListActivity extends AppCompatActivity {
           if (!localTask.isSuccessful()) {
             return Tasks.forResult(Collections.emptyList());
           }
-          final Set<BsonValue> syncedIds = items.sync().getSyncedIds();
           final Map<ObjectId, TodoItem> localItems = new HashMap<>();
           for (final TodoItem item : localTask.getResult()) {
             localItems.put(item.getId(), item);
