@@ -19,7 +19,15 @@ package com.mongodb.stitch.android.services.mongodb.remote;
 import org.bson.Document;
 
 /**
- * The RemoteMongoDatabase interface.
+ * The RemoteMongoDatabase interface provides access to its {@link RemoteMongoCollection}s.
+ * <p>
+ * In order to obtain an instance of the database, use {@link RemoteMongoClient#getDatabase}.
+ * </p><p>
+ * Once you have a database, you can use {@link getCollection} to get a collection
+ * to start reading and writing documents.
+ * </p>
+ * @see RemoteMongoClient
+ * @see RemoteMongoCollection
  */
 public interface RemoteMongoDatabase {
 
@@ -31,7 +39,7 @@ public interface RemoteMongoDatabase {
   String getName();
 
   /**
-   * Gets a collection.
+   * Gets a {@link RemoteMongoCollection}.
    *
    * @param collectionName the name of the collection to return
    * @return the collection

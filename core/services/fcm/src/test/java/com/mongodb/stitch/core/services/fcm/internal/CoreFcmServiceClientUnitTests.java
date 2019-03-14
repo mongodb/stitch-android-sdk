@@ -41,6 +41,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 public class CoreFcmServiceClientUnitTests {
+  private static final String ONE = "one";
+  private static final String TWO = "two";
+  private static final String THREE = "three";
 
   @Test
   @SuppressWarnings("unchecked")
@@ -147,7 +150,7 @@ public class CoreFcmServiceClientUnitTests {
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
     assertEquals(ResultDecoders.sendMessageResponseDecoder, resultClassArg.getValue());
 
-    final Collection<String> registrationTokens = Arrays.asList("one", "two");
+    final Collection<String> registrationTokens = Arrays.asList(ONE, TWO);
     assertEquals(result, client.sendMessageToRegistrationTokens(registrationTokens, fullRequest));
 
     verify(service, times(2))
@@ -164,7 +167,7 @@ public class CoreFcmServiceClientUnitTests {
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
     assertEquals(ResultDecoders.sendMessageResponseDecoder, resultClassArg.getValue());
 
-    final Collection<String> userIds = Arrays.asList("two", "three");
+    final Collection<String> userIds = Arrays.asList(TWO, THREE);
     assertEquals(result, client.sendMessageToUsers(userIds, fullRequest));
 
     verify(service, times(3))
@@ -192,13 +195,13 @@ public class CoreFcmServiceClientUnitTests {
     },IllegalArgumentException.class);
     assertThrows(() -> {
       client.sendMessageToRegistrationTokens(
-          Arrays.asList("one", "two"),
+          Arrays.asList(ONE, TWO),
           new FcmSendMessageRequest.Builder().build());
       return null;
     },IllegalArgumentException.class);
     assertThrows(() -> {
       client.sendMessageToUsers(
-          Arrays.asList("one", "two"),
+          Arrays.asList(ONE, TWO),
           new FcmSendMessageRequest.Builder().build());
       return null;
     },IllegalArgumentException.class);

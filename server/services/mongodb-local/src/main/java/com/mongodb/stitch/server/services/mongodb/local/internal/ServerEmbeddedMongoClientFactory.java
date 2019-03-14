@@ -33,12 +33,14 @@ public final class ServerEmbeddedMongoClientFactory extends EmbeddedMongoClientF
     MongoClients.init(MongoEmbeddedSettings.builder().build());
   }
 
-  public static synchronized ServerEmbeddedMongoClientFactory getInstance() {
-    if (factory != null) {
-      return factory;
-    }
+  public static ServerEmbeddedMongoClientFactory getInstance() {
+    synchronized (ServerEmbeddedMongoClientFactory.class) {
+      if (factory != null) {
+        return factory;
+      }
 
-    factory = new ServerEmbeddedMongoClientFactory();
+      factory = new ServerEmbeddedMongoClientFactory();
+    }
     return factory;
   }
 

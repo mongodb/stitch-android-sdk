@@ -35,7 +35,23 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 
 /**
- * The RemoteMongoCollection interface.
+ * The RemoteMongoCollection interface provides read and write access to documents.
+ * <p>
+ * Use {@link RemoteMongoDatabase#getCollection} to get a collection instance.
+ * </p><p>
+ * Before any access is possible, there must be an active, logged-in user. See
+ * {@link com.mongodb.stitch.android.core.auth.StitchAuth} for how to log in.
+ * </p><p>
+ * Create, read, update and delete (CRUD) functionality is available depending
+ * on the privileges of the active logged-in user. You can set up 
+ * <a href="https://docs.mongodb.com/stitch/mongodb/define-roles-and-permissions/" target=".">Roles</a>
+ * in the Stitch console. Stitch checks any given request against the Roles for the
+ * active user and determines whether the request is permitted for each requested
+ * document.
+ * </p>
+ *
+ * @see RemoteMongoDatabase
+ * @see <a href="https://docs.mongodb.com/stitch/mongodb/" target=".">MongoDB Atlas Overview with Stitch</a>
  *
  * @param <DocumentT> The type that this collection will encode documents from and decode documents
  *                   to.
@@ -43,7 +59,7 @@ import org.bson.types.ObjectId;
 public interface RemoteMongoCollection<DocumentT> {
 
   /**
-   * Gets the namespace of this collection.
+   * Gets the namespace of this collection, i.e. the database and collection names together.
    *
    * @return the namespace
    */
@@ -51,6 +67,10 @@ public interface RemoteMongoCollection<DocumentT> {
 
   /**
    * Get the class of documents stored in this collection.
+   * <p>
+   * If you used the simple {@link RemoteMongoDatabase#getCollection(String)} to get this collection,
+   * this is {@link org.bson.Document}.
+   * </p>
    *
    * @return the class
    */
@@ -125,7 +145,7 @@ public interface RemoteMongoCollection<DocumentT> {
   <ResultT> RemoteFindIterable<ResultT> find(final Class<ResultT> resultClass);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that match the given filter.
    *
    * @param filter the query filter
    * @return the find iterable interface
@@ -133,7 +153,7 @@ public interface RemoteMongoCollection<DocumentT> {
   RemoteFindIterable<DocumentT> find(final Bson filter);
 
   /**
-   * Finds all documents in the collection.
+   * Finds all documents in the collection that match the given filter.
    *
    * @param filter      the query filter
    * @param resultClass the class to decode each document into
