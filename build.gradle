@@ -368,6 +368,13 @@ subprojects {
         }
     }
 
+    pmd {
+        toolVersion = "6.12.0"
+        ruleSetFiles = files("$configDir/pmd.xml")
+        ruleSets = []
+        ignoreFailures = true
+    }
+
     task pmd(type: Pmd) {
         source 'src/main/java', 'src/test/java'
         include '**/*.java'

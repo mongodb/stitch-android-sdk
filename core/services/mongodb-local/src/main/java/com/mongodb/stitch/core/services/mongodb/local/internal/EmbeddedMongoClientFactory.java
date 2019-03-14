@@ -17,13 +17,10 @@
 package com.mongodb.stitch.core.services.mongodb.local.internal;
 
 import com.mongodb.client.MongoClient;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.bson.codecs.configuration.CodecRegistry;
 
 public abstract class EmbeddedMongoClientFactory {
-
-  private static final Map<String, MongoClient> instances = new ConcurrentHashMap<>();
+  private static final MongoClientHolder clientHolder = new MongoClientHolder();
 
   protected abstract MongoClient createClient(
       final String dbPath,
@@ -31,43 +28,67 @@ public abstract class EmbeddedMongoClientFactory {
 
   protected EmbeddedMongoClientFactory() {
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      for (final MongoClient client : instances.values()) {
-        client.close();
+      if (clientHolder.client != null) {
+        clientHolder.client.close();
       }
     }));
   }
 
-  public synchronized MongoClient getClient(
+  public MongoClient getClient(
       final String key,
       final String dbPath,
       final CodecRegistry codecRegistry
   ) {
+    if (key == null || key.isEmpty()) {
+      throw new IllegalArgumentException("keymust be non-empty");
+    }
     if (dbPath == null || dbPath.isEmpty()) {
       throw new IllegalArgumentException("dbPath must be non-empty");
     }
-    if (instances.containsKey(key)) {
-      return instances.get(key);
+
+    if (!key.equals(clientHolder.currentKey) || !dbPath.equals(clientHolder.currentDbPath)) {
+      synchronized (clientHolder) {
+        if (!key.equals(clientHolder.currentKey) || !dbPath.equals(clientHolder.currentDbPath)) {
+          if (clientHolder.client != null) {
+            clientHolder.client.close();
+          }
+          clientHolder.set(createClient(dbPath, codecRegistry), key, dbPath);
+        }
+      }
     }
-
-    for (final MongoClient value : instances.values()) {
-      value.close();
-    }
-    instances.clear();
-
-    final MongoClient client = createClient(dbPath, codecRegistry);
-
-    instances.put(key, client);
-    return client;
+    return clientHolder.client;
   }
 
-  public synchronized void removeClient(final String key) {
-    instances.remove(key);
+  public void removeClient(final String key) {
+    synchronized (clientHolder) {
+      if (clientHolder.currentKey.equals(key)) {
+        clientHolder.clear();
+      }
+    }
   }
 
-  public synchronized void close() {
-    for (final MongoClient instance : instances.values()) {
-      instance.close();
+  public void close() {
+    synchronized (clientHolder) {
+      if (clientHolder.client != null) {
+        clientHolder.client.close();
+      }
+      clientHolder.clear();
     }
-    instances.clear();
+  }
+
+  private static final class MongoClientHolder {
+    MongoClient client;
+    String currentKey;
+    String currentDbPath;
+
+    void set(final MongoClient client, final String key, final String dbPath) {
+      this.client = client;
+      this.currentKey = key;
+      this.currentDbPath = dbPath;
+    }
+
+    void clear() {
+      this.set(null, null, null);
+    }
   }
 }
