@@ -1949,4 +1949,30 @@ class DataSynchronizerUnitTests {
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
         assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
     }
+
+    @Test
+    fun testBatchOps() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        ctx.dataSynchronizer.stop()
+
+        val batchOps = ctx.dataSynchronizer.BatchOps()
+
+        val doc = BsonDocument()
+        ctx.dataSynchronizer.insertOne(ctx.namespace, doc)
+
+        try {
+            batchOps.wrapForRecovery(ctx.namespace) {
+                throw Exception()
+            }
+        } catch (_: Exception) {
+        }
+
+        ctx.dataSynchronizer.deleteOne(ctx.namespace, BsonDocument("_id", doc["_id"]))
+        ctx.dataSynchronizer.recover()
+
+        ctx.
+    }
 }

@@ -129,31 +129,41 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
     }
 
-    void commitAndClear(final MongoNamespace namespace,
-                        final MongoCollection<CoreDocumentSynchronizationConfig> docsColl) {
+    void wrapForRecovery(final MongoNamespace namespace,
+                         final Runnable callable) {
       MongoCollection<BsonDocument> localCollection =
           getLocalCollection(namespace);
 
       List<BsonDocument> oldDocs = localCollection.find(
           new Document("_id", new Document("$in", ids))
       ).into(new ArrayList<>());
+
       if (oldDocs.size() > 0) {
         getUndoCollection(namespace).insertMany(oldDocs);
       }
-      if (this.bulkWriteModels.size() > 0) {
-        localCollection.bulkWrite(this.bulkWriteModels);
-      }
-      if (this.configs.size() > 0) {
-        docsColl.bulkWrite(configs);
-      }
-      if (oldDocs.size() > 0) {
-        getUndoCollection(namespace).deleteMany(
-            new Document("_id", new Document("$in", ids))
-        );
-      }
 
-      this.bulkWriteModels.clear();
-      this.configs.clear();
+      callable.run();
+
+      if (oldDocs.size() > 0) {
+        getUndoCollection(namespace).deleteMany(new Document("_id", new Document("$in", ids)));
+      }
+    }
+
+    void commitAndClear(final MongoNamespace namespace,
+                        final MongoCollection<CoreDocumentSynchronizationConfig> docsColl) {
+      wrapForRecovery(namespace, () -> {
+          MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+
+          if (BatchOps.this.bulkWriteModels.size() > 0) {
+            localCollection.bulkWrite(BatchOps.this.bulkWriteModels);
+          }
+          if (BatchOps.this.configs.size() > 0) {
+            docsColl.bulkWrite(configs);
+          }
+
+          BatchOps.this.bulkWriteModels.clear();
+          BatchOps.this.configs.clear();
+      });
     }
   }
 
@@ -256,7 +266,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * Recovers the state of synchronization in case a system failure happened. The goal is to revert
    * to a known, good state.
    */
-  private void recover() {
+  void recover() {
     final List<NamespaceSynchronizationConfig> nsConfigs = new ArrayList<>();
     for (final MongoNamespace ns : this.syncConfig.getSynchronizedNamespaces()) {
       nsConfigs.add(this.syncConfig.getNamespaceConfig(ns));
@@ -1831,10 +1841,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param documentIds the _ids of the documents.
    */
   @CheckReturnValue
-  private BatchOps desyncDocumentsFromRemote(
-      final MongoNamespace namespace,
-      final BsonValue... documentIds
-  ) {
+  BatchOps desyncDocumentsFromRemote(final MongoNamespace namespace,
+                                     final BsonValue... documentIds) {
     this.waitUntilInitialized();
     final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
     lock.lock();
