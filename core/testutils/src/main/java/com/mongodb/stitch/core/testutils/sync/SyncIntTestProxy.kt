@@ -52,51 +52,6 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @Ignore
 class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
-    private fun measure(title: String, block: () -> Unit) {
-        val now = System.currentTimeMillis()
-        log("starting $title at $now")
-
-        block()
-
-        log("ended $title at ${System.currentTimeMillis()}")
-        log("$title took ${(System.currentTimeMillis() - now)/1000} seconds")
-    }
-
-    private fun log(msg: String) {
-        println("\$_performance_metrics: $msg")
-    }
-
-    @Test
-    fun testInitSyncPerf() {
-        val remoteMethods = syncTestRunner.remoteMethods()
-        val syncMethods = syncTestRunner.syncMethods()
-
-        syncMethods.configure(
-            ConflictHandler { _, _, _ -> null },
-            ChangeEventListener { _, _ -> },
-            ExceptionListener { _, _ -> })
-
-        val array: List<Byte> = (0..1899).map { 0.toByte() }
-        val docs = (0..29999).map { Document("bin", Binary(array.toByteArray())) }
-
-        var i = 0
-        val ids = docs.chunked(1000).map {
-            log("inserting batch $i")
-            i++
-            remoteMethods.insertMany(it).insertedIds.map { it.value }
-        }.flatten()
-
-        this.measure("sync many") {
-            syncMethods.syncMany(*ids.toTypedArray())
-        }
-
-        this.measure("sync pass") {
-            syncTestRunner.dataSynchronizer.doSyncPass()
-        }
-
-        log("all done")
-    }
-
     @Test
     fun testSync() {
         val remoteMethods = syncTestRunner.remoteMethods()

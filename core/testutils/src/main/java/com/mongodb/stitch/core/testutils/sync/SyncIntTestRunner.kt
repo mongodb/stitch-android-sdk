@@ -81,9 +81,6 @@ interface SyncIntTestRunner {
     fun testSync()
 
     @Test
-    fun testInitSyncPerf()
-
-    @Test
     fun testUpdateConflicts()
 
     @Test

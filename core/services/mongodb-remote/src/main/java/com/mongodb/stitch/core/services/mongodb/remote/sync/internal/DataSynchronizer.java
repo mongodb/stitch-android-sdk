@@ -1816,6 +1816,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
+  void desyncMany(final MongoNamespace namespace, final BsonValue... documentIds) {
+    final BatchOps batchOps = this.desyncDocumentsFromRemote(namespace, documentIds);
+    if (batchOps != null) {
+      this.getLocalCollection(namespace).bulkWrite(batchOps.bulkWriteModels);
+    }
+  }
+
   /**
    * Requests that a document be no longer be synchronized by the given _id. Any uncommitted writes
    * will be lost.
@@ -1824,7 +1831,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param documentIds the _ids of the documents.
    */
   @CheckReturnValue
-  public BatchOps desyncDocumentsFromRemote(
+  private BatchOps desyncDocumentsFromRemote(
       final MongoNamespace namespace,
       final BsonValue... documentIds
   ) {

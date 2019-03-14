@@ -38,7 +38,6 @@ import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredentia
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
-import org.bson.types.Binary
 import org.bson.types.ObjectId
 import org.junit.After
 import org.junit.Assert
@@ -255,11 +254,6 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
 
     override fun currentUserId(): String? {
         return client.auth.user?.id
-    }
-
-    @Test
-    override fun testInitSyncPerf() {
-//        testProxy.testInitSyncPerf()
     }
 
     @Test

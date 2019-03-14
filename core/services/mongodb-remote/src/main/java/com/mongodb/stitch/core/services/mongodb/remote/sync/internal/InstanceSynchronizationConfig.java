@@ -148,7 +148,7 @@ class InstanceSynchronizationConfig
     return getNamespaceConfig(namespace).getSynchronizedDocument(documentId);
   }
 
-  public boolean addSynchronizedDocuments(
+  boolean addSynchronizedDocuments(
       final MongoNamespace namespace,
       final BsonValue... documentIds
   ) {
