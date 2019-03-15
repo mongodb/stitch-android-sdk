@@ -132,21 +132,6 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         }
     }
 
-    // Remove this before merging obviously
-    /*  @Test
-    fun testParseUndefined() {
-        //var foo = "{\"\$undefined\":true}"
-        var foo = null
-        val codec = DocumentCodec()
-
-        val bsonReader = JsonReader(foo)
-        bsonReader.readBsonType()
-
-        val result = codec.decode(bsonReader, DecoderContext.builder().build())
-
-        System.err.println(result)
-    } */
-
     @Test
     fun testFindOne() {
         val coll = getTestColl()
