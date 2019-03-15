@@ -520,7 +520,7 @@ class SyncUnitTestHarness : Closeable {
 
             val docConfig = syncConfig.getSynchronizedDocument(namespace, documentId)
 
-            docConfig.setSomePendingWrites(logicalT, event)
+            docConfig.setSomePendingWritesAndSave(logicalT, event)
         }
 
         override fun queueConsumableRemoteUpdateEvent(

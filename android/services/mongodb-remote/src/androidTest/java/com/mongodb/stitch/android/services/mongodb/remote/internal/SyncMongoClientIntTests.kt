@@ -82,6 +82,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             return Tasks.await(sync.syncOne(id))
         }
 
+        override fun syncMany(vararg id: BsonValue) {
+            Tasks.await(sync.syncMany(*id))
+        }
+
         override fun count(filter: Bson): Long {
             return Tasks.await(sync.count(filter))
         }

@@ -22,6 +22,7 @@ import com.mongodb.Block;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.DeleteManyModel;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 
@@ -35,6 +36,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -146,11 +148,11 @@ class InstanceSynchronizationConfig
     return getNamespaceConfig(namespace).getSynchronizedDocument(documentId);
   }
 
-  public boolean addSynchronizedDocument(
+  boolean addSynchronizedDocuments(
       final MongoNamespace namespace,
-      final BsonValue documentId
+      final BsonValue... documentIds
   ) {
-    return getNamespaceConfig(namespace).addSynchronizedDocument(documentId);
+    return getNamespaceConfig(namespace).addSynchronizedDocuments(documentIds);
   }
 
   public CoreDocumentSynchronizationConfig addAndGetSynchronizedDocument(
@@ -160,6 +162,14 @@ class InstanceSynchronizationConfig
     final NamespaceSynchronizationConfig nsConfig = getNamespaceConfig(namespace);
     nsConfig.addSynchronizedDocument(documentId);
     return nsConfig.getSynchronizedDocument(documentId);
+  }
+
+  @Nullable
+  DeleteManyModel<CoreDocumentSynchronizationConfig> removeSynchronizedDocuments(
+      final MongoNamespace namespace,
+      final BsonValue... documentIds
+  ) {
+    return getNamespaceConfig(namespace).removeSynchronizedDocuments(documentIds);
   }
 
   public boolean removeSynchronizedDocument(

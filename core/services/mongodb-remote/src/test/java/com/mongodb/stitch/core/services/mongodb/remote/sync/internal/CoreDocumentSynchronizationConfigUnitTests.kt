@@ -95,7 +95,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         var config = CoreDocumentSynchronizationConfig(coll, namespace, id)
         val expectedTestVersion = BsonDocument("dummy", BsonString("version"))
         val expectedEvent = ChangeEvents.changeEventForLocalDelete(namespace, id, false)
-        config.setSomePendingWrites(
+        config.setSomePendingWritesAndSave(
             1,
             expectedTestVersion,
             expectedEvent)

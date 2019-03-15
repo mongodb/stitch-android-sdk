@@ -27,17 +27,19 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nonnull;
 
 public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkMonitor {
 
   private final ConnectivityManager connManager;
-  private final Set<StateListener> listeners;
+  private final ConcurrentMap<StateListener, Boolean> listeners;
 
   public AndroidNetworkMonitor(final ConnectivityManager connManager) {
     this.connManager = connManager;
-    this.listeners = new HashSet<>();
+    this.listeners = new ConcurrentHashMap<>();
   }
 
   @Override
@@ -47,12 +49,12 @@ public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkM
   }
 
   @Override
-  public synchronized void addNetworkStateListener(@Nonnull final StateListener listener) {
-    listeners.add(listener);
+  public void addNetworkStateListener(@Nonnull final StateListener listener) {
+    listeners.put(listener, Boolean.TRUE);
   }
 
   @Override
-  public synchronized void removeNetworkStateListener(@Nonnull final StateListener listener) {
+  public void removeNetworkStateListener(@Nonnull final StateListener listener) {
     listeners.remove(listener);
   }
 
@@ -63,7 +65,7 @@ public class AndroidNetworkMonitor extends BroadcastReceiver implements NetworkM
     // See https://developer.android.com/guide/components/broadcasts#effects-process-state
     final PendingResult pendingResult = goAsync();
     final NetworkStateChangedTask asyncTask =
-        new NetworkStateChangedTask(pendingResult, new HashSet<>(listeners));
+        new NetworkStateChangedTask(pendingResult, new HashSet<>(listeners.keySet()));
     asyncTask.execute();
   }
 

@@ -36,7 +36,10 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
     }
 
     override fun getStitchBaseURL(): String {
-        return InstrumentationRegistry.getArguments().getString("test.stitch.baseURL", "http://10.0.2.2:9090")
+        return InstrumentationRegistry.getArguments().getString(
+            "test.stitch.baseURL",
+            "http://10.0.2.2:9090"
+        )
     }
 
     fun getAppClient(app: AppResponse): StitchAppClient {

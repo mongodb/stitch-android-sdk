@@ -34,6 +34,9 @@ public interface CoreStitchUser {
 
   UserType getUserType();
 
+  /**
+   * @return The profile information of this user.
+   */
   StitchUserProfile getProfile();
 
   List<? extends StitchUserIdentity> getIdentities();

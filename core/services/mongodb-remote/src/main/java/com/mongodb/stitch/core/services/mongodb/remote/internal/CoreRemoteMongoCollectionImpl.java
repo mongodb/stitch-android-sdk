@@ -54,7 +54,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   private final CoreStitchServiceClient service;
   private final Operations<DocumentT> operations;
   // Sync related fields
-  private final CoreSync<DocumentT> sync;
+  private final CoreSync<DocumentT> coreSync;
   private final DataSynchronizer dataSynchronizer;
   private final NetworkMonitor networkMonitor;
 
@@ -72,7 +72,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
     this.dataSynchronizer = dataSynchronizer;
     this.networkMonitor = networkMonitor;
 
-    this.sync = new CoreSyncImpl<>(
+    this.coreSync = new CoreSyncImpl<>(
       getNamespace(),
       getDocumentClass(),
       dataSynchronizer,
@@ -407,6 +407,6 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
 
   @Override
   public CoreSync<DocumentT> sync() {
-    return this.sync;
+    return this.coreSync;
   }
 }

@@ -23,6 +23,7 @@ import com.mongodb.Block;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.DeleteManyModel;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
@@ -30,12 +31,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
@@ -141,6 +144,10 @@ class NamespaceSynchronizationConfig
     }
   }
 
+  public MongoCollection<CoreDocumentSynchronizationConfig> getDocsColl() {
+    return docsColl;
+  }
+
   boolean isConfigured() {
     nsLock.readLock().lock();
     try {
@@ -227,6 +234,32 @@ class NamespaceSynchronizationConfig
     return documentCodec;
   }
 
+  boolean addSynchronizedDocuments(
+      final BsonValue... documentIds
+  ) {
+    final Map<BsonValue, CoreDocumentSynchronizationConfig> configs = new HashMap<>();
+    for (final BsonValue documentId : documentIds) {
+      if (getSynchronizedDocument(documentId) == null) {
+        configs.put(
+            documentId,
+            new CoreDocumentSynchronizationConfig(docsColl, namespace, documentId));
+      }
+    }
+
+    if (configs.size() > 0) {
+      nsLock.writeLock().lock();
+      try {
+        docsColl.insertMany(new ArrayList<>(configs.values()));
+        syncedDocuments.putAll(configs);
+        return true;
+      } finally {
+        nsLock.writeLock().unlock();
+      }
+    }
+
+    return false;
+  }
+
   boolean addSynchronizedDocument(
       final BsonValue documentId
   ) {
@@ -245,6 +278,32 @@ class NamespaceSynchronizationConfig
       docsColl.insertOne(newConfig);
       syncedDocuments.put(documentId, newConfig);
       return true;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
+  }
+
+  @Nullable
+  DeleteManyModel<CoreDocumentSynchronizationConfig> removeSynchronizedDocuments(
+      final BsonValue... documentIds
+  ) {
+    nsLock.writeLock().lock();
+    try {
+      final List<BsonValue> bsonValues = new ArrayList<>();
+      for (final BsonValue documentId : documentIds) {
+        final CoreDocumentSynchronizationConfig config = syncedDocuments.remove(documentId);
+        if (config != null) {
+          bsonValues.add(config.getDocumentId());
+        }
+      }
+
+      if (bsonValues.size() > 0) {
+        return new DeleteManyModel<>(
+            CoreDocumentSynchronizationConfig.getDocsFilter(namespace, documentIds)
+        );
+      } else {
+        return null;
+      }
     } finally {
       nsLock.writeLock().unlock();
     }
