@@ -1949,4 +1949,43 @@ class DataSynchronizerUnitTests {
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
         assertEquals(ctx.testDocumentId, localDoc?.get("_id"))
     }
+
+    @Test
+    fun testBatchOps() {
+        val ctx = harness.freshTestContext()
+
+        ctx.reconfigure()
+
+        ctx.dataSynchronizer.stop()
+
+        val doc = BsonDocument()
+        ctx.dataSynchronizer.insertOne(ctx.namespace, doc)
+
+        val id = doc["_id"]
+        val filter = BsonDocument("_id", id)
+        val batchOps = SyncWriteModelContainer()
+        batchOps.ids.add(id)
+
+        // cause the batching to fail after the undo docs have been inserted
+        try {
+            batchOps.wrapForRecovery(ctx.dataSynchronizer.getLocalCollection(ctx.namespace),
+                ctx.dataSynchronizer.getUndoCollection(ctx.namespace)) {
+                throw Exception()
+            }
+        } catch (e: Exception) {
+            println(e)
+        }
+
+        // go underneath the DataSynchronizer and delete the document to see if it is readded after
+        // recovery
+        assertEquals(
+            1,
+            ctx.dataSynchronizer.getLocalCollection(ctx.namespace).deleteOne(filter).deletedCount)
+
+        assertNull(ctx.dataSynchronizer.find(ctx.namespace, filter).firstOrNull())
+
+        ctx.dataSynchronizer.recover()
+
+        assertNotNull(ctx.dataSynchronizer.find(ctx.namespace, filter).firstOrNull())
+    }
 }

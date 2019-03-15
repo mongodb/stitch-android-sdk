@@ -51,7 +51,8 @@ import org.bson.types.ObjectId;
  * </p>
  *
  * @see RemoteMongoDatabase
- * @see <a href="https://docs.mongodb.com/stitch/mongodb/" target=".">MongoDB Atlas Overview with Stitch</a>
+ * @see <a href="https://docs.mongodb.com/stitch/mongodb/" target=".">
+ *   MongoDB Atlas Overview with Stitch</a>
  *
  * @param <DocumentT> The type that this collection will encode documents from and decode documents
  *                   to.
@@ -68,7 +69,8 @@ public interface RemoteMongoCollection<DocumentT> {
   /**
    * Get the class of documents stored in this collection.
    * <p>
-   * If you used the simple {@link RemoteMongoDatabase#getCollection(String)} to get this collection,
+   * If you used the simple {@link RemoteMongoDatabase#getCollection(String)} to get
+   * this collection,
    * this is {@link org.bson.Document}.
    * </p>
    *

@@ -1,52 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+                                             xmlns:app="http://schemas.android.com/apk/res-auto"
+                                             xmlns:tools="http://schemas.android.com/tools"
+                                             android:layout_width="match_parent"
+                                             android:layout_height="match_parent"
+                                             tools:context=".MainActivity">
 
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="96dp"
-        android:text="Hello World!"
+        android:text="# of sync'd docs"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="160dp"
-        android:layout_marginTop="164dp"
-        android:text="Add Single Doc"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView" />
-
-    <Button
-        android:id="@+id/button2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="160dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="104dp"
-        android:text="Clear All Docs"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button3" />
-
-    <Button
-        android:id="@+id/button3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="84dp"
-        android:text="Add Many Docs"
-        app:layout_constraintStart_toEndOf="@+id/numInput"
-        app:layout_constraintTop_toBottomOf="@+id/button" />
+        app:layout_constraintTop_toTopOf="parent"/>
 
     <EditText
         android:id="@+id/numInput"
@@ -54,8 +22,69 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:ems="10"
+        android:gravity="center"
+        android:hint="number of docs"
         android:inputType="number"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/button3" />
+        app:layout_constraintLeft_toLeftOf="@id/textView"
+        app:layout_constraintRight_toRightOf="@+id/textView"
+        app:layout_constraintTop_toBottomOf="@+id/textView"/>
 
+    <EditText
+        android:id="@+id/size_input"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:ems="10"
+        android:gravity="center"
+        android:hint="size of docs (in bytes)"
+        android:inputType="number"
+        app:layout_constraintLeft_toLeftOf="@id/numInput"
+        app:layout_constraintRight_toRightOf="@+id/numInput"
+        app:layout_constraintTop_toBottomOf="@+id/numInput"/>
+
+    <Button
+        android:id="@+id/button3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="insert many docs to remote"
+        app:layout_constraintLeft_toLeftOf="@id/size_input"
+        app:layout_constraintRight_toRightOf="@+id/size_input"
+        app:layout_constraintTop_toBottomOf="@+id/size_input"/>
+
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="clear all docs"
+        app:layout_constraintLeft_toLeftOf="@id/button3"
+        app:layout_constraintRight_toRightOf="@id/button3"
+        app:layout_constraintTop_toBottomOf="@+id/button3"/>
+
+    <Button
+        android:id="@+id/doSyncPass"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="do sync pass"
+        app:layout_constraintLeft_toLeftOf="@id/button2"
+        app:layout_constraintRight_toRightOf="@id/button2"
+        app:layout_constraintTop_toBottomOf="@+id/button2"/>
+
+    <TextView
+        android:id="@+id/timer_textview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="# seconds taken"
+        app:layout_constraintLeft_toLeftOf="@id/button2"
+        app:layout_constraintRight_toRightOf="@id/button2"
+        app:layout_constraintTop_toBottomOf="@id/doSyncPass"/>
+
+    <!--<ProgressBar-->
+        <!--android:id="@+id/progressBar1"-->
+        <!--style="?android:attr/progressBarStyleLarge"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--app:layout_constraintLeft_toLeftOf="parent"-->
+        <!--app:layout_constraintRight_toRightOf="parent"-->
+        <!--app:layout_constraintTop_toBottomOf="parent"-->
+        <!--app:layout_constraintBottom_toTopOf="parent"/>-->
 </android.support.constraint.ConstraintLayout>
