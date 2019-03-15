@@ -1968,7 +1968,8 @@ class DataSynchronizerUnitTests {
 
         // cause the batching to fail after the undo docs have been inserted
         try {
-            batchOps.wrapForRecovery(ctx.namespace) {
+            batchOps.wrapForRecovery(ctx.dataSynchronizer.getLocalCollection(ctx.namespace),
+                ctx.dataSynchronizer.getUndoCollection(ctx.namespace)) {
                 throw Exception()
             }
         } catch (e: Exception) {

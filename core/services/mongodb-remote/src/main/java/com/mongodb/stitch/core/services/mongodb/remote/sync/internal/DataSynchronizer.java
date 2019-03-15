@@ -2711,7 +2711,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @return the undo collection representing the given namespace for recording documents that
    * may need to be reverted after a system failure.
    */
-  private MongoCollection<BsonDocument> getUndoCollection(final MongoNamespace namespace) {
+  MongoCollection<BsonDocument> getUndoCollection(final MongoNamespace namespace) {
     return localClient
         .getDatabase(String.format("sync_undo_%s", namespace.getDatabaseName()))
         .getCollection(namespace.getCollectionName(), BsonDocument.class)
