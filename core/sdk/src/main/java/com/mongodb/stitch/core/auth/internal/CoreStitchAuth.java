@@ -250,9 +250,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final Response response = doAuthenticatedRequest(stitchReq);
     try {
       final String bodyStr = IoUtils.readAllToString(response.getBody());
-      if (bodyStr.equals("{\"$undefined\":true}")) {
-        return null;
-      }
+//      if (bodyStr.equals("{\"$undefined\":true}")) {
+//        return null;
+//      }
+      System.err.println("TKTKTK");
+      System.err.println(bodyStr);
 
       return BsonUtils.parseValue(bodyStr, resultDecoder);
     } catch (final Exception e) {
@@ -282,9 +284,11 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
     try {
       final String bodyStr = IoUtils.readAllToString(response.getBody());
-      if (bodyStr.equals("{\"$undefined\":true}")) {
-        return null;
-      }
+//      if (bodyStr.equals("{\"$undefined\":true}")) {
+//        return null;
+//      }
+      System.err.println("TKTKTK");
+      System.err.println(bodyStr);
 
       return BsonUtils.parseValue(bodyStr, resultClass, codecRegistry);
     } catch (final Exception e) {
