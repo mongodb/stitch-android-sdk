@@ -36,10 +36,13 @@ import org.bson.codecs.configuration.CodecRegistry;
  * </p><p>
  * User login is possible with the {@link StitchAuth} from {@link getAuth}.
  * </p><p>
- * Use {@link callFunction} to call <a href="https://docs.mongodb.com/stitch/functions/" target=".">Stitch Functions</a>.
+ * Use {@link callFunction} to call
+ * <a href="https://docs.mongodb.com/stitch/functions/" target=".">Stitch Functions</a>.
  * </p><p>
- * This class can also access different <a href="https://docs.mongodb.com/stitch/services/" target=".">services</a>
- * like local and remote MongoDB, AWS, and HTTP. Use the {@link com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient}
+ * This class can also access different
+ * <a href="https://docs.mongodb.com/stitch/services/" target=".">services</a>
+ * like local and remote MongoDB, AWS, and HTTP.
+ * Use the {@link com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient}
  * service via {@link getServiceClient} for reading and writing on a remote database.
  * </p>
  *

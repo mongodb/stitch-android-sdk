@@ -1958,21 +1958,33 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.stop()
 
-        val batchOps = ctx.dataSynchronizer.BatchOps()
-
         val doc = BsonDocument()
         ctx.dataSynchronizer.insertOne(ctx.namespace, doc)
 
+        val id = doc["_id"]
+        val filter = BsonDocument("_id", id)
+        val batchOps = ctx.dataSynchronizer.BatchOps()
+        batchOps.ids.add(id)
+
+        // cause the batching to fail after the undo docs have been inserted
         try {
             batchOps.wrapForRecovery(ctx.namespace) {
                 throw Exception()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            println(e)
         }
 
-        ctx.dataSynchronizer.deleteOne(ctx.namespace, BsonDocument("_id", doc["_id"]))
+        // go underneath the DataSynchronizer and delete the document to see if it is readded after
+        // recovery
+        assertEquals(
+            1,
+            ctx.dataSynchronizer.getLocalCollection(ctx.namespace).deleteOne(filter).deletedCount)
+
+        assertNull(ctx.dataSynchronizer.find(ctx.namespace, filter).firstOrNull())
+
         ctx.dataSynchronizer.recover()
 
-        ctx.
+        assertNotNull(ctx.dataSynchronizer.find(ctx.namespace, filter).firstOrNull())
     }
 }

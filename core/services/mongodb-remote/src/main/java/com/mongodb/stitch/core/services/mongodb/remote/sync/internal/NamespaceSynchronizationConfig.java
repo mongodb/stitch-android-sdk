@@ -24,7 +24,6 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.DeleteManyModel;
-import com.mongodb.client.model.WriteModel;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
@@ -48,7 +47,6 @@ import org.bson.BsonReader;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
-import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
@@ -239,7 +237,7 @@ class NamespaceSynchronizationConfig
   boolean addSynchronizedDocuments(
       final BsonValue... documentIds
   ) {
-    Map<BsonValue, CoreDocumentSynchronizationConfig> configs = new HashMap<>();
+    final Map<BsonValue, CoreDocumentSynchronizationConfig> configs = new HashMap<>();
     for (final BsonValue documentId : documentIds) {
       if (getSynchronizedDocument(documentId) == null) {
         configs.put(
@@ -291,7 +289,7 @@ class NamespaceSynchronizationConfig
   ) {
     nsLock.writeLock().lock();
     try {
-      List<BsonValue> bsonValues = new ArrayList<>();
+      final List<BsonValue> bsonValues = new ArrayList<>();
       for (final BsonValue documentId : documentIds) {
         final CoreDocumentSynchronizationConfig config = syncedDocuments.remove(documentId);
         if (config != null) {
@@ -300,7 +298,7 @@ class NamespaceSynchronizationConfig
       }
 
       if (bsonValues.size() > 0) {
-        return new DeleteManyModel<CoreDocumentSynchronizationConfig>(
+        return new DeleteManyModel<>(
             CoreDocumentSynchronizationConfig.getDocsFilter(namespace, documentIds)
         );
       } else {

@@ -35,10 +35,13 @@ public interface StitchAuthListener {
    * <ul>
    * <li>When a user logs in.</li>
    * <li>When a user logs out.</li>
-   * <li>When a user is linked to another identity, i.e. with {@link StitchUser#linkWithCredential}.</li>
-   * <li>When a listener is registered. This is to handle the case where during registration an event happens
+   * <li>When a user is linked to another identity, i.e. with
+   * {@link StitchUser#linkWithCredential}.</li>
+   * <li>When a listener is registered.
+   * This is to handle the case where during registration an event happens
    * that the registerer would otherwise miss out on.</li>
-   * <li>When switching active users, e.g. with {@link StitchAuth#switchToUserWithId} or when another user logs in.</li>
+   * <li>When switching active users, e.g. with {@link StitchAuth#switchToUserWithId}
+   * or when another user logs in.</li>
    * </ul>
    *
    * @param auth the instance of {@link StitchAuth} where the event happened. It should be used to
@@ -84,7 +87,8 @@ public interface StitchAuthListener {
   }
 
   /**
-   * Called whenever a user is linked to a new identity, as in {@link StitchUser#linkWithCredential}.
+   * Called whenever a user is linked to a new identity, as in
+   * {@link StitchUser#linkWithCredential}.
    *
    * @param auth       The instance of {@link StitchAuth} where the user was linked.
    *                   It can be used to infer the current state of authentication.
@@ -114,8 +118,8 @@ public interface StitchAuthListener {
 
   /**
    * Called whenever the active user changes.
-   * <p>
-   * This may be due to a call to:
+   *
+   * <p>This may be due to a call to:
    * <ul>
    * <li>{@link StitchAuth#loginWithCredential}</li>
    * <li>{@link StitchAuth#switchToUserWithId}</li>

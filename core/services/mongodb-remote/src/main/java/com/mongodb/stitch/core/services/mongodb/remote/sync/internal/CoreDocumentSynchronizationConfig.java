@@ -25,9 +25,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nonnull;
@@ -44,7 +42,6 @@ import org.bson.BsonReader;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
-import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
@@ -143,12 +140,6 @@ class CoreDocumentSynchronizationConfig {
   public void setStale(final boolean stale) {
     docLock.writeLock().lock();
     try {
-//      docsColl.updateOne(
-//          getDocFilter(namespace, documentId),
-//          new BsonDocument("$set",
-//              new BsonDocument(
-//                  CoreDocumentSynchronizationConfig.ConfigCodec.Fields.IS_STALE,
-//                  new BsonBoolean(stale))));
       isStale = stale;
     } catch (IllegalStateException e) {
       // eat this
@@ -192,7 +183,7 @@ class CoreDocumentSynchronizationConfig {
    * @param atTime      the time at which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  void setSomePendingWrites(
+  void setSomePendingWritesAndSave(
       final long atTime,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
@@ -225,7 +216,7 @@ class CoreDocumentSynchronizationConfig {
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  void setSomePendingWritesNoDB(
+  void setSomePendingWritesAndSave(
       final long atTime,
       final BsonDocument atVersion,
       final ChangeEvent<BsonDocument> changeEvent
@@ -235,6 +226,10 @@ class CoreDocumentSynchronizationConfig {
       this.lastUncommittedChangeEvent = changeEvent;
       this.lastResolution = atTime;
       this.lastKnownRemoteVersion = atVersion;
+
+      docsColl.replaceOne(
+          getDocFilter(namespace, documentId),
+          this);
     } finally {
       docLock.writeLock().unlock();
     }
@@ -258,20 +253,6 @@ class CoreDocumentSynchronizationConfig {
       this.lastUncommittedChangeEvent = changeEvent;
       this.lastResolution = atTime;
       this.lastKnownRemoteVersion = atVersion;
-
-      docsColl.replaceOne(
-          getDocFilter(namespace, documentId),
-          this);
-    } finally {
-      docLock.writeLock().unlock();
-    }
-  }
-
-  void setPendingWritesCompleteNoDB(final BsonDocument atVersion) {
-    docLock.writeLock().lock();
-    try {
-      this.lastUncommittedChangeEvent = null;
-      this.lastKnownRemoteVersion = atVersion;
     } finally {
       docLock.writeLock().unlock();
     }
@@ -282,10 +263,6 @@ class CoreDocumentSynchronizationConfig {
     try {
       this.lastUncommittedChangeEvent = null;
       this.lastKnownRemoteVersion = atVersion;
-
-      docsColl.replaceOne(
-          getDocFilter(namespace, documentId),
-          this);
     } finally {
       docLock.writeLock().unlock();
     }

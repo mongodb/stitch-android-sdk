@@ -39,7 +39,13 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import org.bson.Document
 import org.bson.types.Binary
 import org.bson.types.ObjectId
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import org.bson.BsonObjectId
@@ -113,7 +119,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
     private suspend fun updateLabels() = coroutineScope {
         val syncedIds = withContext(IO) { Tasks.await(syncedColl!!.syncedIds) }
-        withContext(Main) { label!!.text ="# of synced docs: ${syncedIds.size}" }
+        withContext(Main) { label!!.text = "# of synced docs: ${syncedIds.size}" }
     }
 
     private fun showDialog(): AlertDialog {
@@ -126,8 +132,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
         return dialog
     }
 
-    private suspend fun insertManyDocuments(numberOfDocs: Int,
-                                            sizeOfDocsInBytes: Int) = coroutineScope {
+    private suspend fun insertManyDocuments(
+        numberOfDocs: Int,
+        sizeOfDocsInBytes: Int
+    ) = coroutineScope {
         val dialog = withContext(Main) { showDialog() }
 
         val loadingMsg = dialog.findViewById<TextView>(R.id.loading_msg)!!
@@ -145,7 +153,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
 
         var batch = 1
         for (it in docs.chunked(500)) {
-            withContext(Main) { loadingMsg.text = "inserting batch $batch of ${numberOfDocs/500}" }
+            withContext(Main) {
+                loadingMsg.text = "inserting batch $batch of ${numberOfDocs / 500}"
+            }
             batch++
             Tasks.await(coll!!.insertMany(it))
         }

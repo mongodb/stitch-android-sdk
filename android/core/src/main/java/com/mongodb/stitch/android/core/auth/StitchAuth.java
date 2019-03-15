@@ -27,15 +27,17 @@ import java.util.List;
 /**
  * StitchAuth manages authentication for any Stitch based client.
  * <p>
- * You can access the StitchAuth instance of the {@link com.mongodb.stitch.android.core.StitchAppClient} with 
+ * You can access the StitchAuth instance of the
+ * {@link com.mongodb.stitch.android.core.StitchAppClient} with
  * {@link com.mongodb.stitch.android.core.StitchAppClient#getAuth()}.
  * </p><p>
- * This class handles login with various <a href="https://docs.mongodb.com/stitch/authentication/providers/" target=".">
- * authentication providers</a> using {@link StitchCredential}s with {@link loginWithCredential}.
+ * This class handles login with various
+ * <a href="https://docs.mongodb.com/stitch/authentication/providers/" target=".">
+ * authentication providers</a> using {@link StitchCredential}s with {@link #loginWithCredential}.
  * </p><p>
- * Once logged in, you can retrieve the active {@link StitchUser} with {@link getUser},
- * switch the active user with {@link switchToUserWithId}, {@link logout}, and remove users
- * with {@link removeUserWithId}.
+ * Once logged in, you can retrieve the active {@link StitchUser} with {@link #getUser},
+ * switch the active user with {@link #switchToUserWithId}, {@link #logout}, and remove users
+ * with {@link #removeUserWithId}.
  * </p>
  * <h3>Working with Multiple User Accounts</h3>
  * <p>
@@ -44,13 +46,17 @@ import java.util.List;
  * switch the active user to be any other logged in user at any time. This allows users to 
  * quickly switch between logged in accounts on a device.
  * </p><p>
- * When a user is logged out, they remain on the device and are returned in the {@link listUsers} list.
- * To log in again, another {@link loginWithCredential} call needs to be made. To remove a user from
- * the device, use {@link removeUserWithId}.
+ * When a user is logged out, they remain on the device and are returned in the
+ * {@link #listUsers} list.
+ * To log in again, another {@link #loginWithCredential} call needs to be made.
+ * To remove a user from
+ * the device, use {@link #removeUserWithId}.
  * </p><p>
- * The following diagram explains the state of user accounts in your app when different events occur:
+ * The following diagram explains the state of user accounts in your app when different
+ * events occur:
  * </p>
- * <img src="https://docs.mongodb.com/stitch/_images/multi-user.png" alt="Stitch User state diagram" >
+ * <img src="https://docs.mongodb.com/stitch/_images/multi-user.png"
+ * alt="Stitch User state diagram" >
  * 
  * @see com.mongodb.stitch.android.core.StitchAppClient
  * @see StitchUser
@@ -86,10 +92,10 @@ public interface StitchAuth extends Closeable {
    * of the active user. If there was already an active user, that user becomes inactive but
    * still logged in.
    * </p>
-   * @see logout
-   * @see logoutUserWithId
-   * @see switchToUserWithId
-   * @see removeUserWithId
+   * @see #logout
+   * @see #logoutUserWithId
+   * @see #switchToUserWithId
+   * @see #removeUserWithId
    *
    * @param credential the credentials of the user to log in.
    * @return a {@link Task} containing user associated with the credentials if log in is successful.
@@ -99,12 +105,12 @@ public interface StitchAuth extends Closeable {
   /**
    * Logs out the active user.
    * <p>
-   * To log out an inactive user, use {@link logoutUserWithId}.
+   * To log out an inactive user, use {@link #logoutUserWithId}.
    * </p><p>
    * Except for anonymous users, logged out users remain on
-   * the device and will be listed in the result of {@link listUsers}.
-   * To log in again, {@link loginWithCredential} must be used.
-   * To log out and remove the active user, use {@link removeUser}.
+   * the device and will be listed in the result of {@link #listUsers}.
+   * To log in again, {@link #loginWithCredential} must be used.
+   * To log out and remove the active user, use {@link #removeUser}.
    * </p><p>
    * Anonymous users are deleted immediately after logging out.
    * </p>
@@ -117,9 +123,9 @@ public interface StitchAuth extends Closeable {
    * Throws an exception if the user was not found.
    * <p>
    * Except for anonymous users, logged out users remain on
-   * the device and will be listed in the result of {@link listUsers}.
-   * To log in again, {@link loginWithCredential} must be used.
-   * To remove a user from the list, use {@link removeUserWithId}.
+   * the device and will be listed in the result of {@link #listUsers}.
+   * To log in again, {@link #loginWithCredential} must be used.
+   * To remove a user from the list, use {@link #removeUserWithId}.
    * </p><p>
    * Anonymous users are deleted immediately after logging out.
    * </p>
@@ -131,11 +137,11 @@ public interface StitchAuth extends Closeable {
   /**
    * Logs out and removes the active user.
    * <p>
-   * To remove an inactive user, see {@link removeUserWithId}.
+   * To remove an inactive user, see {@link #removeUserWithId}.
    * </p><p>
    * Removing a user means removing it from this device,
    * i.e. removing it from the list of users returned by
-   * {@link listUsers}.
+   * {@link #listUsers}.
    * </p>
    * @return a {@link Task} completing when logged out.
    */
@@ -154,8 +160,8 @@ public interface StitchAuth extends Closeable {
    * <p>
    * Note: even if there are other users who are logged in,
    * this will return false if there is no <i>active</i> user.
-   * A user becomes the active user upon {@link loginWithCredential}.
-   * See {@link listUsers}.
+   * A user becomes the active user upon {@link #loginWithCredential}.
+   * See {@link #listUsers}.
    * </p>
    *
    * @return whether there's a currently active user.

@@ -20,7 +20,6 @@ import org.bson.BsonElement
 import org.bson.BsonObjectId
 import org.bson.BsonValue
 import org.bson.Document
-import org.bson.types.Binary
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

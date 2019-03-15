@@ -131,10 +131,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     void wrapForRecovery(final MongoNamespace namespace,
                          final Runnable callable) {
-      MongoCollection<BsonDocument> localCollection =
-          getLocalCollection(namespace);
+      final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
 
-      List<BsonDocument> oldDocs = localCollection.find(
+      final List<BsonDocument> oldDocs = localCollection.find(
           new Document("_id", new Document("$in", ids))
       ).into(new ArrayList<>());
 
@@ -152,17 +151,17 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     void commitAndClear(final MongoNamespace namespace,
                         final MongoCollection<CoreDocumentSynchronizationConfig> docsColl) {
       wrapForRecovery(namespace, () -> {
-          MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
+        final MongoCollection<BsonDocument> localCollection = getLocalCollection(namespace);
 
-          if (BatchOps.this.bulkWriteModels.size() > 0) {
-            localCollection.bulkWrite(BatchOps.this.bulkWriteModels);
-          }
-          if (BatchOps.this.configs.size() > 0) {
-            docsColl.bulkWrite(configs);
-          }
+        if (BatchOps.this.bulkWriteModels.size() > 0) {
+          localCollection.bulkWrite(BatchOps.this.bulkWriteModels);
+        }
+        if (BatchOps.this.configs.size() > 0) {
+          docsColl.bulkWrite(configs);
+        }
 
-          BatchOps.this.bulkWriteModels.clear();
-          BatchOps.this.configs.clear();
+        BatchOps.this.bulkWriteModels.clear();
+        BatchOps.this.configs.clear();
       });
     }
   }
@@ -694,8 +693,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           }
         }
 
-        nsConfig.setStale(false);
-
         // For synchronized documents that had no unprocessed change event, and did not have a
         // latest version when stale documents were queried, synthesize a remote delete event to
         // delete the local document.
@@ -725,6 +722,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         }
 
         batchOps.commitAndClear(nsConfig.getNamespace(), nsConfig.getDocsColl());
+        nsConfig.setStale(false);
       } finally {
         nsConfig.getLock().writeLock().unlock();
         streamerLock.writeLock().unlock();
@@ -1361,7 +1359,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   }
                 } else {
                   batchOps.merge(
-                    desyncDocumentsFromRemote(nsConfig.getNamespace(), docConfig.getDocumentId()));
+                      desyncDocumentsFromRemote(
+                          nsConfig.getNamespace(), docConfig.getDocumentId()));
                   triggerListeningToNamespace(nsConfig.getNamespace());
                 }
                 break;
@@ -1410,11 +1409,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 false));
 
 
-            docConfig.setPendingWritesCompleteNoDB(nextVersion);
+            docConfig.setPendingWritesComplete(nextVersion);
             if (committedEvent.getOperationType() != OperationType.DELETE) {
               batchOps.configs.add(
-                  new ReplaceOneModel<>
-                      (CoreDocumentSynchronizationConfig.getDocFilter(
+                  new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
                           nsConfig.getNamespace(), docConfig.getDocumentId()),
                         docConfig));
             }
@@ -2038,7 +2036,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             namespace,
             documentId
         );
-        config.setSomePendingWrites(logicalT, event);
+        config.setSomePendingWritesAndSave(logicalT, event);
       } finally {
         lock.unlock();
       }
@@ -2081,7 +2079,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               namespace,
               documentId
           );
-          config.setSomePendingWrites(logicalT, event);
+          config.setSomePendingWritesAndSave(logicalT, event);
           eventsToEmit.add(event);
         }
       } finally {
@@ -2197,7 +2195,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               true);
         }
 
-        config.setSomePendingWrites(logicalT, event);
+        config.setSomePendingWritesAndSave(logicalT, event);
 
         if (documentBeforeUpdate != null) {
           undoCollection
@@ -2331,7 +2329,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     true);
               }
 
-              config.setSomePendingWrites(logicalT, event);
+              config.setSomePendingWritesAndSave(logicalT, event);
               undoCollection.deleteOne(getDocumentIdFilter(documentId));
               eventsToEmit.add(event);
             });
@@ -2388,7 +2386,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       if (remoteEvent.getOperationType() == OperationType.DELETE) {
-          event = ChangeEvents.changeEventForLocalInsert(namespace, docForStorage, true);
+        event = ChangeEvents.changeEventForLocalInsert(namespace, docForStorage, true);
       } else {
         event = ChangeEvents.changeEventForLocalUpdate(
             namespace,
@@ -2399,7 +2397,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             docForStorage,
             true);
       }
-      config.setSomePendingWritesNoDB(
+      config.setSomePendingWrites(
           logicalT,
           atVersion,
           event);
@@ -2448,7 +2446,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       docForStorage = sanitizeDocument(remoteDocument);
 
-      config.setPendingWritesCompleteNoDB(atVersion);
+      config.setPendingWritesComplete(atVersion);
 
       event = ChangeEvents.changeEventForLocalReplace(namespace, documentId, docForStorage, false);
     } finally {
@@ -2521,7 +2519,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           return result;
         }
 
-        config.setSomePendingWrites(logicalT, event);
+        config.setSomePendingWritesAndSave(logicalT, event);
         undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
       } finally {
         nsConfig.getLock().writeLock().unlock();
@@ -2590,7 +2588,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             continue;
           }
 
-          config.setSomePendingWrites(logicalT, event);
+          config.setSomePendingWritesAndSave(logicalT, event);
           undoCollection.deleteOne(getDocumentIdFilter(documentId));
           eventsToEmit.add(event);
         }
@@ -2632,7 +2630,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       event = ChangeEvents.changeEventForLocalDelete(namespace, documentId, true);
-      config.setSomePendingWritesNoDB(logicalT, atVersion, event);
+      config.setSomePendingWrites(logicalT, atVersion, event);
     } finally {
       lock.unlock();
     }
@@ -2653,7 +2651,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace  the namespace where the document lives.
    * @param documentId the _id of the document.
    */
-  @CheckReturnValue @Nullable
+  @CheckReturnValue
+  @Nullable
   private BatchOps deleteOneFromRemote(
       final MongoNamespace namespace,
       final BsonValue documentId
@@ -2803,7 +2802,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    * @param namespace the namespace referring to the local collection.
    * @return the local collection representing the given namespace for raw document operations.
    */
-  private MongoCollection<BsonDocument> getLocalCollection(final MongoNamespace namespace) {
+  MongoCollection<BsonDocument> getLocalCollection(final MongoNamespace namespace) {
     return getLocalCollection(
         namespace,
         BsonDocument.class,
