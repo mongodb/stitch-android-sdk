@@ -71,7 +71,6 @@ This will start you off with the core SDK functionality as well as the remote Mo
 For customized dependencies use the following:
 
 ```gradle
-implementation 'org.mongodb:stitch-server-core:4.2.1'
 implementation 'org.mongodb:stitch-server-services-aws:4.2.1'
 implementation 'org.mongodb:stitch-server-services-fcm:4.2.1'
 implementation 'org.mongodb:stitch-server-services-http:4.2.1'
