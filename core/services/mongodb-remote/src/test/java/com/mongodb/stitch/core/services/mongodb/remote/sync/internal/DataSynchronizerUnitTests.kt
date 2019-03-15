@@ -1963,7 +1963,7 @@ class DataSynchronizerUnitTests {
 
         val id = doc["_id"]
         val filter = BsonDocument("_id", id)
-        val batchOps = ctx.dataSynchronizer.BatchOps()
+        val batchOps = SyncWriteModelContainer()
         batchOps.ids.add(id)
 
         // cause the batching to fail after the undo docs have been inserted
