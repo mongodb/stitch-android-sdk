@@ -40,20 +40,24 @@ final class DocumentVersionInfo {
     private static final String SYNC_PROTOCOL_VERSION_FIELD = "spv";
     private static final String INSTANCE_ID_FIELD = "id";
     private static final String VERSION_COUNTER_FIELD = "v";
+    private static final String HASH_FIELD = "h";
   }
 
   static class Version {
     final int syncProtocolVersion;
     final String instanceId;
     final long versionCounter;
+    final int hash;
 
     Version(
             final int syncProtocolVersion,
             final String instanceId,
-            final long versionCounter) {
+            final long versionCounter,
+            final int hash) {
       this.syncProtocolVersion = syncProtocolVersion;
       this.instanceId = instanceId;
       this.versionCounter = versionCounter;
+      this.hash = hash;
     }
 
     /**
@@ -79,6 +83,12 @@ final class DocumentVersionInfo {
     long getVersionCounter() {
       return versionCounter;
     }
+
+    /**
+     * Returns the hash code of this version.
+     * @return an int representing the hash code of the data in this version.
+     */
+    int getHash() { return hash; }
   }
 
   private DocumentVersionInfo(
@@ -87,10 +97,13 @@ final class DocumentVersionInfo {
   ) {
     if (version != null) {
       this.versionDoc = version;
+
+      BsonInt32 versionDocHash = versionDoc.getInt32(Fields.HASH_FIELD, null);
       this.version = new Version(
         versionDoc.getInt32(Fields.SYNC_PROTOCOL_VERSION_FIELD).getValue(),
         versionDoc.getString(Fields.INSTANCE_ID_FIELD).getValue(),
-        versionDoc.getInt64(Fields.VERSION_COUNTER_FIELD).getValue()
+        versionDoc.getInt64(Fields.VERSION_COUNTER_FIELD).getValue(),
+        versionDocHash.intValue()
       );
     } else {
       this.versionDoc = null;

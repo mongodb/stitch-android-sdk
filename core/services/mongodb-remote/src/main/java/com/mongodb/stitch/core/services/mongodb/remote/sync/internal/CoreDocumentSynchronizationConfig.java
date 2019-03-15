@@ -23,6 +23,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DocumentSynchronizationConfig;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -48,7 +49,7 @@ import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 
 
-class CoreDocumentSynchronizationConfig {
+class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig {
   static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
@@ -332,13 +333,16 @@ class CoreDocumentSynchronizationConfig {
       final DocumentVersionInfo localVersionInfo =
               DocumentVersionInfo.fromVersionDoc(lastKnownRemoteVersion);
 
-      return ((versionInfo.hasVersion() && localVersionInfo.hasVersion()
-              && (versionInfo.getVersion().getSyncProtocolVersion()
-                  == localVersionInfo.getVersion().getSyncProtocolVersion())
-              && (versionInfo.getVersion().getInstanceId()
-                  .equals(localVersionInfo.getVersion().getInstanceId()))
-              && (versionInfo.getVersion().getVersionCounter()
-                  <= localVersionInfo.getVersion().getVersionCounter())));
+      if (!versionInfo.hasVersion() || !localVersionInfo.hasVersion()) {
+        return false;
+      }
+
+      DocumentVersionInfo.Version remoteVersion = versionInfo.getVersion();
+      DocumentVersionInfo.Version localVersion = localVersionInfo.getVersion();
+
+      return (remoteVersion.getSyncProtocolVersion() == localVersion.getSyncProtocolVersion()
+              && remoteVersion.getInstanceId().equals(localVersion.getInstanceId())
+              && remoteVersion.getVersionCounter() <= localVersion.getVersionCounter());
     } finally {
       docLock.readLock().unlock();
     }
@@ -403,6 +407,11 @@ class CoreDocumentSynchronizationConfig {
         break;
     }
     return newestChangeEvent;
+  }
+
+  @Override
+  public ReadWriteLock getLock() {
+    return docLock;
   }
 
   BsonDocument toBsonDocument() {

@@ -16,6 +16,9 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
+import java.util.concurrent.locks.ReadWriteLock;
+
+import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 /**
@@ -38,4 +41,25 @@ public interface DocumentSynchronizationConfig {
    *         remotely.
    */
   boolean hasUncommittedWrites();
+
+  /**
+   * Returns the last logical time at which.
+   *
+   * @return the last logical resolution time.
+   */
+  long getLastResolution();
+
+  /**
+   * Returns the {@link BsonDocument} representing the version information for the last
+   * previously seen remote change event.
+   *
+   * @return the last seen version information.
+   */
+  BsonDocument getLastKnownRemoteVersion();
+
+  /**
+   * Returns the document configuration lock so that synchronization processes can prevent
+   * concurrent changes while relying on its state.
+   */
+  ReadWriteLock getLock();
 }
