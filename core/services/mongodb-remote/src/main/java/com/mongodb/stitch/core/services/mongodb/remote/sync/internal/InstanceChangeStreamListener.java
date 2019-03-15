@@ -26,8 +26,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import org.bson.BsonDocument;
 import org.bson.BsonValue;
+import org.bson.BsonDocument;
 
 interface InstanceChangeStreamListener {
   /**

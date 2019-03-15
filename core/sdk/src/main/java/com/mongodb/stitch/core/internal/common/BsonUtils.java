@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.internal.common;
 import static java.util.Arrays.asList;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
+import java.io.InputStream;
 import java.util.Map;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
@@ -50,6 +51,46 @@ public final class BsonUtils extends RuntimeException {
               new DocumentCodecProvider(),
               new IterableCodecProvider(),
               new MapCodecProvider()));
+
+  /**
+   * Parses the provided extended JSON stream and decodes it into a T value as specified by the
+   * provided {@link Decoder}. The decoder should close the BsonReade{@link org.bson.BsonReader}
+   * when it is finished with it.
+   *
+   * @param jsonStream the JSON stream to parse.
+   * @param valueDecoder the {@link Decoder} to use to convert the BSON value into the type T.
+   * @param <T> the type into which the JSON string is decoded.
+   * @return the decoded value.
+   */
+  public static <T> T parseValue(final InputStream jsonStream, final Decoder<T> valueDecoder) {
+    final JsonReader bsonReader = new JsonReader(jsonStream);
+    bsonReader.readBsonType();
+    return valueDecoder.decode(bsonReader, DecoderContext.builder().build());
+  }
+
+  /**
+   * Parses the provided extended JSON stream and decodes it into a T value as specified by the
+   * provided class type. The type will decoded using the codec found for the type in the provided
+   * codec registry. If the provided type is not supported by the provided codec registry, the
+   * method will throw a {@link org.bson.codecs.configuration.CodecConfigurationException}.
+   *
+   * @param jsonStream the JSON string to parse.
+   * @param valueClass the class that the JSON string should be decoded into.
+   * @param codecRegistry the codec registry to use to find the codec for the provided class.
+   * @param <T> the type into which the JSON string is decoded.
+   * @return the decoded value.
+   */
+  public static <T> T parseValue(
+      final InputStream jsonStream, final Class<T> valueClass, final CodecRegistry codecRegistry) {
+    final JsonReader bsonReader = new JsonReader(jsonStream);
+    bsonReader.readBsonType();
+    // We can't detect if their codecRegistry has any duplicate providers. There's also a chance
+    // that putting ours first may prevent decoding of some of their classes if for example they
+    // have their own way of decoding an Integer.
+    final CodecRegistry newReg =
+        CodecRegistries.fromRegistries(BsonUtils.DEFAULT_CODEC_REGISTRY, codecRegistry);
+    return newReg.get(valueClass).decode(bsonReader, DecoderContext.builder().build());
+  }
 
   /**
    * Parses the provided extended JSON string and decodes it into a T value as specified by the

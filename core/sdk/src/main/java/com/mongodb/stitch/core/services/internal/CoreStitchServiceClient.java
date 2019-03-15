@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.services.internal;
 
+import com.mongodb.stitch.core.internal.common.StreamedDecoder;
 import com.mongodb.stitch.core.internal.net.Stream;
 
 import java.io.IOException;
@@ -37,6 +38,11 @@ public interface CoreStitchServiceClient extends StitchServiceBinder {
       final String name,
       final List<?> args,
       final Decoder<T> resultDecoder);
+
+  <T> T callFunction(
+      final String name,
+      final List<?> args,
+      final StreamedDecoder<T> resultDecoder);
 
   <T> T callFunction(
       final String name,

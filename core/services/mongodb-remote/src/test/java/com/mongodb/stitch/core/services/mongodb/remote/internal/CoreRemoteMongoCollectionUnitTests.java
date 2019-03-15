@@ -34,6 +34,8 @@ import static org.mockito.Mockito.when;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.internal.common.CollectionDecoder;
+import com.mongodb.stitch.core.internal.common.IteratorDecoder;
+import com.mongodb.stitch.core.internal.common.StreamedDecoder;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
@@ -52,6 +54,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -196,16 +199,16 @@ public class CoreRemoteMongoCollectionUnitTests {
     final Document doc1 = new Document("one", 2);
     final Document doc2 = new Document("three", 4);
     final Collection<Document> docs = Arrays.asList(doc1, doc2);
-    doReturn(docs)
-        .when(service).callFunction(any(), any(), any(Decoder.class));
+    doReturn(docs.iterator())
+        .when(service).callFunction(any(), any(), any(StreamedDecoder.class));
 
     final CoreRemoteFindIterable<Document> iter = coll.find();
     assertEquals(docs, iter.into(new ArrayList<>()));
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
-    final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
-        ArgumentCaptor.forClass(Decoder.class);
+    final ArgumentCaptor<StreamedDecoder<Iterator<Document>>> resultClassArg =
+        ArgumentCaptor.forClass(StreamedDecoder.class);
     verify(service)
         .callFunction(
             funcNameArg.capture(),
@@ -222,7 +225,7 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("project", null);
     expectedArgs.put("sort", null);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
-    assertEquals(CollectionDecoder.class, resultClassArg.getValue().getClass());
+    assertEquals(IteratorDecoder.class, resultClassArg.getValue().getClass());
 
     final BsonDocument expectedFilter = new BsonDocument("one", new BsonInt32(23));
     final BsonDocument expectedProject = new BsonDocument("two", new BsonString("four"));
@@ -232,6 +235,8 @@ public class CoreRemoteMongoCollectionUnitTests {
         .sort(expectedSort)
         .limit(5);
 
+    doReturn(docs.iterator())
+        .when(service).callFunction(any(), any(), any(StreamedDecoder.class));
     assertEquals(docs, iter.into(new ArrayList<>()));
     verify(service, times(2))
         .callFunction(
@@ -246,16 +251,16 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("sort", expectedSort);
     expectedArgs.put("limit", 5);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
-    assertEquals(CollectionDecoder.class, resultClassArg.getValue().getClass());
+    assertEquals(IteratorDecoder.class, resultClassArg.getValue().getClass());
 
-    doReturn(Arrays.asList(1, 2, 3))
-        .when(service).callFunction(any(), any(), any(Decoder.class));
+    doReturn(Arrays.asList(1, 2, 3).iterator())
+        .when(service).callFunction(any(), any(), any(StreamedDecoder.class));
     assertEquals(Arrays.asList(1, 2, 3),
         coll.find(expectedFilter, Integer.class).into(new ArrayList<>()));
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunction(any(), any(), any(Decoder.class));
+        .when(service).callFunction(any(), any(), any(StreamedDecoder.class));
     assertThrows(() -> coll.find().first(),
         IllegalArgumentException.class);
   }
@@ -275,16 +280,16 @@ public class CoreRemoteMongoCollectionUnitTests {
     final Document doc1 = new Document("one", 2);
     final Document doc2 = new Document("three", 4);
     final Collection<Document> docs = Arrays.asList(doc1, doc2);
-    doReturn(docs)
-        .when(service).callFunction(any(), any(), any(Decoder.class));
+    doReturn(docs.iterator())
+        .when(service).callFunction(any(), any(), any(StreamedDecoder.class));
 
     CoreRemoteAggregateIterable<Document> iter = coll.aggregate(Collections.emptyList());
     assertEquals(docs, iter.into(new ArrayList<>()));
 
     final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
-    final ArgumentCaptor<Decoder<Collection<Document>>> resultClassArg =
-        ArgumentCaptor.forClass(Decoder.class);
+    final ArgumentCaptor<StreamedDecoder<Iterator<Document>>> resultClassArg =
+        ArgumentCaptor.forClass(StreamedDecoder.class);
     verify(service)
         .callFunction(
             funcNameArg.capture(),
@@ -298,13 +303,15 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("collection", "collName1");
     expectedArgs.put("pipeline", new ArrayList<BsonDocument>());
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
-    assertEquals(CollectionDecoder.class, resultClassArg.getValue().getClass());
+    assertEquals(IteratorDecoder.class, resultClassArg.getValue().getClass());
 
     iter = coll.aggregate(Arrays.asList(new Document("$match", 1), new Document("sort", 2)));
     final List<BsonDocument> expectedPipeline = Arrays.asList(
         new BsonDocument("$match", new BsonInt32(1)), new BsonDocument("sort", new BsonInt32(2))
     );
 
+    doReturn(docs.iterator())
+        .when(service).callFunction(any(), any(), any(StreamedDecoder.class));
     assertEquals(docs, iter.into(new ArrayList<>()));
     verify(service, times(2))
         .callFunction(
@@ -316,11 +323,11 @@ public class CoreRemoteMongoCollectionUnitTests {
     assertEquals(1, funcArgsArg.getValue().size());
     expectedArgs.put("pipeline", expectedPipeline);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
-    assertEquals(CollectionDecoder.class, resultClassArg.getValue().getClass());
+    assertEquals(IteratorDecoder.class, resultClassArg.getValue().getClass());
 
     // Should pass along errors
     doThrow(new IllegalArgumentException("whoops"))
-        .when(service).callFunction(anyString(), anyList(), any(Decoder.class));
+        .when(service).callFunction(anyString(), anyList(), any(StreamedDecoder.class));
     assertThrows(() -> coll.aggregate(Collections.emptyList()).first(),
         IllegalArgumentException.class);
   }

@@ -19,16 +19,17 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.MongoNamespace;
-import com.mongodb.stitch.core.internal.common.CollectionDecoder;
+import com.mongodb.stitch.core.internal.common.IteratorDecoder;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
-import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
+
 import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
 
-public class FindOperation<T> implements Operation<Collection<T>> {
+public class FindOperation<T> implements Operation<Iterator<T>> {
 
   private final MongoNamespace namespace;
   private final Decoder<T> decoder;
@@ -94,7 +95,7 @@ public class FindOperation<T> implements Operation<Collection<T>> {
     return this;
   }
 
-  public Collection<T> execute(final CoreStitchServiceClient service) {
+  public Iterator<T> execute(final CoreStitchServiceClient service) {
 
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
@@ -107,6 +108,6 @@ public class FindOperation<T> implements Operation<Collection<T>> {
     return service.callFunction(
         "find",
         Collections.singletonList(args),
-        new CollectionDecoder<>(decoder));
+        new IteratorDecoder<>(decoder));
   }
 }

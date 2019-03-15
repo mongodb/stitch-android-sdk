@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.services.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.notNull;
 
 import com.mongodb.stitch.core.auth.internal.StitchAuthRequestClient;
+import com.mongodb.stitch.core.internal.common.StreamedDecoder;
 import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchAuthDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchAuthRequest;
@@ -121,6 +122,14 @@ public class CoreStitchServiceClientImpl implements CoreStitchServiceClient {
       final List<?> args,
       final Decoder<T> resultDecoder) {
     return requestClient.doAuthenticatedRequest(
+        getCallServiceFunctionRequest(name, args, null), resultDecoder);
+  }
+
+  public <T> T callFunction(
+      final String name,
+      final List<?> args,
+      final StreamedDecoder<T> resultDecoder) {
+    return requestClient.doAuthenticatedRequestStreamed(
         getCallServiceFunctionRequest(name, args, null), resultDecoder);
   }
 

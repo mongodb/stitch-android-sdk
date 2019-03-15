@@ -19,22 +19,12 @@ import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoDatabaseImpl
-import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders
+import com.mongodb.stitch.core.services.mongodb.remote.internal.*
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
-import org.bson.BsonDocument
-import org.bson.BsonInt32
-import org.bson.BsonInt64
-import org.bson.BsonObjectId
-import org.bson.BsonString
-import org.bson.BsonValue
-import org.bson.Document
+import org.bson.*
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.Codec
 import org.bson.codecs.DocumentCodec
@@ -398,7 +388,7 @@ class SyncUnitTestHarness : Closeable {
                 Mockito.`when`(collectionMock.namespace).thenReturn(namespace)
                 val remoteFindIterable = Mockito.mock(CoreRemoteFindIterable::class.java) as CoreRemoteFindIterable<BsonDocument>
                 Mockito.`when`(collectionMock.find(ArgumentMatchers.any())).thenReturn(remoteFindIterable)
-                Mockito.`when`(remoteFindIterable.into<HashSet<BsonDocument>>(ArgumentMatchers.any())).thenReturn(HashSet())
+                Mockito.`when`(remoteFindIterable.iterator()).thenReturn(CoreRemoteMongoCursorImpl(Collections.emptyList<BsonDocument>().iterator()))
 
                 Mockito.verifyZeroInteractions(collectionMock)
             }

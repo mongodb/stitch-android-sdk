@@ -41,11 +41,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 
 import javax.annotation.Nullable;
 
-import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.Document;
-import org.bson.codecs.BsonDocumentCodec;
+import org.bson.BsonDocument;
 import org.bson.codecs.Codec;
+import org.bson.codecs.BsonDocumentCodec;
 import org.bson.diagnostics.Logger;
 import org.bson.diagnostics.Loggers;
 

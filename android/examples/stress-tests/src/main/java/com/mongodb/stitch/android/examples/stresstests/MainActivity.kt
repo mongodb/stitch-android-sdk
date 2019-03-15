@@ -31,6 +31,7 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.services.mongodb.remote.Sync
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
+import com.mongodb.stitch.core.StitchAppClientConfiguration
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
@@ -190,8 +191,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if (!Stitch.hasAppClient("stitch-tests-js-sdk-jntlj")) {
-            Stitch.initializeDefaultAppClient("stitch-tests-js-sdk-jntlj")
+        if (!Stitch.hasAppClient("stress-slvtw")) {
+            Stitch.initializeDefaultAppClient("stress-slvtw", StitchAppClientConfiguration.Builder().withBaseUrl("https://stitch-qa.mongodb.com").build())
         }
 
         stitchAppClient = Stitch.getDefaultAppClient()

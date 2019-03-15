@@ -33,8 +33,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import org.bson.BsonDocument;
 import org.bson.BsonValue;
+import org.bson.BsonDocument;
 
 
 final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamListener {

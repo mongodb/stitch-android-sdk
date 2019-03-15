@@ -21,6 +21,7 @@ import com.mongodb.Function;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 
 import java.util.Collection;
+import java.util.Iterator;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -42,7 +43,7 @@ public abstract class CoreRemoteMongoIterableImpl<DocumentT, ResultT>
     this.operations = operations;
   }
 
-  abstract Operation<Collection<ResultT>> asOperation();
+  abstract Operation<Iterator<ResultT>> asOperation();
 
   CoreStitchServiceClient getService() {
     return service;
@@ -59,8 +60,7 @@ public abstract class CoreRemoteMongoIterableImpl<DocumentT, ResultT>
   @Override
   @Nonnull
   public CoreRemoteMongoCursor<ResultT> iterator() {
-    final Collection<ResultT> result = asOperation().execute(service);
-    return new CoreRemoteMongoCursorImpl<>(result.iterator());
+    return new CoreRemoteMongoCursorImpl<>(asOperation().execute(service));
   }
 
   /**

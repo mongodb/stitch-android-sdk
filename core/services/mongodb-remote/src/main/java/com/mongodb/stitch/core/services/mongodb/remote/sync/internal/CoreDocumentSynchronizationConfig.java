@@ -36,21 +36,26 @@ import org.bson.BsonBinaryReader;
 import org.bson.BsonBinaryWriter;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
+import org.bson.BsonDocumentWrapper;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonReader;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
+import org.bson.BsonDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
+import org.bson.codecs.BsonDocumentCodec;
+import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.conversions.Bson;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 
 
-class CoreDocumentSynchronizationConfig {
+class CoreDocumentSynchronizationConfig implements Bson {
   private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
@@ -431,6 +436,13 @@ class CoreDocumentSynchronizationConfig {
     return newestChangeEvent;
   }
 
+  @Override
+  public <DocumentT> BsonDocument toBsonDocument(
+      final Class<DocumentT> documentClass, final CodecRegistry codecRegistry) {
+    return new BsonDocumentWrapper<>(
+        this, codecRegistry.get(CoreDocumentSynchronizationConfig.class));
+  }
+
   BsonDocument toBsonDocument() {
     docLock.readLock().lock();
     try {
@@ -520,7 +532,7 @@ class CoreDocumentSynchronizationConfig {
         final BsonReader reader,
         final DecoderContext decoderContext
     ) {
-      final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
+      final BsonDocument document = new BsonDocumentCodec().decode(reader, decoderContext);
       return fromBsonDocument(document);
     }
 

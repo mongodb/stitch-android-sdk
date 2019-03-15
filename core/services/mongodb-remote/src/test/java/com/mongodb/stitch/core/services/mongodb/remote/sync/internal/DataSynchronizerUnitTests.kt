@@ -4,6 +4,7 @@ import com.mongodb.client.model.CountOptions
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.stitch.core.StitchServiceErrorCode
 import com.mongodb.stitch.core.StitchServiceException
+import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
@@ -11,14 +12,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIt
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterableImpl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
-import org.bson.BsonBoolean
-import org.bson.BsonDocument
-import org.bson.BsonInt32
-import org.bson.BsonObjectId
-import org.bson.BsonString
+import org.bson.*
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
-import org.bson.Document
 import org.junit.After
 
 import org.junit.Assert.assertEquals
@@ -961,7 +957,7 @@ class DataSynchronizerUnitTests {
         assertNotNull(result.upsertedId)
 
         val expectedEvent1 = ChangeEvents.changeEventForLocalInsert(ctx.namespace,
-            doc1.append("_id", result.upsertedId), true)
+                doc1.append("_id", result.upsertedId), true)
 
         ctx.waitForEvents(amount = 1)
 
@@ -1054,7 +1050,7 @@ class DataSynchronizerUnitTests {
                     BsonDocument("count", BsonInt32(2)),
                     listOf()
                 ),
-                expectedDocAfterUpdate1,
+                    expectedDocAfterUpdate1,
                 true),
             ChangeEvents.changeEventForLocalUpdate(
                 ctx.namespace,
@@ -1063,7 +1059,7 @@ class DataSynchronizerUnitTests {
                     BsonDocument("count", BsonInt32(2)),
                     listOf()
                 ),
-                expectedDocAfterUpdate2,
+                    expectedDocAfterUpdate2,
                 true))
 
         assertEquals(
@@ -1100,7 +1096,7 @@ class DataSynchronizerUnitTests {
 
         val expectedEvent1 = ChangeEvents.changeEventForLocalInsert(
             ctx.namespace,
-            doc1.append("_id", result.upsertedId), true)
+                doc1.append("_id", result.upsertedId), true)
 
         ctx.waitForEvents(amount = 1)
 
@@ -1523,7 +1519,7 @@ class DataSynchronizerUnitTests {
         // the remote doc will have a higher version than the local
         ctx.updateTestDocument()
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
+        val pseudoUpdatedDocument = ctx.testDocument.append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
             ctx.testDocumentId,
             pseudoUpdatedDocument,
@@ -1963,7 +1959,7 @@ class DataSynchronizerUnitTests {
 
         val id = doc["_id"]
         val filter = BsonDocument("_id", id)
-        val batchOps = SyncWriteModelContainer()
+        val batchOps = SyncWriteModelContainer(BsonUtils.DEFAULT_CODEC_REGISTRY)
         batchOps.ids.add(id)
 
         // cause the batching to fail after the undo docs have been inserted
