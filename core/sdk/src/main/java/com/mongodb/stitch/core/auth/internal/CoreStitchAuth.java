@@ -256,6 +256,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       final String bodyStr = IoUtils.readAllToString(response.getBody());
       final JsonReader bsonReader = new JsonReader(bodyStr);
 
+      // We must check this condition because the decoder will throw trying to decode null
       if (bsonReader.readBsonType() == BsonType.NULL) {
         return null;
       }
@@ -290,6 +291,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       final String bodyStr = IoUtils.readAllToString(response.getBody());
       final JsonReader bsonReader = new JsonReader(bodyStr);
 
+      // We must check this condition because the decoder will throw trying to decode null
       if (bsonReader.readBsonType() == BsonType.NULL) {
         return null;
       }
