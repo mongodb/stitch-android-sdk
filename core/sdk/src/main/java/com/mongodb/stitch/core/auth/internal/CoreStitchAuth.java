@@ -53,9 +53,13 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 import javax.annotation.meta.When;
 
+import org.bson.BsonType;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.json.JsonReader;
 
 /**
  * CoreStitchAuth is responsible for authenticating clients as well as acting as a client for
@@ -250,11 +254,13 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final Response response = doAuthenticatedRequest(stitchReq);
     try {
       final String bodyStr = IoUtils.readAllToString(response.getBody());
-      if (bodyStr.equals("null")) {
+      final JsonReader bsonReader = new JsonReader(bodyStr);
+
+      if (bsonReader.readBsonType() == BsonType.NULL) {
         return null;
       }
+      return resultDecoder.decode(bsonReader, DecoderContext.builder().build());
 
-      return BsonUtils.parseValue(bodyStr, resultDecoder);
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
@@ -282,11 +288,15 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
 
     try {
       final String bodyStr = IoUtils.readAllToString(response.getBody());
-      if (bodyStr.equals("null")) {
+      final JsonReader bsonReader = new JsonReader(bodyStr);
+
+      if (bsonReader.readBsonType() == BsonType.NULL) {
         return null;
       }
 
-      return BsonUtils.parseValue(bodyStr, resultClass, codecRegistry);
+      final CodecRegistry newReg =
+              CodecRegistries.fromRegistries(BsonUtils.DEFAULT_CODEC_REGISTRY, codecRegistry);
+      return newReg.get(resultClass).decode(bsonReader, DecoderContext.builder().build());
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
