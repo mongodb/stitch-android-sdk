@@ -594,7 +594,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
           unseenIds.remove(docConfig.getDocumentId());
           latestDocumentMap.remove(docConfig.getDocumentId());
-          syncWriteModelContainer.merge(syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue()));
+          syncWriteModelContainer.merge(
+              syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue()));
         }
 
 
@@ -1762,9 +1763,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   void desyncMany(final MongoNamespace namespace, final BsonValue... documentIds) {
-    final SyncWriteModelContainer syncWriteModelContainer = this.desyncDocumentsFromRemote(namespace, documentIds);
+    final SyncWriteModelContainer syncWriteModelContainer =
+        this.desyncDocumentsFromRemote(namespace, documentIds);
     if (syncWriteModelContainer != null) {
-      this.getLocalCollection(namespace).bulkWrite(syncWriteModelContainer.bulkWriteModels);
+      syncWriteModelContainer.commitAndClear(
+          this.getLocalCollection(namespace),
+          this.getUndoCollection(namespace),
+          this.syncConfig.getNamespaceConfig(namespace).getDocsColl()
+      );
     }
   }
 
@@ -2521,9 +2527,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           if (config.getLastUncommittedChangeEvent() != null
               && config.getLastUncommittedChangeEvent().getOperationType()
               == OperationType.INSERT) {
-            localCollection.bulkWrite(
-                desyncDocumentsFromRemote(config.getNamespace(),
-                    config.getDocumentId()).bulkWriteModels);
+            desyncDocumentsFromRemote(
+                config.getNamespace(),
+                documentId
+            ).commitAndClear(
+                localCollection,
+                undoCollection,
+                this.syncConfig.getNamespaceConfig(namespace).getDocsColl()
+            );
             undoCollection.deleteOne(getDocumentIdFilter(documentId));
             continue;
           }
