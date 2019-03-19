@@ -2527,12 +2527,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               == OperationType.INSERT) {
             desyncDocumentsFromRemote(
                 config.getNamespace(),
-                config.getDocumentId()
+                documentId
             ).commitAndClear(
                 localCollection,
                 undoCollection,
                 this.syncConfig.getNamespaceConfig(namespace).getDocsColl()
             );
+            undoCollection.deleteOne(getDocumentIdFilter(documentId));
             continue;
           }
 
