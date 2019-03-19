@@ -594,7 +594,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
           unseenIds.remove(docConfig.getDocumentId());
           latestDocumentMap.remove(docConfig.getDocumentId());
-          syncWriteModelContainer.merge(syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue()));
+          syncWriteModelContainer.merge(
+              syncRemoteChangeEventToLocal(nsConfig, docConfig, eventEntry.getValue()));
         }
 
 
@@ -1762,7 +1763,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   void desyncMany(final MongoNamespace namespace, final BsonValue... documentIds) {
-    final SyncWriteModelContainer syncWriteModelContainer = this.desyncDocumentsFromRemote(namespace, documentIds);
+    final SyncWriteModelContainer syncWriteModelContainer =
+        this.desyncDocumentsFromRemote(namespace, documentIds);
     if (syncWriteModelContainer != null) {
       syncWriteModelContainer.commitAndClear(
           this.getLocalCollection(namespace),
