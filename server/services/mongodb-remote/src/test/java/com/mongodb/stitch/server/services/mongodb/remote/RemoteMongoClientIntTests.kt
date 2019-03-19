@@ -14,18 +14,12 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.server.core.StitchAppClient
 import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
-import org.junit.After
-import org.junit.Assume
-import org.junit.Before
-import org.junit.Test
 
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
 import com.mongodb.stitch.core.testutils.CustomType
-import com.mongodb.stitch.server.core.StitchAppClient
-import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl
-import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
+
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
@@ -33,7 +27,6 @@ import org.bson.Document
 import org.bson.codecs.configuration.CodecConfigurationException
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.ObjectId
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -41,6 +34,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.After
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test

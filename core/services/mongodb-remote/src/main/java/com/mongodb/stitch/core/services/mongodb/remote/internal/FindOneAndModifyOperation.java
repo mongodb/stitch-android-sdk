@@ -89,11 +89,7 @@ public class FindOneAndModifyOperation<T> implements Operation<T> {
     args.put("collection", namespace.getCollectionName());
     args.put("filter", filter);
 
-    // Dont send update for findOneAndDelete
-    if (!methodName.equals("findOneAndDelete")) {
-      args.put("update", update);
-    }
-
+    // Send project and sort if they are not null
     if (project != null) {
       args.put("projection", project);
     }
@@ -103,6 +99,8 @@ public class FindOneAndModifyOperation<T> implements Operation<T> {
 
     // findOneAndDelete() does not take these arguments
     if (!methodName.equals("findOneAndDelete")) {
+      args.put("update", update);
+
       if (upsert) {
         args.put("upsert", true);
       }

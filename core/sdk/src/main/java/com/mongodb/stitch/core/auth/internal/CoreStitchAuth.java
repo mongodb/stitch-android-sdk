@@ -252,7 +252,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   public <T> T doAuthenticatedRequest(final StitchAuthRequest stitchReq,
                                       final Decoder<T> resultDecoder) {
     final Response response = doAuthenticatedRequest(stitchReq);
-    System.err.println(stitchReq.getBody().toString());
     try {
       final String bodyStr = IoUtils.readAllToString(response.getBody());
       final JsonReader bsonReader = new JsonReader(bodyStr);
