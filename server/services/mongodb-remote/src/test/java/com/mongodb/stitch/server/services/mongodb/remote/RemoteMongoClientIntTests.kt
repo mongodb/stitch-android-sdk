@@ -11,6 +11,7 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
 import com.mongodb.stitch.core.testutils.CustomType
 import com.mongodb.stitch.server.core.StitchAppClient
@@ -124,6 +125,59 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         try {
             coll.count(Document("\$who", 1))
+            fail()
+        } catch (ex: StitchServiceException) {
+            assertEquals(StitchServiceErrorCode.MONGODB_ERROR, ex.errorCode)
+        }
+    }
+
+    @Test
+    fun findOne() {
+        val coll = getTestColl()
+
+        val doc1 = Document("hello", "world1")
+        val doc2 = Document("hello", "world2")
+        val doc3 = Document("hello", "world3")
+
+        // Test findOne() on empty collection with no filter and no options
+        assertNull(coll.findOne())
+
+        // Insert a document into the collection
+        coll.insertOne(doc1)
+        assertEquals(1, coll.count())
+
+        // Test findOne() with no filter and no options
+        assertEquals(withoutId(coll.findOne()), withoutId(doc1))
+
+        // Test findOne() with filter and no options
+        val result = coll.findOne(Document("hello", "world1"))
+        assertEquals(withoutId(result), withoutId(doc1))
+
+        // Test findOne() with filter that does not match any documents and no options
+        assertNull(coll.findOne(Document("hello", "worldDNE")))
+
+        // Insert 2 more documents into the collection
+        coll.insertMany(listOf(doc2, doc3))
+        assertEquals(3, coll.count())
+
+        // test findOne() with projection and sort options
+        val projection = Document("hello", 1)
+        projection["_id"] = 0
+        val result2 = coll.findOne(Document(), RemoteFindOptions()
+                .limit(2)
+                .projection(projection)
+                .sort(Document("hello", 1)))
+        assertEquals(result2, withoutId(doc1))
+
+        val result3 = coll.findOne(Document(), RemoteFindOptions()
+                .limit(2)
+                .projection(projection)
+                .sort(Document("hello", -1)))
+        assertEquals(result3, withoutId(doc3))
+
+        // test findOne() properly fails
+        try {
+            coll.findOne(Document("\$who", 1))
             fail()
         } catch (ex: StitchServiceException) {
             assertEquals(StitchServiceErrorCode.MONGODB_ERROR, ex.errorCode)

@@ -64,3 +64,8 @@ fastlane/readme.md
 
 # mac
 .DS_Store
+
+# eclipse
+.project
+.classpath
+.settings/

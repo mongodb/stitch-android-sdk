@@ -22,6 +22,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
@@ -129,6 +130,63 @@ public interface RemoteMongoCollection<DocumentT> {
    * @return a task containing the number of documents in the collection
    */
   Task<Long> count(final Bson filter, final RemoteCountOptions options);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @return  a task containing the result of the find one operation
+   */
+  Task<DocumentT> findOne();
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type
+   * @return a task containing the result of the find one operation
+   */
+  <ResultT> Task<ResultT> findOne(final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @return  a task containing the result of the find one operation
+   */
+  Task<DocumentT> findOne(final Bson filter);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  <ResultT> Task<ResultT> findOne(final Bson filter, final Class<ResultT> resultClass);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOptions struct
+   * @return  a task containing the result of the find one operation
+   */
+  Task<DocumentT> findOne(final Bson filter, final RemoteFindOptions options);
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  <ResultT> Task<ResultT> findOne(
+          final Bson filter,
+          final RemoteFindOptions options,
+          final Class<ResultT> resultClass);
 
   /**
    * Finds all documents in the collection.

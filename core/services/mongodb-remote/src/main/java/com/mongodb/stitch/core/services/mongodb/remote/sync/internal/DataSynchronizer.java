@@ -1878,6 +1878,32 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
+  public <T> T findOne(
+          final MongoNamespace namespace,
+          final BsonDocument filter,
+          final BsonDocument projection,
+          final BsonDocument sort,
+          final Class<T> resultClass,
+          final CodecRegistry codecRegistry
+  ) {
+    this.waitUntilInitialized();
+
+    ongoingOperationsGroup.enter();
+    final Lock lock = this.syncConfig.getNamespaceConfig(namespace).getLock().writeLock();
+    lock.lock();
+    try {
+      return getLocalCollection(namespace, resultClass, codecRegistry)
+              .find(filter)
+              .limit(1)
+              .projection(projection)
+              .sort(sort)
+              .first();
+    } finally {
+      lock.unlock();
+      ongoingOperationsGroup.exit();
+    }
+  }
+
   Collection<BsonDocument> find(
       final MongoNamespace namespace,
       final BsonDocument filter

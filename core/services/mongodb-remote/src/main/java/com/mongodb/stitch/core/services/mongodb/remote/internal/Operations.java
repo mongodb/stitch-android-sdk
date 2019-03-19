@@ -58,6 +58,31 @@ public class Operations<DocumentT> {
         .limit(options.getLimit());
   }
 
+  <ResultT> FindOneOperation<ResultT> findOne(
+      final Bson filter,
+      final RemoteFindOptions options,
+      final Class<ResultT> resultClass
+  ) {
+    BsonDocument projection = null;
+    BsonDocument sort = null;
+    if (options != null) {
+      projection = BsonUtils.toBsonDocumentOrNull(
+              options.getProjection(),
+              documentClass,
+              codecRegistry);
+
+      sort =  BsonUtils.toBsonDocumentOrNull(options.getSort(), documentClass, codecRegistry);
+    }
+
+    return new FindOneOperation<>(
+            namespace,
+            filter.toBsonDocument(documentClass, codecRegistry),
+            projection,
+            sort,
+            codecRegistry.get(resultClass));
+  }
+
+
   <ResultT> FindOperation<ResultT> findFirst(
       final Bson filter,
       final Class<ResultT> resultClass,
