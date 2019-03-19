@@ -75,8 +75,7 @@ public class RemoteFindOneAndModifyOptions {
   /**
    * Returns true if a new document should be inserted if there are no matches to the query filter.
    * The default is false.
-   * Note: Only findOneAndUpdate and findOneAndReplace take this options
-   *         findOneAndDelete will always return the old document
+   * Note: Only findOneAndUpdate and findOneAndReplace take this option
    *
    * @return true if a new document should be inserted if there are no matches to the query filter
    */
@@ -99,6 +98,8 @@ public class RemoteFindOneAndModifyOptions {
   /**
    * Returns true if the findOneAndModify operation should return the new document.
    * The default is false
+   * Note: Only findOneAndUpdate and findOneAndReplace take this options
+   *       findOneAndDelete will always return the old document
    *
    * @return true if findOneAndModify operation should return the new document
    */

@@ -524,7 +524,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
           final RemoteFindOneAndModifyOptions options,
           final Class<ResultT> resultClass) {
     return operations.findOneAndModify(
-            "findOneAndModify",
+            "findOneAndUpdate",
             filter,
             update,
             options,
