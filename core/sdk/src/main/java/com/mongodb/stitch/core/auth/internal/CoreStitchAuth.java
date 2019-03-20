@@ -261,7 +261,6 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
         return null;
       }
       return resultDecoder.decode(bsonReader, DecoderContext.builder().build());
-
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }

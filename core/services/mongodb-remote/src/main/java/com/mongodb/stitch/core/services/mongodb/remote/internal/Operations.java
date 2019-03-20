@@ -24,6 +24,7 @@ import static com.mongodb.stitch.core.internal.common.BsonUtils.toBsonDocument;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 
@@ -191,6 +192,38 @@ public class Operations<DocumentT> {
         toBsonDocument(update, documentClass, codecRegistry))
         .upsert(updateOptions.isUpsert());
   }
+
+  <ResultT> FindOneAndModifyOperation<ResultT> findOneAndModify(
+          final String methodName,
+          final Bson filter,
+          final Bson update,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass
+  ) {
+
+    final BsonDocument projection = BsonUtils.toBsonDocumentOrNull(
+            options.getProjection(),
+            documentClass,
+            codecRegistry);
+
+    final BsonDocument sort = BsonUtils.toBsonDocumentOrNull(
+            options.getSort(),
+            documentClass,
+            codecRegistry);
+
+    return new FindOneAndModifyOperation<>(
+            namespace,
+            methodName,
+            filter.toBsonDocument(documentClass, codecRegistry),
+            update.toBsonDocument(documentClass, codecRegistry),
+            projection,
+            sort,
+            codecRegistry.get(resultClass))
+              .upsert(options.isUpsert())
+              .returnNewDocument(options.isReturnNewDocument());
+  }
+
+
 
   <ResultT> WatchOperation<ResultT> watch(
                        final Set<BsonValue> ids,
