@@ -1,16 +1,17 @@
 package com.mongodb.stitch.android.services.mongodb.remote.internal
 
-import android.os.CpuUsageInfo
-import android.os.Debug
 import android.os.Environment
 import android.os.StatFs
 import android.support.test.InstrumentationRegistry
 import android.util.Log
+
 import com.google.android.gms.tasks.Tasks
+
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.android.core.StitchAppClient
+import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
-import com.mongodb.stitch.android.services.mongodb.remote.Sync
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
@@ -18,44 +19,23 @@ import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
-import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult
-import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
+import com.mongodb.stitch.core.testutils.Assert
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
-import com.mongodb.stitch.core.testutils.sync.ProxyRemoteMethods
-import com.mongodb.stitch.core.testutils.sync.ProxySyncMethods
-import com.mongodb.stitch.android.core.StitchAppClient
-import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
-import com.mongodb.stitch.core.auth.internal.CoreStitchUser
-import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+
+import kotlin.collections.*
+import kotlin.system.measureTimeMillis
 import kotlinx.coroutines.*
+
 import org.bson.*
-import org.bson.conversions.Bson
+import org.bson.types.Binary
 import org.bson.types.ObjectId
+
+import org.junit.Assert.assertEquals
 import org.junit.After
-import org.junit.Assert
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import java.io.IOException
-import java.io.RandomAccessFile
-import kotlin.collections.*
-import kotlin.concurrent.thread
-import java.util.Timer
-import kotlin.system.measureTimeMillis
-
-//import com.sun.management.OperatingSystemMXBean;
 
 
 class SyncPerformanceTests : BaseStitchAndroidIntTest() {
@@ -71,34 +51,30 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
         get() = BaseStitchAndroidIntTest.testNetworkMonitor
     private val mongodbUriProp = "test.stitch.mongodbURI"
     private lateinit var mongoClient: RemoteMongoClient
+    private lateinit var coll: RemoteMongoCollection<Document>
 
     private lateinit var mdbService: Apps.App.Services.Service
     private lateinit var mdbRule: RuleResponse
 
-    private lateinit var userId1: String
-    private lateinit var userId2: String
-    private lateinit var userId3: String
+    private lateinit var userId: String
 
     @Before
     override fun setup() {
-        Assume.assumeTrue("no MongoDB URI in properties; skipping test", getMongoDbUri().isNotEmpty())
         super.setup()
+    }
+
+    private fun setupIter(withURI: String) {
+        Assume.assumeTrue("no MongoDB URI in properties; skipping test", withURI.isNotEmpty())
+        setup()
 
         val app = createApp()
-        val app2 = createApp()
 
         addProvider(app.second, ProviderConfigs.Anon)
-        addProvider(app2.second, ProviderConfigs.Anon)
         mdbService = addService(
                 app.second,
                 "mongodb",
                 "mongodb1",
-                ServiceConfigs.Mongo(getMongoDbUri())).second
-        val svc2 = addService(
-                app2.second,
-                "mongodb",
-                "mongodb1",
-                ServiceConfigs.Mongo(getMongoDbUri()))
+                ServiceConfigs.Mongo(withURI)).second
 
         dbName = ObjectId().toHexString()
         collName = ObjectId().toHexString()
@@ -112,18 +88,11 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                 )),
                 schema = RuleCreator.MongoDb.Schema())
         mdbRule = addRule(mdbService, rule)
-        addRule(svc2.second, rule)
-        addProvider(app.second, config = ProviderConfigs.Userpass(
-                emailConfirmationUrl = "http://emailConfirmURL.com",
-                resetPasswordUrl = "http://resetPasswordURL.com",
-                confirmEmailSubject = "email subject",
-                resetPasswordSubject = "password subject")
-        )
+
         this.client = getAppClient(app.first)
-        userId3 = Tasks.await(client.auth.loginWithCredential(AnonymousCredential())).id
-        userId2 = registerAndLoginWithUserPass(app.second, client, "test1@10gen.com", "password")
-        userId1 = registerAndLoginWithUserPass(app.second, client, "test2@10gen.com", "password")
+        userId = Tasks.await(client.auth.loginWithCredential(AnonymousCredential())).id
         mongoClient = client.getServiceClient(RemoteMongoClient.factory, "mongodb1")
+        coll = mongoClient.getDatabase(dbName).getCollection(collName)
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.stop()
         (mongoClient as RemoteMongoClientImpl).dataSynchronizer.disableSyncThread()
         BaseStitchAndroidIntTest.testNetworkMonitor.connectedState = true
@@ -131,12 +100,26 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
 
     @After
     override fun teardown() {
+        super.teardown()
+    }
+
+    private fun teardownIter() {
+        val syncedIds = Tasks.await(coll.sync().syncedIds)
+        Tasks.await(coll.sync().desyncMany(*syncedIds.toTypedArray()))
+        Log.d("perfTests", client.auth.isLoggedIn.toString())
+
+        Tasks.await(coll.deleteMany(Document()))
+
         if (::mongoClient.isInitialized) {
             (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
             AndroidEmbeddedMongoClientFactory.getInstance().close()
         }
-        super.teardown()
+
+        Log.d("perfTests", "tearing down")
+
+        teardown()
     }
+
 
     private fun runPerformanceTestWithParams(testParams: TestParams,
                                              block: () -> Unit) = runBlocking {
@@ -166,6 +149,16 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                     var cpuDataIter     = arrayListOf<Double>()
                     var memoryDataIter  = arrayListOf<Long>()
                     var threadDataIter  = arrayListOf<Int>()
+
+                    // If we pass a desired Stitch URI into the testParams then use that URI
+                    // Otherwise, use the value in local.properties or localhost:26000
+                    if (testParams.stitchHostName.isNotEmpty()) {
+                        setupIter(testParams.stitchHostName)
+                    } else {
+                        setupIter(InstrumentationRegistry.getArguments().getString(mongodbUriProp,
+                                "mongodb://localhost:26000"))
+                    }
+
                     coroutineScope {
                         // Launch coroutine to collect point-in-time data metrics and then delay
                         // for dataProbeGranularityMs
@@ -176,7 +169,7 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                                 memoryDataIter.add(runtime.totalMemory() - runtime.freeMemory())
                                 val stats = StatFs(Environment.getExternalStorageDirectory().getAbsolutePath())
                                 val memFree = stats.freeBlocksLong * stats.blockSizeLong
-                                Log.d("perfTests", memFree.toString())
+                                Log.d("perfTests", "HI")
                                 threadDataIter.add(Thread.activeCount())
                             }
                         }
@@ -185,7 +178,7 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                         val memFreeBefore = statsBefore.freeBlocksLong * statsBefore.blockSizeLong
 
                         // Measure the execution time of runnning the given block of code
-                        delay(4000L) // Eventually take this out but needed for testing
+                        // delay(4000L) // Eventually take this out but needed for testing
                         val time = measureTimeMillis(block)
                         Log.d("perfTests", "After Block")
 
@@ -208,8 +201,6 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                         timeData.add(time)
                         networkSentData.add(100000L)
                         networkReceivedData.add(200000L)
-
-
                     }
 
                     // Create RunResults option which performs outlier extraction, and computes the
@@ -225,10 +216,13 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                         Log.d("perfTests", runResults.toBson().toJson())
                     }
 
-                    // If we are interting this into stitch
+                    // If we are inserting this into stitch
                     if (testParams.outputToStitch) {
                         Log.d("perfTests", "Trying to insert via stitch")
                     }
+
+                    // Reset the StitchApp
+                    teardownIter()
 
                 }
             }
@@ -236,7 +230,14 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
     }
 
     private fun initialSync() {
-        // Thread.sleep(4000L)
+        Log.d("perfTests", "SUP")
+        val numDesiredDocs = 40
+        val documents = getDocuments(numDesiredDocs, 1024)
+        assertEquals(Tasks.await(coll.count()), 0L)
+        Tasks.await(coll.insertMany(documents))
+        Log.d("perfTests", "Inserted")
+
+        assertEquals(Tasks.await(coll.count()), numDesiredDocs.toLong())
     }
 
 
@@ -254,142 +255,41 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
         runPerformanceTestWithParams(testParams, this::initialSync)
     }
 
+    private fun getDocuments(
+            numberOfDocs: Int,
+            sizeOfDocsInBytes: Int
+    ): List<Document>? {
 
+        val user = client.auth.user ?: return null
+        val array: List<Byte> = (0 until sizeOfDocsInBytes).map { 0.toByte() }
+        val docs: List<Document> = (0 until numberOfDocs).map {
+            Document(mapOf(
+                    "_id" to ObjectId(),
+                    "owner_id" to user.id,
+                    "bin" to Binary(array.toByteArray())
+            ))
+        }
+        return docs
+    }
 
     @Test
     fun performanceTest2() {
-        for (i in 0..10) {
-            Log.d("perfTests", i.toString())
-            try {
-                Log.d("perfTests", readCore(0).toString())
-            }
-            catch (e: Exception) {
-                Log.d("perfTests", e.toString())
-            }
-        }
 
-    }
-    /**
-     * Get the uri for where mongodb is running locally.
-     */
-    private fun getMongoDbUri(): String {
-        return InstrumentationRegistry.getArguments().getString(mongodbUriProp, "mongodb://localhost:26000")
-    }
-
-    fun readCore(i: Int): Float {
-        /*
-     * how to calculate multicore this function reads the bytes from a
-     * logging file in the android system (/proc/stat for cpu values) then
-     * puts the line into a string then spilts up each individual part into
-     * an array then(since he know which part represents what) we are able
-     * to determine each cpu total and work then combine it together to get
-     * a single float for overall cpu usage
-     */
-        try {
-            Log.d("perfTests", "A")
-            val reader = RandomAccessFile("/proc/stat", "r")
-            Log.d("perfTests", "B")
-            // skip to the line we need
-            for (ii in 0 until i + 1) {
-                Log.d("perfTests", "C")
-                val line = reader.readLine()
-                Log.d("perfTests", line)
-            }
-            var load = reader.readLine()
-
-            // cores will eventually go offline, and if it does, then it is at
-            // 0% because it is not being
-            // used. so we need to do check if the line we got contains cpu, if
-            // not, then this core = 0
-            if (load.contains("cpu")) {
-                var toks = load.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-
-                // we are recording the work being used by the user and
-                // system(work) and the total info
-                // of cpu stuff (total)
-                // http://stackoverflow.com/questions/3017162/how-to-get-total-cpu-usage-in-linux-c/3017438#3017438
-
-                val work1 = (java.lang.Long.parseLong(toks[1]) + java.lang.Long.parseLong(toks[2])
-                        + java.lang.Long.parseLong(toks[3]))
-                val total1 = (java.lang.Long.parseLong(toks[1]) + java.lang.Long.parseLong(toks[2])
-                        + java.lang.Long.parseLong(toks[3]) + java.lang.Long.parseLong(toks[4])
-                        + java.lang.Long.parseLong(toks[5]) + java.lang.Long.parseLong(toks[6])
-                        + java.lang.Long.parseLong(toks[7]) + java.lang.Long.parseLong(toks[8]))
-
-                try {
-                    // short sleep time = less accurate. But android devices
-                    // typically don't have more than
-                    // 4 cores, and I'n my app, I run this all in a second. So,
-                    // I need it a bit shorter
-                    Thread.sleep(300)
-                } catch (e: Exception) {
-                    Log.d("perfTests", e.toString())
-                }
-
-                reader.seek(0)
-                // skip to the line we need
-                for (ii in 0 until i + 1) {
-                    reader.readLine()
-                }
-                load = reader.readLine()
-
-                // cores will eventually go offline, and if it does, then it is
-                // at 0% because it is not being
-                // used. so we need to do check if the line we got contains cpu,
-                // if not, then this core = 0%
-                if (load.contains("cpu")) {
-                    reader.close()
-                    toks = load.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-
-                    val work2 = (java.lang.Long.parseLong(toks[1]) + java.lang.Long.parseLong(toks[2])
-                            + java.lang.Long.parseLong(toks[3]))
-                    val total2 = (java.lang.Long.parseLong(toks[1]) + java.lang.Long.parseLong(toks[2])
-                            + java.lang.Long.parseLong(toks[3]) + java.lang.Long.parseLong(toks[4])
-                            + java.lang.Long.parseLong(toks[5]) + java.lang.Long.parseLong(toks[6])
-                            + java.lang.Long.parseLong(toks[7]) + java.lang.Long.parseLong(toks[8]))
-
-                    // here we find the change in user work and total info, and
-                    // divide by one another to get our total
-                    // seems to be accurate need to test on quad core
-                    // http://stackoverflow.com/questions/3017162/how-to-get-total-cpu-usage-in-linux-c/3017438#3017438
-
-                    return if (total2 - total1 == 0L)
-                        0f
-                    else
-                        (work2 - work1).toFloat() / (total2 - total1)
-
-                } else {
-                    reader.close()
-                    return 0f
-                }
-
-            } else {
-                reader.close()
-                return 0f
-            }
-
-        } catch (ex: IOException) {
-            Log.d("perfTests", ex.localizedMessage)
-            ex.printStackTrace()
-        }
-
-        return 0f
     }
 }
 
-data class TestParams(
+private data class TestParams(
         val testName: String,
         val numIters: Int = 12,
         val numDocs: IntArray = intArrayOf(),
         val docSizes: IntArray = intArrayOf(),
         val dataProbeGranularityMs: Long = 1500L,
         val numOutliersEachSide: Int = 1,
-        val stitchHostName: String = "Need to hook this up later",
+        val stitchHostName: String = "",
         val outputToStdOut: Boolean = true,
         val outputToStitch: Boolean = false,
         val preserveRawOutput: Boolean = false) {
 }
-
 
 interface DataBlock<T: Number> {
     var mean: Double
@@ -401,13 +301,14 @@ interface DataBlock<T: Number> {
     fun toBson(): BsonDocument
 }
 
-class IntDataBlock(data : IntArray, numOutliers: Int): DataBlock<Int> {
+private class IntDataBlock(data : IntArray, numOutliers: Int): DataBlock<Int> {
     override var mean   = 0.0
     override var median = 0
     override var min    = 0
     override var max    = 0
     override var stdDev = 0.0
 
+    // Compute relevant metrics on init
     init {
         if (numOutliers >= 0 && data.size > 2 * numOutliers) {
             val newData = data.sortedArray().slice((numOutliers)..(data.size - 1 - numOutliers))
@@ -429,6 +330,7 @@ class IntDataBlock(data : IntArray, numOutliers: Int): DataBlock<Int> {
         }
     }
 
+    // Compute relevant metrics on init
     override fun toBson(): BsonDocument {
         return BsonDocument()
                 .append("min", BsonInt32(this.min))
@@ -439,13 +341,14 @@ class IntDataBlock(data : IntArray, numOutliers: Int): DataBlock<Int> {
     }
 }
 
-class DoubleDataBlock(data: DoubleArray, numOutliers: Int): DataBlock<Double> {
+private class DoubleDataBlock(data: DoubleArray, numOutliers: Int): DataBlock<Double> {
     override var mean   = 0.0
     override var median = 0.0
     override var min    = 0.0
     override var max    = 0.0
     override var stdDev = 0.0
 
+    // Compute relevant metrics on init
     init {
         if (numOutliers >= 0 && data.size > 2 * numOutliers) {
             val newData = data.sortedArray().slice((numOutliers)..(data.size - 1 - numOutliers))
@@ -477,7 +380,7 @@ class DoubleDataBlock(data: DoubleArray, numOutliers: Int): DataBlock<Double> {
     }
 }
 
-class LongDataBlock(data: LongArray, numOutliers: Int): DataBlock<Long> {
+private class LongDataBlock(data: LongArray, numOutliers: Int): DataBlock<Long> {
     override var mean   = 0.0
     override var median = 0L
     override var min    = 0L
@@ -515,7 +418,7 @@ class LongDataBlock(data: LongArray, numOutliers: Int): DataBlock<Long> {
     }
 }
 
-class RunResults(numDocs: Int,
+private class RunResults(numDocs: Int,
                  docSize: Int,
                  numIters: Int,
                  numOutliers: Int,
