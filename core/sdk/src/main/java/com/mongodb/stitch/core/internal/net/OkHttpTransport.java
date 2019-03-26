@@ -35,8 +35,8 @@ import okhttp3.Protocol;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 
-public final class OkHttpTransport implements Transport {
-  private static final int STREAM_TIMEOUT_SECONDS = 60;
+public class OkHttpTransport implements Transport {
+  private static final int STREAM_TIMEOUT_MILLISECONDS = 60000;
 
   private final OkHttpClient client;
 
@@ -92,15 +92,22 @@ public final class OkHttpTransport implements Transport {
     return new Response(statusCode, headers, bodyStream);
   }
 
+  protected OkHttpClient.Builder newClientBuilder(final long connectTimeout,
+                                                  final long readTimeout,
+                                                  final long writeTimeout) {
+    return this.client.newBuilder()
+        .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
+        .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
+        .writeTimeout(writeTimeout, TimeUnit.MILLISECONDS)
+        .protocols(Collections.singletonList(Protocol.HTTP_1_1));
+  }
+
   @Override
   // This executes a request synchronously
   public Response roundTrip(final Request request) throws IOException {
-    final OkHttpClient reqClient = client.newBuilder()
-            .connectTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
-            .readTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
-            .writeTimeout(request.getTimeout(), TimeUnit.MILLISECONDS)
-            .protocols(Collections.singletonList(Protocol.HTTP_1_1))
-            .build();
+    final OkHttpClient reqClient = newClientBuilder(
+        request.getTimeout(), request.getTimeout(), request.getTimeout()
+    ).build();
     return handleResponse(reqClient.newCall(buildRequest(request)).execute());
   }
 
@@ -115,11 +122,7 @@ public final class OkHttpTransport implements Transport {
 
     try {
       final okhttp3.Request httpRequest = buildRequest(request);
-      final Call call = client.newBuilder()
-          .connectTimeout(STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-          .readTimeout(0, TimeUnit.MILLISECONDS)
-          .writeTimeout(0, TimeUnit.MILLISECONDS)
-          .protocols(Collections.singletonList(Protocol.HTTP_1_1))
+      final Call call = newClientBuilder(STREAM_TIMEOUT_MILLISECONDS, 0,0)
           .build().newCall(httpRequest);
       final okhttp3.Response response = call.execute();
 

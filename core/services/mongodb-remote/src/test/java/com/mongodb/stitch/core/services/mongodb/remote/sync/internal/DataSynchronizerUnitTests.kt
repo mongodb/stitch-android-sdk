@@ -185,7 +185,6 @@ class DataSynchronizerUnitTests {
         // reset
         ctx = harness.freshTestContext()
         ctx.mockInsertException(duplicateInsertException)
-        println("inserting test doc")
         ctx.insertTestDocument()
 
         // accept the local event this time, which will insert the local doc.
