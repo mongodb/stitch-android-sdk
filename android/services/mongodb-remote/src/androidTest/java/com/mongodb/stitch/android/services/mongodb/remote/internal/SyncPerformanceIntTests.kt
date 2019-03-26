@@ -22,10 +22,12 @@ import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
+import kotlinx.coroutines.NonCancellable.isCancelled
 
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.system.measureTimeMillis
@@ -45,10 +47,11 @@ import org.junit.After
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
+import java.security.Security.addProvider
 
 import java.util.Date
 
-class SyncPerformanceTests : BaseStitchAndroidIntTest() {
+class SyncPerformanceIntTests : BaseStitchAndroidIntTest() {
 
     private val mongodbUriProp = "test.stitch.mongodbURI"
     private val stitchOutputAppName = "stitchdocsexamples-pqwyr"
@@ -117,13 +120,16 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
 
         if (!Stitch.hasAppClient(stitchOutputAppName)) {
             outputClient = Stitch.initializeAppClient(stitchOutputAppName)
-            outputClient.auth.loginWithCredential(AnonymousCredential())
-
-            outputColl = outputClient
-                .getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
-                .getDatabase(stitchOutputDbName)
-                .getCollection(stitchOutputCollName)
+        } else {
+            outputClient = Stitch.getAppClient(stitchOutputAppName)
         }
+
+        outputClient.auth.loginWithCredential(AnonymousCredential())
+
+        outputColl = outputClient
+            .getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
+            .getDatabase(stitchOutputDbName)
+            .getCollection(stitchOutputCollName)
     }
 
     private fun setupIter() {
@@ -220,7 +226,7 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                         // Launch coroutine to collect point-in-time data metrics and then delay
                         // for dataProbeGranularityMs
                         val job = launch {
-                            while (true) {
+                            while (isActive) {
                                 delay(testParams.dataProbeGranularityMs)
                                 cpuDataIter.add(100.09)
                                 memoryDataIter.add(runtime.totalMemory() - runtime.freeMemory())
@@ -307,7 +313,7 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
     }
 
     private fun disconnectReconnect() {
-        val numDesiredDocs = 5000
+        val numDesiredDocs = 10
         val documents = getDocuments(numDesiredDocs, 1024)
         assertEquals(Tasks.await(coll.count()), 0L)
         Tasks.await(coll.insertMany(documents))
@@ -320,9 +326,9 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
             runId = runId,
             testName = "disconnectReconnectTest",
             dataProbeGranularityMs = 400L,
-            docSizes = intArrayOf(1),
-            numDocs = intArrayOf(10),
-            numIters = 3,
+            docSizes = intArrayOf(1, 3),
+            numDocs = intArrayOf(10, 20),
+            numIters = 2,
             numOutliersEachSide = 0,
             outputToStitch = true
         )
