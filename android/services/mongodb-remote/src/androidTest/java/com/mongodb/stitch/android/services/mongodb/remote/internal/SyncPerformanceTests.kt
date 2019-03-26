@@ -94,6 +94,23 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
         )
     }
 
+    private fun getDocuments(
+        numberOfDocs: Int,
+        sizeOfDocsInBytes: Int
+    ): List<Document>? {
+
+        val user = client.auth.user ?: return null
+        val array: List<Byte> = (0 until sizeOfDocsInBytes).map { 0.toByte() }
+        val docs: List<Document> = (0 until numberOfDocs).map {
+            Document(mapOf(
+                "_id" to ObjectId(),
+                "owner_id" to user.id,
+                "bin" to Binary(array.toByteArray())
+            ))
+        }
+        return docs
+    }
+
     @Before
     override fun setup() {
         super.setup()
@@ -238,29 +255,29 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                         networkReceivedData.add(200000L)
                     }
 
-                    // Create RunResults option which performs outlier extraction, and computes the
-                    // desired statistical metrics
-                    val runResults = RunResults(numDoc, docSize, testParams.numIters,
-                            testParams.numOutliersEachSide, timeData.toLongArray(),
-                            networkSentData.toLongArray(), networkReceivedData.toLongArray(),
-                            cpuData.toDoubleArray(), memoryData.toLongArray(),
-                            diskData.toLongArray(), threadData.toIntArray())
-
-                    // If we are logging to stdout
-                    if (testParams.outputToStdOut) {
-                        Log.d("perfTests", runResults.toBson().toJson())
-                    }
-
-                    // If we are inserting this into stitch
-                    if (testParams.outputToStitch) {
-                        val filterDocument = Document("_id", resultId)
-                        val updateDocument = Document()
-                            .append("\$push", Document("results", runResults.toBson()))
-                        Tasks.await(outputColl.updateOne(filterDocument, updateDocument))
-                    }
-
                     // Reset the StitchApp
                     teardownIter()
+                }
+
+                // Create RunResults option which performs outlier extraction, and computes the
+                // desired statistical metrics
+                val runResults = RunResults(numDoc, docSize, testParams.numIters,
+                    testParams.numOutliersEachSide, timeData.toLongArray(),
+                    networkSentData.toLongArray(), networkReceivedData.toLongArray(),
+                    cpuData.toDoubleArray(), memoryData.toLongArray(),
+                    diskData.toLongArray(), threadData.toIntArray())
+
+                // If we are logging to stdout
+                if (testParams.outputToStdOut) {
+                    Log.d("perfTests", runResults.toBson().toJson())
+                }
+
+                // If we are inserting this into stitch
+                if (testParams.outputToStitch) {
+                    val filterDocument = Document("_id", resultId)
+                    val updateDocument = Document()
+                        .append("\$push", Document("results", runResults.toBson()))
+                    Tasks.await(outputColl.updateOne(filterDocument, updateDocument))
                 }
             }
         }
@@ -275,10 +292,10 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
-    fun performanceTest1() {
+    fun testInitialSync() {
         val testParams = TestParams(
             runId = runId,
-            testName = "myCustomTest",
+            testName = "initialSyncTest",
             dataProbeGranularityMs = 400L,
             docSizes = intArrayOf(1),
             numDocs = intArrayOf(10),
@@ -289,26 +306,27 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
         runPerformanceTestWithParams(testParams, this::initialSync)
     }
 
-    private fun getDocuments(
-        numberOfDocs: Int,
-        sizeOfDocsInBytes: Int
-    ): List<Document>? {
-
-        val user = client.auth.user ?: return null
-        val array: List<Byte> = (0 until sizeOfDocsInBytes).map { 0.toByte() }
-        val docs: List<Document> = (0 until numberOfDocs).map {
-            Document(mapOf(
-                    "_id" to ObjectId(),
-                    "owner_id" to user.id,
-                    "bin" to Binary(array.toByteArray())
-            ))
-        }
-        return docs
+    private fun disconnectReconnect() {
+        val numDesiredDocs = 5000
+        val documents = getDocuments(numDesiredDocs, 1024)
+        assertEquals(Tasks.await(coll.count()), 0L)
+        Tasks.await(coll.insertMany(documents))
+        assertEquals(Tasks.await(coll.count()), numDesiredDocs.toLong())
     }
 
     @Test
-    fun performanceTest2() {
-        Log.d("perfTests", "Performance test #2")
+    fun testDisconnectReconnect() {
+        val testParams = TestParams(
+            runId = runId,
+            testName = "disconnectReconnectTest",
+            dataProbeGranularityMs = 400L,
+            docSizes = intArrayOf(1),
+            numDocs = intArrayOf(10),
+            numIters = 3,
+            numOutliersEachSide = 0,
+            outputToStitch = true
+        )
+        runPerformanceTestWithParams(testParams, this::disconnectReconnect)
     }
 }
 
