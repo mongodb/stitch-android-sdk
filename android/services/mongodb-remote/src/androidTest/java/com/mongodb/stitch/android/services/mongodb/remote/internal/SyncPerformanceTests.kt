@@ -8,6 +8,7 @@ import android.util.Log
 import com.google.android.gms.tasks.Tasks
 
 import com.mongodb.MongoNamespace
+import com.mongodb.stitch.android.core.Stitch
 import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
@@ -20,15 +21,23 @@ import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
-import com.mongodb.stitch.core.testutils.Assert
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 
-import kotlin.collections.*
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.system.measureTimeMillis
-import kotlinx.coroutines.*
 
-import org.bson.*
+import org.bson.BsonArray
+import org.bson.BsonDateTime
+import org.bson.BsonDouble
+import org.bson.BsonInt32
+import org.bson.BsonInt64
+import org.bson.BsonString
 import org.bson.types.Binary
+import org.bson.Document
 import org.bson.types.ObjectId
 
 import org.junit.Assert.assertEquals
@@ -37,19 +46,24 @@ import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 
+import java.util.Date
 
 class SyncPerformanceTests : BaseStitchAndroidIntTest() {
 
+    private val mongodbUriProp = "test.stitch.mongodbURI"
+    private val stitchOutputAppName = "stitchdocsexamples-pqwyr"
+    private val stitchOutputDbName = "stress"
+    private val stitchOutputCollName = "results"
+    private var stitchTestHost = ""
+    private val runId = ObjectId()
+
     lateinit var client: StitchAppClient
+    lateinit var outputClient: StitchAppClient
+    lateinit var outputColl: RemoteMongoCollection<Document>
 
     private var dbName = ObjectId().toHexString()
     private var collName = ObjectId().toHexString()
     private var namespace = MongoNamespace(dbName, collName)
-    private val dataSynchronizer: DataSynchronizer
-        get() = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
-    private val testNetworkMonitor: BaseStitchIntTest.TestNetworkMonitor
-        get() = BaseStitchAndroidIntTest.testNetworkMonitor
-    private val mongodbUriProp = "test.stitch.mongodbURI"
     private lateinit var mongoClient: RemoteMongoClient
     private lateinit var coll: RemoteMongoCollection<Document>
 
@@ -58,13 +72,45 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
 
     private lateinit var userId: String
 
+    private val dataSynchronizer: DataSynchronizer
+        get() = (mongoClient as RemoteMongoClientImpl).dataSynchronizer
+    private val testNetworkMonitor: BaseStitchIntTest.TestNetworkMonitor
+        get() = BaseStitchAndroidIntTest.testNetworkMonitor
+
+    /**
+     * Get the uri for where mongodb is running locally.
+     */
+    private fun getMongoDbUri(): String {
+        return InstrumentationRegistry.getArguments().getString(mongodbUriProp, "mongodb://localhost:26000")
+    }
+
+    override fun getStitchBaseURL(): String {
+        if (stitchTestHost.isNotEmpty()) {
+            return stitchTestHost
+        }
+        return InstrumentationRegistry.getArguments().getString(
+            "test.stitch.baseURL",
+            "http://10.0.2.2:9090"
+        )
+    }
+
     @Before
     override fun setup() {
         super.setup()
+
+        if (!Stitch.hasAppClient(stitchOutputAppName)) {
+            outputClient = Stitch.initializeAppClient(stitchOutputAppName)
+            outputClient.auth.loginWithCredential(AnonymousCredential())
+
+            outputColl = outputClient
+                .getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
+                .getDatabase(stitchOutputDbName)
+                .getCollection(stitchOutputCollName)
+        }
     }
 
-    private fun setupIter(withURI: String) {
-        Assume.assumeTrue("no MongoDB URI in properties; skipping test", withURI.isNotEmpty())
+    private fun setupIter() {
+        Assume.assumeTrue("no MongoDB URI in properties; skipping test", getMongoDbUri().isNotEmpty())
         setup()
 
         val app = createApp()
@@ -74,7 +120,7 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                 app.second,
                 "mongodb",
                 "mongodb1",
-                ServiceConfigs.Mongo(withURI)).second
+                ServiceConfigs.Mongo(getMongoDbUri())).second
 
         dbName = ObjectId().toHexString()
         collName = ObjectId().toHexString()
@@ -106,8 +152,6 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
     private fun teardownIter() {
         val syncedIds = Tasks.await(coll.sync().syncedIds)
         Tasks.await(coll.sync().desyncMany(*syncedIds.toTypedArray()))
-        Log.d("perfTests", client.auth.isLoggedIn.toString())
-
         Tasks.await(coll.deleteMany(Document()))
 
         if (::mongoClient.isInitialized) {
@@ -115,49 +159,45 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
             AndroidEmbeddedMongoClientFactory.getInstance().close()
         }
 
-        Log.d("perfTests", "tearing down")
-
         teardown()
     }
 
-
-    private fun runPerformanceTestWithParams(testParams: TestParams,
-                                             block: () -> Unit) = runBlocking {
+    private fun runPerformanceTestWithParams(
+        testParams: TestParams,
+        block: () -> Unit
+    ) = runBlocking {
 
         val runtime = Runtime.getRuntime()
+        stitchTestHost = testParams.stitchHostName
 
+        val resultId = ObjectId()
         if (testParams.outputToStitch) {
-            // We will need to setup a stitchClient
+            val doc = testParams.toBson().append("_id", resultId)
+            Tasks.await(outputColl.insertOne(doc))
         }
 
         for (docSize in testParams.docSizes) {
             for (numDoc in testParams.numDocs) {
 
                 // There data structures hold the metric results for all n iterations of this test
-                var timeData            = arrayListOf<Long>()
-                var cpuData             = arrayListOf<Double>()
-                var memoryData          = arrayListOf<Long>()
-                var diskData            = arrayListOf<Long>()
-                var threadData          = arrayListOf<Int>()
-                var networkSentData     = arrayListOf<Long>()
+                var timeData = arrayListOf<Long>()
+                var cpuData = arrayListOf<Double>()
+                var memoryData = arrayListOf<Long>()
+                var diskData = arrayListOf<Long>()
+                var threadData = arrayListOf<Int>()
+                var networkSentData = arrayListOf<Long>()
                 var networkReceivedData = arrayListOf<Long>()
 
                 for (iter in 1..testParams.numIters) {
 
                     // These data structures will have  < (time / dataGranularityMs) for the
                     // point-in-time metrics collected
-                    var cpuDataIter     = arrayListOf<Double>()
-                    var memoryDataIter  = arrayListOf<Long>()
-                    var threadDataIter  = arrayListOf<Int>()
+                    var cpuDataIter = arrayListOf<Double>()
+                    var memoryDataIter = arrayListOf<Long>()
+                    var threadDataIter = arrayListOf<Int>()
 
-                    // If we pass a desired Stitch URI into the testParams then use that URI
-                    // Otherwise, use the value in local.properties or localhost:26000
-                    if (testParams.stitchHostName.isNotEmpty()) {
-                        setupIter(testParams.stitchHostName)
-                    } else {
-                        setupIter(InstrumentationRegistry.getArguments().getString(mongodbUriProp,
-                                "mongodb://localhost:26000"))
-                    }
+                    // Setup the Stitch Host
+                    setupIter()
 
                     coroutineScope {
                         // Launch coroutine to collect point-in-time data metrics and then delay
@@ -165,11 +205,8 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                         val job = launch {
                             while (true) {
                                 delay(testParams.dataProbeGranularityMs)
-                                cpuDataIter.add(2.0)
+                                cpuDataIter.add(100.09)
                                 memoryDataIter.add(runtime.totalMemory() - runtime.freeMemory())
-                                val stats = StatFs(Environment.getExternalStorageDirectory().getAbsolutePath())
-                                val memFree = stats.freeBlocksLong * stats.blockSizeLong
-                                Log.d("perfTests", "HI")
                                 threadDataIter.add(Thread.activeCount())
                             }
                         }
@@ -178,10 +215,8 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
                         val memFreeBefore = statsBefore.freeBlocksLong * statsBefore.blockSizeLong
 
                         // Measure the execution time of runnning the given block of code
-                        // delay(4000L) // Eventually take this out but needed for testing
+                        delay(5000L) // Eventually take this out but needed for testing
                         val time = measureTimeMillis(block)
-                        Log.d("perfTests", "After Block")
-
 
                         // Not entirely sure which one to use here, but cancelAndJoin() seems right
                         // job.cancel()
@@ -218,46 +253,45 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
 
                     // If we are inserting this into stitch
                     if (testParams.outputToStitch) {
-                        Log.d("perfTests", "Trying to insert via stitch")
+                        val filterDocument = Document("_id", resultId)
+                        val updateDocument = Document()
+                            .append("\$push", Document("results", runResults.toBson()))
+                        Tasks.await(outputColl.updateOne(filterDocument, updateDocument))
                     }
 
                     // Reset the StitchApp
                     teardownIter()
-
                 }
             }
         }
     }
 
     private fun initialSync() {
-        Log.d("perfTests", "SUP")
         val numDesiredDocs = 40
         val documents = getDocuments(numDesiredDocs, 1024)
         assertEquals(Tasks.await(coll.count()), 0L)
         Tasks.await(coll.insertMany(documents))
-        Log.d("perfTests", "Inserted")
-
         assertEquals(Tasks.await(coll.count()), numDesiredDocs.toLong())
     }
-
 
     @Test
     fun performanceTest1() {
         val testParams = TestParams(
-                testName = "myCustomTest",
-                dataProbeGranularityMs = 400L,
-                docSizes = intArrayOf(1),
-                numDocs = intArrayOf(10),
-                numIters = 3,
-                numOutliersEachSide = 0,
-                outputToStitch = true
+            runId = runId,
+            testName = "myCustomTest",
+            dataProbeGranularityMs = 400L,
+            docSizes = intArrayOf(1),
+            numDocs = intArrayOf(10),
+            numIters = 3,
+            numOutliersEachSide = 0,
+            outputToStitch = true
         )
         runPerformanceTestWithParams(testParams, this::initialSync)
     }
 
     private fun getDocuments(
-            numberOfDocs: Int,
-            sizeOfDocsInBytes: Int
+        numberOfDocs: Int,
+        sizeOfDocsInBytes: Int
     ): List<Document>? {
 
         val user = client.auth.user ?: return null
@@ -274,38 +308,50 @@ class SyncPerformanceTests : BaseStitchAndroidIntTest() {
 
     @Test
     fun performanceTest2() {
-
+        Log.d("perfTests", "Performance test #2")
     }
 }
 
 private data class TestParams(
-        val testName: String,
-        val numIters: Int = 12,
-        val numDocs: IntArray = intArrayOf(),
-        val docSizes: IntArray = intArrayOf(),
-        val dataProbeGranularityMs: Long = 1500L,
-        val numOutliersEachSide: Int = 1,
-        val stitchHostName: String = "",
-        val outputToStdOut: Boolean = true,
-        val outputToStitch: Boolean = false,
-        val preserveRawOutput: Boolean = false) {
+    val runId: ObjectId,
+    val testName: String,
+    val numIters: Int = 12,
+    val numDocs: IntArray = intArrayOf(),
+    val docSizes: IntArray = intArrayOf(),
+    val dataProbeGranularityMs: Long = 1500L,
+    val numOutliersEachSide: Int = 1,
+    val stitchHostName: String = "",
+    val outputToStdOut: Boolean = true,
+    val outputToStitch: Boolean = false,
+    val preserveRawOutput: Boolean = false
+) {
+    fun toBson(): Document {
+        return Document()
+            .append("name", BsonString(this.testName))
+            .append("dataProbeGranularityMs", BsonInt64(this.dataProbeGranularityMs))
+            .append("numOutliersEachSide", BsonInt32(this.numOutliersEachSide))
+            .append("stitchHostName", BsonString(this.stitchHostName))
+            .append("date", BsonDateTime(Date().time))
+            .append("runId", runId)
+            .append("results", BsonArray())
+    }
 }
 
-interface DataBlock<T: Number> {
+interface DataBlock<T : Number> {
     var mean: Double
     var median: T
     var stdDev: Double
     var min: T
     var max: T
 
-    fun toBson(): BsonDocument
+    fun toBson(): Document
 }
 
-private class IntDataBlock(data : IntArray, numOutliers: Int): DataBlock<Int> {
-    override var mean   = 0.0
+private class IntDataBlock(data: IntArray, numOutliers: Int) : DataBlock<Int> {
+    override var mean = 0.0
     override var median = 0
-    override var min    = 0
-    override var max    = 0
+    override var min = 0
+    override var max = 0
     override var stdDev = 0.0
 
     // Compute relevant metrics on init
@@ -325,27 +371,27 @@ private class IntDataBlock(data : IntArray, numOutliers: Int): DataBlock<Int> {
             }
 
             mean = newData.average()
-            stdDev = data.fold(0.0, { accumulator, next -> accumulator + (next - mean) * (next - mean)})
-            stdDev =  Math.sqrt(stdDev / dataSize)
+            stdDev = data.fold(0.0, { accumulator, next -> accumulator + (next - mean) * (next - mean) })
+            stdDev = Math.sqrt(stdDev / dataSize)
         }
     }
 
     // Compute relevant metrics on init
-    override fun toBson(): BsonDocument {
-        return BsonDocument()
-                .append("min", BsonInt32(this.min))
-                .append("max", BsonInt32(this.max))
-                .append("mean", BsonDouble(this.mean))
-                .append("median", BsonInt32(this.median))
-                .append("stdDev", BsonDouble(this.stdDev))
+    override fun toBson(): Document {
+        return Document()
+            .append("min", BsonInt32(this.min))
+            .append("max", BsonInt32(this.max))
+            .append("mean", BsonDouble(this.mean))
+            .append("median", BsonInt32(this.median))
+            .append("stdDev", BsonDouble(this.stdDev))
     }
 }
 
-private class DoubleDataBlock(data: DoubleArray, numOutliers: Int): DataBlock<Double> {
-    override var mean   = 0.0
+private class DoubleDataBlock(data: DoubleArray, numOutliers: Int) : DataBlock<Double> {
+    override var mean = 0.0
     override var median = 0.0
-    override var min    = 0.0
-    override var max    = 0.0
+    override var min = 0.0
+    override var max = 0.0
     override var stdDev = 0.0
 
     // Compute relevant metrics on init
@@ -365,26 +411,26 @@ private class DoubleDataBlock(data: DoubleArray, numOutliers: Int): DataBlock<Do
             }
 
             mean = newData.average()
-            stdDev = data.fold(0.0, { accumulator, next -> accumulator + (next - mean) * (next - mean)})
-            stdDev =  Math.sqrt(stdDev / dataSize)
+            stdDev = data.fold(0.0, { accumulator, next -> accumulator + (next - mean) * (next - mean) })
+            stdDev = Math.sqrt(stdDev / dataSize)
         }
     }
 
-    override fun toBson(): BsonDocument {
-        return BsonDocument()
-                .append("min", BsonDouble(this.min))
-                .append("max", BsonDouble(this.max))
-                .append("mean", BsonDouble(this.mean))
-                .append("median", BsonDouble(this.median))
-                .append("stdDev", BsonDouble(this.stdDev))
+    override fun toBson(): Document {
+        return Document()
+            .append("min", BsonDouble(this.min))
+            .append("max", BsonDouble(this.max))
+            .append("mean", BsonDouble(this.mean))
+            .append("median", BsonDouble(this.median))
+            .append("stdDev", BsonDouble(this.stdDev))
     }
 }
 
-private class LongDataBlock(data: LongArray, numOutliers: Int): DataBlock<Long> {
-    override var mean   = 0.0
+private class LongDataBlock(data: LongArray, numOutliers: Int) : DataBlock<Long> {
+    override var mean = 0.0
     override var median = 0L
-    override var min    = 0L
-    override var max    = 0L
+    override var min = 0L
+    override var max = 0L
     override var stdDev = 0.0
 
     init {
@@ -403,33 +449,34 @@ private class LongDataBlock(data: LongArray, numOutliers: Int): DataBlock<Long> 
             }
 
             mean = newData.average()
-            stdDev = data.fold(0.0, { accumulator, next -> accumulator + (next - mean) * (next - mean)})
-            stdDev =  Math.sqrt(stdDev / dataSize)
+            stdDev = data.fold(0.0, { accumulator, next -> accumulator + (next - mean) * (next - mean) })
+            stdDev = Math.sqrt(stdDev / dataSize)
         }
     }
 
-    override fun toBson(): BsonDocument {
-        return BsonDocument()
-                .append("min", BsonInt64(this.min))
-                .append("max", BsonInt64(this.max))
-                .append("mean", BsonDouble(this.mean))
-                .append("median", BsonInt64(this.median))
-                .append("stdDev", BsonDouble(this.stdDev))
+    override fun toBson(): Document {
+        return Document()
+            .append("min", BsonInt64(this.min))
+            .append("max", BsonInt64(this.max))
+            .append("mean", BsonDouble(this.mean))
+            .append("median", BsonInt64(this.median))
+            .append("stdDev", BsonDouble(this.stdDev))
     }
 }
 
-private class RunResults(numDocs: Int,
-                 docSize: Int,
-                 numIters: Int,
-                 numOutliers: Int,
-                 time: LongArray,
-                 networkSentBytes: LongArray,
-                 networkReceivedBytes: LongArray,
-                 cpu: DoubleArray,
-                 memory: LongArray,
-                 disk: LongArray,
-                 threads: IntArray) {
-
+private class RunResults(
+    numDocs: Int,
+    docSize: Int,
+    numIters: Int,
+    numOutliers: Int,
+    time: LongArray,
+    networkSentBytes: LongArray,
+    networkReceivedBytes: LongArray,
+    cpu: DoubleArray,
+    memory: LongArray,
+    disk: LongArray,
+    threads: IntArray
+) {
     var numDocs: Int = 0
     var docSize: Int = 0
     var numIters: Int = 0
@@ -441,7 +488,6 @@ private class RunResults(numDocs: Int,
     var memoryResults: DataBlock<Long>? = null
     var diskResults: DataBlock<Long>? = null
     var threadResults: DataBlock<Int>? = null
-
 
     init {
         this.numDocs = numDocs
@@ -456,8 +502,8 @@ private class RunResults(numDocs: Int,
         this.threadResults = IntDataBlock(threads, numOutliers)
     }
 
-    fun toBson(): BsonDocument {
-        return BsonDocument()
+    fun toBson(): Document {
+        return Document()
                 .append("numDocs", BsonInt32(this.numDocs))
                 .append("docSize", BsonInt32(this.docSize))
                 .append("numIters", BsonInt32(this.numIters))
@@ -469,5 +515,4 @@ private class RunResults(numDocs: Int,
                 .append("disk", diskResults?.toBson() ?: BsonString("Error"))
                 .append("threads", threadResults?.toBson() ?: BsonString("Error"))
     }
-
 }
