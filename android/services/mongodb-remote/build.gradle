@@ -5,7 +5,6 @@ apply plugin: 'jacoco-android'
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'kotlin-android-extensions'
 
-
 ext.pomDisplayName = "Android Remote MongoDB Service"
 
 buildscript {
@@ -37,7 +36,6 @@ android {
 
 dependencies {
     implementation project(':android:stitch-android-core')
-
     api project(':core:core-services:stitch-core-services-mongodb-remote')
     api project(':android:android-services:stitch-android-services-mongodb-local')
 
