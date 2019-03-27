@@ -5,7 +5,7 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 
-class OkHttpInstrumentedTransport: OkHttpTransport() {
+class OkHttpInstrumentedTransport : OkHttpTransport() {
     var bytesUploaded: Long = 0
         private set
     var bytesDownloaded: Long = 0
@@ -25,9 +25,11 @@ class OkHttpInstrumentedTransport: OkHttpTransport() {
         }
     }
 
-    override fun newClientBuilder(connectTimeout: Long,
-                                  readTimeout: Long,
-                                  writeTimeout: Long): OkHttpClient.Builder {
+    override fun newClientBuilder(
+        connectTimeout: Long,
+        readTimeout: Long,
+        writeTimeout: Long
+    ): OkHttpClient.Builder {
         return super.newClientBuilder(connectTimeout, readTimeout, writeTimeout)
             .addNetworkInterceptor(this.interceptor)
     }

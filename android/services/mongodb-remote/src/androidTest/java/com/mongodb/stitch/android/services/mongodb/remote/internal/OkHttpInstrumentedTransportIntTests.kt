@@ -10,7 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class OkHttpInstrumentedTransportIntTests: BaseStitchAndroidIntTest() {
+class OkHttpInstrumentedTransportIntTests : BaseStitchAndroidIntTest() {
     private val transport = OkHttpInstrumentedTransport()
     override fun getAppClientConfigurationBuilder(): StitchAppClientConfiguration.Builder {
         return super.getAppClientConfigurationBuilder().withTransport(transport)
@@ -34,7 +34,7 @@ class OkHttpInstrumentedTransportIntTests: BaseStitchAndroidIntTest() {
         val foo = Tasks.await(appClient.callFunction("echo", listOf("foo"), String::class.java))
         assertEquals("foo", foo)
 
-        assertTrue(transport.bytesDownloaded in 1600 .. 1650)
-        assertTrue(transport.bytesUploaded in 1500 .. 1550)
+        assertTrue(transport.bytesDownloaded in 1600..1650)
+        assertTrue(transport.bytesUploaded in 1500..1550)
     }
 }
