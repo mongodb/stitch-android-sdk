@@ -10,48 +10,48 @@ import java.util.concurrent.TimeUnit
 
 open class ChainImpl: Interceptor.Chain {
     override fun request(): Request {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     @Throws(IOException::class)
     override fun proceed(request: Request): Response {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun connection(): Connection? {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun call(): Call {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun connectTimeoutMillis(): Int {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun withConnectTimeout(timeout: Int, unit: TimeUnit): Interceptor.Chain {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun readTimeoutMillis(): Int {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun withReadTimeout(timeout: Int, unit: TimeUnit): Interceptor.Chain {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun writeTimeoutMillis(): Int {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 
     override fun withWriteTimeout(timeout: Int, unit: TimeUnit): Interceptor.Chain {
-        TODO("method not mocked")
+        throw NotImplementedError("method not mocked")
     }
 }
 
-// TODO: Add to new test source unit tests once added
+// throw NotImplementedError: Add to new test source unit tests once added
 //@RunWith(MockitoJUnitRunner::class)
 //class OkHttpInstrumentedTransportUnitTests {
 //    @Test
