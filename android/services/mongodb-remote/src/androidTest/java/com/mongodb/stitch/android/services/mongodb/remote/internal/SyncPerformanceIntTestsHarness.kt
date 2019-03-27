@@ -44,7 +44,6 @@ import org.bson.types.ObjectId
 import org.junit.After
 import org.junit.Before
 
-
 import java.util.Date
 
 typealias TestDefinition = (Int, Int) -> Unit
@@ -252,9 +251,6 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                             cpuData.add(cpuDataIter.average())
                             memoryData.add(memoryDataIter.average())
 
-                            // Add the execution time and network information from transport
-                            //timeData.add(time)
-
                             // TODO: Add in these values when instrumented transport is implemented
                             networkSentData.add((transport.bytesUploaded - networkSentBefore).toDouble())
                             networkReceivedData.add((transport.bytesDownloaded - networkReceivedBefore).toDouble())
@@ -286,7 +282,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                     }
                 }
             }
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             Tasks.await(outputColl.deleteOne(Document("_id", resultId)))
             throw e
         }
@@ -311,10 +307,10 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                     "runId" to runId,
                     "name" to BsonString(this.testName),
                     "dataProbeGranularityMs" to BsonInt64(this.dataProbeGranularityMs),
-                    "numOutliersEachSide" to  BsonInt32(this.numOutliersEachSide),
+                    "numOutliersEachSide" to BsonInt32(this.numOutliersEachSide),
                     "stitchHostName" to BsonString(this.stitchHostName),
                     "date" to BsonDateTime(Date().time),
-                    "results" to  BsonArray()
+                    "results" to BsonArray()
                 )
             )
         }

@@ -15,7 +15,6 @@ import org.junit.BeforeClass
 import org.junit.Test
 
 class SyncPerformanceIntTests : SyncPerformanceIntTestsHarness() {
-    //private lateinit var runId: ObjectId
     private var testHarness = SyncPerformanceIntTestsHarness()
 
     private fun getDocuments(
@@ -34,7 +33,6 @@ class SyncPerformanceIntTests : SyncPerformanceIntTestsHarness() {
     }
 
     companion object {
-
         private lateinit var runId: ObjectId
 
         @BeforeClass
@@ -58,7 +56,7 @@ class SyncPerformanceIntTests : SyncPerformanceIntTestsHarness() {
     fun testInitialSync() {
         Log.d("perfTests", "testInitialSync")
         val testParams = TestParams(
-            runId = runId ,
+            runId = runId,
             testName = "testInitialSync",
             dataProbeGranularityMs = 400L,
             docSizes = intArrayOf(50),
