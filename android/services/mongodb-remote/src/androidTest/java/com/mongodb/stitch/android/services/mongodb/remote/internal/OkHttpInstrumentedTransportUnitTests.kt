@@ -10,7 +10,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 
-open class ChainImpl : Interceptor.Chain {
+open class MockChainImpl : Interceptor.Chain {
     override fun request(): Request {
         throw NotImplementedError("method not mocked")
     }
@@ -59,7 +59,7 @@ class OkHttpInstrumentedTransportUnitTests {
     fun testIntercept() {
         val instrumentedTransport = OkHttpInstrumentedTransport()
 
-        val chainMock = Mockito.mock(ChainImpl::class.java)
+        val chainMock = Mockito.mock(MockChainImpl::class.java)
         val requestMock = Mockito.mock(Request::class.java)
         val requestBodyMock = Mockito.mock(RequestBody::class.java)
         val headersMock = Mockito.mock(Headers::class.java)
