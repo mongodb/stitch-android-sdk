@@ -345,7 +345,7 @@ private class DoubleDataBlock(data: DoubleArray, numOutliers: Int) {
             }
 
             mean = newData.average()
-            stdDev = data.fold(0.0) { accumulator, next -> accumulator + (next - mean) * (next - mean) }
+            stdDev = newData.fold(0.0) { accumulator, next -> accumulator + (next - mean) * (next - mean) }
             stdDev = Math.sqrt(stdDev / dataSize)
         }
     }

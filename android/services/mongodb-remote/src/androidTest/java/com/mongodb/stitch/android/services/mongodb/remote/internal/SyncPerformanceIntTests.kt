@@ -63,8 +63,8 @@ class SyncPerformanceIntTests : SyncPerformanceIntTestsHarness() {
             dataProbeGranularityMs = 400L,
             docSizes = intArrayOf(50),
             numDocs = intArrayOf(100),
-            numIters = 5,
-            numOutliersEachSide = 1,
+            numIters = 3,
+            numOutliersEachSide = 0,
             outputToStitch = true
         )
 
