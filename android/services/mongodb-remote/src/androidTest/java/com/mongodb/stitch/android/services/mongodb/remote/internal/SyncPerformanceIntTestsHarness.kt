@@ -14,6 +14,7 @@ import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbedde
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
+import com.mongodb.stitch.core.StitchAppClientConfiguration
 import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.services.ServiceConfigs
@@ -92,6 +93,11 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             "test.stitch.baseURL",
             "http://10.0.2.2:9090"
         )
+    }
+
+    private val transport = OkHttpInstrumentedTransport()
+    override fun getAppClientConfigurationBuilder(): StitchAppClientConfiguration.Builder {
+        return super.getAppClientConfigurationBuilder().withTransport(transport)
     }
 
     @Before
@@ -220,8 +226,11 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                                 }
                             }
 
+                            // Get the before values for necessary metrics
                             val statsBefore = StatFs(Environment.getExternalStorageDirectory().getAbsolutePath())
                             val memFreeBefore = statsBefore.freeBlocksLong * statsBefore.blockSizeLong
+                            val networkSentBefore = transport.bytesUploaded
+                            val networkReceivedBefore = transport.bytesDownloaded
 
                             // Measure the execution time of runnning the given block of code
                             val timeBefore = Date().time
@@ -247,8 +256,8 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                             //timeData.add(time)
 
                             // TODO: Add in these values when instrumented transport is implemented
-                            networkSentData.add(100000.0)
-                            networkReceivedData.add(200000.0)
+                            networkSentData.add((transport.bytesUploaded - networkSentBefore).toDouble())
+                            networkReceivedData.add((transport.bytesDownloaded - networkReceivedBefore).toDouble())
                         }
 
                         // Reset the StitchApp
