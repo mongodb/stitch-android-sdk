@@ -181,7 +181,6 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             testColl = testMongoClient.getDatabase(testDbName).getCollection(testCollName)
         }
 
-
         (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.stop()
         (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.disableSyncThread()
         BaseStitchAndroidIntTest.testNetworkMonitor.connectedState = true
@@ -289,7 +288,6 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                             threadData.add(threadDataIter.average())
                             cpuData.add(cpuDataIter.average())
                             memoryData.add(memoryDataIter.average())
-
                         }
 
                         // Reset the StitchApp
