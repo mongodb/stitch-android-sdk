@@ -131,7 +131,6 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     }
 
     private fun setupIter() {
-
         // Setup Stitch app to use for the tests
         // We need a new one for each iteration
         super.setup()
@@ -278,20 +277,19 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                             // job.cancel()
                             job.cancelAndJoin()
 
+                            // Add metrics
                             timeData.add((Date().time - timeBefore).toDouble())
-
                             val statsAfter = StatFs(Environment.getExternalStorageDirectory().getAbsolutePath())
                             val memFreeAfter = statsAfter.freeBlocksLong * statsAfter.blockSizeLong
                             diskData.add((memFreeBefore - memFreeAfter).toDouble())
+                            networkSentData.add((transport.bytesUploaded - networkSentBefore).toDouble())
+                            networkReceivedData.add((transport.bytesDownloaded - networkReceivedBefore).toDouble())
 
                             // Average the point-in-time data metrics
                             threadData.add(threadDataIter.average())
                             cpuData.add(cpuDataIter.average())
                             memoryData.add(memoryDataIter.average())
 
-                            // TODO: Add in these values when instrumented transport is implemented
-                            networkSentData.add((transport.bytesUploaded - networkSentBefore).toDouble())
-                            networkReceivedData.add((transport.bytesDownloaded - networkReceivedBefore).toDouble())
                         }
 
                         // Reset the StitchApp
