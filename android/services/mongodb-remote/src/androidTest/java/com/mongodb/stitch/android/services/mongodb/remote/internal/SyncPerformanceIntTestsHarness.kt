@@ -58,10 +58,14 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     private val stitchOutputAppName = "android-sdk-perf-testing-yuvef"
     private val stitchOutputDbName = "performance"
     private val stitchOutputCollName = "results"
+
+    private val stitchTestDbName = "performance"
+    private val stitchTestCollName = "rawTestColl"
     private var stitchTestHost = ""
 
     // Private variables
     private lateinit var outputClient: StitchAppClient
+    private lateinit var outputMongoClient: RemoteMongoClient
     private lateinit var outputColl: RemoteMongoCollection<Document>
     private lateinit var mdbService: Apps.App.Services.Service
     private lateinit var mdbRule: RuleResponse
@@ -120,8 +124,8 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             Tasks.await(outputClient.auth.loginWithCredential(UserApiKeyCredential(getStitchAPIKey())))
         }
 
-        outputColl = outputClient
-            .getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
+        outputMongoClient = outputClient.getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
+        outputColl = outputMongoClient
             .getDatabase(stitchOutputDbName)
             .getCollection(stitchOutputCollName)
     }
@@ -131,33 +135,54 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         // Setup Stitch app to use for the tests
         // We need a new one for each iteration
         super.setup()
-        val app = createApp()
-        addProvider(app.second, ProviderConfigs.Anon)
-        mdbService = addService(
+
+        if (getStitchBaseURL().equals("https://stitch.mongodb.com")) {
+            testDbName = stitchTestDbName
+            testCollName = stitchTestCollName
+            testColl = outputClient
+                .getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
+                .getDatabase(testDbName)
+                .getCollection(testCollName)
+            testClient = outputClient
+            testMongoClient = outputMongoClient
+
+            if (!outputClient.auth.isLoggedIn) {
+                testUserId = Tasks.await(outputClient.auth.loginWithCredential(UserApiKeyCredential(getStitchAPIKey()))).id
+            } else {
+                testUserId = outputClient.auth.user!!.id
+            }
+
+            Tasks.await(testClient.callFunction("deleteAllAsSystemUser", arrayListOf<String>()))
+        } else {
+            val app = createApp()
+            addProvider(app.second, ProviderConfigs.Anon)
+            mdbService = addService(
                 app.second,
                 "mongodb",
                 "mongodb1",
                 ServiceConfigs.Mongo(getMongoDbUri())).second
 
-        testDbName = ObjectId().toHexString()
-        testCollName = ObjectId().toHexString()
-        testNamespace = MongoNamespace(testDbName, testCollName
-        )
+            testDbName = ObjectId().toHexString()
+            testCollName = ObjectId().toHexString()
+            testNamespace = MongoNamespace(testDbName, testCollName)
 
-        val rule = RuleCreator.MongoDb(
+            val rule = RuleCreator.MongoDb(
                 database = testDbName,
                 collection = testCollName,
                 roles = listOf(RuleCreator.MongoDb.Role(
-                        read = true, write = true
+                    read = true, write = true
                 )),
                 schema = RuleCreator.MongoDb.Schema())
 
-        mdbRule = addRule(mdbService, rule)
+            mdbRule = addRule(mdbService, rule)
 
-        testClient = getAppClient(app.first)
-        testUserId = Tasks.await(testClient.auth.loginWithCredential(AnonymousCredential())).id
-        testMongoClient = testClient.getServiceClient(RemoteMongoClient.factory, "mongodb1")
-        testColl = testMongoClient.getDatabase(testDbName).getCollection(testCollName)
+            testClient = getAppClient(app.first)
+            testUserId = Tasks.await(testClient.auth.loginWithCredential(AnonymousCredential())).id
+            testMongoClient = testClient.getServiceClient(RemoteMongoClient.factory, "mongodb1")
+            testColl = testMongoClient.getDatabase(testDbName).getCollection(testCollName)
+        }
+
+
         (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.stop()
         (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.disableSyncThread()
         BaseStitchAndroidIntTest.testNetworkMonitor.connectedState = true
@@ -171,7 +196,12 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     private fun teardownIter() {
         val syncedIds = Tasks.await(testColl.sync().syncedIds)
         Tasks.await(testColl.sync().desyncMany(*syncedIds.toTypedArray()))
-        Tasks.await(testColl.deleteMany(Document()))
+
+        if (getStitchBaseURL().equals("https://stitch.mongodb.com")) {
+            Tasks.await(testClient.callFunction("deleteAllAsSystemUser", arrayListOf<String>()))
+        } else {
+            Tasks.await(testColl.deleteMany(Document()))
+        }
 
         if (::testMongoClient.isInitialized) {
             (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
@@ -192,6 +222,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         val resultId = ObjectId()
         if (testParams.outputToStitch) {
             val doc = testParams.toBson().append("_id", resultId)
+                .append("stitchHostName", BsonString(getStitchBaseURL()))
             Tasks.await(outputColl.insertOne(doc))
         }
 
@@ -316,7 +347,6 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                     "dataProbeGranularityMs" to BsonInt64(this.dataProbeGranularityMs),
                     "numOutliersEachSide" to BsonInt32(this.numOutliersEachSide),
                     "numIters" to BsonInt32(this.numIters),
-                    "stitchHostName" to BsonString(this.stitchHostName),
                     "date" to BsonDateTime(Date().time),
                     "sdk" to BsonString("android"),
                     "results" to BsonArray()

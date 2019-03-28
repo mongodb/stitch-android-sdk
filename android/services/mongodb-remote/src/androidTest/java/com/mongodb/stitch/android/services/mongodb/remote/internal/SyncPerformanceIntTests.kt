@@ -63,7 +63,8 @@ class SyncPerformanceIntTests : SyncPerformanceIntTestsHarness() {
             numDocs = intArrayOf(100),
             numIters = 3,
             numOutliersEachSide = 0,
-            outputToStitch = true
+            outputToStitch = true,
+            stitchHostName = "https://stitch.mongodb.com"
         )
 
         testHarness.runPerformanceTestWithParams(testParams) { docSize, numDocs ->
