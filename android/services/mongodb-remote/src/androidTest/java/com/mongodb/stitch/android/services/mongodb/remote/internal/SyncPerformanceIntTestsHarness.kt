@@ -21,6 +21,7 @@ import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
 import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
+import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import kotlinx.coroutines.Dispatchers.IO
@@ -52,8 +53,10 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
     // Private constants
     private val mongodbUriProp = "test.stitch.mongodbURI"
-    private val stitchOutputAppName = "stitchdocsexamples-pqwyr"
-    private val stitchOutputDbName = "stress"
+    private val stitchAPIKeyProp = "test.stitch.androidPerfStitchAPIKey"
+
+    private val stitchOutputAppName = "android-sdk-perf-testing-yuvef"
+    private val stitchOutputDbName = "performance"
     private val stitchOutputCollName = "results"
     private var stitchTestHost = ""
 
@@ -76,6 +79,10 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         get() = (testMongoClient as RemoteMongoClientImpl).dataSynchronizer
     val testNetworkMonitor: BaseStitchIntTest.TestNetworkMonitor
         get() = BaseStitchAndroidIntTest.testNetworkMonitor
+
+    private fun getStitchAPIKey(): String {
+        return InstrumentationRegistry.getArguments().getString(stitchAPIKeyProp, "")
+    }
 
     /**
      * Get the uri for where mongodb is running locally.
@@ -110,7 +117,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         }
 
         if (!outputClient.auth.isLoggedIn) {
-            Tasks.await(outputClient.auth.loginWithCredential(AnonymousCredential()))
+            Tasks.await(outputClient.auth.loginWithCredential(UserApiKeyCredential(getStitchAPIKey())))
         }
 
         outputColl = outputClient
@@ -262,7 +269,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
                     // Create RunResults option which performs outlier extraction, and computes the
                     // desired statistical metrics
-                    val runResults = RunResults(numDoc, docSize, testParams.numIters,
+                    val runResults = RunResults(numDoc, docSize,
                         testParams.numOutliersEachSide, timeData.toDoubleArray(),
                         networkSentData.toDoubleArray(), networkReceivedData.toDoubleArray(),
                         cpuData.toDoubleArray(), memoryData.toDoubleArray(),
@@ -298,7 +305,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         val numOutliersEachSide: Int = 1,
         val stitchHostName: String = "",
         val outputToStdOut: Boolean = true,
-        val outputToStitch: Boolean = false,
+        val outputToStitch: Boolean = true,
         val preserveRawOutput: Boolean = false
     ) {
         fun toBson(): Document {
@@ -308,8 +315,10 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                     "name" to BsonString(this.testName),
                     "dataProbeGranularityMs" to BsonInt64(this.dataProbeGranularityMs),
                     "numOutliersEachSide" to BsonInt32(this.numOutliersEachSide),
+                    "numIters" to BsonInt32(this.numIters),
                     "stitchHostName" to BsonString(this.stitchHostName),
                     "date" to BsonDateTime(Date().time),
+                    "sdk" to BsonString("android"),
                     "results" to BsonArray()
                 )
             )
@@ -362,7 +371,6 @@ private class DoubleDataBlock(data: DoubleArray, numOutliers: Int) {
 private class RunResults(
     numDocs: Int,
     docSize: Int,
-    numIters: Int,
     numOutliers: Int,
     time: DoubleArray,
     networkSentBytes: DoubleArray,
@@ -374,7 +382,6 @@ private class RunResults(
 ) {
     var numDocs: Int = 0
     var docSize: Int = 0
-    var numIters: Int = 0
 
     val timeResults: DoubleDataBlock
     val networkSentResults: DoubleDataBlock
@@ -387,7 +394,6 @@ private class RunResults(
     init {
         this.numDocs = numDocs
         this.docSize = docSize
-        this.numIters = numIters
         this.timeResults = DoubleDataBlock(time, numOutliers)
         this.networkSentResults = DoubleDataBlock(networkSentBytes, numOutliers)
         this.networkReceivedResults = DoubleDataBlock(networkReceivedBytes, numOutliers)
@@ -402,7 +408,6 @@ private class RunResults(
             mapOf(
                 "numDocs" to BsonInt32(this.numDocs),
                 "docSize" to BsonInt32(this.docSize),
-                "numIters" to BsonInt32(this.numIters),
                 "timeMs" to this.timeResults.toBson(),
                 "networkSentBytes" to this.networkSentResults.toBson(),
                 "networkReceivedBytes" to this.networkReceivedResults.toBson(),

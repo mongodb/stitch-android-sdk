@@ -30,6 +30,9 @@ android {
         if (file.exists()) {
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
         }
+        if (!properties.getProperty("test.stitch.androidPerfStitchAPIKey", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfStitchAPIKey", properties.getProperty("test.stitch.androidPerfStitchAPIKey", "")
+        }
         testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
     }
 }
