@@ -1,0 +1,10 @@
+prefix=/data/mci/139f64e3b5e090cd49bcad9582d22d36/src/build/mongo-embedded-sdk-4.1.0-96-g98f9ed8-tmp
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: libbson
+Description: The libbson BSON serialization library.
+Version: 1.9.2
+Libs: -L${libdir} -lbson-1.0
+Cflags: -I${includedir}/libbson-1.0

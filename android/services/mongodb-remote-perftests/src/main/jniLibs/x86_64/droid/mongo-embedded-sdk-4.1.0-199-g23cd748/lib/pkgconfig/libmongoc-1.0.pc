@@ -1,0 +1,11 @@
+prefix=/data/mci/0c019c7aa3f90a32d4e788464e841967/src/build/mongo-embedded-sdk-4.1.0-199-g23cd748-tmp
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: libmongoc
+Description: The libmongoc MongoDB client library.
+Version: 1.10.1
+Requires: libbson-1.0
+Libs: -L${libdir} -lmongoc-1.0
+Cflags: -I${includedir}/libmongoc-1.0
