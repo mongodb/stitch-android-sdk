@@ -3,6 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'digital.wup.android-maven-publish'
 apply plugin: 'jacoco-android'
 apply plugin: 'com.jfrog.bintray'
+apply plugin: 'kotlin-android-extensions'
 
 ext.pomDisplayName = "Android Remote MongoDB Service"
 
@@ -29,6 +30,9 @@ android {
         if (file.exists()) {
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
         }
+        if (!properties.getProperty("test.stitch.androidPerfStitchAPIKey", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfStitchAPIKey", properties.getProperty("test.stitch.androidPerfStitchAPIKey", "")
+        }
         testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
     }
 }
@@ -41,6 +45,8 @@ dependencies {
     androidTestImplementation project(':android:stitch-android-testutils')
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
     androidTestImplementation "org.mockito:mockito-core:2.18.3"
     androidTestImplementation 'com.squareup.okhttp3:okhttp:3.11.0'
+    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1"
 }

@@ -140,6 +140,7 @@ functions:
           echo "test.stitch.awsSecretAccessKey=${test_aws_secret}" >> local.properties
           echo "test.stitch.fcmSenderId=${test_fcm_sender_id}" >> local.properties
           echo "test.stitch.fcmApiKey=${test_fcm_api_key}" >> local.properties
+          echo "test.stitch.androidPerfStitchAPIKey=${perf_android_api_key} >> local.properties
 
   "setup_emulator":
     - command: shell.exec
