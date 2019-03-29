@@ -298,7 +298,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                         }
 
                         // Run the user-defined teardown for this test, after reporting metrics
-                        testSetup?.invoke(docSize, numDoc)
+                        testTeardown?.invoke(docSize, numDoc)
 
                         // Reset the StitchApp
                         teardownIter()
