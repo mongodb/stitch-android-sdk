@@ -67,12 +67,12 @@ class SyncPerformanceIntTests : SyncPerformanceIntTestsHarness() {
             stitchHostName = "https://stitch.mongodb.com"
         )
 
-        testHarness.runPerformanceTestWithParams(testParams) { docSize, numDocs ->
+        testHarness.runPerformanceTestWithParams(testParams, testDefinition = { docSize, numDocs ->
             val documents = getDocuments(numDocs, docSize)
             assertEquals(Tasks.await(testHarness.testColl.count()), 0L)
             Tasks.await(testHarness.testColl.insertMany(documents))
             assertEquals(Tasks.await(testHarness.testColl.count()), numDocs.toLong())
-        }
+        })
         Log.d("perfTests", "testInitialSync")
     }
 
@@ -87,15 +87,16 @@ class SyncPerformanceIntTests : SyncPerformanceIntTestsHarness() {
             numDocs = intArrayOf(100, 150),
             numIters = 3,
             numOutliersEachSide = 0,
-            outputToStitch = true
+            outputToStitch = true,
+            stitchHostName = "https://stitch.mongodb.com"
         )
 
-        testHarness.runPerformanceTestWithParams(testParams) { docSize, numDocs ->
+        testHarness.runPerformanceTestWithParams(testParams, testDefinition = { docSize, numDocs ->
             val documents = getDocuments(numDocs, docSize)
             assertEquals(Tasks.await(testHarness.testColl.count()), 0L)
             Tasks.await(testHarness.testColl.insertMany(documents))
             assertEquals(Tasks.await(testHarness.testColl.count()), numDocs.toLong())
-        }
+        })
         Log.d("perfTests", "testDisconnectReconnect")
     }
 }

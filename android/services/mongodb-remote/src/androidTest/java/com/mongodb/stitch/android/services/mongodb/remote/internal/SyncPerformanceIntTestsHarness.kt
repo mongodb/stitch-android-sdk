@@ -47,7 +47,7 @@ import org.junit.Before
 
 import java.util.Date
 
-typealias TestDefinition = (Int, Int) -> Unit
+typealias TestDefinition = (docSize: Int, numDocs: Int) -> Unit
 
 open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
@@ -61,7 +61,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
     private val stitchTestDbName = "performance"
     private val stitchTestCollName = "rawTestColl"
-    private var stitchTestHost = ""
+    public var stitchTestHost = ""
 
     // Private variables
     private lateinit var outputClient: StitchAppClient
@@ -85,6 +85,8 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         get() = BaseStitchAndroidIntTest.testNetworkMonitor
 
     private fun getStitchAPIKey(): String {
+        val apiKey = InstrumentationRegistry.getArguments().getString(stitchAPIKeyProp, "")
+        print(apiKey)
         return InstrumentationRegistry.getArguments().getString(stitchAPIKeyProp, "")
     }
 
@@ -201,17 +203,19 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             Tasks.await(testColl.deleteMany(Document()))
         }
 
-        if (::testMongoClient.isInitialized) {
-            (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
-            AndroidEmbeddedMongoClientFactory.getInstance().close()
-        }
+//        if (::testMongoClient.isInitialized) {
+//            (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+//            AndroidEmbeddedMongoClientFactory.getInstance().close()
+//        }
 
         teardown()
     }
 
     public fun runPerformanceTestWithParams(
         testParams: TestParams,
-        testDefinition: TestDefinition
+        testSetup: TestDefinition? = null,
+        testDefinition: TestDefinition,
+        testTeardown: TestDefinition? = null
     ) = runBlocking {
         setup()
         val runtime = Runtime.getRuntime()
@@ -247,6 +251,9 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
                         // Setup the Stitch Host
                         setupIter()
+
+                        // Run the user-defined setup for this test, before capturing any metrics
+                        testSetup?.invoke(docSize, numDoc)
 
                         coroutineScope {
                             // Launch coroutine to collect point-in-time data metrics and then delay
@@ -289,6 +296,9 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                             cpuData.add(cpuDataIter.average())
                             memoryData.add(memoryDataIter.average())
                         }
+
+                        // Run the user-defined teardown for this test, after reporting metrics
+                        testSetup?.invoke(docSize, numDoc)
 
                         // Reset the StitchApp
                         teardownIter()
