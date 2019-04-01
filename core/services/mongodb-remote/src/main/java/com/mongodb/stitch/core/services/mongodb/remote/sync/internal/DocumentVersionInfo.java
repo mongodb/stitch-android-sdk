@@ -17,8 +17,10 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
+import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeDocument;
 
 import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DocumentSynchronizationConfig;
 
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -47,13 +49,13 @@ final class DocumentVersionInfo {
     final int syncProtocolVersion;
     final String instanceId;
     final long versionCounter;
-    final int hash;
+    final Long hash;
 
     Version(
             final int syncProtocolVersion,
             final String instanceId,
             final long versionCounter,
-            final int hash) {
+            final Long hash) {
       this.syncProtocolVersion = syncProtocolVersion;
       this.instanceId = instanceId;
       this.versionCounter = versionCounter;
@@ -86,9 +88,10 @@ final class DocumentVersionInfo {
 
     /**
      * Returns the hash code of this version.
-     * @return an int representing the hash code of the data in this version.
+     * @return a long representing the hash code of the data in this version or null if hash
+     * has not been calculated.
      */
-    int getHash() { return hash; }
+    Long getHash() { return hash; }
   }
 
   private DocumentVersionInfo(
@@ -103,7 +106,7 @@ final class DocumentVersionInfo {
         versionDoc.getInt32(Fields.SYNC_PROTOCOL_VERSION_FIELD).getValue(),
         versionDoc.getString(Fields.INSTANCE_ID_FIELD).getValue(),
         versionDoc.getInt64(Fields.VERSION_COUNTER_FIELD).getValue(),
-        versionDocHash.intValue()
+        versionDocHash == null ? null : versionDocHash.longValue()
       );
     } else {
       this.versionDoc = null;
@@ -163,7 +166,7 @@ final class DocumentVersionInfo {
    * @return a DocumentVersionInfo
    */
   static DocumentVersionInfo getLocalVersionInfo(
-      final CoreDocumentSynchronizationConfig docConfig
+      final DocumentSynchronizationConfig docConfig
   ) {
     return new DocumentVersionInfo(
         docConfig.getLastKnownRemoteVersion(),
@@ -199,14 +202,18 @@ final class DocumentVersionInfo {
   /**
    * Returns a BSON version document representing a new version with a new instance ID, and
    * version counter of zero.
+   * @param fullDocument the full document that this version corresponds to
    * @return a BsonDocument representing a synchronization version
    */
-  static BsonDocument getFreshVersionDocument() {
+  static BsonDocument getFreshVersionDocument(BsonDocument fullDocument) {
     final BsonDocument versionDoc = new BsonDocument();
 
     versionDoc.append(Fields.SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(1));
     versionDoc.append(Fields.INSTANCE_ID_FIELD, new BsonString(UUID.randomUUID().toString()));
     versionDoc.append(Fields.VERSION_COUNTER_FIELD, new BsonInt64(0L));
+
+    BsonDocument sanitizedDocument = sanitizeDocument(fullDocument);
+    versionDoc.append(Fields.HASH_FIELD, new BsonInt64(HashUtils.hash(sanitizedDocument)));
 
     return versionDoc;
   }
@@ -252,9 +259,9 @@ final class DocumentVersionInfo {
    * empty version.
    * @return a BsonDocument representing a synchronization version
    */
-  BsonDocument getNextVersion() {
+  BsonDocument getNextVersion(BsonDocument localDoc) {
     if (!this.hasVersion() || this.getVersionDoc() == null) {
-      return getFreshVersionDocument();
+      return getFreshVersionDocument(localDoc);
     }
     final BsonDocument nextVersion = BsonUtils.copyOfDocument(this.getVersionDoc());
     nextVersion.put(

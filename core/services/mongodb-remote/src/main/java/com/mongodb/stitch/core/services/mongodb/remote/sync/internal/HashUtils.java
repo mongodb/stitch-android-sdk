@@ -16,11 +16,27 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
+import java.nio.LongBuffer;
+import java.util.Arrays;
+
+import com.mongodb.stitch.core.internal.common.BsonUtils;
+import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
+
 import org.bson.BsonBinaryWriter;
 import org.bson.BsonDocument;
+import org.bson.BsonDocumentReader;
+import org.bson.BsonNull;
+import org.bson.BsonType;
+import org.bson.BsonValue;
+import org.bson.Document;
 import org.bson.codecs.BsonDocumentCodec;
+import org.bson.codecs.Decoder;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.EncoderContext;
+import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.io.BasicOutputBuffer;
+import org.bson.json.JsonReader;
 
 /**
  * Utility functions for calculating
@@ -28,6 +44,7 @@ import org.bson.io.BasicOutputBuffer;
 public final class HashUtils {
   private static final long FNV_64BIT_OFFSET_BASIS = -3750763034362895579L;
   private static final long FNV_64BIT_PRIME = 1099511628211L;
+  private static final int FNV_BYTE_ALIGNMENT = 8;
 
   private static final BsonDocumentCodec BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
@@ -43,23 +60,36 @@ public final class HashUtils {
    * @return
    */
   public static long hash(final BsonDocument doc) {
-    final byte[] docBytes = toBytes(doc);
+    if (doc == null) {
+      return 0L;
+    }
+    final byte[] docBytes = toBytes(doc, FNV_BYTE_ALIGNMENT);
     long hashValue = FNV_64BIT_OFFSET_BASIS;
 
-    for (int offset = 0; offset < docBytes.length; offset++) {
-      final byte b = docBytes[offset];
-      hashValue = hashValue ^ b;
+
+    for (int offset = 0; offset < docBytes.length; offset += 8) {
+
+      int val = 0;
+      for (int sigbyte = 0; sigbyte < FNV_BYTE_ALIGNMENT; sigbyte++) {
+        val = val << 1;
+        val = val ^ docBytes[offset + sigbyte];
+      }
+      hashValue = hashValue ^ val;
       hashValue *= FNV_64BIT_PRIME;
     }
 
     return hashValue;
   }
 
-  public static byte[] toBytes(final BsonDocument doc) {
+  public static byte[] toBytes(final BsonDocument doc, final int alignment) {
     final BasicOutputBuffer buffer = new BasicOutputBuffer();
     final BsonBinaryWriter writer = new BsonBinaryWriter(buffer);
     BSON_DOCUMENT_CODEC.encode(writer, doc, EncoderContext.builder().build());
 
-    return buffer.getInternalBuffer();
+    final int paddingToAlignment = buffer.getSize() % alignment;
+    byte[] paddingBytes = new byte[paddingToAlignment];
+    buffer.writeBytes(paddingBytes);
+
+    return buffer.toByteArray();
   }
 }

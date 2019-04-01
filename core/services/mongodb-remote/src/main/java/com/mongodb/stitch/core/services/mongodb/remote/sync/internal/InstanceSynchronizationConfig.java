@@ -25,6 +25,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.DeleteManyModel;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DocumentSynchronizationConfig;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,14 +54,14 @@ class InstanceSynchronizationConfig
 
   private final Map<MongoNamespace, NamespaceSynchronizationConfig> namespaces;
   private final MongoCollection<NamespaceSynchronizationConfig> namespacesColl;
-  private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
+  private final MongoCollection<DocumentSynchronizationConfig> docsColl;
   private final ReadWriteLock instanceLock;
 
   InstanceSynchronizationConfig(final MongoDatabase configDb) {
     this.namespacesColl = configDb
         .getCollection("namespaces", NamespaceSynchronizationConfig.class);
     this.docsColl = configDb
-        .getCollection("documents", CoreDocumentSynchronizationConfig.class);
+        .getCollection("documents", DocumentSynchronizationConfig.class);
 
     this.namespacesColl.createIndex(
         Indexes.ascending(
@@ -141,7 +142,7 @@ class InstanceSynchronizationConfig
     }
   }
 
-  public CoreDocumentSynchronizationConfig getSynchronizedDocument(
+  public DocumentSynchronizationConfig getSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
@@ -155,7 +156,7 @@ class InstanceSynchronizationConfig
     return getNamespaceConfig(namespace).addSynchronizedDocuments(documentIds);
   }
 
-  public CoreDocumentSynchronizationConfig addAndGetSynchronizedDocument(
+  public DocumentSynchronizationConfig addAndGetSynchronizedDocument(
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
@@ -165,7 +166,7 @@ class InstanceSynchronizationConfig
   }
 
   @Nullable
-  DeleteManyModel<CoreDocumentSynchronizationConfig> removeSynchronizedDocuments(
+  DeleteManyModel<DocumentSynchronizationConfig> removeSynchronizedDocuments(
       final MongoNamespace namespace,
       final BsonValue... documentIds
   ) {
@@ -199,7 +200,7 @@ class InstanceSynchronizationConfig
    * @param namespace the namespace to get synchronized documents for.
    * @return the set of synchronized documents in a namespace.
    */
-  public Set<CoreDocumentSynchronizationConfig> getSynchronizedDocuments(
+  public Set<DocumentSynchronizationConfig> getSynchronizedDocuments(
       final MongoNamespace namespace
   ) {
     return getNamespaceConfig(namespace).getSynchronizedDocuments();

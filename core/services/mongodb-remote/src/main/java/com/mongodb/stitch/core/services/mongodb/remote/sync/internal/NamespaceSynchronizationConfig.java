@@ -26,6 +26,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.DeleteManyModel;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DocumentSynchronizationConfig;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,6 +35,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -52,13 +55,11 @@ import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
-class NamespaceSynchronizationConfig
-    implements Iterable<CoreDocumentSynchronizationConfig> {
-
+class NamespaceSynchronizationConfig implements Iterable<DocumentSynchronizationConfig> {
   private final MongoCollection<NamespaceSynchronizationConfig> namespacesColl;
-  private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
+  private final MongoCollection<DocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
-  private final Map<BsonValue, CoreDocumentSynchronizationConfig> syncedDocuments;
+  private final ConcurrentMap<BsonValue, DocumentSynchronizationConfig> syncedDocuments;
   private final ReadWriteLock nsLock;
 
   private NamespaceListenerConfig namespaceListenerConfig;
@@ -67,13 +68,13 @@ class NamespaceSynchronizationConfig
 
   NamespaceSynchronizationConfig(
       final MongoCollection<NamespaceSynchronizationConfig> namespacesColl,
-      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
+      final MongoCollection<DocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace
   ) {
     this.namespacesColl = namespacesColl;
     this.docsColl = docsColl;
     this.namespace = namespace;
-    this.syncedDocuments = new HashMap<>();
+    this.syncedDocuments = new ConcurrentHashMap<>();
     this.nsLock = new ReentrantReadWriteLock();
 
     // Fill from db
@@ -81,10 +82,10 @@ class NamespaceSynchronizationConfig
     docsFilter.put(
         CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD,
         new BsonString(namespace.toString()));
-    docsColl.find(docsFilter).forEach(new Block<CoreDocumentSynchronizationConfig>() {
+    docsColl.find(docsFilter).forEach(new Block<DocumentSynchronizationConfig>() {
       @Override
       public void apply(
-          @Nonnull final CoreDocumentSynchronizationConfig docConfig
+          @Nonnull final DocumentSynchronizationConfig docConfig
       ) {
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
@@ -95,13 +96,13 @@ class NamespaceSynchronizationConfig
 
   NamespaceSynchronizationConfig(
       final MongoCollection<NamespaceSynchronizationConfig> namespacesColl,
-      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
+      final MongoCollection<DocumentSynchronizationConfig> docsColl,
       final NamespaceSynchronizationConfig config
   ) {
     this.namespacesColl = namespacesColl;
     this.docsColl = docsColl;
     this.namespace = config.namespace;
-    this.syncedDocuments = new HashMap<>();
+    this.syncedDocuments = new ConcurrentHashMap<>();
     this.nsLock = config.nsLock;
 
     // Fill from db
@@ -109,10 +110,10 @@ class NamespaceSynchronizationConfig
     docsFilter.put(
         CoreDocumentSynchronizationConfig.ConfigCodec.Fields.NAMESPACE_FIELD,
         new BsonString(namespace.toString()));
-    docsColl.find(docsFilter).forEach(new Block<CoreDocumentSynchronizationConfig>() {
+    docsColl.find(docsFilter).forEach(new Block<DocumentSynchronizationConfig>() {
       @Override
       public void apply(
-          @Nonnull final CoreDocumentSynchronizationConfig docConfig
+          @Nonnull final DocumentSynchronizationConfig docConfig
       ) {
         syncedDocuments.put(docConfig.getDocumentId(), new CoreDocumentSynchronizationConfig(
             docsColl,
@@ -144,7 +145,7 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  public MongoCollection<CoreDocumentSynchronizationConfig> getDocsColl() {
+  public MongoCollection<DocumentSynchronizationConfig> getDocsColl() {
     return docsColl;
   }
 
@@ -173,7 +174,7 @@ class NamespaceSynchronizationConfig
     return namespaceListenerConfig;
   }
 
-  public CoreDocumentSynchronizationConfig getSynchronizedDocument(final BsonValue documentId) {
+  public DocumentSynchronizationConfig getSynchronizedDocument(final BsonValue documentId) {
     nsLock.readLock().lock();
     try {
       return syncedDocuments.get(documentId);
@@ -182,7 +183,7 @@ class NamespaceSynchronizationConfig
     }
   }
 
-  public Set<CoreDocumentSynchronizationConfig> getSynchronizedDocuments() {
+  public Set<DocumentSynchronizationConfig> getSynchronizedDocuments() {
     nsLock.readLock().lock();
     try {
       return new HashSet<>(syncedDocuments.values());
@@ -266,7 +267,7 @@ class NamespaceSynchronizationConfig
 
     final CoreDocumentSynchronizationConfig newConfig;
 
-    final CoreDocumentSynchronizationConfig existingConfig = getSynchronizedDocument(documentId);
+    final DocumentSynchronizationConfig existingConfig = getSynchronizedDocument(documentId);
     if (existingConfig != null) {
       return false;
     }
@@ -284,14 +285,14 @@ class NamespaceSynchronizationConfig
   }
 
   @Nullable
-  DeleteManyModel<CoreDocumentSynchronizationConfig> removeSynchronizedDocuments(
+  DeleteManyModel<DocumentSynchronizationConfig> removeSynchronizedDocuments(
       final BsonValue... documentIds
   ) {
     nsLock.writeLock().lock();
     try {
       final List<BsonValue> bsonValues = new ArrayList<>();
       for (final BsonValue documentId : documentIds) {
-        final CoreDocumentSynchronizationConfig config = syncedDocuments.remove(documentId);
+        final DocumentSynchronizationConfig config = syncedDocuments.remove(documentId);
         if (config != null) {
           bsonValues.add(config.getDocumentId());
         }
@@ -366,7 +367,7 @@ class NamespaceSynchronizationConfig
 
   @Override
   @Nonnull
-  public Iterator<CoreDocumentSynchronizationConfig> iterator() {
+  public Iterator<DocumentSynchronizationConfig> iterator() {
     nsLock.readLock().lock();
     try {
       return new ArrayList<>(syncedDocuments.values()).iterator();

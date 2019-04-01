@@ -50,11 +50,10 @@ import org.bson.codecs.EncoderContext;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 
-
 class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig {
   private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
-  private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
+  private final MongoCollection<DocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
   private final BsonValue documentId;
   private final ReadWriteLock docLock;
@@ -66,7 +65,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   private boolean isPaused;
 
   CoreDocumentSynchronizationConfig(
-      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
+      final MongoCollection<DocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
@@ -75,16 +74,16 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   }
 
   CoreDocumentSynchronizationConfig(
-      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
-      final CoreDocumentSynchronizationConfig config
+      final MongoCollection<DocumentSynchronizationConfig> docsColl,
+      final DocumentSynchronizationConfig config
   ) {
-    this(docsColl, config.namespace, config.documentId, config.lastUncommittedChangeEvent,
-        config.lastResolution, config.lastKnownRemoteVersion, config.docLock, config.isStale,
-        config.isPaused);
+    this(docsColl, config.getNamespace(), config.getDocumentId(),
+         config.getLastUncommittedChangeEvent(), config.getLastResolution(),
+         config.getLastKnownRemoteVersion(), config.getLock(), config.isStale(), config.isPaused());
   }
 
   private CoreDocumentSynchronizationConfig(
-      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
+      final MongoCollection<DocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
       final BsonValue documentId,
       final ChangeEvent<BsonDocument> lastUncommittedChangeEvent,
@@ -156,7 +155,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
    *
    * @param isPaused whether or not this config is frozen
    */
-  void setPaused(final boolean isPaused) {
+  public void setPaused(final boolean isPaused) {
     docLock.writeLock().lock();
     try {
       docsColl.updateOne(
@@ -173,7 +172,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  boolean isPaused() {
+  public boolean isPaused() {
     return isPaused;
   }
 
@@ -184,7 +183,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
    * @param atTime      the time at which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  void setSomePendingWritesAndSave(
+  public void setSomePendingWritesAndSave(
       final long atTime,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
@@ -217,17 +216,15 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  void setSomePendingWritesAndSave(
+  @Override
+  public void setSomePendingWritesAndSave(
       final long atTime,
       final BsonDocument atVersion,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
     docLock.writeLock().lock();
+    this.setSomePendingWrites(atTime, atVersion, changeEvent);
     try {
-      this.lastUncommittedChangeEvent = changeEvent;
-      this.lastResolution = atTime;
-      this.lastKnownRemoteVersion = atVersion;
-
       docsColl.replaceOne(
           getDocFilter(namespace, documentId),
           this);
@@ -244,7 +241,8 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  void setSomePendingWrites(
+  @Override
+  public void setSomePendingWrites(
       final long atTime,
       final BsonDocument atVersion,
       final ChangeEvent<BsonDocument> changeEvent
@@ -259,7 +257,8 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  void setPendingWritesComplete(final BsonDocument atVersion) {
+  @Override
+  public void setPendingWritesComplete(final BsonDocument atVersion) {
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent = null;
@@ -299,6 +298,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
+  @Override
   public BsonValue getDocumentId() {
     docLock.readLock().lock();
     try {
@@ -308,6 +308,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
+  @Override
   public MongoNamespace getNamespace() {
     docLock.readLock().lock();
     try {
@@ -317,6 +318,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
+  @Override
   public boolean hasUncommittedWrites() {
     docLock.readLock().lock();
     try {
@@ -326,6 +328,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
+  @Override
   public ChangeEvent<BsonDocument> getLastUncommittedChangeEvent() {
     docLock.readLock().lock();
     try {
@@ -335,6 +338,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
+  @Override
   public long getLastResolution() {
     docLock.readLock().lock();
     try {
@@ -344,31 +348,11 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
+  @Override
   public BsonDocument getLastKnownRemoteVersion() {
     docLock.readLock().lock();
     try {
       return lastKnownRemoteVersion;
-    } finally {
-      docLock.readLock().unlock();
-    }
-  }
-
-  public boolean hasCommittedVersion(final DocumentVersionInfo versionInfo) {
-    docLock.readLock().lock();
-    try {
-      final DocumentVersionInfo localVersionInfo =
-              DocumentVersionInfo.fromVersionDoc(lastKnownRemoteVersion);
-
-      if (!versionInfo.hasVersion() || !localVersionInfo.hasVersion()) {
-        return false;
-      }
-
-      DocumentVersionInfo.Version remoteVersion = versionInfo.getVersion();
-      DocumentVersionInfo.Version localVersion = localVersionInfo.getVersion();
-
-      return (remoteVersion.getSyncProtocolVersion() == localVersion.getSyncProtocolVersion()
-              && remoteVersion.getInstanceId().equals(localVersion.getInstanceId())
-              && remoteVersion.getVersionCounter() <= localVersion.getVersionCounter());
     } finally {
       docLock.readLock().unlock();
     }
