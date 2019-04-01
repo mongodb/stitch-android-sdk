@@ -65,14 +65,6 @@ subprojects {
                 }
             }
 
-//            connectedAndroidTest {
-//                it.onlyIf {
-//                    project.hasProperty("perf") ?
-//                            project.name.contains("perftest") :
-//                            !project.name.contains("perftest")
-//                }
-//            }
-
             task findbugs(type: FindBugs, dependsOn: "assembleDebug") {
                 excludeFilter new File(config_dir, 'findbugs-exclude.xml')
                 classes = fileTree("$project.buildDir/intermediates/javac/debug/compileDebugJavaWithJavac/classes/com/mongodb")

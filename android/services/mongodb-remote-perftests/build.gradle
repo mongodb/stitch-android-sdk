@@ -18,14 +18,6 @@ buildscript {
 }
 
 android {
-
-//    buildTypes {
-//        performance {
-//            matchingFallbacks = ['debug']
-//            initWith debug
-//        }
-//    }
-//    testBuildType "performance"
     compileSdkVersion target_api
     defaultConfig {
         minSdkVersion 24
@@ -60,6 +52,4 @@ dependencies {
     androidTestImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation project(':android:stitch-android-testutils')
-
-
 }
