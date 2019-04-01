@@ -144,9 +144,9 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
                     val runResult = (1..testParams.numIters).map {
                         ctx.setup()
-                        beforeEach(ctx)
+                        beforeEach(ctx, numDoc, docSize)
                         val result = ctx.runSingleIteration(numDoc, docSize, testDefinition)
-                        afterEach(ctx)
+                        afterEach(ctx, numDoc, docSize)
                         ctx.teardown()
                         result
                     }.fold(
