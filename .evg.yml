@@ -372,6 +372,47 @@ tasks:
           echo "running android tests"
           echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
           ./gradlew connectedAndroidTest -PwithProguardMinification --info --continue --warning-mode=all --stacktrace  < /dev/null
+  - name: run_performance_tests
+    exec_timeout_secs: 7200
+    commands:
+    - func: "fetch_source"
+    - func: "setup_mongod"
+    - func: "setup_android"
+    - func: "setup_stitch"
+    - func: "setup_emulator"
+    - func: "setup_test_creds"
+    - command: shell.exec
+      params:
+        shell: "bash"
+        background: true
+        script: |
+          set -e
+          LOGCAT_PID=''
+          cleanup() {
+              kill -9 $LOGCAT_PID
+          }
+          trap cleanup EXIT
+
+          SDK_HOME=`pwd`/.android
+          $SDK_HOME/platform-tools/adb logcat &
+          LOGCAT_PID=$!
+          sleep 86400
+    - command: shell.exec
+      params:
+        shell: "bash"
+        script: |
+          set -e
+          SDK_HOME=`pwd`/.android
+          export JAVA_HOME="/opt/java/jdk8"
+
+          export ANDROID_HOME=$SDK_HOME
+          export ANDROID_SDK_ROOT=$SDK_HOME
+          export ANDROID_SDK_HOME=$SDK_HOME
+          export ADB_INSTALL_TIMEOUT=30
+          cd stitch-java-sdk
+          echo "running android tests"
+          echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
+          ./gradlew connectedAndroidTest -Pperf --info --continue --warning-mode=all --stacktrace  < /dev/null
 
   - name: finalize_coverage
     depends_on:
