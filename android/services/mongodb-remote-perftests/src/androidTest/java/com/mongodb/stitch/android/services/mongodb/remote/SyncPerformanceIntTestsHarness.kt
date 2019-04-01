@@ -5,20 +5,11 @@ import android.util.Log
 
 import com.google.android.gms.tasks.Tasks
 
-import com.mongodb.MongoNamespace
 import com.mongodb.stitch.android.core.Stitch
 import com.mongodb.stitch.android.core.StitchAppClient
-import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.StitchAppClientConfiguration
-import com.mongodb.stitch.core.admin.Apps
-import com.mongodb.stitch.core.admin.services.rules.RuleResponse
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
-import com.mongodb.stitch.core.testutils.BaseStitchIntTest
-
-import kotlinx.coroutines.runBlocking
-
 import org.bson.BsonArray
 import org.bson.BsonDateTime
 import org.bson.BsonDouble
@@ -28,12 +19,9 @@ import org.bson.BsonString
 import org.bson.Document
 import org.bson.types.ObjectId
 
-import org.junit.After
-import org.junit.Before
-
 import java.util.Date
 
-typealias TestDefinition = (Int, Int) -> Unit
+typealias TestDefinition = (SyncPerformanceContext, Int, Int) -> Unit
 
 data class TestParams(
     val runId: ObjectId,
@@ -64,8 +52,6 @@ data class TestParams(
     }
 }
 
-data class MemoryAndThreadCount(val memoryData: List<Long>, val threadData: List<Int>)
-
 class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     // Private constants
     private val mongodbUriProp = "test.stitch.mongodbURI"
@@ -80,28 +66,11 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     internal var stitchTestHost = ""
 
     private val transport by lazy { OkHttpInstrumentedTransport() }
-    private val cpuMonitor by lazy { CPUMonitor() }
 
     // Private variables
     internal lateinit var outputClient: StitchAppClient
     internal lateinit var outputMongoClient: RemoteMongoClient
     internal lateinit var outputColl: RemoteMongoCollection<Document>
-    internal lateinit var mdbService: Apps.App.Services.Service
-    internal lateinit var mdbRule: RuleResponse
-
-    // Public variables
-    lateinit var testClient: StitchAppClient
-    var testDbName = ObjectId().toHexString()
-    var testCollName = ObjectId().toHexString()
-    var testNamespace = MongoNamespace(testDbName, testCollName)
-    lateinit var testMongoClient: RemoteMongoClient
-    lateinit var testColl: RemoteMongoCollection<Document>
-    lateinit var testUserId: String
-
-    val testDataSynchronizer: DataSynchronizer
-        get() = (testMongoClient as RemoteMongoClientImpl).dataSynchronizer
-    val testNetworkMonitor: BaseStitchIntTest.TestNetworkMonitor
-        get() = BaseStitchAndroidIntTest.testNetworkMonitor
 
     fun getStitchAPIKey(): String {
         return InstrumentationRegistry.getArguments().getString(stitchAPIKeyProp, "")
@@ -128,7 +97,6 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         return super.getAppClientConfigurationBuilder().withTransport(transport)
     }
 
-    @Before
     override fun setup() {
         super.setup()
 
@@ -138,7 +106,8 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         }
 
         if (!outputClient.auth.isLoggedIn) {
-            Tasks.await(outputClient.auth.loginWithCredential(UserApiKeyCredential(getStitchAPIKey())))
+            Tasks.await(
+                outputClient.auth.loginWithCredential(UserApiKeyCredential(getStitchAPIKey())))
         }
 
         outputMongoClient = outputClient.getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
@@ -147,16 +116,12 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             .getCollection(stitchOutputCollName)
     }
 
-    @After
-    override fun teardown() {
-        super.teardown()
-    }
-
     fun runPerformanceTestWithParams(
         testParams: TestParams,
-        testDefinition: TestDefinition
-    ) = runBlocking {
-        setup()
+        testDefinition: TestDefinition,
+        beforeEach: (SyncPerformanceContext) -> Unit = {},
+        afterEach: (SyncPerformanceContext) -> Unit = {}
+    ) {
         stitchTestHost = testParams.stitchHostName
 
         val resultId = ObjectId()
@@ -175,8 +140,13 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                         transport
                     )
 
-                    val runResult = (0..testParams.numIters).map {
-                        ctx.runSingleIteration(numDoc, docSize, testDefinition)
+                    val runResult = (1..testParams.numIters).map {
+                        ctx.setup()
+                        beforeEach(ctx)
+                        val result = ctx.runSingleIteration(numDoc, docSize, testDefinition)
+                        afterEach(ctx)
+                        ctx.teardown()
+                        result
                     }.fold(
                         RunResult(numDoc, docSize, testParams.numOutliersEachSide)
                     ) { acc: RunResult, partialResult: PartialResult ->
@@ -191,8 +161,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
                     // If we are logging to stdout
                     if (testParams.outputToStdOut) {
-                        Log.d("perfTests",
-                            runResult.asBson.toJson())
+                        Log.d("perfTests", runResult.asBson.toJson())
                     }
 
                     // If we are inserting this into stitch

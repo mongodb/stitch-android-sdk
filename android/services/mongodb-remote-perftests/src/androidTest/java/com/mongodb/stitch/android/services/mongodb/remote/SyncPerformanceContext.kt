@@ -32,21 +32,30 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
                              private val transport: OkHttpInstrumentedTransport) {
     // Public variables
     lateinit var testClient: StitchAppClient
-    var testDbName = ObjectId().toHexString()
-    var testCollName = ObjectId().toHexString()
+        private set
+    var testDbName: String = ObjectId().toHexString()
+        private set
+    var testCollName: String = ObjectId().toHexString()
+        private set
     var testNamespace = MongoNamespace(testDbName, testCollName)
+        private set
     lateinit var testMongoClient: RemoteMongoClient
+        private set
     lateinit var testColl: RemoteMongoCollection<Document>
+        private set
     lateinit var testUserId: String
+        private set
 
     val testDataSynchronizer: DataSynchronizer
         get() = (testMongoClient as RemoteMongoClientImpl).dataSynchronizer
     val testNetworkMonitor: BaseStitchIntTest.TestNetworkMonitor
         get() = BaseStitchAndroidIntTest.testNetworkMonitor
     lateinit var mdbService: Apps.App.Services.Service
+        private set
     lateinit var mdbRule: RuleResponse
+        private set
 
-    private fun setup() {
+    fun setup() {
         if (harness.getStitchBaseURL() == "https://stitch.mongodb.com") {
             testDbName = harness.stitchTestDbName
             testCollName = harness.stitchTestCollName
@@ -69,14 +78,13 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
         } else {
             val app = harness.createApp()
             harness.addProvider(app.second, ProviderConfigs.Anon)
-            harness.mdbService = harness.addService(
+            mdbService = harness.addService(
                 app.second,
                 "mongodb",
                 "mongodb1",
                 ServiceConfigs.Mongo(harness.getMongoDbUri())).second
-
-            harness.testDbName = ObjectId().toHexString()
-            harness.testCollName = ObjectId().toHexString()
+            testDbName = ObjectId().toHexString()
+            testCollName = ObjectId().toHexString()
             testNamespace = MongoNamespace(testDbName, testCollName)
 
             val rule = RuleCreator.MongoDb(
@@ -100,7 +108,7 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
         BaseStitchAndroidIntTest.testNetworkMonitor.connectedState = true
     }
 
-    private fun teardownIter() {
+    fun teardown() {
         val syncedIds = Tasks.await(testColl.sync().syncedIds)
         Tasks.await(testColl.sync().desyncMany(*syncedIds.toTypedArray()))
 
@@ -118,33 +126,36 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
 
     private val runtime by lazy { Runtime.getRuntime() }
 
-    private suspend fun generateMemoryAndThreadData(partialResult: PartialResult) = coroutineScope {
-        launch(Dispatchers.IO) {
-            val memoryDataIter = arrayListOf<Long>()
-            val threadDataIter = arrayListOf<Int>()
+    private fun generateMemoryAndThreadData(partialResult: PartialResult) = object: Thread() {
+        override fun run() {
+            this.name = "${testParams.testName}_memory_and_thread_monitor"
+            val memoryData = arrayListOf<Long>()
+            val threadData = arrayListOf<Int>()
 
-            while (isActive) {
-                memoryDataIter.add(runtime.totalMemory() - runtime.freeMemory())
-                threadDataIter.add(Thread.activeCount())
-                delay(testParams.dataProbeGranularityMs)
+            while (!this.isInterrupted) {
+                memoryData.add(runtime.totalMemory() - runtime.freeMemory())
+                threadData.add(Thread.activeCount())
+                try {
+                    sleep(testParams.dataProbeGranularityMs)
+                } catch (_: InterruptedException) {
+                    break
+                }
             }
 
-            partialResult.activeThreadCount = threadDataIter.average()
-            partialResult.memoryUsage = memoryDataIter.average()
+            partialResult.activeThreadCount = threadData.average()
+            partialResult.memoryUsage = memoryData.average()
         }
     }
 
-    suspend fun runSingleIteration(numDocs: Int,
+    fun runSingleIteration(numDocs: Int,
                                    docSize: Int,
-                                   testDefinition: TestDefinition) = coroutineScope {
-        setup()
-
+                                   testDefinition: TestDefinition): PartialResult {
         val partialResult = PartialResult()
 
         // Launch coroutine to collect point-in-runTimes data metrics and then delay
         // for dataProbeGranularityMs
         val job = generateMemoryAndThreadData(partialResult)
-
+        job.start()
         // Get the before values for necessary metrics
         val statsBefore = StatFs(Environment.getExternalStorageDirectory().getAbsolutePath())
         val memFreeBefore = statsBefore.freeBlocksLong * statsBefore.blockSizeLong
@@ -153,10 +164,11 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
         // Measure the execution runTimes of running the given block of code
         val timeBefore = Date().time
 
-        delay(2000L) // Eventually take this out but needed for testing
-        testDefinition(numDocs, docSize)
+        Thread.sleep(2000L) // Eventually take this out but needed for testing
+        testDefinition(this@SyncPerformanceContext, numDocs, docSize)
 
-        job.cancelAndJoin()
+        job.interrupt()
+        job.join()
 
         // Add metrics
         partialResult.timeTaken = (Date().time - timeBefore).toDouble()
@@ -164,11 +176,9 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
         val memFreeAfter = statsAfter.freeBlocksLong * statsAfter.blockSizeLong
         partialResult.diskUsage = (memFreeBefore - memFreeAfter).toDouble()
         partialResult.networkSent = (transport.bytesUploaded - networkSentBefore).toDouble()
-        partialResult.networkReceived = (transport.bytesDownloaded - networkReceivedBefore).toDouble()
+        partialResult.networkReceived = (transport.bytesDownloaded - networkReceivedBefore)
+            .toDouble()
 
-        // Reset the StitchApp
-        teardownIter()
-
-        partialResult
+        return partialResult
     }
 }

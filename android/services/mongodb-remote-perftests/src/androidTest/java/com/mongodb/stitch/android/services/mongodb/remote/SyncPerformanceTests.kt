@@ -1,5 +1,6 @@
 package com.mongodb.stitch.android.services.mongodb.remote
 
+import android.support.test.runner.AndroidJUnit4
 import android.util.Log
 
 import com.google.android.gms.tasks.Tasks
@@ -7,12 +8,15 @@ import com.google.android.gms.tasks.Tasks
 import org.bson.types.Binary
 import org.bson.Document
 import org.bson.types.ObjectId
+import org.junit.After
 
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 
-class SyncPerformanceIntTests {
+@RunWith(AndroidJUnit4::class)
+class SyncPerformanceTests {
     private val outputToStitch = false
 
     companion object {
@@ -37,50 +41,56 @@ class SyncPerformanceIntTests {
         }
     }
 
+    @Before
+    fun setup() {
+        this.testHarness.setup()
+    }
+
+    @After
+    fun teardown() {
+        this.testHarness.teardown()
+    }
+
     @Test
     fun testInitialSync() {
-        Log.d("perfTests", "testInitialSync")
         val testParams = TestParams(
             runId = runId,
             testName = "testInitialSync",
             dataProbeGranularityMs = 400L,
             docSizes = intArrayOf(50),
-            numDocs = intArrayOf(100),
+            numDocs = intArrayOf(10),
             numIters = 3,
             numOutliersEachSide = 0,
             outputToStitch = outputToStitch,
             stitchHostName = "https://stitch.mongodb.com"
         )
 
-        testHarness.runPerformanceTestWithParams(testParams) { docSize, numDocs ->
+        testHarness.runPerformanceTestWithParams(testParams, { ctx, docSize, numDocs ->
             val documents = getDocuments(numDocs, docSize)
-            assertEquals(Tasks.await(testHarness.testColl.count()), 0L)
-            Tasks.await(testHarness.testColl.insertMany(documents))
-            assertEquals(Tasks.await(testHarness.testColl.count()), numDocs.toLong())
-        }
-        Log.d("perfTests", "testInitialSync")
+            assertEquals(0L, Tasks.await(ctx.testColl.count()))
+            Tasks.await(ctx.testColl.insertMany(documents))
+            assertEquals(numDocs.toLong(), Tasks.await(ctx.testColl.count()))
+        })
     }
 
     @Test
     fun testDisconnectReconnect() {
-        Log.d("perfTests", "testDisconnectReconnect")
         val testParams = TestParams(
             runId = runId,
             testName = "testDisconnectReconnect",
             dataProbeGranularityMs = 400L,
             docSizes = intArrayOf(30, 60),
-            numDocs = intArrayOf(100, 150),
+            numDocs = intArrayOf(10),
             numIters = 3,
             numOutliersEachSide = 0,
             outputToStitch = outputToStitch
         )
 
-        testHarness.runPerformanceTestWithParams(testParams) { docSize, numDocs ->
+        testHarness.runPerformanceTestWithParams(testParams, { ctx, docSize, numDocs ->
             val documents = getDocuments(numDocs, docSize)
-            assertEquals(Tasks.await(testHarness.testColl.count()), 0L)
-            Tasks.await(testHarness.testColl.insertMany(documents))
-            assertEquals(Tasks.await(testHarness.testColl.count()), numDocs.toLong())
-        }
-        Log.d("perfTests", "testDisconnectReconnect")
+            assertEquals(Tasks.await(ctx.testColl.count()), 0L)
+            Tasks.await(ctx.testColl.insertMany(documents))
+            assertEquals(Tasks.await(ctx.testColl.count()), numDocs.toLong())
+        })
     }
 }

@@ -18,6 +18,14 @@ buildscript {
 }
 
 android {
+
+//    buildTypes {
+//        performance {
+//            matchingFallbacks = ['debug']
+//            initWith debug
+//        }
+//    }
+//    testBuildType "performance"
     compileSdkVersion target_api
     defaultConfig {
         minSdkVersion 24
@@ -34,14 +42,6 @@ android {
             testInstrumentationRunnerArgument "test.stitch.androidPerfStitchAPIKey", properties.getProperty("test.stitch.androidPerfStitchAPIKey", "")
         }
         testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
-    }
-    packagingOptions {
-        exclude "lib/lib/*.so"
-    }
-    sourceSets {
-        androidTest {
-            manifest.srcFile 'src/main/AndroidManifest.xml'
-        }
     }
 }
 
