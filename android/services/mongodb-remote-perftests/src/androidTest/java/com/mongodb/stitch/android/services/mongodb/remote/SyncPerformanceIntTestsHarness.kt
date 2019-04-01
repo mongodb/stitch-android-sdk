@@ -21,7 +21,9 @@ import org.bson.types.ObjectId
 
 import java.util.Date
 
-typealias TestDefinition = (SyncPerformanceContext, Int, Int) -> Unit
+typealias TestDefinition = (ctx: SyncPerformanceTestContext, numDocs: Int, docSize: Int) -> Unit
+typealias BeforeBlock = TestDefinition
+typealias AfterBlock = TestDefinition
 
 data class TestParams(
     val runId: ObjectId,
@@ -119,8 +121,8 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     fun runPerformanceTestWithParams(
         testParams: TestParams,
         testDefinition: TestDefinition,
-        beforeEach: (SyncPerformanceContext) -> Unit = {},
-        afterEach: (SyncPerformanceContext) -> Unit = {}
+        beforeEach: BeforeBlock,
+        afterEach: AfterBlock
     ) {
         stitchTestHost = testParams.stitchHostName
 
@@ -134,7 +136,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         try {
             for (docSize in testParams.docSizes) {
                 for (numDoc in testParams.numDocs) {
-                    val ctx = SyncPerformanceContext(
+                    val ctx = SyncPerformanceTestContext(
                         this@SyncPerformanceIntTestsHarness,
                         testParams,
                         transport

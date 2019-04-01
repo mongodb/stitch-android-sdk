@@ -17,19 +17,13 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import org.bson.Document
 import org.bson.types.ObjectId
 import java.util.*
 
-class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness,
-                             private val testParams: TestParams,
-                             private val transport: OkHttpInstrumentedTransport) {
+class SyncPerformanceTestContext(private val harness: SyncPerformanceIntTestsHarness,
+                                 private val testParams: TestParams,
+                                 private val transport: OkHttpInstrumentedTransport) {
     // Public variables
     lateinit var testClient: StitchAppClient
         private set
@@ -147,13 +141,13 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
         }
     }
 
-    fun runSingleIteration(numDocs: Int,
-                                   docSize: Int,
-                                   testDefinition: TestDefinition): PartialResult {
+    fun runSingleIteration(
+        numDocs: Int,
+        docSize: Int,
+        testDefinition: TestDefinition
+    ): PartialResult {
         val partialResult = PartialResult()
 
-        // Launch coroutine to collect point-in-runTimes data metrics and then delay
-        // for dataProbeGranularityMs
         val job = generateMemoryAndThreadData(partialResult)
         job.start()
         // Get the before values for necessary metrics
@@ -165,7 +159,7 @@ class SyncPerformanceContext(private val harness: SyncPerformanceIntTestsHarness
         val timeBefore = Date().time
 
         Thread.sleep(2000L) // Eventually take this out but needed for testing
-        testDefinition(this@SyncPerformanceContext, numDocs, docSize)
+        testDefinition(this@SyncPerformanceTestContext, numDocs, docSize)
 
         job.interrupt()
         job.join()
