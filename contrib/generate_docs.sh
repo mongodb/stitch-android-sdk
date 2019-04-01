@@ -44,3 +44,10 @@ python contrib/paste-examples/paste.py \
   ./ \
   ./build/docs/javadoc/
 
+# Copy fonts
+# Note: I can't get this to work as a gradle task, as javadoc wipes the target directory
+# and `copyDocFonts.mustRunAfter doAllJavadocs` etc. does not in fact force copyDocFonts
+# to run after doAllJavadocs. Let me know if you figure out how to do this as a gradle task! -CB
+mkdir -p build/docs/javadoc/fonts
+cp -f contrib/assets/fonts/* build/docs/javadoc/fonts
+echo "Done copying fonts."

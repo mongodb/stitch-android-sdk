@@ -53,9 +53,13 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 import javax.annotation.meta.When;
 
+import org.bson.BsonType;
 import org.bson.Document;
 import org.bson.codecs.Decoder;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.json.JsonReader;
 
 /**
  * CoreStitchAuth is responsible for authenticating clients as well as acting as a client for
@@ -249,7 +253,14 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                                       final Decoder<T> resultDecoder) {
     final Response response = doAuthenticatedRequest(stitchReq);
     try {
-      return BsonUtils.parseValue(IoUtils.readAllToString(response.getBody()), resultDecoder);
+      final String bodyStr = IoUtils.readAllToString(response.getBody());
+      final JsonReader bsonReader = new JsonReader(bodyStr);
+
+      // We must check this condition because the decoder will throw trying to decode null
+      if (bsonReader.readBsonType() == BsonType.NULL) {
+        return null;
+      }
+      return resultDecoder.decode(bsonReader, DecoderContext.builder().build());
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
@@ -276,8 +287,17 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     final Response response = doAuthenticatedRequest(stitchReq);
 
     try {
-      return BsonUtils.parseValue(IoUtils.readAllToString(
-          response.getBody()), resultClass, codecRegistry);
+      final String bodyStr = IoUtils.readAllToString(response.getBody());
+      final JsonReader bsonReader = new JsonReader(bodyStr);
+
+      // We must check this condition because the decoder will throw trying to decode null
+      if (bsonReader.readBsonType() == BsonType.NULL) {
+        return null;
+      }
+
+      final CodecRegistry newReg =
+              CodecRegistries.fromRegistries(BsonUtils.DEFAULT_CODEC_REGISTRY, codecRegistry);
+      return newReg.get(resultClass).decode(bsonReader, DecoderContext.builder().build());
     } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
     }
