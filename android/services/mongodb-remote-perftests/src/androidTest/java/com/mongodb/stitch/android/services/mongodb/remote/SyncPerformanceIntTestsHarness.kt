@@ -121,8 +121,8 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     fun runPerformanceTestWithParams(
         testParams: TestParams,
         testDefinition: TestDefinition,
-        beforeEach: BeforeBlock,
-        afterEach: AfterBlock
+        beforeEach: BeforeBlock = { _, _, _ -> },
+        afterEach: AfterBlock = { _, _, _ -> }
     ) {
         stitchTestHost = testParams.stitchHostName
 
