@@ -60,7 +60,7 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     private val stitchOutputCollName = "results"
 
     private val stitchTestDbName = "performance"
-    private val stitchTestCollName = "rawTestColl"
+    private val stitchTestCollName = "rawTestCollAndroid"
     public var stitchTestHost = ""
 
     // Private variables

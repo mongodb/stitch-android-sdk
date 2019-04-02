@@ -23,8 +23,8 @@ class SyncL2ROnlyPerformanceIntTests {
     // right now, these are not the full range of parameters required by the ticket, because
     // currently it's not possible to L2R sync-many more than 1MB of docs at a time due to the
     // Stitch request size limit. These will need to be batched under the hood.
-    private val docSizes = intArrayOf(1024) //, 2048, 5120, 10240, 25600, 51200, 102400)
-    private val numDocs = intArrayOf(100, 500) //, 1000, 5000, 10000, 25000)
+    private val docSizes = intArrayOf(1024, 2048, 5120, 10240, 25600, 51200, 102400)
+    private val numDocs = intArrayOf(100, 500, 1000, 5000, 10000, 25000)
 
     private fun generateRandomString(length: Int): String {
         val alphabet = "abcdefghijklmnopqrstuvwzyz1234567890"
@@ -66,8 +66,8 @@ class SyncL2ROnlyPerformanceIntTests {
                 runId = runId,
                 testName = testName,
                 dataProbeGranularityMs = 400L,
-                docSizes = intArrayOf(1024),//, 2048, 5120, 10240, 25600, 51960, 102400),
-                numDocs = intArrayOf(100, 500),//, 1000, 5000, 10000, 25000),
+                docSizes = docSizes,
+                numDocs = numDocs,
                 numIters = 3,
                 numOutliersEachSide = 0,
                 outputToStitch = true,
@@ -201,7 +201,9 @@ class SyncL2ROnlyPerformanceIntTests {
                 testTeardown = { _, numDocs: Int ->
                     // Verify that the test did indeed synchronize the provided documents remotely,
                     // halting the test and invalidating its results otherwise
-                    if(numDocs.toLong() != Tasks.await(testHarness.testColl.count())) {
+                    val numDocsInColl = Tasks.await(testHarness.testColl.count())
+                    if(numDocs.toLong() != numDocsInColl) {
+                        Log.e(TAG, "$numDocs != $numDocsInColl")
                         error("test did not successfully perform the initial sync")
                     }
                 }
