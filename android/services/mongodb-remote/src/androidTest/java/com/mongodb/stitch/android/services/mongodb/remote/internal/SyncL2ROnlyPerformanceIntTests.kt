@@ -68,15 +68,15 @@ class SyncL2ROnlyPerformanceIntTests {
                 dataProbeGranularityMs = 400L,
                 docSizes = intArrayOf(1024),//, 2048, 5120, 10240, 25600, 51960, 102400),
                 numDocs = intArrayOf(100, 500),//, 1000, 5000, 10000, 25000),
-                numIters = 3,
+                numIters = 1,
                 numOutliersEachSide = 0,
                 outputToStitch = true,
                 stitchHostName = "https://stitch.mongodb.com"
         )
 
-        // Local variable for list of document ids captured by the test definition closures below.
+        // Local variable for list of documents captured by the test definition closures below.
         // This should change for each iteration of the test.
-        var documentIdsForCurrentTest: List<BsonValue>? = null
+        var documentsForCurrentTest: List<Document>? = null
 
         testHarness.runPerformanceTestWithParams(
                 params,
@@ -87,13 +87,7 @@ class SyncL2ROnlyPerformanceIntTests {
                     // documents as synced, and the time it takes to sync those local documents
                     // remotely.
                     Log.i(TAG,"Setting up $testName for $numDocs $docSize-byte docs")
-                    val documentsForCurrentTest = generateDocuments(docSize, numDocs)
-
-                    Tasks.await(testHarness.testColl.insertMany(documentsForCurrentTest))
-                    documentIdsForCurrentTest = documentsForCurrentTest.map {
-                        val objId = it.getObjectId("_id")
-                        BsonObjectId(objId)
-                    }
+                    documentsForCurrentTest = generateDocuments(docSize, numDocs)
                 },
                 testDefinition = { _, _ ->
                     // Initial sync for a purely L2R scenario means syncing locally present
@@ -101,7 +95,7 @@ class SyncL2ROnlyPerformanceIntTests {
                     // local documents to the remote cluster.
 
                     // halt the test if the sync harness was configured incorrectly
-                    if (documentIdsForCurrentTest == null) {
+                    if (documentsForCurrentTest == null) {
                         error("test harness setup function never ran")
                     }
 
@@ -116,9 +110,8 @@ class SyncL2ROnlyPerformanceIntTests {
                             }
                     ))
 
-                    Tasks.await(sync.syncMany(
-                        *documentIdsForCurrentTest!!.toTypedArray())
-                    )
+                    Tasks.await(testHarness.testColl.sync().insertMany(documentsForCurrentTest))
+
 
                     val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
 
@@ -154,22 +147,12 @@ class SyncL2ROnlyPerformanceIntTests {
                 stitchHostName = "https://stitch.mongodb.com"
         )
 
-        // Local variable for list of document ids captured by the test definition closures below.
-        // This should change for each iteration of the test.
-        var documentIdsForCurrentTest: List<BsonValue>? = null
-
         testHarness.runPerformanceTestWithParams(
                 params,
                 testSetup = { docSize: Int, numDocs: Int ->
                     // Generate and insert the documents, and perform the initial sync.
                     Log.i(TAG,"Setting up $testName for $numDocs $docSize-byte docs")
                     val documentsForCurrentTest = generateDocuments(docSize, numDocs)
-
-                    Tasks.await(testHarness.testColl.insertMany(documentsForCurrentTest))
-                    documentIdsForCurrentTest = documentsForCurrentTest.map {
-                        val objId = it.getObjectId("_id")
-                        BsonObjectId(objId)
-                    }
 
                     val sync = testHarness.testColl.sync()
 
@@ -182,9 +165,7 @@ class SyncL2ROnlyPerformanceIntTests {
                             }
                     ))
 
-                    Tasks.await(sync.syncMany(
-                            *documentIdsForCurrentTest!!.toTypedArray())
-                    )
+                    Tasks.await(sync.insertMany(documentsForCurrentTest))
 
                     val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
 
@@ -251,9 +232,8 @@ class SyncL2ROnlyPerformanceIntTests {
                 stitchHostName = "https://stitch.mongodb.com"
         )
 
-        // Local variable for list of document ids captured by the test definition closures below.
+        // Local variable for the number of docs updated in the test
         // This should change for each iteration of the test.
-        var documentIdsForCurrentTest: List<BsonValue>? = null
         var numberOfChangedDocs: Int? = null
 
         testHarness.runPerformanceTestWithParams(
@@ -262,12 +242,6 @@ class SyncL2ROnlyPerformanceIntTests {
                     // Generate and insert the documents, and perform the initial sync.
                     Log.i(TAG,"Setting up $testName test for $numDocs $docSize-byte docs")
                     val documentsForCurrentTest = generateDocuments(docSize, numDocs)
-
-                    Tasks.await(testHarness.testColl.insertMany(documentsForCurrentTest))
-                    documentIdsForCurrentTest = documentsForCurrentTest.map {
-                        val objId = it.getObjectId("_id")
-                        BsonObjectId(objId)
-                    }
 
                     val sync = testHarness.testColl.sync()
 
@@ -280,7 +254,7 @@ class SyncL2ROnlyPerformanceIntTests {
                             }
                     ))
 
-                    Tasks.await(sync.syncMany(*documentIdsForCurrentTest!!.toTypedArray()))
+                    Tasks.await(sync.insertMany(documentsForCurrentTest))
 
                     val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
 
@@ -291,21 +265,21 @@ class SyncL2ROnlyPerformanceIntTests {
 
                     // randomly sample a percentage of the documents to trigger local updates
                     // that will be synced to the remote in the next sync pass
-                    val shuffledIds = documentIdsForCurrentTest!!.shuffled()
+                    val shuffledDocs = documentsForCurrentTest.shuffled()
 
-                    val idsToUpdate = if (pctOfDocsWithChangeEvents > 0.0) shuffledIds.subList(
+                    val docsToUpdate = if (pctOfDocsWithChangeEvents > 0.0) shuffledDocs.subList(
                             0,
                             Math.round(pctOfDocsWithChangeEvents*numDocs).toInt()
                     ) else emptyList()
 
-                    idsToUpdate.forEach { id ->
+                    docsToUpdate.forEach {
                         Tasks.await(sync.updateOne(
-                                Document("_id", id),
+                                Document("_id", it["_id"]),
                                 Document("\$set", Document("newField", "blah"))
                         ))
                     }
 
-                    numberOfChangedDocs = idsToUpdate.size
+                    numberOfChangedDocs = docsToUpdate.size
                 },
                 testDefinition = { _, _ ->
                     // Do the sync pass that will sync the changed L2R documents
@@ -327,7 +301,9 @@ class SyncL2ROnlyPerformanceIntTests {
                     val numOfDocsWithNewField = Tasks.await(testHarness.testColl.count(
                             Document("newField", Document("\$exists", true))))
 
+
                     if(numberOfChangedDocs!!.toLong() != numOfDocsWithNewField) {
+                        Log.e(TAG,"Comparing: $numberOfChangedDocs != $numOfDocsWithNewField")
                         error("test did not successfully perform the l2r pass")
                     }
                 }
