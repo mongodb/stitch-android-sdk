@@ -31,11 +31,11 @@ class SyncL2ROnlyPerformanceTests {
         this.testHarness.teardown()
     }
 
-    // right now, these are not the full range of parameters required by the ticket, because
-    // currently it's not possible to L2R sync-many more than 1MB of docs at a time due to the
-    // Stitch request size limit. These will need to be batched under the hood.
-    private val docSizes = intArrayOf(1024) // , 2048, 5120, 10240, 25600, 51200, 102400)
-    private val numDocs = intArrayOf(100, 500) // , 1000, 5000, 10000, 25000)
+    // NOTE: Many of the tests above 1024 bytes and above 500 docs will fail for various reasons
+    // because they hit undocumented limits. These failures along with stacktraces will be present
+    // in the reported results
+    private val docSizes = intArrayOf(1024, 2048, 5120, 10240, 25600, 51200, 102400)
+    private val numDocs = intArrayOf(100, 500, 1000, 5000, 10000, 25000)
 
     @Test
     fun testInitialSync() {
@@ -60,27 +60,17 @@ class SyncL2ROnlyPerformanceTests {
 
         testHarness.runPerformanceTestWithParams(
                 params,
-                beforeEach = { _, numDocs: Int, docSize: Int ->
-                    // Generate and insert the documents outside of the test so that the document
-                    // generation and local insert process is not a measurable part of the test. We
-                    // are primarily concerned with the performance of configuring the local
-                    // documents as synced, and the time it takes to sync those local documents
-                    // remotely.
+                beforeEach = { _, numDocs, docSize ->
+                    // Generate the documents that are to be synced via L2R
                     Log.i(TAG, "Setting up $testName for $numDocs $docSize-byte docs")
                     documentsForCurrentTest = generateDocuments(docSize, numDocs)
                 },
                 testDefinition = { ctx, _, _ ->
-                    // Initial sync for a purely L2R scenario means syncing locally present
-                    // document ids, and performing a single sync pass to synchronize those
-                    // local documents to the remote cluster.
-
-                    // halt the test if the sync harness was configured incorrectly
-                    if (documentsForCurrentTest == null) {
-                        error("test harness setup function never ran")
-                    }
-
+                    // Initial sync for a purely L2R scenario means inserting local documents,
+                    // and performing a sync pass to sync those documents up to the remote.
                     val sync = ctx.testColl.sync()
 
+                    // If sync fails for any reason, halt the test
                     Tasks.await(sync.configure(
                             DefaultSyncConflictResolvers.remoteWins(),
                             null,
@@ -94,16 +84,17 @@ class SyncL2ROnlyPerformanceTests {
 
                     val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
 
-                    // don't report results if the sync pass failed
+                    // Halt the test if the sync pass failed
                     if (!syncPassSucceeded) {
                         error("sync pass failed")
                     }
                 },
-                afterEach = { ctx, numDocs: Int, _ ->
+                afterEach = { ctx, numDocs, _ ->
                     // Verify that the test did indeed synchronize the provided documents remotely,
-                    // halting the test and invalidating its results otherwise
-                    if (numDocs.toLong() != Tasks.await(ctx.testColl.count())) {
-                        error("test did not successfully perform the initial sync")
+                    val numOfDocsSynced = Tasks.await(ctx.testColl.count())
+                    if (numDocs.toLong() != numOfDocsSynced) {
+                        Log.e(TAG, "$numDocs != $numOfDocsSynced")
+                        error("test did not correctly perform the initial sync")
                     }
                 }
         )
@@ -135,6 +126,7 @@ class SyncL2ROnlyPerformanceTests {
 
                     val sync = ctx.testColl.sync()
 
+                    // If sync fails for any reason, halt the test
                     Tasks.await(sync.configure(
                             DefaultSyncConflictResolvers.remoteWins(),
                             null,
@@ -148,11 +140,12 @@ class SyncL2ROnlyPerformanceTests {
 
                     val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
 
-                    // don't report results if the sync pass failed
+                    // Halt the test if the sync pass failed
                     if (!syncPassSucceeded) {
                         error("sync pass failed")
                     }
 
+                    // Disconnect the DataSynchronizer and wait for the underlying streams to close
                     ctx.testNetworkMonitor.connectedState = false
                     while (ctx.testDataSynchronizer.areAllStreamsOpen()) {
                         Log.i(TAG, "waiting for streams to close")
@@ -178,12 +171,11 @@ class SyncL2ROnlyPerformanceTests {
                     }
                 },
                 afterEach = { ctx, numDocs: Int, _ ->
-                    // Verify that the test did indeed synchronize the provided documents remotely,
-                    // halting the test and invalidating its results otherwise
-                    val numDocsInColl = Tasks.await(ctx.testColl.count())
-                    if (numDocs.toLong() != numDocsInColl) {
-                        Log.e(TAG, "$numDocs != $numDocsInColl")
-                        error("test did not successfully perform the initial sync")
+                    // Verify that the test did indeed synchronize the provided documents remotely
+                    val numOfDocsSynced = Tasks.await(ctx.testColl.count())
+                    if (numDocs.toLong() != numOfDocsSynced) {
+                        Log.e(TAG, "$numDocs != $numOfDocsSynced")
+                        error("test did not correctly perform the initial sync")
                     }
                 }
         )
@@ -191,14 +183,20 @@ class SyncL2ROnlyPerformanceTests {
 
     @Test
     fun testSyncPass() {
+        // Do an L2R sync pass test where
+        // - no documents are changed
+        // - 1% of documents are changed
+        // - 10% of documents are changed
+        // - 25% of documents are changed
+        // - 50% of documents are changed
+        // - 100% of documents are changed
         val changeEventPercentages = doubleArrayOf(0.0, 0.01, 0.10, 0.25, 0.50, 1.0)
 
-        // perform the sync pass test for each desired percentage of changed documents
         changeEventPercentages.forEach { doTestSyncPass(it) }
     }
 
     private fun doTestSyncPass(pctOfDocsWithChangeEvents: Double) {
-        val testName = "testL2R_${pctOfDocsWithChangeEvents}DocsChanged"
+        val testName = "testL2R_SyncPass_${pctOfDocsWithChangeEvents}DocsChanged"
         Log.d(TAG, testName)
 
         val params = TestParams(
@@ -226,6 +224,7 @@ class SyncL2ROnlyPerformanceTests {
 
                     val sync = ctx.testColl.sync()
 
+                    // If sync fails for any reason, halt the test
                     Tasks.await(sync.configure(
                             DefaultSyncConflictResolvers.remoteWins(),
                             null,
@@ -239,13 +238,12 @@ class SyncL2ROnlyPerformanceTests {
 
                     val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
 
-                    // don't report results if the sync pass failed
+                    // Halt the test if the sync pass failed
                     if (!syncPassSucceeded) {
                         error("sync pass failed")
                     }
 
-                    // randomly sample a percentage of the documents to trigger local updates
-                    // that will be synced to the remote in the next sync pass
+                    // Randomly sample a percentage of the documents that will be locally updated
                     val shuffledDocs = documentsForCurrentTest.shuffled()
 
                     val docsToUpdate = if (pctOfDocsWithChangeEvents > 0.0) shuffledDocs.subList(
@@ -263,31 +261,54 @@ class SyncL2ROnlyPerformanceTests {
                     numberOfChangedDocs = docsToUpdate.size
                 },
                 testDefinition = { ctx, _, _ ->
-                    // Do the sync pass that will sync the changed L2R documents
+                    // Do the sync pass that will sync the local changes to the remote collection
                     val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
 
-                    // halt the test if the sync pass failed
+                    // Halt the test if the sync pass failed
                     if (!syncPassSucceeded) {
                         error("sync pass failed")
                     }
                 },
                 afterEach = { ctx, numDocs: Int, _ ->
-                    // Verify that the test did indeed synchronize the provided documents remotely,
-                    // and that the documents that were supposed to be updated got updated.
-                    // Halt the test and invalidate its results otherwise
-                    if (numDocs.toLong() != Tasks.await(ctx.testColl.count())) {
-                        error("test did not successfully perform the initial sync")
+                    // Verify that the test did indeed synchronize the provided documents remotely
+                    val numOfDocsSynced = Tasks.await(ctx.testColl.count())
+                    if (numDocs.toLong() != numOfDocsSynced) {
+                        Log.e(TAG, "$numDocs != $numOfDocsSynced")
+                        error("test did not correctly perform the initial sync")
                     }
 
+                    // Verify that the test did indeed synchronize the provided documents remotely,
+                    // and that the documents that were supposed to be updated got updated.
                     val numOfDocsWithNewField = Tasks.await(ctx.testColl.count(
                             Document("newField", Document("\$exists", true))))
-
                     if (numberOfChangedDocs!!.toLong() != numOfDocsWithNewField) {
                         Log.e(TAG, "$numberOfChangedDocs != $numOfDocsWithNewField")
-                        error("test did not successfully perform the l2r pass")
+                        error("test did not correctly perform the l2r pass")
                     }
                 }
         )
+    }
+
+    private fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {
+        val docList = ArrayList<Document>()
+
+        // To generate the documents, we use 7-character field names, and 54-character
+        // strings as the field values. For each field, we expect 3 bytes of overhead.
+        // (the BSON string type code, and two null terminators). This way, each field is 64 bytes.
+        // All of the doc sizes we use in this test are divisible by 16, so the number of fields
+        // we generate in the document will be the desired document size divided by 16.
+        // To account for the 5 byte overhead of defining a BSON document, and the 17 bytes
+        // overhead of defining the objectId _id, the first field will have 32 characters.
+        repeat(numDocs) {
+            val doc = Document()
+                    .append(generateRandomString(7), generateRandomString(32))
+            repeat(docSizeInBytes / 16 - 1) {
+                doc.append(generateRandomString(7), generateRandomString(54))
+            }
+
+            docList.add(doc)
+        }
+        return docList
     }
 
     private fun generateRandomString(length: Int): String {
@@ -297,27 +318,5 @@ class SyncL2ROnlyPerformanceTests {
             str += alphabet[Random.nextInt(alphabet.length)]
         }
         return str
-    }
-
-    private fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {
-        val docList = ArrayList<Document>()
-
-        // to generate the documents, we will use 7-character field names, and 54-character
-        // strings as the field values. For each field, we expect 3 bytes of overhead.
-        // (the BSON string type code, and two null terminators). This way, each field is 64 bytes.
-        // All of the doc sizes we use in this test are divisible by 16, so the number of fields
-        // we generate in the document will be the desired document size divided by 16.
-        // To account for the 5 byte overhead of defining a BSON document, and the 17 bytes
-        // overhead of defining the objectId _id the first field will
-        // have 32 characters.
-        repeat(numDocs) {
-            val doc = Document().append(generateRandomString(7), generateRandomString(32))
-            repeat(docSizeInBytes / 16 - 1) {
-                doc.append(generateRandomString(7), generateRandomString(54))
-            }
-
-            docList.add(doc)
-        }
-        return docList
     }
 }
