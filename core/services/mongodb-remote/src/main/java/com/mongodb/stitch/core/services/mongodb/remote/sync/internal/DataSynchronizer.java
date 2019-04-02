@@ -439,10 +439,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public void stop() {
     syncLock.lock();
     try {
+      instanceChangeStreamListener.stop();
       if (syncThread == null) {
         return;
       }
-      instanceChangeStreamListener.stop();
       syncThread.interrupt();
       try {
         syncThread.join();

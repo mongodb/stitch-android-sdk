@@ -117,7 +117,12 @@ open class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         super.setup()
 
         if (!Stitch.hasAppClient(stitchOutputAppName)) {
-            outputClient = Stitch.initializeAppClient(stitchOutputAppName)
+            outputClient = Stitch.initializeAppClient(
+                    stitchOutputAppName,
+                    StitchAppClientConfiguration.Builder()
+                            .withNetworkMonitor(testNetworkMonitor)
+                            .build()
+            )
         } else {
             outputClient = Stitch.getAppClient(stitchOutputAppName)
         }
