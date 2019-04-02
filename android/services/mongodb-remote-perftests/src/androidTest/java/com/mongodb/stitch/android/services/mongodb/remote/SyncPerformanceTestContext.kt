@@ -116,10 +116,11 @@ class SyncPerformanceTestContext(
         // TODO: The test should be set up in such a way that each setup sets up an embedded mongo
         // instance. Until we do that, we can't actually properly tear down the embedded instance
         // or close the data synchronizer on each test iteration.
-        /** if (::testMongoClient.isInitialized) {
-            (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
-            AndroidEmbeddedMongoClientFactory.getInstance().close()
-        } */
+        
+        // if (::testMongoClient.isInitialized) {
+        //    (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+        //    AndroidEmbeddedMongoClientFactory.getInstance().close()
+        // }
     }
 
     private val runtime by lazy { Runtime.getRuntime() }
