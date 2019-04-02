@@ -1,30 +1,294 @@
-package com.mongodb.stitch.android.services.mongodb.remote.internal
+package com.mongodb.stitch.android.services.mongodb.remote
 
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
-import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-import org.bson.BsonObjectId
-import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.Test
 import kotlin.random.Random
 
-class SyncL2ROnlyPerformanceIntTests {
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
+import org.junit.After
+import org.junit.Before
+
+class SyncL2ROnlyPerformanceTests {
     private var testHarness = SyncPerformanceIntTestsHarness()
 
     private val runId: ObjectId by lazy { ObjectId() }
 
     companion object {
-        private val TAG = SyncL2ROnlyPerformanceIntTests::class.java.simpleName
+        private val TAG = SyncL2ROnlyPerformanceTests::class.java.simpleName
+    }
+
+    @Before
+    fun setup() {
+        this.testHarness.setup()
+    }
+
+    @After
+    fun teardown() {
+        this.testHarness.teardown()
     }
 
     // right now, these are not the full range of parameters required by the ticket, because
     // currently it's not possible to L2R sync-many more than 1MB of docs at a time due to the
     // Stitch request size limit. These will need to be batched under the hood.
-    private val docSizes = intArrayOf(1024, 2048, 5120, 10240, 25600, 51200, 102400)
-    private val numDocs = intArrayOf(100, 500, 1000, 5000, 10000, 25000)
+    private val docSizes = intArrayOf(1024) // , 2048, 5120, 10240, 25600, 51200, 102400)
+    private val numDocs = intArrayOf(100, 500) // , 1000, 5000, 10000, 25000)
+
+    @Test
+    fun testInitialSync() {
+        val testName = "testL2R_InitialSync"
+        Log.d(TAG, testName)
+
+        val params = TestParams(
+                runId = runId,
+                testName = testName,
+                dataProbeGranularityMs = 400L,
+                docSizes = docSizes,
+                numDocs = numDocs,
+                numIters = 3,
+                numOutliersEachSide = 0,
+                outputToStitch = true,
+                stitchHostName = "https://stitch.mongodb.com"
+        )
+
+        // Local variable for list of documents captured by the test definition closures below.
+        // This should change for each iteration of the test.
+        var documentsForCurrentTest: List<Document>? = null
+
+        testHarness.runPerformanceTestWithParams(
+                params,
+                beforeEach = { _, numDocs: Int, docSize: Int ->
+                    // Generate and insert the documents outside of the test so that the document
+                    // generation and local insert process is not a measurable part of the test. We
+                    // are primarily concerned with the performance of configuring the local
+                    // documents as synced, and the time it takes to sync those local documents
+                    // remotely.
+                    Log.i(TAG, "Setting up $testName for $numDocs $docSize-byte docs")
+                    documentsForCurrentTest = generateDocuments(docSize, numDocs)
+                },
+                testDefinition = { ctx, _, _ ->
+                    // Initial sync for a purely L2R scenario means syncing locally present
+                    // document ids, and performing a single sync pass to synchronize those
+                    // local documents to the remote cluster.
+
+                    // halt the test if the sync harness was configured incorrectly
+                    if (documentsForCurrentTest == null) {
+                        error("test harness setup function never ran")
+                    }
+
+                    val sync = ctx.testColl.sync()
+
+                    Tasks.await(sync.configure(
+                            DefaultSyncConflictResolvers.remoteWins(),
+                            null,
+                            ExceptionListener { id, ex ->
+                                Log.e(TAG, "unexpected sync error with id $id: ${ex.localizedMessage}")
+                                error(ex)
+                            }
+                    ))
+
+                    Tasks.await(ctx.testColl.sync().insertMany(documentsForCurrentTest))
+
+                    val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
+
+                    // don't report results if the sync pass failed
+                    if (!syncPassSucceeded) {
+                        error("sync pass failed")
+                    }
+                },
+                afterEach = { ctx, numDocs: Int, _ ->
+                    // Verify that the test did indeed synchronize the provided documents remotely,
+                    // halting the test and invalidating its results otherwise
+                    if (numDocs.toLong() != Tasks.await(ctx.testColl.count())) {
+                        error("test did not successfully perform the initial sync")
+                    }
+                }
+        )
+    }
+
+    @Test
+    fun testDisconnectReconnect() {
+        val testName = "testL2R_DisconnectReconnect"
+        Log.d(TAG, testName)
+
+        val params = TestParams(
+                runId = runId,
+                testName = testName,
+                dataProbeGranularityMs = 400L,
+                docSizes = docSizes,
+                numDocs = numDocs,
+                numIters = 3,
+                numOutliersEachSide = 0,
+                outputToStitch = true,
+                stitchHostName = "https://stitch.mongodb.com"
+        )
+
+        testHarness.runPerformanceTestWithParams(
+                params,
+                beforeEach = { ctx, numDocs: Int, docSize: Int ->
+                    // Generate and insert the documents, and perform the initial sync.
+                    Log.i(TAG, "Setting up $testName for $numDocs $docSize-byte docs")
+                    val documentsForCurrentTest = generateDocuments(docSize, numDocs)
+
+                    val sync = ctx.testColl.sync()
+
+                    Tasks.await(sync.configure(
+                            DefaultSyncConflictResolvers.remoteWins(),
+                            null,
+                            ExceptionListener { id, ex ->
+                                Log.e(TAG, "unexpected sync error with id $id: ${ex.localizedMessage}")
+                                error(ex)
+                            }
+                    ))
+
+                    Tasks.await(sync.insertMany(documentsForCurrentTest))
+
+                    val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
+
+                    // don't report results if the sync pass failed
+                    if (!syncPassSucceeded) {
+                        error("sync pass failed")
+                    }
+
+                    ctx.testNetworkMonitor.connectedState = false
+                    while (ctx.testDataSynchronizer.areAllStreamsOpen()) {
+                        Log.i(TAG, "waiting for streams to close")
+                        Thread.sleep(1000)
+                    }
+                },
+                testDefinition = { ctx, _, _ ->
+                    // Reconnect the DataSynchronizer, and wait for the streams to reopen. The
+                    // stream being open indicates that the doc configs are now set as stale.
+                    // Check every 10ms so we're not doing too much work on this thread, and don't
+                    // log anything, so as not to pollute the test results with logging overhead.
+                    ctx.testNetworkMonitor.connectedState = true
+                    while (!ctx.testDataSynchronizer.areAllStreamsOpen()) {
+                        Thread.sleep(10)
+                    }
+
+                    // Do the sync pass that will perform the stale document fetch
+                    val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
+
+                    // Halt the test if the sync pass failed
+                    if (!syncPassSucceeded) {
+                        error("sync pass failed")
+                    }
+                },
+                afterEach = { ctx, numDocs: Int, _ ->
+                    // Verify that the test did indeed synchronize the provided documents remotely,
+                    // halting the test and invalidating its results otherwise
+                    val numDocsInColl = Tasks.await(ctx.testColl.count())
+                    if (numDocs.toLong() != numDocsInColl) {
+                        Log.e(TAG, "$numDocs != $numDocsInColl")
+                        error("test did not successfully perform the initial sync")
+                    }
+                }
+        )
+    }
+
+    @Test
+    fun testSyncPass() {
+        val changeEventPercentages = doubleArrayOf(0.0, 0.01, 0.10, 0.25, 0.50, 1.0)
+
+        // perform the sync pass test for each desired percentage of changed documents
+        changeEventPercentages.forEach { doTestSyncPass(it) }
+    }
+
+    private fun doTestSyncPass(pctOfDocsWithChangeEvents: Double) {
+        val testName = "testL2R_${pctOfDocsWithChangeEvents}DocsChanged"
+        Log.d(TAG, testName)
+
+        val params = TestParams(
+                runId = runId,
+                testName = testName,
+                dataProbeGranularityMs = 400L,
+                docSizes = docSizes,
+                numDocs = numDocs,
+                numIters = 3,
+                numOutliersEachSide = 0,
+                outputToStitch = true,
+                stitchHostName = "https://stitch.mongodb.com"
+        )
+
+        // Local variable for the number of docs updated in the test
+        // This should change for each iteration of the test.
+        var numberOfChangedDocs: Int? = null
+
+        testHarness.runPerformanceTestWithParams(
+                params,
+                beforeEach = { ctx, numDocs: Int, docSize: Int ->
+                    // Generate and insert the documents, and perform the initial sync.
+                    Log.i(TAG, "Setting up $testName test for $numDocs $docSize-byte docs")
+                    val documentsForCurrentTest = generateDocuments(docSize, numDocs)
+
+                    val sync = ctx.testColl.sync()
+
+                    Tasks.await(sync.configure(
+                            DefaultSyncConflictResolvers.remoteWins(),
+                            null,
+                            ExceptionListener { id, ex ->
+                                Log.e(TAG, "unexpected sync error with id $id: ${ex.localizedMessage}")
+                                error(ex)
+                            }
+                    ))
+
+                    Tasks.await(sync.insertMany(documentsForCurrentTest))
+
+                    val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
+
+                    // don't report results if the sync pass failed
+                    if (!syncPassSucceeded) {
+                        error("sync pass failed")
+                    }
+
+                    // randomly sample a percentage of the documents to trigger local updates
+                    // that will be synced to the remote in the next sync pass
+                    val shuffledDocs = documentsForCurrentTest.shuffled()
+
+                    val docsToUpdate = if (pctOfDocsWithChangeEvents > 0.0) shuffledDocs.subList(
+                            0,
+                            Math.round(pctOfDocsWithChangeEvents*numDocs).toInt()
+                    ) else emptyList()
+
+                    docsToUpdate.forEach {
+                        Tasks.await(sync.updateOne(
+                                Document("_id", it["_id"]),
+                                Document("\$set", Document("newField", "blah"))
+                        ))
+                    }
+
+                    numberOfChangedDocs = docsToUpdate.size
+                },
+                testDefinition = { ctx, _, _ ->
+                    // Do the sync pass that will sync the changed L2R documents
+                    val syncPassSucceeded = ctx.testDataSynchronizer.doSyncPass()
+
+                    // halt the test if the sync pass failed
+                    if (!syncPassSucceeded) {
+                        error("sync pass failed")
+                    }
+                },
+                afterEach = { ctx, numDocs: Int, _ ->
+                    // Verify that the test did indeed synchronize the provided documents remotely,
+                    // and that the documents that were supposed to be updated got updated.
+                    // Halt the test and invalidate its results otherwise
+                    if (numDocs.toLong() != Tasks.await(ctx.testColl.count())) {
+                        error("test did not successfully perform the initial sync")
+                    }
+
+                    val numOfDocsWithNewField = Tasks.await(ctx.testColl.count(
+                            Document("newField", Document("\$exists", true))))
+
+                    if (numberOfChangedDocs!!.toLong() != numOfDocsWithNewField) {
+                        Log.e(TAG, "$numberOfChangedDocs != $numOfDocsWithNewField")
+                        error("test did not successfully perform the l2r pass")
+                    }
+                }
+        )
+    }
 
     private fun generateRandomString(length: Int): String {
         val alphabet = "abcdefghijklmnopqrstuvwzyz1234567890"
@@ -56,260 +320,4 @@ class SyncL2ROnlyPerformanceIntTests {
         }
         return docList
     }
-
-    @Test
-    fun testInitialSync() {
-        val testName = "testL2R_InitialSync"
-        Log.d(TAG, testName)
-
-        val params = SyncPerformanceIntTestsHarness.TestParams(
-                runId = runId,
-                testName = testName,
-                dataProbeGranularityMs = 400L,
-                docSizes = docSizes,
-                numDocs = numDocs,
-                numIters = 3,
-                numOutliersEachSide = 0,
-                outputToStitch = true,
-                stitchHostName = "https://stitch.mongodb.com"
-        )
-
-        // Local variable for list of documents captured by the test definition closures below.
-        // This should change for each iteration of the test.
-        var documentsForCurrentTest: List<Document>? = null
-
-        testHarness.runPerformanceTestWithParams(
-                params,
-                testSetup = { docSize: Int, numDocs: Int ->
-                    // Generate and insert the documents outside of the test so that the document
-                    // generation and local insert process is not a measurable part of the test. We
-                    // are primarily concerned with the performance of configuring the local
-                    // documents as synced, and the time it takes to sync those local documents
-                    // remotely.
-                    Log.i(TAG,"Setting up $testName for $numDocs $docSize-byte docs")
-                    documentsForCurrentTest = generateDocuments(docSize, numDocs)
-                },
-                testDefinition = { _, _ ->
-                    // Initial sync for a purely L2R scenario means syncing locally present
-                    // document ids, and performing a single sync pass to synchronize those
-                    // local documents to the remote cluster.
-
-                    // halt the test if the sync harness was configured incorrectly
-                    if (documentsForCurrentTest == null) {
-                        error("test harness setup function never ran")
-                    }
-
-                    val sync = testHarness.testColl.sync()
-
-                    Tasks.await(sync.configure(
-                            DefaultSyncConflictResolvers.remoteWins(),
-                            null,
-                            ExceptionListener { id, ex ->
-                                Log.e(TAG, "unexpected sync error with id $id: ${ex.localizedMessage}")
-                                error(ex)
-                            }
-                    ))
-
-                    Tasks.await(testHarness.testColl.sync().insertMany(documentsForCurrentTest))
-
-
-                    val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
-
-                    // don't report results if the sync pass failed
-                    if (!syncPassSucceeded) {
-                        error("sync pass failed")
-                    }
-                },
-                testTeardown = { _, numDocs: Int ->
-                    // Verify that the test did indeed synchronize the provided documents remotely,
-                    // halting the test and invalidating its results otherwise
-                    if(numDocs.toLong() != Tasks.await(testHarness.testColl.count())) {
-                        error("test did not successfully perform the initial sync")
-                    }
-                }
-        )
-    }
-
-    @Test
-    fun testDisconnectReconnect() {
-        val testName = "testL2R_DisconnectReconnect"
-        Log.d(TAG, testName)
-
-        val params = SyncPerformanceIntTestsHarness.TestParams(
-                runId = runId,
-                testName = testName,
-                dataProbeGranularityMs = 400L,
-                docSizes = docSizes,
-                numDocs = numDocs,
-                numIters = 3,
-                numOutliersEachSide = 0,
-                outputToStitch = true,
-                stitchHostName = "https://stitch.mongodb.com"
-        )
-
-        testHarness.runPerformanceTestWithParams(
-                params,
-                testSetup = { docSize: Int, numDocs: Int ->
-                    // Generate and insert the documents, and perform the initial sync.
-                    Log.i(TAG,"Setting up $testName for $numDocs $docSize-byte docs")
-                    val documentsForCurrentTest = generateDocuments(docSize, numDocs)
-
-                    val sync = testHarness.testColl.sync()
-
-                    Tasks.await(sync.configure(
-                            DefaultSyncConflictResolvers.remoteWins(),
-                            null,
-                            ExceptionListener { id, ex ->
-                                Log.e(TAG, "unexpected sync error with id $id: ${ex.localizedMessage}")
-                                error(ex)
-                            }
-                    ))
-
-                    Tasks.await(sync.insertMany(documentsForCurrentTest))
-
-                    val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
-
-                    // don't report results if the sync pass failed
-                    if (!syncPassSucceeded) {
-                        error("sync pass failed")
-                    }
-
-                    testHarness.testNetworkMonitor.connectedState = false
-                    while(testHarness.testDataSynchronizer.areAllStreamsOpen()) {
-                        Log.i(TAG, "waiting for streams to close")
-                        Thread.sleep(1000)
-                    }
-                },
-                testDefinition = { _, _ ->
-                    // Reconnect the DataSynchronizer, and wait for the streams to reopen. The
-                    // stream being open indicates that the doc configs are now set as stale.
-                    // Check every 10ms so we're not doing too much work on this thread, and don't
-                    // log anything, so as not to pollute the test results with logging overhead.
-                    testHarness.testNetworkMonitor.connectedState = true
-                    while(!testHarness.testDataSynchronizer.areAllStreamsOpen()) {
-                        Thread.sleep(10)
-                    }
-
-                    // Do the sync pass that will perform the stale document fetch
-                    val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
-
-                    // Halt the test if the sync pass failed
-                    if (!syncPassSucceeded) {
-                        error("sync pass failed")
-                    }
-                },
-                testTeardown = { _, numDocs: Int ->
-                    // Verify that the test did indeed synchronize the provided documents remotely,
-                    // halting the test and invalidating its results otherwise
-                    val numDocsInColl = Tasks.await(testHarness.testColl.count())
-                    if(numDocs.toLong() != numDocsInColl) {
-                        Log.e(TAG, "$numDocs != $numDocsInColl")
-                        error("test did not successfully perform the initial sync")
-                    }
-                }
-        )
-    }
-
-    @Test
-    fun testSyncPass() {
-        val changeEventPercentages = doubleArrayOf(0.0, 0.01, 0.10, 0.25, 0.50, 1.0)
-
-        // perform the sync pass test for each desired percentage of changed documents
-        changeEventPercentages.forEach { doTestSyncPass(it) }
-    }
-
-    private fun doTestSyncPass(pctOfDocsWithChangeEvents: Double) {
-        val testName = "testL2R_${pctOfDocsWithChangeEvents}DocsChanged"
-        Log.d(TAG, testName)
-
-        val params = SyncPerformanceIntTestsHarness.TestParams(
-                runId = runId,
-                testName = testName,
-                dataProbeGranularityMs = 400L,
-                docSizes = docSizes,
-                numDocs = numDocs,
-                numIters = 3,
-                numOutliersEachSide = 0,
-                outputToStitch = true,
-                stitchHostName = "https://stitch.mongodb.com"
-        )
-
-        // Local variable for the number of docs updated in the test
-        // This should change for each iteration of the test.
-        var numberOfChangedDocs: Int? = null
-
-        testHarness.runPerformanceTestWithParams(
-                params,
-                testSetup = { docSize: Int, numDocs: Int ->
-                    // Generate and insert the documents, and perform the initial sync.
-                    Log.i(TAG,"Setting up $testName test for $numDocs $docSize-byte docs")
-                    val documentsForCurrentTest = generateDocuments(docSize, numDocs)
-
-                    val sync = testHarness.testColl.sync()
-
-                    Tasks.await(sync.configure(
-                            DefaultSyncConflictResolvers.remoteWins(),
-                            null,
-                            ExceptionListener { id, ex ->
-                                Log.e(TAG, "unexpected sync error with id $id: ${ex.localizedMessage}")
-                                error(ex)
-                            }
-                    ))
-
-                    Tasks.await(sync.insertMany(documentsForCurrentTest))
-
-                    val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
-
-                    // don't report results if the sync pass failed
-                    if (!syncPassSucceeded) {
-                        error("sync pass failed")
-                    }
-
-                    // randomly sample a percentage of the documents to trigger local updates
-                    // that will be synced to the remote in the next sync pass
-                    val shuffledDocs = documentsForCurrentTest.shuffled()
-
-                    val docsToUpdate = if (pctOfDocsWithChangeEvents > 0.0) shuffledDocs.subList(
-                            0,
-                            Math.round(pctOfDocsWithChangeEvents*numDocs).toInt()
-                    ) else emptyList()
-
-                    docsToUpdate.forEach {
-                        Tasks.await(sync.updateOne(
-                                Document("_id", it["_id"]),
-                                Document("\$set", Document("newField", "blah"))
-                        ))
-                    }
-
-                    numberOfChangedDocs = docsToUpdate.size
-                },
-                testDefinition = { _, _ ->
-                    // Do the sync pass that will sync the changed L2R documents
-                    val syncPassSucceeded = testHarness.testDataSynchronizer.doSyncPass()
-
-                    // halt the test if the sync pass failed
-                    if (!syncPassSucceeded) {
-                        error("sync pass failed")
-                    }
-                },
-                testTeardown = { _, numDocs: Int ->
-                    // Verify that the test did indeed synchronize the provided documents remotely,
-                    // and that the documents that were supposed to be updated got updated.
-                    // Halt the test and invalidate its results otherwise
-                    if(numDocs.toLong() != Tasks.await(testHarness.testColl.count())) {
-                        error("test did not successfully perform the initial sync")
-                    }
-
-                    val numOfDocsWithNewField = Tasks.await(testHarness.testColl.count(
-                            Document("newField", Document("\$exists", true))))
-
-
-                    if(numberOfChangedDocs!!.toLong() != numOfDocsWithNewField) {
-                        Log.e(TAG,"$numberOfChangedDocs != $numOfDocsWithNewField")
-                        error("test did not successfully perform the l2r pass")
-                    }
-                }
-        )
-    }
-
 }

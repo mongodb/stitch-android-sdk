@@ -1,7 +1,5 @@
 package com.mongodb.stitch.android.services.mongodb.remote
 
-import okhttp3.Call
-import okhttp3.Connection
 import okhttp3.Headers
 import okhttp3.Interceptor
 import okhttp3.Request
@@ -11,12 +9,9 @@ import okhttp3.ResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers
 
 import org.mockito.Mockito
 import org.mockito.junit.MockitoJUnitRunner
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
  * Returns Mockito.any() as nullable type to avoid java.lang.IllegalStateException when
@@ -36,7 +31,6 @@ class OkHttpInstrumentedTransportUnitTests {
         val headersMock = Mockito.mock(Headers::class.java)
         val responseMock = Mockito.mock(Response::class.java)
         val responseBodyMock = Mockito.mock(ResponseBody::class.java)
-
 
         Mockito.`when`(headersMock.byteCount()).thenReturn(10)
         Mockito.`when`(requestMock.headers()).thenReturn(headersMock)

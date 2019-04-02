@@ -5,7 +5,6 @@ import android.os.StatFs
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.android.core.StitchAppClient
-import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.admin.Apps
@@ -17,13 +16,15 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
+import java.util.Date
 import org.bson.Document
 import org.bson.types.ObjectId
-import java.util.*
 
-class SyncPerformanceTestContext(private val harness: SyncPerformanceIntTestsHarness,
-                                 private val testParams: TestParams,
-                                 private val transport: OkHttpInstrumentedTransport) {
+class SyncPerformanceTestContext(
+    private val harness: SyncPerformanceIntTestsHarness,
+    private val testParams: TestParams,
+    private val transport: OkHttpInstrumentedTransport
+) {
     // Public variables
     lateinit var testClient: StitchAppClient
         private set
@@ -112,15 +113,18 @@ class SyncPerformanceTestContext(private val harness: SyncPerformanceIntTestsHar
             Tasks.await(testColl.deleteMany(Document()))
         }
 
-        if (::testMongoClient.isInitialized) {
+        // TODO: The test should be set up in such a way that each setup sets up an embedded mongo
+        // instance. Until we do that, we can't actually properly tear down the embedded instance
+        // or close the data synchronizer on each test iteration.
+        /** if (::testMongoClient.isInitialized) {
             (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
             AndroidEmbeddedMongoClientFactory.getInstance().close()
-        }
+        } */
     }
 
     private val runtime by lazy { Runtime.getRuntime() }
 
-    private fun generateMemoryAndThreadData(partialResult: PartialResult) = object: Thread() {
+    private fun generateMemoryAndThreadData(partialResult: PartialResult) = object : Thread() {
         override fun run() {
             this.name = "${testParams.testName}_memory_and_thread_monitor"
             val memoryData = arrayListOf<Long>()
@@ -158,7 +162,6 @@ class SyncPerformanceTestContext(private val harness: SyncPerformanceIntTestsHar
         // Measure the execution runTimes of running the given block of code
         val timeBefore = Date().time
 
-        Thread.sleep(2000L) // Eventually take this out but needed for testing
         testDefinition(this@SyncPerformanceTestContext, numDocs, docSize)
 
         job.interrupt()
