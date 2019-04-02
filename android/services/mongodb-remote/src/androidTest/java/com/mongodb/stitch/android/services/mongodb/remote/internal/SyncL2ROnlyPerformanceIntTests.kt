@@ -68,7 +68,7 @@ class SyncL2ROnlyPerformanceIntTests {
                 dataProbeGranularityMs = 400L,
                 docSizes = intArrayOf(1024),//, 2048, 5120, 10240, 25600, 51960, 102400),
                 numDocs = intArrayOf(100, 500),//, 1000, 5000, 10000, 25000),
-                numIters = 1,
+                numIters = 3,
                 numOutliersEachSide = 0,
                 outputToStitch = true,
                 stitchHostName = "https://stitch.mongodb.com"
@@ -303,7 +303,7 @@ class SyncL2ROnlyPerformanceIntTests {
 
 
                     if(numberOfChangedDocs!!.toLong() != numOfDocsWithNewField) {
-                        Log.e(TAG,"Comparing: $numberOfChangedDocs != $numOfDocsWithNewField")
+                        Log.e(TAG,"$numberOfChangedDocs != $numOfDocsWithNewField")
                         error("test did not successfully perform the l2r pass")
                     }
                 }
