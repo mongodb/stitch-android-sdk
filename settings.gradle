@@ -37,6 +37,7 @@ include ':core:sdk',
         ':android:services:http',
         ':android:services:mongodb-local',
         ':android:services:mongodb-remote',
+        ':android:services:mongodb-remote-perftests',
         ':android:services:twilio',
         ':android:examples:fcm',
         ':android:examples:stress-tests',
@@ -80,6 +81,7 @@ project(':android:services:fcm').name = 'stitch-android-services-fcm'
 project(':android:services:http').name = 'stitch-android-services-http'
 project(':android:services:mongodb-local').name = 'stitch-android-services-mongodb-local'
 project(':android:services:mongodb-remote').name = 'stitch-android-services-mongodb-remote'
+project(':android:services:mongodb-remote-perftests').name = 'stitch-android-services-mongodb-remote-perftests'
 project(':android:services:twilio').name = 'stitch-android-services-twilio'
 project(':android:examples:fcm').name = 'stitch-android-examples-fcm'
 project(':android:examples:todo').name = 'stitch-android-examples-todo'
