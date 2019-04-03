@@ -2,6 +2,7 @@ package com.mongodb.stitch.android.services.mongodb.remote
 
 import android.os.Environment
 import android.os.StatFs
+import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.android.core.StitchAppClient
@@ -50,6 +51,10 @@ class SyncPerformanceTestContext(
     lateinit var mdbRule: RuleResponse
         private set
 
+    companion object {
+        val TAG = SyncPerformanceTestContext::class.java.simpleName
+    }
+
     fun setup() {
         if (harness.getStitchBaseURL() == "https://stitch.mongodb.com") {
             testDbName = harness.stitchTestDbName
@@ -69,7 +74,7 @@ class SyncPerformanceTestContext(
                 testUserId = harness.outputClient.auth.user!!.id
             }
 
-            Tasks.await(testClient.callFunction("deleteAllAsSystemUser", arrayListOf<String>()))
+            deleteTestCollection(testClient)
         } else {
             val app = harness.createApp()
             harness.addProvider(app.second, ProviderConfigs.Anon)
@@ -108,7 +113,7 @@ class SyncPerformanceTestContext(
         Tasks.await(testColl.sync().desyncMany(*syncedIds.toTypedArray()))
 
         if (harness.getStitchBaseURL() == "https://stitch.mongodb.com") {
-            Tasks.await(testClient.callFunction("deleteAllAsSystemUser", arrayListOf<String>()))
+            deleteTestCollection(testClient)
         } else {
             Tasks.await(testColl.deleteMany(Document()))
         }
@@ -178,5 +183,29 @@ class SyncPerformanceTestContext(
             .toDouble()
 
         return partialResult
+    }
+
+    private fun deleteTestCollection(testClient: StitchAppClient) {
+        // This is a workaround for the fact that deleteMany will time out when trying to delete
+        // over 2500 documents at a time. Ideally we'd drop the collection, but it's currently not
+        // possible directly via Stitch
+
+        // we're testing up to 25K docs, and we can delete 2500-3000 per pass,
+        val maxRetries = 15
+
+        for (i in 0..maxRetries) {
+            try {
+                Tasks.await(testClient.callFunction(
+                    "deleteAllAsSystemUser", arrayListOf<String>())
+                )
+                break
+            } catch (e: Exception) {
+                if (i < maxRetries) {
+                    Log.i(TAG, "Error deleting all documents: ${e.localizedMessage}, retrying")
+                } else {
+                    Log.e(TAG, "Error deleting all documents: ${e.localizedMessage}, no more retries")
+                }
+            }
+        }
     }
 }
