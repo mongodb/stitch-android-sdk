@@ -711,6 +711,9 @@ class SyncUnitTestHarness : Closeable {
     private var latestCtx: DataSynchronizerTestContext? = null
 
     override fun close() {
+        latestCtx?.localClient?.listDatabaseNames()?.forEach {
+            latestCtx?.localClient?.getDatabase(it)?.drop()
+        }
         latestCtx?.dataSynchronizer?.close()
     }
 
