@@ -680,13 +680,13 @@ task_groups:
       - func: "setup_android"
     tasks:
       - run_core_sdk_tests
+      - run_core_services_mongodb_remote_tests
       - run_core_services_aws_tests
       - run_core_services_aws_s3_tests
       - run_core_services_aws_ses_tests
       - run_core_services_fcm_tests
       - run_core_services_http_tests
       - run_core_services_mongodb_local_tests
-      - run_core_services_mongodb_remote_tests
       - run_core_services_twilio_tests
   - name: run_android_tests
     setup_group_can_fail_task: true
@@ -708,13 +708,13 @@ task_groups:
       - func: "setup_emulator"
     tasks:
       - run_android_sdk_tests
+      - run_android_services_mongodb_remote_tests
       - run_android_services_aws_tests
       - run_android_services_aws_s3_tests
       - run_android_services_aws_ses_tests
       - run_android_services_fcm_tests
       - run_android_services_http_tests
       - run_android_services_mongodb_local_tests
-      - run_android_services_mongodb_remote_tests
       - run_android_services_twilio_tests
   - name: run_linter
     setup_group_can_fail_task: true
@@ -723,11 +723,11 @@ task_groups:
       - func: "fetch_source"
       - func: "setup_android"
     tasks:
+      - findbugs
       - lint
       - ktlint
       - checkstyle
       - pmd
-      - findbugs
 buildvariants:
 - name: macos-1014
   display_name: macos-1014
