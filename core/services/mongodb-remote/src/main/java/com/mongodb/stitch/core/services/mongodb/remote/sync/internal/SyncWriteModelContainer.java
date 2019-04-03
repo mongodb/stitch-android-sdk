@@ -21,12 +21,14 @@ import com.mongodb.client.model.WriteModel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.Document;
@@ -68,8 +70,9 @@ class SyncWriteModelContainer {
   void wrapForRecovery(final MongoCollection<BsonDocument> localCollection,
                        final MongoCollection<BsonDocument> undoCollection,
                        final Runnable callable) {
+    System.err.println(String.format("SIZE OF IDS: %d", ids.size()));
     final List<BsonDocument> oldDocs = localCollection.find(
-        new Document("_id", new Document("$in", ids))
+        new BsonDocument("_id", new BsonDocument("$in", new BsonArray(new ArrayList<>(ids))))
     ).into(new ArrayList<>());
 
     if (oldDocs.size() > 0) {
@@ -79,7 +82,9 @@ class SyncWriteModelContainer {
     callable.run();
 
     if (oldDocs.size() > 0) {
-      undoCollection.deleteMany(new Document("_id", new Document("$in", ids)));
+      undoCollection.deleteMany(
+          new BsonDocument("_id", new BsonDocument("$in", new BsonArray(new ArrayList<>(ids))))
+      );
     }
   }
 

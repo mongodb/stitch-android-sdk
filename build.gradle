@@ -158,7 +158,6 @@ subprojects {
 
             test {
                 outputs.upToDateWhen { false }
-                jvmArgs "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap"
                 systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
             }
 
