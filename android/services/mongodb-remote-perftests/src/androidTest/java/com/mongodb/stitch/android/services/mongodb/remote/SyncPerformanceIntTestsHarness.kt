@@ -189,6 +189,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                             .append("exception", e.localizedMessage)
                             .append("stacktrace", e.stackTrace.map { it.toString() }))
             ))
+            throw e
         }
     }
 }
