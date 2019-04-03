@@ -13,4 +13,4 @@ cd stitch-java-sdk
 
 echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
 
-./gradlew $MODULE jacocoTestReport --info --continue --warning-mode=all --stacktrace < /dev/null
+./gradlew $MODULE jacocoTestReport --info --warning-mode=all --stacktrace < /dev/null

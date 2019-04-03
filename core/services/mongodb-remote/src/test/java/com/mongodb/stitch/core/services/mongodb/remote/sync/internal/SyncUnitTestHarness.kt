@@ -716,6 +716,7 @@ class SyncUnitTestHarness : Closeable {
                 latestCtx?.localClient?.getDatabase(it)?.drop()
             }
         }
+
         latestCtx?.dataSynchronizer?.close()
     }
 

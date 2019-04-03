@@ -1,4 +1,4 @@
-package com.mongodb.stitch.android.services.mongodb.remote
+package com.mongodb.stitch.android.services.mongodb.performance
 
 import com.mongodb.stitch.core.internal.net.OkHttpTransport
 import okhttp3.Interceptor

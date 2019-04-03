@@ -21,7 +21,6 @@ import com.mongodb.client.model.WriteModel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,7 +30,6 @@ import javax.annotation.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
-import org.bson.Document;
 
 class SyncWriteModelContainer {
   final List<WriteModel<BsonDocument>> bulkWriteModels;
@@ -70,7 +68,6 @@ class SyncWriteModelContainer {
   void wrapForRecovery(final MongoCollection<BsonDocument> localCollection,
                        final MongoCollection<BsonDocument> undoCollection,
                        final Runnable callable) {
-    System.err.println(String.format("SIZE OF IDS: %d", ids.size()));
     final List<BsonDocument> oldDocs = localCollection.find(
         new BsonDocument("_id", new BsonDocument("$in", new BsonArray(new ArrayList<>(ids))))
     ).into(new ArrayList<>());
