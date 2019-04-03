@@ -712,7 +712,9 @@ class SyncUnitTestHarness : Closeable {
 
     override fun close() {
         latestCtx?.localClient?.listDatabaseNames()?.forEach {
-            latestCtx?.localClient?.getDatabase(it)?.drop()
+            if (it != "admin") {
+                latestCtx?.localClient?.getDatabase(it)?.drop()
+            }
         }
         latestCtx?.dataSynchronizer?.close()
     }
