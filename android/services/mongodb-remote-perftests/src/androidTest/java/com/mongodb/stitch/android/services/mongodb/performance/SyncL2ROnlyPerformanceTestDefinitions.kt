@@ -1,11 +1,10 @@
-package com.mongodb.stitch.android.services.mongodb.remote
+package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import org.bson.Document
-
-import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import org.bson.types.ObjectId
 
 class SyncL2ROnlyPerformanceTestDefinitions {

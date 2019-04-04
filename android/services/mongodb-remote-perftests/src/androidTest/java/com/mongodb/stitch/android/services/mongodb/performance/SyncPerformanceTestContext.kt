@@ -1,4 +1,4 @@
-package com.mongodb.stitch.android.services.mongodb.remote
+package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.os.Environment
 import android.os.StatFs
@@ -6,6 +6,9 @@ import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.android.core.StitchAppClient
+
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.admin.Apps

@@ -27,9 +27,9 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
-import org.bson.Document;
 
 class SyncWriteModelContainer {
   final List<WriteModel<BsonDocument>> bulkWriteModels;
@@ -69,7 +69,7 @@ class SyncWriteModelContainer {
                        final MongoCollection<BsonDocument> undoCollection,
                        final Runnable callable) {
     final List<BsonDocument> oldDocs = localCollection.find(
-        new Document("_id", new Document("$in", ids))
+        new BsonDocument("_id", new BsonDocument("$in", new BsonArray(new ArrayList<>(ids))))
     ).into(new ArrayList<>());
 
     if (oldDocs.size() > 0) {
@@ -79,7 +79,9 @@ class SyncWriteModelContainer {
     callable.run();
 
     if (oldDocs.size() > 0) {
-      undoCollection.deleteMany(new Document("_id", new Document("$in", ids)));
+      undoCollection.deleteMany(
+          new BsonDocument("_id", new BsonDocument("$in", new BsonArray(new ArrayList<>(ids))))
+      );
     }
   }
 

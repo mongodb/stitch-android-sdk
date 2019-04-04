@@ -8,8 +8,6 @@ buildscript {
 }
 
 subprojects {
-    def env = System.getProperties()
-
     afterEvaluate {
         if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
             android {

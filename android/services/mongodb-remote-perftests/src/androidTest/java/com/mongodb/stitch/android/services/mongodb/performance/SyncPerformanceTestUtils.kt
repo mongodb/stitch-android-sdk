@@ -1,4 +1,4 @@
-package com.mongodb.stitch.android.services.mongodb.remote
+package com.mongodb.stitch.android.services.mongodb.performance
 
 import org.bson.Document
 import kotlin.random.Random
