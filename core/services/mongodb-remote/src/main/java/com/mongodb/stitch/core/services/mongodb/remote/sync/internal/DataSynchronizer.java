@@ -154,7 +154,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.initThread = new Thread(() -> {
       initialize();
       recover();
-    });
+    }, "dataSynchronizerInitializationThread");
 
     this.initThread.start();
   }
@@ -318,7 +318,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       initialize();
       this.start();
       ongoingOperationsGroup.unblock();
-    });
+    }, "dataSynchronizerReinitializationThread");
 
     this.initThread.start();
   }
@@ -401,10 +401,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       if (syncThread == null) {
-        syncThread = new Thread(new DataSynchronizerRunner(
-            new WeakReference<>(this),
-            networkMonitor,
-            logger));
+        syncThread = new Thread(
+            new DataSynchronizerRunner(
+              new WeakReference<>(this),
+              networkMonitor,
+              logger
+            ),
+            "dataSynchronizerRunnerThread"
+        );
       }
       if (syncThreadEnabled && !isRunning) {
         syncThread.start();

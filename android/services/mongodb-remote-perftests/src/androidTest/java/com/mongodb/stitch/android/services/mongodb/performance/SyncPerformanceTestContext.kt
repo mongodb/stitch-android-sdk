@@ -1,4 +1,4 @@
-package com.mongodb.stitch.android.services.mongodb.remote
+package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.os.Environment
 import android.os.StatFs
@@ -6,6 +6,8 @@ import com.google.android.gms.tasks.Tasks
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
+import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.admin.Apps
@@ -19,11 +21,13 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchro
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import org.bson.Document
 import org.bson.types.ObjectId
-import java.util.*
+import java.util.Date
 
-class SyncPerformanceTestContext(private val harness: SyncPerformanceIntTestsHarness,
-                                 private val testParams: TestParams,
-                                 private val transport: OkHttpInstrumentedTransport) {
+class SyncPerformanceTestContext(
+    private val harness: SyncPerformanceIntTestsHarness,
+    private val testParams: TestParams,
+    private val transport: OkHttpInstrumentedTransport
+) {
     // Public variables
     lateinit var testClient: StitchAppClient
         private set
@@ -120,7 +124,7 @@ class SyncPerformanceTestContext(private val harness: SyncPerformanceIntTestsHar
 
     private val runtime by lazy { Runtime.getRuntime() }
 
-    private fun generateMemoryAndThreadData(partialResult: PartialResult) = object: Thread() {
+    private fun generateMemoryAndThreadData(partialResult: PartialResult) = object : Thread() {
         override fun run() {
             this.name = "${testParams.testName}_memory_and_thread_monitor"
             val memoryData = arrayListOf<Long>()

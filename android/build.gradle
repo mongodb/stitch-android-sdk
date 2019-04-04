@@ -8,18 +8,6 @@ buildscript {
 }
 
 subprojects {
-    def env = System.getProperties()
-    // if not building from android studio...
-    if (env['com.android.studio.gradle.project.path'] == null) {
-        project.tasks.configureEach {
-            it.onlyIf {
-                project.hasProperty("perf") ?
-                        project.name.contains("perftest") :
-                        !project.name.contains("perftest")
-            }
-        }
-    }
-
     afterEvaluate {
         if (project.plugins.hasPlugin("com.android.library") || project.plugins.hasPlugin("com.android.application")) {
             android {
