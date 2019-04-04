@@ -1,4 +1,4 @@
-package com.mongodb.stitch.android.services.mongodb.remote
+package com.mongodb.stitch.android.services.mongodb.performance
 
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest

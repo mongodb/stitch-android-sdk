@@ -1,7 +1,6 @@
-package com.mongodb.stitch.android.services.mongodb.remote
+package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.support.test.runner.AndroidJUnit4
-import android.util.Log
 
 import com.google.android.gms.tasks.Tasks
 
@@ -23,7 +22,6 @@ class SyncPerformanceTests {
         private val runId by lazy {
             ObjectId()
         }
-
     }
 
     private var testHarness = SyncPerformanceIntTestsHarness()
