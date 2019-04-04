@@ -13,7 +13,7 @@ class SyncPerformanceTestUtils {
         private const val defaultStitchHostname = "https://stitch.mongodb.com"
 
         private const val itersProp = "test.stitch.androidPerfIters"
-        private const val defaultIters = 3
+        private const val defaultIters = "3"
 
         internal fun getConfiguredStitchHostname(): String {
             return InstrumentationRegistry.getArguments().getString(
@@ -22,9 +22,9 @@ class SyncPerformanceTestUtils {
         }
 
         internal fun getConfiguredIters(): Int {
-            return InstrumentationRegistry.getArguments().getInt(
+            return Integer.parseInt(InstrumentationRegistry.getArguments().getString(
                     itersProp, defaultIters
-            )
+            ))
         }
 
         internal fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {
