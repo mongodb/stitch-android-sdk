@@ -149,8 +149,16 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         // don't log anything, so as not to pollute the test results with logging
                         // overhead.
                         ctx.testNetworkMonitor.connectedState = true
+                        var counter = 0
                         while (!ctx.testDataSynchronizer.areAllStreamsOpen()) {
                             Thread.sleep(10)
+
+                            // if this hangs longer than 30 seconds, throw an error
+                            counter += 1
+                            if(counter > 3000) {
+                                Log.e(TAG, "stream never opened after reconnect")
+                                error("stream never opened after reconnect")
+                            }
                         }
 
                         // Do the sync pass that will perform the stale document fetch
