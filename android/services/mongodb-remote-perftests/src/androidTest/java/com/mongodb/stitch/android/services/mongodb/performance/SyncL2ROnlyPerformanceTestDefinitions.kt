@@ -15,7 +15,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
         // reasons because they hit undocumented limits. These failures along with stacktraces will
         // be present in the reported results
         private val docSizes = intArrayOf(1024, 2048, 5120, 10240, 25600, 51200, 102400)
-        private val numDocs = intArrayOf(100, 500, 1000) //, 5000, 10000, 25000)
+        private val numDocs = intArrayOf(100, 500, 1000, 5000, 10000, 25000)
 
         fun testInitialSync(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
             val testName = "testL2R_InitialSync"
