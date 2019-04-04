@@ -155,7 +155,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
 
                             // if this hangs longer than 30 seconds, throw an error
                             counter += 1
-                            if(counter > 3000) {
+                            if (counter > 3000) {
                                 Log.e(TAG, "stream never opened after reconnect")
                                 error("stream never opened after reconnect")
                             }
