@@ -53,7 +53,8 @@ class SyncPerformanceTests {
         SyncL2ROnlyPerformanceTestDefinitions.testSyncPass(this.testHarness, runId)
     }
 
-    // Placeholder tests until the performance testing suite is in place
+    // Placeholder tests until the whole performance testing suite is in place
+
     @Test
     fun testInitialSync() {
         val testParams = TestParams(
@@ -62,10 +63,10 @@ class SyncPerformanceTests {
             dataProbeGranularityMs = 400L,
             docSizes = intArrayOf(50),
             numDocs = intArrayOf(10),
-            numIters = 3,
+            numIters = SyncPerformanceTestUtils.getConfiguredIters(),
             numOutliersEachSide = 0,
             outputToStitch = outputToStitch,
-            stitchHostName = "https://stitch.mongodb.com"
+            stitchHostName = SyncPerformanceTestUtils.getConfiguredStitchHostname()
         )
 
         testHarness.runPerformanceTestWithParams(testParams, { ctx, docSize, numDocs ->
@@ -84,10 +85,10 @@ class SyncPerformanceTests {
             dataProbeGranularityMs = 400L,
             docSizes = intArrayOf(30, 60),
             numDocs = intArrayOf(10),
-            numIters = 3,
+            numIters = SyncPerformanceTestUtils.getConfiguredIters(),
             numOutliersEachSide = 0,
             outputToStitch = outputToStitch,
-            stitchHostName = "https://stitch.mongodb.com"
+            stitchHostName = SyncPerformanceTestUtils.getConfiguredStitchHostname()
         )
 
         testHarness.runPerformanceTestWithParams(testParams, { ctx, docSize, numDocs ->

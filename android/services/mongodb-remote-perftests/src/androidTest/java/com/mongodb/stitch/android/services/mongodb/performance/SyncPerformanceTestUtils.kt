@@ -1,5 +1,6 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
+import android.support.test.InstrumentationRegistry
 import org.bson.Document
 import kotlin.random.Random
 
@@ -8,6 +9,24 @@ import kotlin.random.Random
  */
 class SyncPerformanceTestUtils {
     companion object {
+        private const val stitchHostnameProp = "test.stitch.androidPerfStitchHostname"
+        private const val defaultStitchHostname = "https://stitch.mongodb.com"
+
+        private const val itersProp = "test.stitch.androidPerfIters"
+        private const val defaultIters = 3
+
+        internal fun getConfiguredStitchHostname(): String {
+            return InstrumentationRegistry.getArguments().getString(
+                    stitchHostnameProp, defaultStitchHostname
+            )
+        }
+
+        internal fun getConfiguredIters(): Int {
+            return InstrumentationRegistry.getArguments().getInt(
+                    itersProp, defaultIters
+            )
+        }
+
         internal fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {
             val docList = ArrayList<Document>()
 
