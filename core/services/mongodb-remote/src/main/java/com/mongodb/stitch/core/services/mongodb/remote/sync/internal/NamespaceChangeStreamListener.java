@@ -254,7 +254,7 @@ public class NamespaceChangeStreamListener implements Closeable {
           return;
         }
 
-        logger.info(String.format(Locale.US,
+        logger.debug(String.format(Locale.US,
             "NamespaceChangeStreamListener::stream ns=%s event found: op=%s id=%s",
             nsConfig.getNamespace(), event.getData().getOperationType(), event.getData().getId()));
         nsLock.writeLock().lockInterruptibly();

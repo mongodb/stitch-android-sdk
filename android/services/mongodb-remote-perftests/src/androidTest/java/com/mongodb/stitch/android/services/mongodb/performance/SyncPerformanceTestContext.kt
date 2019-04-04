@@ -2,10 +2,12 @@ package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.os.Environment
 import android.os.StatFs
+import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
+
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
@@ -19,9 +21,9 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
+import java.util.Date
 import org.bson.Document
 import org.bson.types.ObjectId
-import java.util.Date
 
 class SyncPerformanceTestContext(
     private val harness: SyncPerformanceIntTestsHarness,
@@ -53,6 +55,10 @@ class SyncPerformanceTestContext(
     lateinit var mdbRule: RuleResponse
         private set
 
+    companion object {
+        val TAG = SyncPerformanceTestContext::class.java.simpleName
+    }
+
     fun setup() {
         if (harness.getStitchBaseURL() == "https://stitch.mongodb.com") {
             testDbName = harness.stitchTestDbName
@@ -72,7 +78,7 @@ class SyncPerformanceTestContext(
                 testUserId = harness.outputClient.auth.user!!.id
             }
 
-            Tasks.await(testClient.callFunction("deleteAllAsSystemUser", arrayListOf<String>()))
+            deleteTestCollection(testClient)
         } else {
             val app = harness.createApp()
             harness.addProvider(app.second, ProviderConfigs.Anon)
@@ -111,14 +117,14 @@ class SyncPerformanceTestContext(
         Tasks.await(testColl.sync().desyncMany(*syncedIds.toTypedArray()))
 
         if (harness.getStitchBaseURL() == "https://stitch.mongodb.com") {
-            Tasks.await(testClient.callFunction("deleteAllAsSystemUser", arrayListOf<String>()))
+            deleteTestCollection(testClient)
         } else {
             Tasks.await(testColl.deleteMany(Document()))
-        }
 
-        if (::testMongoClient.isInitialized) {
-            (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
-            AndroidEmbeddedMongoClientFactory.getInstance().close()
+            if (::testMongoClient.isInitialized) {
+                (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
+                AndroidEmbeddedMongoClientFactory.getInstance().close()
+            }
         }
     }
 
@@ -162,7 +168,6 @@ class SyncPerformanceTestContext(
         // Measure the execution runTimes of running the given block of code
         val timeBefore = Date().time
 
-        Thread.sleep(2000L) // Eventually take this out but needed for testing
         testDefinition(this@SyncPerformanceTestContext, numDocs, docSize)
 
         job.interrupt()
@@ -178,5 +183,29 @@ class SyncPerformanceTestContext(
             .toDouble()
 
         return partialResult
+    }
+
+    private fun deleteTestCollection(testClient: StitchAppClient) {
+        // This is a workaround for the fact that deleteMany will time out when trying to delete
+        // over 2500 documents at a time. Ideally we'd drop the collection, but it's currently not
+        // possible directly via Stitch
+
+        // we're testing up to 25K docs, and we can delete 2500-3000 per pass,
+        val maxRetries = 15
+
+        for (i in 0..maxRetries) {
+            try {
+                Tasks.await(testClient.callFunction(
+                    "deleteAllAsSystemUser", arrayListOf<String>())
+                )
+                break
+            } catch (e: Exception) {
+                if (i < maxRetries) {
+                    Log.i(TAG, "Error deleting all documents: ${e.localizedMessage}, retrying")
+                } else {
+                    Log.e(TAG, "Error deleting all documents: ${e.localizedMessage}, no more retries")
+                }
+            }
+        }
     }
 }

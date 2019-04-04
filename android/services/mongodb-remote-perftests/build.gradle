@@ -31,6 +31,13 @@ android {
         if (!properties.getProperty("test.stitch.androidPerfStitchAPIKey", "").isEmpty()) {
             testInstrumentationRunnerArgument "test.stitch.androidPerfStitchAPIKey", properties.getProperty("test.stitch.androidPerfStitchAPIKey", "")
         }
+        if (!properties.getProperty("test.stitch.androidPerfStitchHostname", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfStitchHostname", properties.getProperty("test.stitch.androidPerfStitchHostname", "")
+        }
+        if (!properties.getProperty("test.stitch.androidPerfIters", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfIters", properties.getProperty("test.stitch.androidPerfIters", "")
+        }
+
         testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
     }
 }
