@@ -1190,7 +1190,9 @@ class DataSynchronizerUnitTests {
         // called (coalescence). verify desync was called
         assertEquals(1, deleteResult.deletedCount)
         assertTrue(deleteResult.wasAcknowledged())
-        verify(ctx.dataSynchronizer).desyncDocumentsFromRemote(eq(ctx.namespace), eq(ctx.testDocumentId))
+        verify(ctx.dataSynchronizer).desyncDocumentsFromRemote(
+                eq(ctx.dataSynchronizer.syncConfig.getNamespaceConfig(ctx.namespace)),
+                eq(ctx.testDocumentId))
         // assert that the updated document equals what we've expected
         assertNull(ctx.findTestDocumentFromLocalCollection())
 
@@ -1963,13 +1965,16 @@ class DataSynchronizerUnitTests {
 
         val id = doc["_id"]
         val filter = BsonDocument("_id", id)
-        val batchOps = LocalSyncWriteModelContainer()
-        batchOps.ids.add(id)
+        val batchOps = LocalSyncWriteModelContainer(
+                ctx.dataSynchronizer.getLocalCollection(ctx.namespace),
+                ctx.collectionMock,
+                ctx.dataSynchronizer.getUndoCollection(ctx.namespace),
+                ctx.dataSynchronizer.syncConfig.getNamespaceConfig(ctx.namespace).docsColl)
+        batchOps.addDocIDs(id)
 
         // cause the batching to fail after the undo docs have been inserted
         try {
-            batchOps.wrapForRecovery(ctx.dataSynchronizer.getLocalCollection(ctx.namespace),
-                ctx.dataSynchronizer.getUndoCollection(ctx.namespace)) {
+            batchOps.wrapForRecovery {
                 throw Exception()
             }
         } catch (e: Exception) {

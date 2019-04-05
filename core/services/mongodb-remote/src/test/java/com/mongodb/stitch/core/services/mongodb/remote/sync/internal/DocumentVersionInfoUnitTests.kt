@@ -1,5 +1,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
+import org.bson.BsonDocument
+import org.bson.BsonObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -15,9 +17,12 @@ class DocumentVersionInfoUnitTests {
         assertNull(emptyVersion.versionDoc)
         assertNull(emptyVersion.filter)
 
+        val localDoc = BsonDocument().append("_id", BsonObjectId());
+
         // the next version from an empty version should be a non-empty version with a version
         // counter of zero.
-        val nextVersion = DocumentVersionInfo.fromVersionDoc(emptyVersion.nextVersion)
+        val nextVersion =
+                DocumentVersionInfo.fromVersionDoc(emptyVersion.getNextVersion(localDoc))
         assertTrue(nextVersion.hasVersion())
         assertNotNull(nextVersion.versionDoc)
         assertNull(nextVersion.filter)
@@ -27,7 +32,8 @@ class DocumentVersionInfoUnitTests {
 
         // the next version from a non-empty version should be the same version, but with the
         // version counter incremented by one
-        val incrementedVersion = DocumentVersionInfo.fromVersionDoc(nextVersion.nextVersion)
+        val incrementedVersion =
+                DocumentVersionInfo.fromVersionDoc(nextVersion.getNextVersion(localDoc))
         assertTrue(nextVersion.hasVersion())
         assertNotNull(incrementedVersion .versionDoc)
         assertNull(incrementedVersion.filter)

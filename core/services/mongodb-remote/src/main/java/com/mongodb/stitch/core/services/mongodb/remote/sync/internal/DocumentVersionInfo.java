@@ -20,7 +20,6 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Data
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeDocument;
 
 import com.mongodb.stitch.core.internal.common.BsonUtils;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.DocumentSynchronizationConfig;
 
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -91,7 +90,9 @@ final class DocumentVersionInfo {
      * @return a long representing the hash code of the data in this version or null if hash
      * has not been calculated.
      */
-    Long getHash() { return hash; }
+    Long getHash() {
+      return hash;
+    }
   }
 
   private DocumentVersionInfo(
@@ -101,7 +102,7 @@ final class DocumentVersionInfo {
     if (version != null) {
       this.versionDoc = version;
 
-      BsonInt32 versionDocHash = versionDoc.getInt32(Fields.HASH_FIELD, null);
+      final BsonInt64 versionDocHash = versionDoc.getInt64(Fields.HASH_FIELD, null);
       this.version = new Version(
         versionDoc.getInt32(Fields.SYNC_PROTOCOL_VERSION_FIELD).getValue(),
         versionDoc.getString(Fields.INSTANCE_ID_FIELD).getValue(),
@@ -162,11 +163,11 @@ final class DocumentVersionInfo {
 
   /**
    * Returns the current version info for a locally synchronized document.
-   * @param docConfig the CoreDocumentSynchronizationConfig to get the version info from.
+   * @param docConfig the CoreCoreDocumentSynchronizationConfig to get the version info from.
    * @return a DocumentVersionInfo
    */
   static DocumentVersionInfo getLocalVersionInfo(
-      final DocumentSynchronizationConfig docConfig
+      final CoreDocumentSynchronizationConfig docConfig
   ) {
     return new DocumentVersionInfo(
         docConfig.getLastKnownRemoteVersion(),
@@ -205,14 +206,14 @@ final class DocumentVersionInfo {
    * @param fullDocument the full document that this version corresponds to
    * @return a BsonDocument representing a synchronization version
    */
-  static BsonDocument getFreshVersionDocument(BsonDocument fullDocument) {
+  static BsonDocument getFreshVersionDocument(final BsonDocument fullDocument) {
     final BsonDocument versionDoc = new BsonDocument();
 
     versionDoc.append(Fields.SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(1));
     versionDoc.append(Fields.INSTANCE_ID_FIELD, new BsonString(UUID.randomUUID().toString()));
     versionDoc.append(Fields.VERSION_COUNTER_FIELD, new BsonInt64(0L));
 
-    BsonDocument sanitizedDocument = sanitizeDocument(fullDocument);
+    final BsonDocument sanitizedDocument = sanitizeDocument(fullDocument);
     versionDoc.append(Fields.HASH_FIELD, new BsonInt64(HashUtils.hash(sanitizedDocument)));
 
     return versionDoc;
@@ -259,7 +260,7 @@ final class DocumentVersionInfo {
    * empty version.
    * @return a BsonDocument representing a synchronization version
    */
-  BsonDocument getNextVersion(BsonDocument localDoc) {
+  BsonDocument getNextVersion(final BsonDocument localDoc) {
     if (!this.hasVersion() || this.getVersionDoc() == null) {
       return getFreshVersionDocument(localDoc);
     }

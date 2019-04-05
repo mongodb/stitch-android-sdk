@@ -16,9 +16,6 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.mongodb.MongoNamespace;
 import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
@@ -57,6 +54,9 @@ import com.mongodb.client.result.UpdateResult;
 import com.mongodb.lang.Nullable;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -110,7 +110,7 @@ public class WriteModelContainer<DocumentT> implements Committable {
   private static class MongoCollectionFacade<DocumentT> implements MongoCollection<DocumentT> {
     private final CoreRemoteMongoCollection<DocumentT> collection;
 
-    MongoCollectionFacade(CoreRemoteMongoCollection<DocumentT> collection) {
+    MongoCollectionFacade(final CoreRemoteMongoCollection<DocumentT> collection) {
       this.collection = collection;
     }
 
@@ -145,27 +145,28 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public <NewTDocument> MongoCollection<NewTDocument> withDocumentClass(Class<NewTDocument> clazz) {
+    public <NewT> MongoCollection<NewT> withDocumentClass(
+        final Class<NewT> clazz) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public MongoCollection<DocumentT> withCodecRegistry(CodecRegistry codecRegistry) {
+    public MongoCollection<DocumentT> withCodecRegistry(final CodecRegistry codecRegistry) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public MongoCollection<DocumentT> withReadPreference(ReadPreference readPreference) {
+    public MongoCollection<DocumentT> withReadPreference(final ReadPreference readPreference) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public MongoCollection<DocumentT> withWriteConcern(WriteConcern writeConcern) {
+    public MongoCollection<DocumentT> withWriteConcern(final WriteConcern writeConcern) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public MongoCollection<DocumentT> withReadConcern(ReadConcern readConcern) {
+    public MongoCollection<DocumentT> withReadConcern(final ReadConcern readConcern) {
       throw new UnsupportedOperationException();
     }
 
@@ -175,34 +176,34 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public long count(Bson filter) {
+    public long count(final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public long count(
-        Bson filter,
-        CountOptions options) {
+        final Bson filter,
+        final CountOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long count(ClientSession clientSession) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long count(
-        ClientSession clientSession,
-        Bson filter) {
+    public long count(final ClientSession clientSession) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public long count(
-        ClientSession clientSession,
-        Bson filter,
-        CountOptions options) {
+        final ClientSession clientSession,
+        final Bson filter) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long count(
+        final ClientSession clientSession,
+        final Bson filter,
+        final CountOptions options) {
       throw new UnsupportedOperationException();
     }
 
@@ -212,34 +213,34 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public long countDocuments(Bson filter) {
+    public long countDocuments(final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public long countDocuments(
-        Bson filter,
-        CountOptions options) {
+        final Bson filter,
+        final CountOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public long countDocuments(ClientSession clientSession) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long countDocuments(
-        ClientSession clientSession,
-        Bson filter) {
+    public long countDocuments(final ClientSession clientSession) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public long countDocuments(
-        ClientSession clientSession,
-        Bson filter,
-        CountOptions options) {
+        final ClientSession clientSession,
+        final Bson filter) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long countDocuments(
+        final ClientSession clientSession,
+        final Bson filter,
+        final CountOptions options) {
       throw new UnsupportedOperationException();
     }
 
@@ -249,39 +250,39 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public long estimatedDocumentCount(EstimatedDocumentCountOptions options) {
+    public long estimatedDocumentCount(final EstimatedDocumentCountOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> DistinctIterable<TResult> distinct(
-        String fieldName,
-        Class<TResult> tResultClass) {
+    public <ResultT> DistinctIterable<ResultT> distinct(
+        final String fieldName,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> DistinctIterable<TResult> distinct(
-        String fieldName,
-        Bson filter,
-        Class<TResult> tResultClass) {
+    public <ResultT> DistinctIterable<ResultT> distinct(
+        final String fieldName,
+        final Bson filter,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> DistinctIterable<TResult> distinct(
-        ClientSession clientSession,
-        String fieldName,
-        Class<TResult> tResultClass) {
+    public <ResultT> DistinctIterable<ResultT> distinct(
+        final ClientSession clientSession,
+        final String fieldName,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> DistinctIterable<TResult> distinct(
-        ClientSession clientSession,
-        String fieldName,
-        Bson filter,
-        Class<TResult> tResultClass) {
+    public <ResultT> DistinctIterable<ResultT> distinct(
+        final ClientSession clientSession,
+        final String fieldName,
+        final Bson filter,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
@@ -291,73 +292,73 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public <TResult> FindIterable<TResult> find(Class<TResult> tResultClass) {
+    public <ResultT> FindIterable<ResultT> find(final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public FindIterable<DocumentT> find(Bson filter) {
+    public FindIterable<DocumentT> find(final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> FindIterable<TResult> find(
-        Bson filter,
-        Class<TResult> tResultClass) {
+    public <ResultT> FindIterable<ResultT> find(
+        final Bson filter,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public FindIterable<DocumentT> find(ClientSession clientSession) {
+    public FindIterable<DocumentT> find(final ClientSession clientSession) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> FindIterable<TResult> find(
-        ClientSession clientSession,
-        Class<TResult> tResultClass) {
+    public <ResultT> FindIterable<ResultT> find(
+        final ClientSession clientSession,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public FindIterable<DocumentT> find(
-        ClientSession clientSession,
-        Bson filter) {
+        final ClientSession clientSession,
+        final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> FindIterable<TResult> find(
-        ClientSession clientSession,
-        Bson filter,
-        Class<TResult> tResultClass) {
+    public <ResultT> FindIterable<ResultT> find(
+        final ClientSession clientSession,
+        final Bson filter,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public AggregateIterable<DocumentT> aggregate(List<? extends Bson> pipeline) {
+    public AggregateIterable<DocumentT> aggregate(final List<? extends Bson> pipeline) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> AggregateIterable<TResult> aggregate(
-        List<? extends Bson> pipeline,
-        Class<TResult> tResultClass) {
+    public <ResultT> AggregateIterable<ResultT> aggregate(
+        final List<? extends Bson> pipeline,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public AggregateIterable<DocumentT> aggregate(
-        ClientSession clientSession,
-        List<? extends Bson> pipeline) {
+        final ClientSession clientSession,
+        final List<? extends Bson> pipeline) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> AggregateIterable<TResult> aggregate(
-        ClientSession clientSession,
-        List<? extends Bson> pipeline,
-        Class<TResult> tResultClass) {
+    public <ResultT> AggregateIterable<ResultT> aggregate(
+        final ClientSession clientSession,
+        final List<? extends Bson> pipeline,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
@@ -367,432 +368,433 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public <TResult> ChangeStreamIterable<TResult> watch(Class<TResult> tResultClass) {
+    public <ResultT> ChangeStreamIterable<ResultT> watch(final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public ChangeStreamIterable<DocumentT> watch(List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<DocumentT> watch(final List<? extends Bson> pipeline) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> ChangeStreamIterable<TResult> watch(
-        List<? extends Bson> pipeline,
-        Class<TResult> tResultClass) {
+    public <ResultT> ChangeStreamIterable<ResultT> watch(
+        final List<? extends Bson> pipeline,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public ChangeStreamIterable<DocumentT> watch(ClientSession clientSession) {
+    public ChangeStreamIterable<DocumentT> watch(final ClientSession clientSession) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> ChangeStreamIterable<TResult> watch(
-        ClientSession clientSession,
-        Class<TResult> tResultClass) {
+    public <ResultT> ChangeStreamIterable<ResultT> watch(
+        final ClientSession clientSession,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public ChangeStreamIterable<DocumentT> watch(
-        ClientSession clientSession,
-        List<? extends Bson> pipeline) {
+        final ClientSession clientSession,
+        final List<? extends Bson> pipeline) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> ChangeStreamIterable<TResult> watch(
-        ClientSession clientSession,
-        List<? extends Bson> pipeline,
-        Class<TResult> tResultClass) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public MapReduceIterable<DocumentT> mapReduce(
-        String mapFunction,
-        String reduceFunction) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <TResult> MapReduceIterable<TResult> mapReduce(
-        String mapFunction,
-        String reduceFunction,
-        Class<TResult> tResultClass) {
+    public <ResultT> ChangeStreamIterable<ResultT> watch(
+        final ClientSession clientSession,
+        final List<? extends Bson> pipeline,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public MapReduceIterable<DocumentT> mapReduce(
-        ClientSession clientSession,
-        String mapFunction,
-        String reduceFunction) {
+        final String mapFunction,
+        final String reduceFunction) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> MapReduceIterable<TResult> mapReduce(
-        ClientSession clientSession,
-        String mapFunction,
-        String reduceFunction,
-        Class<TResult> tResultClass) {
+    public <ResultT> MapReduceIterable<ResultT> mapReduce(
+        final String mapFunction,
+        final String reduceFunction,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public BulkWriteResult bulkWrite(List<? extends WriteModel<? extends DocumentT>> requests) {
-      for (WriteModel<? extends DocumentT> write : requests) {
+    public MapReduceIterable<DocumentT> mapReduce(
+        final ClientSession clientSession,
+        final String mapFunction,
+        final String reduceFunction) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <ResultT> MapReduceIterable<ResultT> mapReduce(
+        final ClientSession clientSession,
+        final String mapFunction,
+        final String reduceFunction,
+        final Class<ResultT> resultClass) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public BulkWriteResult bulkWrite(
+        final List<? extends WriteModel<? extends DocumentT>> requests) {
+      for (final WriteModel<? extends DocumentT> write : requests) {
         if (write instanceof ReplaceOneModel) {
-          ReplaceOneModel<DocumentT> replaceModel = ((ReplaceOneModel) write);
-          RemoteUpdateResult result = this.collection.updateOne(replaceModel.getFilter(),
+          final ReplaceOneModel<DocumentT> replaceModel = ((ReplaceOneModel) write);
+          final RemoteUpdateResult result = this.collection.updateOne(replaceModel.getFilter(),
               (Bson) replaceModel.getReplacement());
         } else if (write instanceof UpdateOneModel) {
-          UpdateOneModel<DocumentT> updateModel = ((UpdateOneModel) write);
-          RemoteUpdateResult result = this.collection.updateOne(updateModel.getFilter(),
+          final UpdateOneModel<DocumentT> updateModel = ((UpdateOneModel) write);
+          final RemoteUpdateResult result = this.collection.updateOne(updateModel.getFilter(),
               updateModel.getUpdate());
         } else if (write instanceof UpdateManyModel) {
-          UpdateManyModel<DocumentT> updateModel = ((UpdateManyModel) write);
-          RemoteUpdateResult result = this.collection.updateMany(updateModel.getFilter(),
+          final UpdateManyModel<DocumentT> updateModel = ((UpdateManyModel) write);
+          final RemoteUpdateResult result = this.collection.updateMany(updateModel.getFilter(),
               updateModel.getUpdate());
         }
       }
-      return null; // no one using this result
+      return BulkWriteResult.unacknowledged(); // unused
     }
 
     @Override
     public BulkWriteResult bulkWrite(
-        List<? extends WriteModel<? extends DocumentT>> requests,
-        BulkWriteOptions options) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public BulkWriteResult bulkWrite(
-        ClientSession clientSession,
-        List<? extends WriteModel<? extends DocumentT>> requests) {
+        final List<? extends WriteModel<? extends DocumentT>> requests,
+        final BulkWriteOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public BulkWriteResult bulkWrite(
-        ClientSession clientSession,
-        List<? extends WriteModel<? extends DocumentT>> requests,
-        BulkWriteOptions options) {
+        final ClientSession clientSession,
+        final List<? extends WriteModel<? extends DocumentT>> requests) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void insertOne(DocumentT documentT) {
+    public BulkWriteResult bulkWrite(
+        final ClientSession clientSession,
+        final List<? extends WriteModel<? extends DocumentT>> requests,
+        final BulkWriteOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void insertOne(
-        DocumentT documentT,
-        InsertOneOptions options) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void insertOne(
-        ClientSession clientSession,
-        DocumentT documentT) {
+    public void insertOne(final DocumentT documentT) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void insertOne(
-        ClientSession clientSession,
-        DocumentT documentT,
-        InsertOneOptions options) {
+        final DocumentT documentT,
+        final InsertOneOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void insertMany(List<? extends DocumentT> documentTS) {
+    public void insertOne(
+        final ClientSession clientSession,
+        final DocumentT documentT) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void insertOne(
+        final ClientSession clientSession,
+        final DocumentT documentT,
+        final InsertOneOptions options) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void insertMany(final List<? extends DocumentT> documents) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void insertMany(
-        List<? extends DocumentT> documentTS,
-        InsertManyOptions options) {
+        final List<? extends DocumentT> documents,
+        final InsertManyOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void insertMany(
-        ClientSession clientSession,
-        List<? extends DocumentT> documentTS) {
+        final ClientSession clientSession,
+        final List<? extends DocumentT> documents) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void insertMany(
-        ClientSession clientSession,
-        List<? extends DocumentT> documentTS,
-        InsertManyOptions options) {
+        final ClientSession clientSession,
+        final List<? extends DocumentT> documents,
+        final InsertManyOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public DeleteResult deleteOne(Bson filter) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DeleteResult deleteOne(
-        Bson filter,
-        DeleteOptions options) {
+    public DeleteResult deleteOne(final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DeleteResult deleteOne(
-        ClientSession clientSession,
-        Bson filter) {
+        final Bson filter,
+        final DeleteOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DeleteResult deleteOne(
-        ClientSession clientSession,
-        Bson filter,
-        DeleteOptions options) {
+        final ClientSession clientSession,
+        final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public DeleteResult deleteMany(Bson filter) {
+    public DeleteResult deleteOne(
+        final ClientSession clientSession,
+        final Bson filter,
+        final DeleteOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public DeleteResult deleteMany(
-        Bson filter,
-        DeleteOptions options) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DeleteResult deleteMany(
-        ClientSession clientSession,
-        Bson filter) {
+    public DeleteResult deleteMany(final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DeleteResult deleteMany(
-        ClientSession clientSession,
-        Bson filter,
-        DeleteOptions options) {
+        final Bson filter,
+        final DeleteOptions options) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DeleteResult deleteMany(
+        final ClientSession clientSession,
+        final Bson filter) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public DeleteResult deleteMany(
+        final ClientSession clientSession,
+        final Bson filter,
+        final DeleteOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult replaceOne(
-        Bson filter,
-        DocumentT replacement) {
+        final Bson filter,
+        final DocumentT replacement) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult replaceOne(
-        Bson filter,
-        DocumentT replacement,
-        UpdateOptions updateOptions) {
+        final Bson filter,
+        final DocumentT replacement,
+        final UpdateOptions updateOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult replaceOne(
-        Bson filter,
-        DocumentT replacement,
-        ReplaceOptions replaceOptions) {
+        final Bson filter,
+        final DocumentT replacement,
+        final ReplaceOptions replaceOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult replaceOne(
-        ClientSession clientSession,
-        Bson filter,
-        DocumentT replacement) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final DocumentT replacement) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult replaceOne(
-        ClientSession clientSession,
-        Bson filter,
-        DocumentT replacement,
-        UpdateOptions updateOptions) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final DocumentT replacement,
+        final UpdateOptions updateOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult replaceOne(
-        ClientSession clientSession,
-        Bson filter,
-        DocumentT replacement,
-        ReplaceOptions replaceOptions) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final DocumentT replacement,
+        final ReplaceOptions replaceOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateOne(
-        Bson filter,
-        Bson update) {
+        final Bson filter,
+        final Bson update) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateOne(
-        Bson filter,
-        Bson update,
-        UpdateOptions updateOptions) {
+        final Bson filter,
+        final Bson update,
+        final UpdateOptions updateOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateOne(
-        ClientSession clientSession,
-        Bson filter,
-        Bson update) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final Bson update) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateOne(
-        ClientSession clientSession,
-        Bson filter,
-        Bson update,
-        UpdateOptions updateOptions) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final Bson update,
+        final UpdateOptions updateOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateMany(
-        Bson filter,
-        Bson update) {
+        final Bson filter,
+        final Bson update) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateMany(
-        Bson filter,
-        Bson update,
-        UpdateOptions updateOptions) {
+        final Bson filter,
+        final Bson update,
+        final UpdateOptions updateOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateMany(
-        ClientSession clientSession,
-        Bson filter,
-        Bson update) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final Bson update) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public UpdateResult updateMany(
-        ClientSession clientSession,
-        Bson filter,
-        Bson update,
-        UpdateOptions updateOptions) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final Bson update,
+        final UpdateOptions updateOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public DocumentT findOneAndDelete(Bson filter) {
+    public DocumentT findOneAndDelete(final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndDelete(
-        Bson filter,
-        FindOneAndDeleteOptions options) {
+        final Bson filter,
+        final FindOneAndDeleteOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndDelete(
-        ClientSession clientSession,
-        Bson filter) {
+        final ClientSession clientSession,
+        final Bson filter) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndDelete(
-        ClientSession clientSession,
-        Bson filter,
-        FindOneAndDeleteOptions options) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final FindOneAndDeleteOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndReplace(
-        Bson filter,
-        DocumentT replacement) {
+        final Bson filter,
+        final DocumentT replacement) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndReplace(
-        Bson filter,
-        DocumentT replacement,
-        FindOneAndReplaceOptions options) {
+        final Bson filter,
+        final DocumentT replacement,
+        final FindOneAndReplaceOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndReplace(
-        ClientSession clientSession,
-        Bson filter,
-        DocumentT replacement) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final DocumentT replacement) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndReplace(
-        ClientSession clientSession,
-        Bson filter,
-        DocumentT replacement,
-        FindOneAndReplaceOptions options) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final DocumentT replacement,
+        final FindOneAndReplaceOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndUpdate(
-        Bson filter,
-        Bson update) {
+        final Bson filter,
+        final Bson update) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndUpdate(
-        Bson filter,
-        Bson update,
-        FindOneAndUpdateOptions options) {
+        final Bson filter,
+        final Bson update,
+        final FindOneAndUpdateOptions options) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndUpdate(
-        ClientSession clientSession,
-        Bson filter,
-        Bson update) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final Bson update) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public DocumentT findOneAndUpdate(
-        ClientSession clientSession,
-        Bson filter,
-        Bson update,
-        FindOneAndUpdateOptions options) {
+        final ClientSession clientSession,
+        final Bson filter,
+        final Bson update,
+        final FindOneAndUpdateOptions options) {
       throw new UnsupportedOperationException();
     }
 
@@ -802,61 +804,61 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public void drop(ClientSession clientSession) {
+    public void drop(final ClientSession clientSession) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public String createIndex(Bson keys) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public String createIndex(
-        Bson keys,
-        IndexOptions indexOptions) {
+    public String createIndex(final Bson keys) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public String createIndex(
-        ClientSession clientSession,
-        Bson keys) {
+        final Bson keys,
+        final IndexOptions indexOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public String createIndex(
-        ClientSession clientSession,
-        Bson keys,
-        IndexOptions indexOptions) {
+        final ClientSession clientSession,
+        final Bson keys) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<String> createIndexes(List<IndexModel> indexes) {
+    public String createIndex(
+        final ClientSession clientSession,
+        final Bson keys,
+        final IndexOptions indexOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<String> createIndexes(
-        List<IndexModel> indexes,
-        CreateIndexOptions createIndexOptions) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<String> createIndexes(
-        ClientSession clientSession,
-        List<IndexModel> indexes) {
+    public List<String> createIndexes(final List<IndexModel> indexes) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public List<String> createIndexes(
-        ClientSession clientSession,
-        List<IndexModel> indexes,
-        CreateIndexOptions createIndexOptions) {
+        final List<IndexModel> indexes,
+        final CreateIndexOptions createIndexOptions) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<String> createIndexes(
+        final ClientSession clientSession,
+        final List<IndexModel> indexes) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<String> createIndexes(
+        final ClientSession clientSession,
+        final List<IndexModel> indexes,
+        final CreateIndexOptions createIndexOptions) {
       throw new UnsupportedOperationException();
     }
 
@@ -866,73 +868,73 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public <TResult> ListIndexesIterable<TResult> listIndexes(Class<TResult> tResultClass) {
+    public <ResultT> ListIndexesIterable<ResultT> listIndexes(final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public ListIndexesIterable<Document> listIndexes(ClientSession clientSession) {
+    public ListIndexesIterable<Document> listIndexes(final ClientSession clientSession) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <TResult> ListIndexesIterable<TResult> listIndexes(
-        ClientSession clientSession,
-        Class<TResult> tResultClass) {
+    public <ResultT> ListIndexesIterable<ResultT> listIndexes(
+        final ClientSession clientSession,
+        final Class<ResultT> resultClass) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void dropIndex(String indexName) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void dropIndex(
-        String indexName,
-        DropIndexOptions dropIndexOptions) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void dropIndex(Bson keys) {
+    public void dropIndex(final String indexName) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void dropIndex(
-        Bson keys,
-        DropIndexOptions dropIndexOptions) {
+        final String indexName,
+        final DropIndexOptions dropIndexOptions) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void dropIndex(final Bson keys) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void dropIndex(
-        ClientSession clientSession,
-        String indexName) {
+        final Bson keys,
+        final DropIndexOptions dropIndexOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void dropIndex(
-        ClientSession clientSession,
-        Bson keys) {
+        final ClientSession clientSession,
+        final String indexName) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void dropIndex(
-        ClientSession clientSession,
-        String indexName,
-        DropIndexOptions dropIndexOptions) {
+        final ClientSession clientSession,
+        final Bson keys) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void dropIndex(
-        ClientSession clientSession,
-        Bson keys,
-        DropIndexOptions dropIndexOptions) {
+        final ClientSession clientSession,
+        final String indexName,
+        final DropIndexOptions dropIndexOptions) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void dropIndex(
+        final ClientSession clientSession,
+        final Bson keys,
+        final DropIndexOptions dropIndexOptions) {
       throw new UnsupportedOperationException();
     }
 
@@ -942,46 +944,46 @@ public class WriteModelContainer<DocumentT> implements Committable {
     }
 
     @Override
-    public void dropIndexes(ClientSession clientSession) {
+    public void dropIndexes(final ClientSession clientSession) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void dropIndexes(DropIndexOptions dropIndexOptions) {
+    public void dropIndexes(final DropIndexOptions dropIndexOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void dropIndexes(
-        ClientSession clientSession,
-        DropIndexOptions dropIndexOptions) {
+        final ClientSession clientSession,
+        final DropIndexOptions dropIndexOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public void renameCollection(MongoNamespace newCollectionNamespace) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void renameCollection(
-        MongoNamespace newCollectionNamespace,
-        RenameCollectionOptions renameCollectionOptions) {
+    public void renameCollection(final MongoNamespace newCollectionNamespace) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void renameCollection(
-        ClientSession clientSession,
-        MongoNamespace newCollectionNamespace) {
+        final MongoNamespace newCollectionNamespace,
+        final RenameCollectionOptions renameCollectionOptions) {
       throw new UnsupportedOperationException();
     }
 
     @Override
     public void renameCollection(
-        ClientSession clientSession,
-        MongoNamespace newCollectionNamespace,
-        RenameCollectionOptions renameCollectionOptions) {
+        final ClientSession clientSession,
+        final MongoNamespace newCollectionNamespace) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void renameCollection(
+        final ClientSession clientSession,
+        final MongoNamespace newCollectionNamespace,
+        final RenameCollectionOptions renameCollectionOptions) {
       throw new UnsupportedOperationException();
     }
   }

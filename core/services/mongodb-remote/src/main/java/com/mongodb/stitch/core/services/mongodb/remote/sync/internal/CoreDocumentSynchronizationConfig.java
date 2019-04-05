@@ -23,7 +23,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.DocumentSynchronizationConfig;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -50,10 +49,10 @@ import org.bson.codecs.EncoderContext;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 
-class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig {
+class CoreDocumentSynchronizationConfig {
   private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
-  private final MongoCollection<DocumentSynchronizationConfig> docsColl;
+  private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;
   private final BsonValue documentId;
   private final ReadWriteLock docLock;
@@ -65,7 +64,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   private boolean isPaused;
 
   CoreDocumentSynchronizationConfig(
-      final MongoCollection<DocumentSynchronizationConfig> docsColl,
+      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
       final BsonValue documentId
   ) {
@@ -74,8 +73,8 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   }
 
   CoreDocumentSynchronizationConfig(
-      final MongoCollection<DocumentSynchronizationConfig> docsColl,
-      final DocumentSynchronizationConfig config
+      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
+      final CoreDocumentSynchronizationConfig config
   ) {
     this(docsColl, config.getNamespace(), config.getDocumentId(),
          config.getLastUncommittedChangeEvent(), config.getLastResolution(),
@@ -83,7 +82,7 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   }
 
   private CoreDocumentSynchronizationConfig(
-      final MongoCollection<DocumentSynchronizationConfig> docsColl,
+      final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final MongoNamespace namespace,
       final BsonValue documentId,
       final ChangeEvent<BsonDocument> lastUncommittedChangeEvent,
@@ -187,16 +186,16 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
       final long atTime,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
-    // if we were frozen
-    if (isPaused) {
-      // unfreeze the document due to the local write
-      setPaused(false);
-      // and now the unfrozen document is now stale
-      setStale(true);
-    }
-
     docLock.writeLock().lock();
     try {
+      // if we were frozen
+      if (isPaused) {
+        // unfreeze the document due to the local write
+        setPaused(false);
+        // and now the unfrozen document is now stale
+        setStale(true);
+      }
+
       this.lastUncommittedChangeEvent =
           coalesceChangeEvents(this.lastUncommittedChangeEvent, changeEvent);
       this.lastResolution = atTime;
@@ -216,15 +215,14 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  @Override
   public void setSomePendingWritesAndSave(
       final long atTime,
       final BsonDocument atVersion,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
     docLock.writeLock().lock();
-    this.setSomePendingWrites(atTime, atVersion, changeEvent);
     try {
+      this.setSomePendingWrites(atTime, atVersion, changeEvent);
       docsColl.replaceOne(
           getDocFilter(namespace, documentId),
           this);
@@ -241,7 +239,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  @Override
   public void setSomePendingWrites(
       final long atTime,
       final BsonDocument atVersion,
@@ -257,7 +254,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  @Override
   public void setPendingWritesComplete(final BsonDocument atVersion) {
     docLock.writeLock().lock();
     try {
@@ -269,7 +265,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   }
 
   // Equality on documentId
-  @Override
   public boolean equals(final Object object) {
     docLock.readLock().lock();
     try {
@@ -287,7 +282,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   }
 
   // Hash on documentId
-  @Override
   public int hashCode() {
     docLock.readLock().lock();
     try {
@@ -298,7 +292,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  @Override
   public BsonValue getDocumentId() {
     docLock.readLock().lock();
     try {
@@ -308,7 +301,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  @Override
   public MongoNamespace getNamespace() {
     docLock.readLock().lock();
     try {
@@ -318,7 +310,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  @Override
   public boolean hasUncommittedWrites() {
     docLock.readLock().lock();
     try {
@@ -328,7 +319,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  @Override
   public ChangeEvent<BsonDocument> getLastUncommittedChangeEvent() {
     docLock.readLock().lock();
     try {
@@ -338,7 +328,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  @Override
   public long getLastResolution() {
     docLock.readLock().lock();
     try {
@@ -348,7 +337,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     }
   }
 
-  @Override
   public BsonDocument getLastKnownRemoteVersion() {
     docLock.readLock().lock();
     try {
@@ -419,7 +407,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
     return newestChangeEvent;
   }
 
-  @Override
   public ReadWriteLock getLock() {
     return docLock;
   }
@@ -507,8 +494,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
   static final ConfigCodec configCodec = new ConfigCodec();
 
   static final class ConfigCodec implements Codec<CoreDocumentSynchronizationConfig> {
-
-    @Override
     public CoreDocumentSynchronizationConfig decode(
         final BsonReader reader,
         final DecoderContext decoderContext
@@ -517,7 +502,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
       return fromBsonDocument(document);
     }
 
-    @Override
     public void encode(
         final BsonWriter writer,
         final CoreDocumentSynchronizationConfig value,
@@ -526,7 +510,6 @@ class CoreDocumentSynchronizationConfig implements DocumentSynchronizationConfig
       new BsonDocumentCodec().encode(writer, value.toBsonDocument(), encoderContext);
     }
 
-    @Override
     public Class<CoreDocumentSynchronizationConfig> getEncoderClass() {
       return CoreDocumentSynchronizationConfig.class;
     }
