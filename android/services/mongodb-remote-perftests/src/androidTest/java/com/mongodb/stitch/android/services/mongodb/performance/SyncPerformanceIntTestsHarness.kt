@@ -66,7 +66,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     private val stitchOutputCollName = "results"
 
     internal val stitchTestDbName = "performance"
-    internal val stitchTestCollName = "rawTestColl"
+    internal val stitchTestCollName = "rawTestCollAndroid"
     internal var stitchTestHost = ""
 
     private val transport by lazy { OkHttpInstrumentedTransport() }
@@ -106,7 +106,12 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
         outputClient = when (Stitch.hasAppClient(stitchOutputAppName)) {
             true -> Stitch.getAppClient(stitchOutputAppName)
-            false -> Stitch.initializeAppClient(stitchOutputAppName)
+            false -> Stitch.initializeAppClient(
+                    stitchOutputAppName,
+                    StitchAppClientConfiguration.Builder()
+                            .withNetworkMonitor(testNetworkMonitor)
+                            .build()
+            )
         }
 
         if (!outputClient.auth.isLoggedIn) {
@@ -172,13 +177,20 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                     if (testParams.outputToStitch) {
                         val filterDocument = Document("_id", resultId)
                         val updateDocument = Document()
-                            .append("\$push", Document("results", runResult.asBson.toJson()))
+                            .append("\$push", Document("results", runResult.asBson))
+                            .append("\$set", Document("status", "Success"))
                         Tasks.await(outputColl.updateOne(filterDocument, updateDocument))
                     }
                 }
             }
         } catch (e: Exception) {
-            Tasks.await(outputColl.deleteOne(Document("_id", resultId)))
+            Tasks.await(outputColl.updateOne(
+                    Document("_id", resultId),
+                    Document("\$set", Document()
+                            .append("status", "Failure")
+                            .append("exception", e.localizedMessage)
+                            .append("stacktrace", e.stackTrace.map { it.toString() }))
+            ))
             throw e
         }
     }
