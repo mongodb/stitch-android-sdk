@@ -9,11 +9,37 @@ import kotlin.random.Random
  */
 class SyncPerformanceTestUtils {
     companion object {
-        private const val stitchHostnameProp = "test.stitch.androidPerfStitchHostname"
-        private const val defaultStitchHostname = "https://stitch.mongodb.com"
+        public const val STITCH_PROD_HOST = "https://stitch.mongodb.com"
 
-        private const val itersProp = "test.stitch.androidPerfIters"
-        private const val defaultIters = "3"
+        private const val stitchHostnameProp = "test.stitch.perf.stitchHost"
+        private const val defaultStitchHostname = "http://10.0.2.2:9090"
+
+        private const val itersProp = "test.stitch.perf.iters"
+        private const val defaultIters = "5"
+
+        private const val hostnameProp = "test.stitch.perf.hostname"
+        private const val defaultHostname = "Local"
+
+        private const val docSizesProp = "test.stitch.perf.docSizes"
+        private const val defaultDocSizes = "1024,2048,5120,10240,25600,51200,102400"
+
+        private const val numDocsProp = "test.stitch.perf.numDocs"
+        private const val defaultNumDocs = "100,500,1000,5000,10000,25000"
+
+        private const val dataGranularityProp = "test.stitch.perf.dataGranularity"
+        private const val defaultDataGranularity = "1000"
+
+        private const val numOutliersProp = "test.stitch.perf.outliers"
+        private const val defaultNumOutliers = "0"
+
+        private const val outputToStdOutProp = "test.stitch.perf.outputStdout"
+        private const val defaultOutputToStdOut = "true"
+
+        private const val outputToStitchProp = "test.stitch.perf.outputStitch"
+        private const val defaultOutputToStitch = "true"
+
+        private const val preserveRawOutputProp = "test.stitch.perf.rawOutput"
+        private const val defaultPreserveRawOutput = "false"
 
         internal fun getConfiguredStitchHostname(): String {
             return InstrumentationRegistry.getArguments().getString(
@@ -21,10 +47,51 @@ class SyncPerformanceTestUtils {
             )
         }
 
+        internal fun getConfiguredHostname(): String {
+            return InstrumentationRegistry.getArguments().getString(hostnameProp, defaultHostname)
+        }
+
         internal fun getConfiguredIters(): Int {
             return Integer.parseInt(InstrumentationRegistry.getArguments().getString(
                     itersProp, defaultIters
             ))
+        }
+
+        internal fun getConfiguredDocSizes(): IntArray {
+            return InstrumentationRegistry.getArguments().getString(docSizesProp, defaultDocSizes)
+                .split(",").map { Integer.parseInt(it) }.toIntArray()
+        }
+
+        internal fun getConfiguredNumDocs(): IntArray {
+            return InstrumentationRegistry.getArguments().getString(numDocsProp, defaultNumDocs)
+                .split(",").map { Integer.parseInt(it) }.toIntArray()
+        }
+
+        internal fun getConfiguredDataGranularity(): Long {
+            return Integer.parseInt(InstrumentationRegistry.getArguments().getString(
+                dataGranularityProp, defaultDataGranularity
+            )).toLong()
+        }
+
+        internal fun getConfiguredNumOutliers(): Int {
+            return Integer.parseInt(InstrumentationRegistry.getArguments().getString(
+                numOutliersProp, defaultNumOutliers
+            ))
+        }
+
+        internal fun getConfigureOutputToStdOut(): Boolean {
+            return InstrumentationRegistry.getArguments().getString(
+                outputToStdOutProp, defaultOutputToStdOut)!!.toBoolean()
+        }
+
+        internal fun getConfigureOutputToStitch(): Boolean {
+            return InstrumentationRegistry.getArguments().getString(
+                outputToStitchProp, defaultOutputToStitch)!!.toBoolean()
+        }
+
+        internal fun getConfigurePreserveRawOutput(): Boolean {
+            return InstrumentationRegistry.getArguments().getString(
+                preserveRawOutputProp, defaultPreserveRawOutput)!!.toBoolean()
         }
 
         internal fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {

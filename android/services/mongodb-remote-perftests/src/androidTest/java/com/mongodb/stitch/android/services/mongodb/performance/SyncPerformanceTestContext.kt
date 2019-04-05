@@ -2,131 +2,45 @@ package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.os.Environment
 import android.os.StatFs
-import android.util.Log
-import com.google.android.gms.tasks.Tasks
+
 import com.mongodb.MongoNamespace
 import com.mongodb.stitch.android.core.StitchAppClient
-import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
-import com.mongodb.stitch.core.admin.Apps
-import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
-import com.mongodb.stitch.core.admin.services.ServiceConfigs
-import com.mongodb.stitch.core.admin.services.rules.RuleCreator
-import com.mongodb.stitch.core.admin.services.rules.RuleResponse
-import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
-import com.mongodb.stitch.core.auth.providers.userapikey.UserApiKeyCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer
 import com.mongodb.stitch.core.testutils.BaseStitchIntTest
 import java.util.Date
 import org.bson.Document
 import org.bson.types.ObjectId
 
-class SyncPerformanceTestContext(
+open abstract class SyncPerformanceTestContext(
     private val harness: SyncPerformanceIntTestsHarness,
     private val testParams: TestParams,
     private val transport: OkHttpInstrumentedTransport
 ) {
     // Public variables
-    lateinit var testClient: StitchAppClient
-        private set
-    var testDbName: String = ObjectId().toHexString()
-        private set
-    var testCollName: String = ObjectId().toHexString()
-        private set
-    var testNamespace = MongoNamespace(testDbName, testCollName)
-        private set
-    lateinit var testMongoClient: RemoteMongoClient
-        private set
-    lateinit var testColl: RemoteMongoCollection<Document>
-        private set
-    lateinit var testUserId: String
-        private set
-
-    val testDataSynchronizer: DataSynchronizer
-        get() = (testMongoClient as RemoteMongoClientImpl).dataSynchronizer
+    protected var testDbName: String = ObjectId().toHexString()
+    protected var testCollName: String = ObjectId().toHexString()
+    protected var testNamespace = MongoNamespace(testDbName, testCollName)
     val testNetworkMonitor: BaseStitchIntTest.TestNetworkMonitor
         get() = BaseStitchAndroidIntTest.testNetworkMonitor
-    lateinit var mdbService: Apps.App.Services.Service
-        private set
-    lateinit var mdbRule: RuleResponse
-        private set
+
+    open lateinit var testClient: StitchAppClient
+    open lateinit var testMongoClient: RemoteMongoClient
+    open lateinit var testColl: RemoteMongoCollection<Document>
+    open lateinit var testUserId: String
+    val testDataSynchronizer: DataSynchronizer
+        get() = (testMongoClient as RemoteMongoClientImpl).dataSynchronizer
 
     companion object {
         val TAG = SyncPerformanceTestContext::class.java.simpleName
     }
 
-    fun setup() {
-        if (harness.getStitchBaseURL() == "https://stitch.mongodb.com") {
-            testDbName = harness.stitchTestDbName
-            testCollName = harness.stitchTestCollName
-            testColl = harness.outputClient
-                .getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
-                .getDatabase(testDbName)
-                .getCollection(testCollName)
-            testClient = harness.outputClient
-            testMongoClient = harness.outputMongoClient
-
-            if (!harness.outputClient.auth.isLoggedIn) {
-                testUserId = Tasks.await(
-                    harness.outputClient.auth.loginWithCredential(
-                        UserApiKeyCredential(harness.getStitchAPIKey()))).id
-            } else {
-                testUserId = harness.outputClient.auth.user!!.id
-            }
-
-            deleteTestCollection(testClient)
-        } else {
-            val app = harness.createApp()
-            harness.addProvider(app.second, ProviderConfigs.Anon)
-            mdbService = harness.addService(
-                app.second,
-                "mongodb",
-                "mongodb1",
-                ServiceConfigs.Mongo(harness.getMongoDbUri())).second
-            testDbName = ObjectId().toHexString()
-            testCollName = ObjectId().toHexString()
-            testNamespace = MongoNamespace(testDbName, testCollName)
-
-            val rule = RuleCreator.MongoDb(
-                database = testDbName,
-                collection = testCollName,
-                roles = listOf(RuleCreator.MongoDb.Role(
-                    read = true, write = true
-                )),
-                schema = RuleCreator.MongoDb.Schema())
-
-            mdbRule = harness.addRule(mdbService, rule)
-
-            testClient = harness.getAppClient(app.first)
-            testUserId = Tasks.await(testClient.auth.loginWithCredential(AnonymousCredential())).id
-            testMongoClient = testClient.getServiceClient(RemoteMongoClient.factory, "mongodb1")
-            testColl = testMongoClient.getDatabase(testDbName).getCollection(testCollName)
-        }
-
-        (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.stop()
-        (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.disableSyncThread()
-        BaseStitchAndroidIntTest.testNetworkMonitor.connectedState = true
-    }
-
-    fun teardown() {
-        val syncedIds = Tasks.await(testColl.sync().syncedIds)
-        Tasks.await(testColl.sync().desyncMany(*syncedIds.toTypedArray()))
-
-        if (harness.getStitchBaseURL() == "https://stitch.mongodb.com") {
-            deleteTestCollection(testClient)
-        } else {
-            Tasks.await(testColl.deleteMany(Document()))
-
-            if (::testMongoClient.isInitialized) {
-                (testMongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
-                AndroidEmbeddedMongoClientFactory.getInstance().close()
-            }
-        }
-    }
+    abstract fun setup()
+    abstract fun teardown()
 
     private val runtime by lazy { Runtime.getRuntime() }
 
@@ -160,12 +74,11 @@ class SyncPerformanceTestContext(
 
         val job = generateMemoryAndThreadData(partialResult)
         job.start()
+
         // Get the before values for necessary metrics
-        val statsBefore = StatFs(Environment.getExternalStorageDirectory().getAbsolutePath())
-        val memFreeBefore = statsBefore.freeBlocksLong * statsBefore.blockSizeLong
+        val memFreeBeforeData = StatFs(Environment.getDataDirectory().path).freeBytes
         val networkSentBefore = transport.bytesUploaded
         val networkReceivedBefore = transport.bytesDownloaded
-        // Measure the execution runTimes of running the given block of code
         val timeBefore = Date().time
 
         testDefinition(this@SyncPerformanceTestContext, numDocs, docSize)
@@ -175,37 +88,12 @@ class SyncPerformanceTestContext(
 
         // Add metrics
         partialResult.timeTaken = (Date().time - timeBefore).toDouble()
-        val statsAfter = StatFs(Environment.getExternalStorageDirectory().absolutePath)
-        val memFreeAfter = statsAfter.freeBlocksLong * statsAfter.blockSizeLong
-        partialResult.diskUsage = (memFreeBefore - memFreeAfter).toDouble()
+        val memFreeAfterData = StatFs(Environment.getDataDirectory().path).freeBytes
+        partialResult.diskUsage = (memFreeBeforeData - memFreeAfterData).toDouble()
         partialResult.networkSent = (transport.bytesUploaded - networkSentBefore).toDouble()
         partialResult.networkReceived = (transport.bytesDownloaded - networkReceivedBefore)
             .toDouble()
 
         return partialResult
-    }
-
-    private fun deleteTestCollection(testClient: StitchAppClient) {
-        // This is a workaround for the fact that deleteMany will time out when trying to delete
-        // over 2500 documents at a time. Ideally we'd drop the collection, but it's currently not
-        // possible directly via Stitch
-
-        // we're testing up to 25K docs, and we can delete 2500-3000 per pass,
-        val maxRetries = 15
-
-        for (i in 0..maxRetries) {
-            try {
-                Tasks.await(testClient.callFunction(
-                    "deleteAllAsSystemUser", arrayListOf<String>())
-                )
-                break
-            } catch (e: Exception) {
-                if (i < maxRetries) {
-                    Log.i(TAG, "Error deleting all documents: ${e.localizedMessage}, retrying")
-                } else {
-                    Log.e(TAG, "Error deleting all documents: ${e.localizedMessage}, no more retries")
-                }
-            }
-        }
     }
 }
