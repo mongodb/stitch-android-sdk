@@ -6,17 +6,17 @@ ext.pomDisplayName = "Core SDK"
 
 buildscript {
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
 dependencies {
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.7'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
     implementation 'com.squareup.okhttp3:okhttp:3.11.0'
 
     api 'com.google.code.findbugs:jsr305:3.0.2'
-    api 'org.mongodb:bson:3.9.0'
+    api 'org.mongodb:bson:3.10.1'
 
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     testImplementation project(':core:stitch-core-testutils')
