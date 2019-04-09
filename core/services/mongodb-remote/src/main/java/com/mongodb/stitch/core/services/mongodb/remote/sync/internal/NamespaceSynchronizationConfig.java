@@ -53,7 +53,7 @@ import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
 
-class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSynchronizationConfig> {
+public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSynchronizationConfig> {
   private final MongoCollection<NamespaceSynchronizationConfig> namespacesColl;
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
   private final MongoNamespace namespace;

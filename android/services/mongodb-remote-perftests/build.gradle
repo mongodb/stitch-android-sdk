@@ -1,0 +1,60 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'digital.wup.android-maven-publish'
+apply plugin: 'jacoco-android'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'kotlin-android-extensions'
+
+buildscript {
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.3.0'
+        classpath 'digital.wup:android-maven-publish:3.6.2'
+        classpath 'com.dicedmelon.gradle:jacoco-android:0.1.4'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+    }
+}
+
+android {
+    compileSdkVersion target_api
+    defaultConfig {
+        minSdkVersion 24
+        targetSdkVersion target_api
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        Properties properties = new Properties()
+        File file = project.rootProject.file('local.properties')
+        if (file.exists()) {
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        }
+        if (!properties.getProperty("test.stitch.androidPerfStitchAPIKey", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfStitchAPIKey", properties.getProperty("test.stitch.androidPerfStitchAPIKey", "")
+        }
+        if (!properties.getProperty("test.stitch.androidPerfStitchHostname", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfStitchHostname", properties.getProperty("test.stitch.androidPerfStitchHostname", "")
+        }
+        if (!properties.getProperty("test.stitch.androidPerfIters", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfIters", properties.getProperty("test.stitch.androidPerfIters", "")
+        }
+
+        testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
+    }
+}
+
+dependencies {
+    api project(':core:stitch-core-sdk')
+    api project(':android:android-services:stitch-android-services-mongodb-remote')
+
+    implementation 'com.squareup.okhttp3:okhttp:3.11.0'
+
+    api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1"
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation "org.mockito:mockito-core:2.18.3"
+
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation project(':android:stitch-android-testutils')
+}

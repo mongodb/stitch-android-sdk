@@ -12,6 +12,8 @@ import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.authProviders.authProvider
 import com.mongodb.stitch.core.admin.create
 import com.mongodb.stitch.core.admin.enable
+import com.mongodb.stitch.core.admin.functions.FunctionCreator
+import com.mongodb.stitch.core.admin.functions.FunctionResponse
 import com.mongodb.stitch.core.admin.list
 import com.mongodb.stitch.core.admin.remove
 import com.mongodb.stitch.core.admin.services.ServiceConfigWrapper
@@ -125,5 +127,9 @@ abstract class BaseStitchIntTest {
 
     fun addRule(svc: Service, config: RuleCreator): RuleResponse {
         return svc.rules.create(data = config)
+    }
+
+    fun addFunction(app: App, data: FunctionCreator): FunctionResponse {
+        return app.functions.create(data)
     }
 }

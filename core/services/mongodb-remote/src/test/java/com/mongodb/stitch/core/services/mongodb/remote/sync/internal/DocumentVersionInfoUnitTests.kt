@@ -17,7 +17,7 @@ class DocumentVersionInfoUnitTests {
         assertNull(emptyVersion.versionDoc)
         assertNull(emptyVersion.filter)
 
-        val localDoc = BsonDocument().append("_id", BsonObjectId());
+        val localDoc = BsonDocument().append("_id", BsonObjectId())
 
         // the next version from an empty version should be a non-empty version with a version
         // counter of zero.

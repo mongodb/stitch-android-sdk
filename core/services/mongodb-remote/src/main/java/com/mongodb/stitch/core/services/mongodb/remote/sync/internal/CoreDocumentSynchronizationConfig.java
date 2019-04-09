@@ -49,7 +49,7 @@ import org.bson.codecs.EncoderContext;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.OutputBuffer;
 
-class CoreDocumentSynchronizationConfig {
+public class CoreDocumentSynchronizationConfig {
   private static final Codec<BsonDocument> BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
   private final MongoCollection<CoreDocumentSynchronizationConfig> docsColl;
@@ -76,9 +76,9 @@ class CoreDocumentSynchronizationConfig {
       final MongoCollection<CoreDocumentSynchronizationConfig> docsColl,
       final CoreDocumentSynchronizationConfig config
   ) {
-    this(docsColl, config.getNamespace(), config.getDocumentId(),
-         config.getLastUncommittedChangeEvent(), config.getLastResolution(),
-         config.getLastKnownRemoteVersion(), config.getLock(), config.isStale(), config.isPaused());
+    this(docsColl, config.namespace, config.documentId, config.lastUncommittedChangeEvent,
+        config.lastResolution, config.lastKnownRemoteVersion, config.docLock, config.isStale,
+        config.isPaused);
   }
 
   private CoreDocumentSynchronizationConfig(

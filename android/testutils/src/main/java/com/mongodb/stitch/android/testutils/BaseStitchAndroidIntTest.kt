@@ -42,15 +42,19 @@ open class BaseStitchAndroidIntTest : BaseStitchIntTest() {
         )
     }
 
+    open fun getAppClientConfigurationBuilder(): StitchAppClientConfiguration.Builder {
+        return StitchAppClientConfiguration.Builder()
+            .withBaseUrl(getStitchBaseURL())
+            .withNetworkMonitor(testNetworkMonitor)
+    }
+
     fun getAppClient(app: AppResponse): StitchAppClient {
         if (Stitch.hasAppClient(app.clientAppId)) {
             return Stitch.getAppClient(app.clientAppId)
         }
         val client = Stitch.initializeAppClient(
                 app.clientAppId,
-                StitchAppClientConfiguration.Builder()
-                        .withBaseUrl(getStitchBaseURL())
-                        .withNetworkMonitor(testNetworkMonitor).build())
+                getAppClientConfigurationBuilder().build())
         clients.add(client)
         return client
     }

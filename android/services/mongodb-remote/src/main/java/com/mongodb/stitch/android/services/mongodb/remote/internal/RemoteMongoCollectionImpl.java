@@ -28,6 +28,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
@@ -139,6 +141,107 @@ public final class RemoteMongoCollectionImpl<DocumentT>
       }
     });
   }
+
+
+  /**
+   * Finds a document in the collection
+   *
+   * @return  a task containing the result of the find one operation
+   */
+  public Task<DocumentT> findOne() {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOne();
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type
+   * @return a task containing the result of the find one operation
+   */
+  public <ResultT> Task<ResultT> findOne(final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOne(resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @return  a task containing the result of the find one operation
+   */
+  public Task<DocumentT> findOne(final Bson filter) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOne(filter);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  public <ResultT> Task<ResultT> findOne(final Bson filter, final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOne(filter, resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOptions struct
+   * @return  a task containing the result of the find one operation
+   */
+  public Task<DocumentT> findOne(final Bson filter, final RemoteFindOptions options) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOne(filter, options);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return  a task containing the result of the find one operation
+   */
+  public <ResultT> Task<ResultT> findOne(
+          final Bson filter,
+          final RemoteFindOptions options,
+          final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOne(filter, options, resultClass);
+      }
+    });
+  }
+
 
   /**
    * Finds all documents in the collection.
@@ -339,14 +442,241 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the update many operation
    */
   public Task<RemoteUpdateResult> updateMany(
-      final Bson filter,
-      final Bson update,
-      final RemoteUpdateOptions updateOptions
+          final Bson filter,
+          final Bson update,
+          final RemoteUpdateOptions updateOptions
   ) {
     return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
       @Override
       public RemoteUpdateResult call() {
         return proxy.updateMany(filter, update, updateOptions);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @param update the update document
+   * @return a task containing the resulting document
+   */
+  public Task<DocumentT> findOneAndUpdate(final Bson filter, final Bson update) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOneAndUpdate(filter, update);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param update      the update document
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  public <ResultT> Task<ResultT> findOneAndUpdate(final Bson filter,
+                                                  final Bson update,
+                                                  final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOneAndUpdate(filter, update, resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter the query filter
+   * @param update the update document
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return a task containing the resulting document
+   */
+  public Task<DocumentT> findOneAndUpdate(final Bson filter,
+                                          final Bson update,
+                                          final RemoteFindOneAndModifyOptions options) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOneAndUpdate(filter, update, options);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and performs the given update.
+   *
+   * @param filter      the query filter
+   * @param update      the update document
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  public <ResultT> Task<ResultT> findOneAndUpdate(
+          final Bson filter,
+          final Bson update,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOneAndUpdate(filter, update, options, resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @return a task containing the resulting document
+   */
+  public Task<DocumentT> findOneAndReplace(final Bson filter, final Bson replacement) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOneAndReplace(filter, replacement);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  public <ResultT> Task<ResultT> findOneAndReplace(final Bson filter,
+                                                   final Bson replacement,
+                                                   final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOneAndReplace(filter, replacement, resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return a task containing the resulting document
+   */
+  public Task<DocumentT> findOneAndReplace(final Bson filter,
+                                           final Bson replacement,
+                                           final RemoteFindOneAndModifyOptions options) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOneAndReplace(filter, replacement, options);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and replaces it with the given document
+   *
+   * @param filter the query filter
+   * @param replacement the document to replace the matched document with
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  public <ResultT> Task<ResultT> findOneAndReplace(
+          final Bson filter,
+          final Bson replacement,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOneAndReplace(filter, replacement, options, resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter the query filter
+   * @return a task containing the resulting document
+   */
+  public Task<DocumentT> findOneAndDelete(final Bson filter) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOneAndDelete(filter);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter      the query filter
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  public <ResultT> Task<ResultT> findOneAndDelete(final Bson filter,
+                                                  final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOneAndDelete(filter, resultClass);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter the query filter
+   * @param options A RemoteFindOneAndModifyOptions struct
+   * @return a task containing the resulting document
+   */
+  public Task<DocumentT> findOneAndDelete(final Bson filter,
+                                          final RemoteFindOneAndModifyOptions options) {
+    return dispatcher.dispatchTask(new Callable<DocumentT>() {
+      @Override
+      public DocumentT call() {
+        return proxy.findOneAndDelete(filter, options);
+      }
+    });
+  }
+
+  /**
+   * Finds a document in the collection and delete it.
+   *
+   * @param filter      the query filter
+   * @param options     A RemoteFindOneAndModifyOptions struct
+   * @param resultClass the class to decode each document into
+   * @param <ResultT>   the target document type of the iterable.
+   * @return a task containing the resulting document
+   */
+  public <ResultT> Task<ResultT> findOneAndDelete(
+          final Bson filter,
+          final RemoteFindOneAndModifyOptions options,
+          final Class<ResultT> resultClass) {
+    return dispatcher.dispatchTask(new Callable<ResultT>() {
+      @Override
+      public ResultT call() {
+        return proxy.findOneAndDelete(filter, options, resultClass);
       }
     });
   }

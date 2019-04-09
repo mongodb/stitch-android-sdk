@@ -382,26 +382,26 @@ class SyncUnitTestHarness : Closeable {
                 dataSynchronizer.disableListeners()
 
                 dataSynchronizer.stop()
-
-                Mockito.`when`(service.streamFunction(
-                    ArgumentMatchers.anyString(),
-                    ArgumentMatchers.anyList<Any>(),
-                    ArgumentMatchers.eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
-                ).thenReturn(streamMock)
-
-                val databaseSpy = Mockito.mock(CoreRemoteMongoDatabaseImpl::class.java)
-                Mockito.`when`(remoteClient.getDatabase(ArgumentMatchers.eq(namespace.databaseName))).thenReturn(databaseSpy)
-                Mockito.`when`(
-                    databaseSpy.getCollection(ArgumentMatchers.eq(namespace.collectionName),
-                        ArgumentMatchers.eq(BsonDocument::class.java))).thenReturn(collectionMock)
-
-                Mockito.`when`(collectionMock.namespace).thenReturn(namespace)
-                val remoteFindIterable = Mockito.mock(CoreRemoteFindIterable::class.java) as CoreRemoteFindIterable<BsonDocument>
-                Mockito.`when`(collectionMock.find(ArgumentMatchers.any())).thenReturn(remoteFindIterable)
-                Mockito.`when`(remoteFindIterable.into<HashSet<BsonDocument>>(ArgumentMatchers.any())).thenReturn(HashSet())
-
-                Mockito.verifyZeroInteractions(collectionMock)
             }
+
+            Mockito.`when`(service.streamFunction(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyList<Any>(),
+                ArgumentMatchers.eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
+            ).thenReturn(streamMock)
+
+            val databaseSpy = Mockito.mock(CoreRemoteMongoDatabaseImpl::class.java)
+            Mockito.`when`(remoteClient.getDatabase(ArgumentMatchers.eq(namespace.databaseName))).thenReturn(databaseSpy)
+            Mockito.`when`(
+                databaseSpy.getCollection(ArgumentMatchers.eq(namespace.collectionName),
+                    ArgumentMatchers.eq(BsonDocument::class.java))).thenReturn(collectionMock)
+
+            Mockito.`when`(collectionMock.namespace).thenReturn(namespace)
+            val remoteFindIterable = Mockito.mock(CoreRemoteFindIterable::class.java) as CoreRemoteFindIterable<BsonDocument>
+            Mockito.`when`(collectionMock.find(ArgumentMatchers.any())).thenReturn(remoteFindIterable)
+            Mockito.`when`(remoteFindIterable.into<HashSet<BsonDocument>>(ArgumentMatchers.any())).thenReturn(HashSet())
+
+            Mockito.verifyZeroInteractions(collectionMock)
         }
 
         /**
@@ -586,6 +586,15 @@ class SyncUnitTestHarness : Closeable {
                 CodecRegistries.fromCodecs(bsonDocumentCodec)).firstOrNull()
         }
 
+        override fun findTestNamespaceConfig(): NamespaceSynchronizationConfig? {
+            return dataSynchronizer.syncConfig.getNamespaceConfig(namespace)
+        }
+
+        override fun findTestDocumentConfig(): CoreDocumentSynchronizationConfig? {
+            return dataSynchronizer.syncConfig.getNamespaceConfig(namespace).docsColl.find(
+                    BsonDocument("document_id", testDocumentId)).firstOrNull()
+        }
+
         override fun verifyChangeEventListenerCalledForActiveDoc(
             times: Int,
             vararg expectedChangeEvents: ChangeEvent<BsonDocument>
@@ -711,6 +720,12 @@ class SyncUnitTestHarness : Closeable {
     private var latestCtx: DataSynchronizerTestContext? = null
 
     override fun close() {
+        latestCtx?.localClient?.listDatabaseNames()?.forEach {
+            if (it != "admin") {
+                latestCtx?.localClient?.getDatabase(it)?.drop()
+            }
+        }
+
         latestCtx?.dataSynchronizer?.close()
     }
 

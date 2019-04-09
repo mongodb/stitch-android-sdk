@@ -9,6 +9,9 @@ functions:
         script: |
           set -e
           curl --silent ${mongodb_url} | tar xz
+          cd mongodb-*
+          mkdir db_files
+  "run_mongod":
     - command: shell.exec
       params:
         background: true
@@ -16,7 +19,6 @@ functions:
           set -e
           cd mongodb-*
           echo "starting mongod..."
-          mkdir db_files
           ./bin/mongod --dbpath ./db_files --port 26000 --replSet test
     - command: shell.exec
       params:
@@ -34,43 +36,36 @@ functions:
         script: |
           set -e
           SDK_HOME=`pwd`/.android
-
           if [ ! -e  $SDK_HOME ]; then
               echo "Installing ANDROID SDK"
               DOWNLOAD_LOGS=$SDK_HOME/download_logs
               mkdir -p $SDK_HOME
               mkdir -p $DOWNLOAD_LOGS
-              (
-                cd $SDK_HOME
-                export JAVA_HOME="/opt/java/jdk8"
-
-                export ANDROID_HOME=$SDK_HOME
-                export ANDROID_SDK_ROOT=$SDK_HOME
-                export ANDROID_SDK_HOME=$SDK_HOME
-
-                SDK_PACKAGE=sdk-tools-darwin-4333796.zip
-                curl -O -s https://dl.google.com/android/repository/$SDK_PACKAGE
-                unzip -o -qq $SDK_PACKAGE
-                export PATH="$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$PATH"
-                ls -l
-                $SDK_HOME/tools/bin/sdkmanager --update 
-                yes | $SDK_HOME/tools/bin/sdkmanager --licenses
-                yes | $SDK_HOME/tools/bin/sdkmanager --channel=0 \
-                    "platforms;android-28"  \
-                    "emulator" \
-                    "patcher;v4" \
-                    "platform-tools"  \
-                    "build-tools;28.0.3" \
-                    "system-images;android-26;google_apis;x86_64" \
-                    "extras;intel;Hardware_Accelerated_Execution_Manager"
-                yes | $SDK_HOME/tools/bin/sdkmanager --licenses
-                $SDK_HOME/tools/bin/sdkmanager --update 
-                PLATFORM_TOOLS=platform-tools-latest-darwin.zip
-                curl -OL -s https://dl.google.com/android/repository/$PLATFORM_TOOLS
-                unzip -o -qq $PLATFORM_TOOLS
-              ) &> $DOWNLOAD_LOGS/download.log
+              cd $SDK_HOME
+              mkdir .android
+              touch .android/repositories.cfg
+              export JAVA_HOME="/opt/java/jdk8"
+              export ANDROID_HOME=$SDK_HOME
+              export ANDROID_SDK_ROOT=$SDK_HOME
+              export ANDROID_SDK_HOME=$SDK_HOME
+              SDK_PACKAGE=sdk-tools-darwin-4333796.zip
+              curl -O -s https://dl.google.com/android/repository/$SDK_PACKAGE
+              unzip -o -qq $SDK_PACKAGE
+              export PATH="$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$PATH"
+              yes | $SDK_HOME/tools/bin/sdkmanager --channel=0 \
+                  "platforms;android-28"  \
+                  "emulator" \
+                  "patcher;v4" \
+                  "platform-tools"  \
+                  "build-tools;28.0.3" \
+                  "system-images;android-26;google_apis;x86_64" \
+                  "extras;intel;Hardware_Accelerated_Execution_Manager"
+              PLATFORM_TOOLS=platform-tools-latest-darwin.zip
+              curl -OL -s https://dl.google.com/android/repository/$PLATFORM_TOOLS
+              unzip -o -qq $PLATFORM_TOOLS
+              $SDK_HOME/tools/bin/sdkmanager --update
+              yes | $SDK_HOME/tools/bin/sdkmanager --licenses
           fi
-
   "setup_stitch":
     - command: shell.exec
       params:
@@ -98,7 +93,6 @@ functions:
     - command: shell.exec
       params:
         shell: "bash"
-        background: true
         script: |
           set -e
           export PATH=`pwd`/:$PATH
@@ -111,6 +105,19 @@ functions:
           echo "running stitch"
           # TODO: Probably better to get an API key added to mimic cloud
           go run $STITCH_PATH/cmd/auth/user.go addUser -domainID 000000000000000000000000 -mongoURI mongodb://localhost:26000 -salt 'DQOWene1723baqD!_@#' -id "unique_user@domain.com" -password "password"
+  "run_stitch":
+    - command: shell.exec
+      params:
+        shell: "bash"
+        silent: true
+        background: true
+        script: |
+          export PATH=`pwd`/:$PATH
+          export GOROOT=`pwd`/go
+          export PATH=$GOROOT/bin:$PATH
+          export GOPATH=`pwd`
+          export STITCH_PATH=$GOPATH/src/github.com/10gen/stitch
+          export PATH="$PATH:$STITCH_PATH/etc/transpiler/bin"
           go run $STITCH_PATH/cmd/server/main.go --configFile $STITCH_PATH/etc/configs/test_config_sdk_base.json --configFile $STITCH_PATH/etc/configs/test_config_sdk_android.json 
     - command: shell.exec
       params:
@@ -125,7 +132,6 @@ functions:
               exit 1
             fi
           done
-
   "setup_test_creds":
     - command: shell.exec
       params:
@@ -140,7 +146,37 @@ functions:
           echo "test.stitch.awsSecretAccessKey=${test_aws_secret}" >> local.properties
           echo "test.stitch.fcmSenderId=${test_fcm_sender_id}" >> local.properties
           echo "test.stitch.fcmApiKey=${test_fcm_api_key}" >> local.properties
+          echo "test.stitch.androidPerfStitchAPIKey=${perf_android_api_key}" >> local.properties
+  "create_emulator":
+    - command: shell.exec
+      params:
+        shell: "bash"
+        script: |
+          set -e
 
+          SDK_HOME=`pwd`/.android
+          export JAVA_HOME="/opt/java/jdk8"
+
+          export ANDROID_HOME=$SDK_HOME
+          export ANDROID_SDK_ROOT=$SDK_HOME
+          export ANDROID_SDK_HOME=$SDK_HOME
+
+          # Create the AVD
+          echo "Creating AVD"
+          echo no | $SDK_HOME/tools/bin/avdmanager create avd -n android_avd -c 1000M -k "system-images;android-26;google_apis;x86_64" -f
+  "cleanup_adb":
+    - command: shell.exec
+      params:
+        shell: "bash"
+        script: |
+          echo "Cleaning up old adb"
+          pid=`ps aux | pgrep adb`
+          if [ -z "$pid" ]
+          then
+                echo "\$pid is empty"
+          else
+                kill -9 $pid
+          fi
   "setup_emulator":
     - command: shell.exec
       params:
@@ -156,17 +192,8 @@ functions:
           export ANDROID_SDK_ROOT=$SDK_HOME
           export ANDROID_SDK_HOME=$SDK_HOME
 
-          EMULATOR_PID=''
-          cleanup() {
-              kill -9 $EMULATOR_PID
-              $SDK_HOME/tools/bin/avdmanager delete avd -n android_avd
-          }
-          trap cleanup EXIT
-
           # Create the AVD
           echo "Creating AVD"
-          echo no | $SDK_HOME/tools/bin/avdmanager create avd -n android_avd -c 1000M -k "system-images;android-26;google_apis;x86_64" -f
-          $SDK_HOME/tools/bin/sdkmanager --update 
           $SDK_HOME/tools/emulator -avd android_avd -no-audio -no-window -no-snapshot -wipe-data -gpu off &
           EMULATOR_PID=$!
           sleep 86400
@@ -178,7 +205,7 @@ functions:
           echo "Waiting for emulator to be ready"
 
           SDK_HOME=`pwd`/.android
-
+          
           # Wait for ADB to detect the device
           $SDK_HOME/platform-tools/adb wait-for-device
 
@@ -202,7 +229,23 @@ functions:
             sleep 5
           done
           echo "Emulator is ready"
+  "setup_logcat":
+    - command: shell.exec
+      params:
+        shell: "bash"
+        background: true
+        script: |
+          set -e
+          LOGCAT_PID=''
+          cleanup() {
+              kill -9 $LOGCAT_PID
+          }
+          trap cleanup EXIT
 
+          SDK_HOME=`pwd`/.android
+          $SDK_HOME/platform-tools/adb logcat &
+          LOGCAT_PID=$!
+          sleep 86400
   "publish_coveralls":
     - command: shell.exec
       params:
@@ -241,120 +284,7 @@ functions:
             export CI_PULL_REQUEST=${github_pr_number}
           fi
           ./gradlew coveralls
-
-tasks:
-  - name: lint
-    commands:
-      - func: "fetch_source"
-      - func: "setup_android"
-      - command: shell.exec
-        params:
-          shell: "bash"
-          script: |
-            set -e
-            SDK_HOME=`pwd`/.android
-            export JAVA_HOME="/opt/java/jdk8"
-
-            export ANDROID_HOME=$SDK_HOME
-            export ANDROID_SDK_ROOT=$SDK_HOME
-            export ANDROID_SDK_HOME=$SDK_HOME
-            cd stitch-java-sdk
-            ./gradlew checkstyle ktlint findbugs pmd lint --continue --warning-mode=all < /dev/null
-
-  - name: run_core_tests
-    priority: 100
-    exec_timeout_secs: 3600
-    commands:
-      - func: "fetch_source"
-      - func: "setup_mongod"
-      - func: "setup_android"
-      - func: "setup_stitch"
-      - func: "setup_test_creds"
-      - command: shell.exec
-        params:
-          shell: "bash"
-          script: |
-            set -e
-            SDK_HOME=`pwd`/.android
-            export JAVA_HOME="/opt/java/jdk8"
-
-            export ANDROID_HOME=$SDK_HOME
-            export ANDROID_SDK_ROOT=$SDK_HOME
-            export ANDROID_SDK_HOME=$SDK_HOME
-            cd stitch-java-sdk
-            echo "running java tests"
-            echo "test.stitch.baseURL=http://localhost:9090" >> local.properties
-            ./gradlew test jacocoTestReport --info --continue --warning-mode=all --stacktrace < /dev/null
-      - func: "publish_coveralls"
-
-  - name: run_android_tests
-    exec_timeout_secs: 7200
-    commands:
-      - func: "fetch_source"
-      - func: "setup_mongod"
-      - func: "setup_android"
-      - func: "setup_stitch"
-      - func: "setup_emulator"
-      - func: "setup_test_creds"
-      - command: shell.exec
-        params:
-          shell: "bash"
-          background: true
-          script: |
-            set -e
-            LOGCAT_PID=''
-            cleanup() {
-                kill -9 $LOGCAT_PID
-            }
-            trap cleanup EXIT
-
-            SDK_HOME=`pwd`/.android
-            $SDK_HOME/platform-tools/adb logcat &
-            LOGCAT_PID=$!
-            sleep 86400
-      - command: shell.exec
-        params:
-          shell: "bash"
-          script: |
-            set -e
-            SDK_HOME=`pwd`/.android
-            export JAVA_HOME="/opt/java/jdk8"
-
-            export ANDROID_HOME=$SDK_HOME
-            export ANDROID_SDK_ROOT=$SDK_HOME
-            export ANDROID_SDK_HOME=$SDK_HOME
-            export ADB_INSTALL_TIMEOUT=30
-            cd stitch-java-sdk
-            echo "running android tests"
-            echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
-            ./gradlew connectedAndroidTest jacocoTestReport --info --continue --warning-mode=all --stacktrace  < /dev/null
-      - func: "publish_coveralls"
-
-  - name: run_android_tests_with_proguard
-    exec_timeout_secs: 7200
-    commands:
-    - func: "fetch_source"
-    - func: "setup_mongod"
-    - func: "setup_android"
-    - func: "setup_stitch"
-    - func: "setup_emulator"
-    - func: "setup_test_creds"
-    - command: shell.exec
-      params:
-        shell: "bash"
-        background: true
-        script: |
-          set -e
-          LOGCAT_PID=''
-          cleanup() {
-              kill -9 $LOGCAT_PID
-          }
-          trap cleanup EXIT
-
-          SDK_HOME=`pwd`/.android
-          $SDK_HOME/platform-tools/adb logcat &
-          LOGCAT_PID=$!
-          sleep 86400
+  "setup_android_sdk_env_vars":
     - command: shell.exec
       params:
         shell: "bash"
@@ -366,83 +296,443 @@ tasks:
           export ANDROID_HOME=$SDK_HOME
           export ANDROID_SDK_ROOT=$SDK_HOME
           export ANDROID_SDK_HOME=$SDK_HOME
-          export ADB_INSTALL_TIMEOUT=30
           cd stitch-java-sdk
-          echo "running android tests"
-          echo "test.stitch.baseURL=http://10.0.2.2:9090" >> local.properties
-          ./gradlew connectedAndroidTest -PwithProguardMinification --info --continue --warning-mode=all --stacktrace  < /dev/null
-
-  - name: finalize_coverage
-    depends_on:
-      - name: run_core_tests
-        variant: "macos-1014-stitch"
-        status: '*'
-      - name: run_android_tests
-        variant: "macos-1014-stitch"
-        status: '*'
-      - name: run_android_tests_with_proguard
+          echo "test.stitch.baseURL=http://localhost:9090" >> local.properties
+tasks:
+  - name: lint
     commands:
       - command: shell.exec
         params:
           shell: "bash"
-          silent: true
           script: |
             set -e
-            echo export COVERALLS_TOKEN=${coveralls_repo_token} >> creds
+            SDK_HOME=`pwd`/.android
+            export JAVA_HOME="/opt/java/jdk8"
+
+            export ANDROID_HOME=$SDK_HOME
+            export ANDROID_SDK_ROOT=$SDK_HOME
+            export ANDROID_SDK_HOME=$SDK_HOME
+            cd stitch-java-sdk
+            ./gradlew lint --continue --warning-mode=all < /dev/null
+    post:
+      command: s3.put
+      params:
+        aws_key: ${test_artifacts_aws_key}
+        aws_secret: ${test_artifacts_aws_secret}
+        local_files_include_filter:
+          - stitch-java-sdk/**/build/reports/**/*lint*.html
+        remote_file: ${build_id}/report
+        bucket: stitch-test-artifacts
+        content_type: text/html
+        permissions: public-read
+  - name: ktlint
+    commands:
       - command: shell.exec
         params:
-          silent: true
+          shell: "bash"
           script: |
             set -e
-            . ./creds
-            curl -k -X POST "https://coveralls.io/webhook?repo_token=$COVERALLS_TOKEN" -H "Content-Type: application/json" -d "{\"payload\": {\"build_num\": \"${version_id}\", \"status\": \"done\"}}"
-post:
-  - command: attach.xunit_results
-    params:
-      files:
-        - "./stitch-java-sdk/core/sdk/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/admin-client/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/services/mongodb-local/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/services/mongodb-remote/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/services/aws-s3/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/services/aws-ses/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/services/fcm/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/services/http/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/core/services/twilio/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/server/coretest/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/server/services/mongodb-local/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/server/services/mongodb-remote/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/server/services/aws-s3/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/server/services/aws-ses/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/server/services/http/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/server/services/twilio/build/test-results/test/*.xml"
-        - "./stitch-java-sdk/android/coretest/build/outputs/androidTest-results/connected/*.xml"
-        - "./stitch-java-sdk/android/services/mongodb-local/build/outputs/androidTest-results/connected/*.xml"
-        - "./stitch-java-sdk/android/services/mongodb-remote/build/outputs/androidTest-results/connected/*.xml"
-        - "./stitch-java-sdk/android/services/aws-s3/build/outputs/androidTest-results/connected/*.xml"
-        - "./stitch-java-sdk/android/services/aws-ses/build/outputs/androidTest-results/connected/*.xml"
-        - "./stitch-java-sdk/android/services/fcm/build/outputs/androidTest-results/connected/*.xml"
-        - "./stitch-java-sdk/android/services/http/build/outputs/androidTest-results/connected/*.xml"
-        - "./stitch-java-sdk/android/services/twilio/build/outputs/androidTest-results/connected/*.xml"
-  - command: s3.put
-    params:
-      aws_key: ${test_artifacts_aws_key}
-      aws_secret: ${test_artifacts_aws_secret}
-      local_files_include_filter:
-        - stitch-java-sdk/**/build/outputs/**/*checkstyle*.html
-        - stitch-java-sdk/**/build/outputs/**/*findbugs*.html
-        - stitch-java-sdk/**/build/outputs/**/*pmd*.html
-        - stitch-java-sdk/**/build/reports/**/*lint*.html
-      remote_file: ${build_id}/report
-      bucket: stitch-test-artifacts
-      content_type: text/html
-      permissions: public-read
+            SDK_HOME=`pwd`/.android
+            export JAVA_HOME="/opt/java/jdk8"
 
+            export ANDROID_HOME=$SDK_HOME
+            export ANDROID_SDK_ROOT=$SDK_HOME
+            export ANDROID_SDK_HOME=$SDK_HOME
+            cd stitch-java-sdk
+            ./gradlew ktlint --continue --warning-mode=all < /dev/null
+  - name: checkstyle
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            SDK_HOME=`pwd`/.android
+            export JAVA_HOME="/opt/java/jdk8"
+
+            export ANDROID_HOME=$SDK_HOME
+            export ANDROID_SDK_ROOT=$SDK_HOME
+            export ANDROID_SDK_HOME=$SDK_HOME
+            cd stitch-java-sdk
+            ./gradlew checkstyle --continue --warning-mode=all < /dev/null
+    post:
+      command: s3.put
+      params:
+        aws_key: ${test_artifacts_aws_key}
+        aws_secret: ${test_artifacts_aws_secret}
+        local_files_include_filter:
+          - stitch-java-sdk/**/build/outputs/**/*checkstyle*.html
+        remote_file: ${build_id}/report
+        bucket: stitch-test-artifacts
+        content_type: text/html
+        permissions: public-read
+  - name: findbugs
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            SDK_HOME=`pwd`/.android
+            export JAVA_HOME="/opt/java/jdk8"
+
+            export ANDROID_HOME=$SDK_HOME
+            export ANDROID_SDK_ROOT=$SDK_HOME
+            export ANDROID_SDK_HOME=$SDK_HOME
+            cd stitch-java-sdk
+            ./gradlew findbugs --continue --warning-mode=all < /dev/null
+    post:
+      command: s3.put
+      params:
+        aws_key: ${test_artifacts_aws_key}
+        aws_secret: ${test_artifacts_aws_secret}
+        local_files_include_filter:
+          - stitch-java-sdk/**/build/outputs/**/*findbugs*.html
+        remote_file: ${build_id}/report
+        bucket: stitch-test-artifacts
+        content_type: text/html
+        permissions: public-read
+  - name: pmd
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            SDK_HOME=`pwd`/.android
+            export JAVA_HOME="/opt/java/jdk8"
+
+            export ANDROID_HOME=$SDK_HOME
+            export ANDROID_SDK_ROOT=$SDK_HOME
+            export ANDROID_SDK_HOME=$SDK_HOME
+            cd stitch-java-sdk
+            ./gradlew pmd --continue --warning-mode=all < /dev/null
+    post:
+      command: s3.put
+      params:
+        aws_key: ${test_artifacts_aws_key}
+        aws_secret: ${test_artifacts_aws_secret}
+        local_files_include_filter:
+          - stitch-java-sdk/**/build/outputs/**/*pmd*.html
+        remote_file: ${build_id}/report
+        bucket: stitch-test-artifacts
+        content_type: text/html
+        permissions: public-read
+  - name: run_core_sdk_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:stitch-core-sdk:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/sdk/build/test-results/test/*.xml"
+
+  - name: run_android_sdk_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :android:stitch-android-coretest:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/coretest/build/outputs/androidTest-results/connected/*.xml"
+
+  - name: run_core_services_aws_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-aws:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/aws/build/test-results/test/*.xml"
+
+  - name: run_android_services_aws_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            ps aux
+            sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-aws:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/services/aws/build/outputs/androidTest-results/test/*.xml"
+
+  - name: run_core_services_aws_s3_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-aws-s3:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/aws-s3/build/test-results/test/*.xml"
+
+  - name: run_android_services_aws_s3_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-aws-s3:connectedAndroidTest
+    post:
+    - command: attach.xunit_results
+      params:
+      files:
+        - "./stitch-java-sdk/android/services/aws-s3/build/outputs/androidTest-results/test/*.xml"
+
+  - name: run_core_services_aws_ses_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-aws-ses:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/aws-ses/build/test-results/test/*.xml"
+
+  - name: run_android_services_aws_ses_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-aws-ses:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/services/aws-ses/build/outputs/androidTest-results/test/*.xml"
+
+  - name: run_core_services_fcm_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh  :core:core-services:stitch-core-services-fcm:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/fcm/build/test-results/test/*.xml"
+
+  - name: run_android_services_fcm_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh  :android:android-services:stitch-android-services-fcm:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/services/fcm/build/outputs/androidTest-results/test/*.xml"
+
+  - name: run_core_services_http_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-http:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/http/build/test-results/test/*.xml"
+
+  - name: run_android_services_http_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-http:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/services/http/build/outputs/androidTest-results/test/*.xml"
+
+  - name: run_core_services_mongodb_local_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-mongodb-local:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/mongodb-local/build/test-results/test/*.xml"
+
+  - name: run_android_services_mongodb_local_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-mongodb-local:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/services/mongodb-local/build/outputs/androidTest-results/test/*.xml"
+
+  - name: run_core_services_mongodb_remote_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-mongodb-remote:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/mongodb-remote/build/test-results/test/*.xml"
+
+  - name: run_android_services_mongodb_remote_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-mongodb-remote:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/services/mongodb-remote/build/outputs/androidTest-results/connected/*.xml"
+
+  - name: run_core_services_twilio_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-twilio:test
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/core/services/twilio/build/test-results/test/*.xml"
+
+  - name: run_android_services_twilio_tests
+    commands:
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-twilio:connectedAndroidTest
+    post:
+      - command: attach.xunit_results
+        params:
+        files:
+          - "./stitch-java-sdk/android/services/twilio/build/outputs/androidTest-results/test/*.xml"
+
+task_groups:
+  - name: run_core_tests
+    setup_group_can_fail_task: true
+    max_hosts: 2
+    setup_group:
+      - func: "fetch_source"
+      - func: "setup_android"
+    tasks:
+      - run_core_sdk_tests
+      - run_core_services_mongodb_remote_tests
+      - run_core_services_aws_tests
+      - run_core_services_aws_s3_tests
+      - run_core_services_aws_ses_tests
+      - run_core_services_fcm_tests
+      - run_core_services_http_tests
+      - run_core_services_mongodb_local_tests
+      - run_core_services_twilio_tests
+  - name: run_android_tests
+    setup_group_can_fail_task: true
+    max_hosts: 4
+    setup_group:
+      - func: "fetch_source"
+      - func: "setup_mongod"
+      - func: "setup_android"
+      - func: "run_mongod"
+      - func: "setup_stitch"
+      - func: "setup_test_creds"
+      - func: "setup_android_sdk_env_vars"
+      - func: "cleanup_adb"
+      - func: "create_emulator"
+      - func: "setup_logcat"
+    setup_task:
+      - func: "run_mongod"
+      - func: "run_stitch"
+      - func: "setup_emulator"
+    tasks:
+      - run_android_sdk_tests
+      - run_android_services_mongodb_remote_tests
+      - run_android_services_aws_tests
+      - run_android_services_aws_s3_tests
+      - run_android_services_aws_ses_tests
+      - run_android_services_fcm_tests
+      - run_android_services_http_tests
+      - run_android_services_mongodb_local_tests
+      - run_android_services_twilio_tests
+  - name: run_linter
+    setup_group_can_fail_task: true
+    max_hosts: 2
+    setup_group:
+      - func: "fetch_source"
+      - func: "setup_android"
+    tasks:
+      - findbugs
+      - lint
+      - ktlint
+      - checkstyle
+      - pmd
 buildvariants:
-- name: macos-1014-stitch
-  display_name: macos-1014-stitch
+- name: macos-1014
+  display_name: macos-1014
   run_on:
-    - macos-1014-stitch
+    - macos-1014
   expansions:
     go_url: "https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz"
     mongodb_url: http://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-4.0.2.tgz
@@ -450,6 +740,4 @@ buildvariants:
   tasks:
     - name: run_core_tests
     - name: run_android_tests
-    - name: run_android_tests_with_proguard
-    - name: lint
-    - name: finalize_coverage
+    - name: run_linter

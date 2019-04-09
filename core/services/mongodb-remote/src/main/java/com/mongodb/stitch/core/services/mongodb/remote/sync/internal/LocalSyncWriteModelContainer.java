@@ -32,15 +32,17 @@ import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.Document;
 
-class LocalSyncWriteModelContainer implements Committable {
+class LocalSyncWriteModelContainer {
   private final MongoCollection<BsonDocument> localCollection;
   private final MongoCollection<BsonDocument> undoCollection;
 
-  private final WriteModelContainer<BsonDocument> localWrites;
-  private final WriteModelContainer<BsonDocument> remoteWrites;
-  private final WriteModelContainer<CoreDocumentSynchronizationConfig> configs;
+  private final MongoCollectionWriteModelContainer<BsonDocument> localWrites;
+  private final MongoCollectionWriteModelContainer<CoreDocumentSynchronizationConfig> configs;
+  private final CoreRemoteMongoCollectionWriteModelContainer<BsonDocument> remoteWrites;
 
   private final Set<BsonValue> ids = new HashSet<>();
+
+  private Runnable postCommit = null;
 
   LocalSyncWriteModelContainer(
       @Nonnull final MongoCollection<BsonDocument> localCollection,
@@ -50,9 +52,9 @@ class LocalSyncWriteModelContainer implements Committable {
     this.localCollection = localCollection;
     this.undoCollection = undoCollection;
 
-    this.localWrites = new WriteModelContainer<>(localCollection);
-    this.remoteWrites = new WriteModelContainer<>(remoteCollection);
-    this.configs = new WriteModelContainer<>(docsCollection);
+    this.localWrites = new MongoCollectionWriteModelContainer<>(localCollection);
+    this.configs = new MongoCollectionWriteModelContainer<>(docsCollection);
+    this.remoteWrites = new CoreRemoteMongoCollectionWriteModelContainer<>(remoteCollection);
   }
 
   void addDocIDs(final BsonValue ...ids) {
@@ -71,7 +73,10 @@ class LocalSyncWriteModelContainer implements Committable {
     configs.add(config);
   }
 
-  protected void merge(final LocalSyncWriteModelContainer localSyncWriteModelContainer) {
+  void merge(final LocalSyncWriteModelContainer localSyncWriteModelContainer) {
+    if (localSyncWriteModelContainer == null) {
+      return;
+    }
     this.localWrites.merge(localSyncWriteModelContainer.localWrites);
     this.remoteWrites.merge(localSyncWriteModelContainer.remoteWrites);
     this.configs.merge(localSyncWriteModelContainer.configs);
@@ -95,21 +100,20 @@ class LocalSyncWriteModelContainer implements Committable {
     }
   }
 
-  @Override
-  public void commit() {
-    wrapForRecovery(() -> {
-      localWrites.commit();
-      configs.commit();
-      remoteWrites.commit();
-    });
-  }
-
-  @Override
-  public void commitAndClear() {
+  void commitAndClear() {
     wrapForRecovery(() -> {
       localWrites.commitAndClear();
       configs.commitAndClear();
       remoteWrites.commitAndClear();
     });
+
+    if (postCommit != null) {
+      postCommit.run();
+    }
+  }
+
+  LocalSyncWriteModelContainer withPostCommit(final Runnable runnable) {
+    this.postCommit = runnable;
+    return this;
   }
 }

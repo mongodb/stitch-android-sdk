@@ -158,7 +158,6 @@ subprojects {
 
             test {
                 outputs.upToDateWhen { false }
-
                 systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
             }
 
@@ -465,8 +464,11 @@ rootProject.gradle.projectsEvaluated {
 
         if (project.hasProperty("analytics")) {
             println "Building with analytics."
-            options.header = new File(configDir, 'header.html').text
+            options.addStringOption("top", new File(configDir, 'header.html').text)
             options.addBooleanOption("-allow-script-in-comments", true)
+            // Note: despite multiple --add-stylesheet flags being allowed on command line,
+            // there is no apparent way to add multiple stylesheets via this options object.
+            options.addFileOption("-add-stylesheet", new File(rootDir, 'contrib/assets/css/javadoc-main.css'))
         } else {
             println "Building without analytics. Use -Panalytics to enable analytics."
         }

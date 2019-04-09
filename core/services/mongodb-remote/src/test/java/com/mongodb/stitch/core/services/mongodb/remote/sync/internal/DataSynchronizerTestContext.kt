@@ -20,7 +20,7 @@ import java.lang.Exception
  * Set fake version state to be included on updates.
  */
 enum class TestVersionState {
-    NONE, PREVIOUS, SAME, NEXT, NEW
+    NONE, PREVIOUS, SAME, NEXT, NEW;
 }
 /**
  * Testing context to test a data synchronizer.
@@ -116,6 +116,16 @@ interface DataSynchronizerTestContext : Closeable {
      * Attempt to find the contextual test document locally.
      */
     fun findTestDocumentFromLocalCollection(): BsonDocument?
+
+    /**
+     * Attempt to find the contextual test namespace's sync configuration
+     */
+    fun findTestNamespaceConfig(): NamespaceSynchronizationConfig?
+
+    /**
+     * Attempt to find the contextual test document's sync configuration
+     */
+    fun findTestDocumentConfig(): CoreDocumentSynchronizationConfig?
 
     /**
      * Verify the changeEventListener was called for the test document.
