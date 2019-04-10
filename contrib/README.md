@@ -4,7 +4,7 @@
 
 This project follows [Semantic Versioning 2.0](https://semver.org/). In general, every release is associated with a tag and a changelog. `master` serves as the mainline branch for the project and represent the latest state of development.
 
-### Incrementing the SDK version
+### 1. Incrementing the SDK version
 ```bash
 # run bump_version.bash with either patch, minor, or major followed by the JIRA ticket number (you may omit the STITCH keyword if you would like).
 ./bump_version.bash <snapshot|beta|patch|minor|major> <STITCH-1234|1234>
@@ -15,16 +15,15 @@ This project follows [Semantic Versioning 2.0](https://semver.org/). In general,
 #### Configuring Hub
 For `bump_version.bash` to work properly, you must have ```hub``` installed. Please see [Hub](https://github.com/github/hub) for installation details.
 
-### Publishing the new SDK
+### 2. Publishing the new SDK
 
-Once the Pull Request created by `bump_version.bash` is successfuly merged into Github call the following:
+Once the Pull Request created by `bump_version.bash` is successfully merged into Github publish the SDK using the following command:
 ```bash
-# run publish_sdk.bash
 ./publish_sdk.bash
 ```
 
 #### Configuring Bintray Upload
-For `./gradlew bintrayUpload` to work properly, you must locally specify your Bintray credentials. You can do this by adding the following lines to your `local.properties` file:
+For the `./gradlew bintrayUpload` command to work properly, you must locally specify your Bintray credentials. You can do this by adding the following lines to your `local.properties` file:
 
 ```
 publish.bintray.user=<bintray_user>
@@ -34,7 +33,7 @@ publish.bintray.mavenSyncUser=<maven_central_sync_user> # optional
 publish.bintray.mavenSyncPassword=<maven_central_sync_password> # optional
 ```
 
-### Publish the release on Github
+### 3. Publish the release on Github
 Publish a release for the new SDK version on the GitHub repository and include relevant release notes. See https://help.github.com/en/articles/creating-releases for context, and follow the general format of our previous releases.
 
 ### Snapshot Versions
