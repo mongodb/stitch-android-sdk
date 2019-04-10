@@ -163,7 +163,7 @@ public class StitchRequestClientImplUnitTests {
     final Request expectedRequest = new Request.Builder()
         .withMethod(Method.PATCH)
         .withUrl(URI.create(domain).resolve(path).toString())
-        .withBody("{\"my\" : {\"$numberInt\" : \"24\"}}".getBytes(StandardCharsets.UTF_8))
+        .withBody("{\"my\": {\"$numberInt\": \"24\"}}".getBytes(StandardCharsets.UTF_8))
         .withHeaders(expectedHeaders)
         .withTimeout(60000L)
         .build();

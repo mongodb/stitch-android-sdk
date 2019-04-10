@@ -160,12 +160,13 @@ public class CoreStitchAuthUnitTests {
     final ArgumentCaptor<StitchRequest> reqArgs = ArgumentCaptor.forClass(StitchRequest.class);
     verify(requestClient, times(4)).doRequest(reqArgs.capture());
 
-    final StitchRequest.Builder expectedRequest = new StitchRequest.Builder();
+    final StitchAuthDocRequest.Builder expectedRequest = new StitchAuthDocRequest.Builder();
     expectedRequest.withMethod(Method.POST)
-        .withBody(String.format(
-            "{\"username\" : \"foo@foo.com\",\"password\" : \"bar\","
-            + "\"options\" : {\"device\" : {\"deviceId\" : \"%s\"}}}",
-            getLastDeviceId()).getBytes(StandardCharsets.UTF_8))
+        .withDocument(new Document()
+                .append("username", "foo@foo.com")
+                .append("password", "bar")
+                .append("options",
+                    new Document("device", new Document("deviceId", getLastDeviceId()))))
         .withPath(routes.getAuthProviderLinkRoute(UserPasswordAuthProvider.DEFAULT_NAME));
     final Map<String, String> headers = new HashMap<>();
     headers.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);
@@ -444,12 +445,13 @@ public class CoreStitchAuthUnitTests {
     expectedRequest.withHeaders(headers);
     assertEquals(expectedRequest.build(), reqArgs.getAllValues().get(3));
 
-    final StitchRequest.Builder expectedRequest2 = new StitchRequest.Builder();
+    final StitchAuthDocRequest.Builder expectedRequest2 = new StitchAuthDocRequest.Builder();
     expectedRequest2.withMethod(Method.POST)
-        .withBody(String.format(
-            "{\"username\" : \"foo@foo.com\",\"password\" : \"bar\","
-            + "\"options\" : {\"device\" : {\"deviceId\" : \"%s\"}}}",
-            getLastDeviceId()).getBytes(StandardCharsets.UTF_8))
+        .withDocument(new Document()
+            .append("username", "foo@foo.com")
+            .append("password", "bar")
+            .append("options",
+                new Document("device", new Document("deviceId", getLastDeviceId()))))
         .withPath(routes.getAuthProviderLinkRoute(UserPasswordAuthProvider.DEFAULT_NAME));
     final Map<String, String> headers2 = new HashMap<>();
     headers2.put(Headers.CONTENT_TYPE, ContentTypes.APPLICATION_JSON);

@@ -5,13 +5,13 @@ ext.pomDisplayName = "Core Local MongoDB Service"
 
 buildscript {
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.0'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
     }
 }
 
 dependencies {
     implementation project(':core:stitch-core-sdk')
-    api 'org.mongodb:mongodb-driver-sync:3.9.0'
+    api 'org.mongodb:mongodb-driver-sync:3.10.1'
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8
