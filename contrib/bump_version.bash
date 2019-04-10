@@ -98,19 +98,19 @@ then
 	BODY="Changelog since $LAST_TAGGED_VERSION:
 $BODY"
 
-	git tag -a "$NEW_VERSION" -m "$BODY"
+    git tag -a "$NEW_VERSION" -m "$BODY"
 
-	echo "creating pull request in github..."
-	git push -u origin "Release-$NEW_VERSION"
-	hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
+    echo "creating pull request in github..."
+    git push -u origin "Release-$NEW_VERSION"
+    hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
 else
-	set +e
-	git commit -m "$JIRA_TICKET: Update $NEW_VERSION"
-	if [ $? -eq 0 ]; then
+    set +e
+    git commit -m "$JIRA_TICKET: Update $NEW_VERSION"
+    if [ $? -eq 0 ]; then
 	    echo "creating pull request in github..."
-		set -e
-		git push -u origin "Release-$NEW_VERSION"
-	    hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
+        set -e
+        git push -u origin "Release-$NEW_VERSION"
+        hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
 	fi
 	set -e
 fi
