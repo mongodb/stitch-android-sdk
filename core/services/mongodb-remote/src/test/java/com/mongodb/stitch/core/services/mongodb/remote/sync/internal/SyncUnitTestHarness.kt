@@ -7,6 +7,7 @@ import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.StitchAppClientInfo
 import com.mongodb.stitch.core.internal.common.AuthMonitor
+import com.mongodb.stitch.core.internal.common.Dispatcher
 import com.mongodb.stitch.core.internal.common.ThreadDispatcher
 import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.core.internal.net.EventStream
@@ -345,6 +346,8 @@ class SyncUnitTestHarness : Closeable {
         }
         private val remoteClient = Mockito.mock(CoreRemoteMongoClientImpl::class.java)
 
+        override val dispatcher : Dispatcher = ThreadDispatcher()
+
         override val dataSynchronizer: DataSynchronizer by lazy {
             // Insert any documents that we want to be recovered by the recovery sequence.
             if (!undoDocuments.isEmpty()) {
@@ -360,7 +363,7 @@ class SyncUnitTestHarness : Closeable {
                 remoteClient,
                 networkMonitor,
                 authMonitor,
-                ThreadDispatcher()
+                dispatcher
             )
             ds.waitUntilInitialized()
             ds = Mockito.spy(ds)

@@ -86,7 +86,10 @@ final class DocumentVersionInfo {
     }
 
     /**
-     * Returns the hash code of this version.
+     * Returns the hash code of this version. This hash is intended to be the locally
+     * calculated hash even if it is incidentally stored with version information on the
+     * server. Remote calculation of this hash as part of version information should not
+     * be relied upon.
      * @return a long representing the hash code of the data in this version or null if hash
      * has not been calculated.
      */
@@ -163,7 +166,7 @@ final class DocumentVersionInfo {
 
   /**
    * Returns the current version info for a locally synchronized document.
-   * @param docConfig the CoreCoreDocumentSynchronizationConfig to get the version info from.
+   * @param docConfig the CoreDocumentSynchronizationConfig to get the version info from.
    * @return a DocumentVersionInfo
    */
   static DocumentVersionInfo getLocalVersionInfo(

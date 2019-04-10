@@ -28,7 +28,6 @@ import org.bson.io.BasicOutputBuffer;
 public final class HashUtils {
   private static final long FNV_64BIT_OFFSET_BASIS = -3750763034362895579L;
   private static final long FNV_64BIT_PRIME = 1099511628211L;
-  private static final int FNV_BYTE_ALIGNMENT = 8;
 
   private static final BsonDocumentCodec BSON_DOCUMENT_CODEC = new BsonDocumentCodec();
 
@@ -48,18 +47,18 @@ public final class HashUtils {
       return 0L;
     }
 
-    final byte[] docBytes = toBytes(doc, FNV_BYTE_ALIGNMENT);
+    final byte[] docBytes = toBytes(doc);
     long hashValue = FNV_64BIT_OFFSET_BASIS;
 
     for (int offset = 0; offset < docBytes.length; offset++) {
-      hashValue = hashValue ^ docBytes[offset];
+      hashValue ^= docBytes[offset];
       hashValue *= FNV_64BIT_PRIME;
     }
 
     return hashValue;
   }
 
-  public static byte[] toBytes(final BsonDocument doc, final int alignment) {
+  public static byte[] toBytes(final BsonDocument doc) {
     final BasicOutputBuffer buffer = new BasicOutputBuffer();
     final BsonBinaryWriter writer = new BsonBinaryWriter(buffer);
     BSON_DOCUMENT_CODEC.encode(writer, doc, EncoderContext.builder().build());

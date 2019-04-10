@@ -20,6 +20,8 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateManyModel;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.result.UpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 
 import java.util.List;
@@ -44,21 +46,33 @@ public class CoreRemoteMongoCollectionWriteModelContainer<DocumentT>
    * Commits the writes to the remote collection.
    */
   @Override
-  public void commit() {
+  public boolean commit() {
     final CoreRemoteMongoCollection<DocumentT> collection = getCollection();
     final List<WriteModel<DocumentT>> writeModels = getBulkWriteModels();
 
+    // define success as any one operation succeeding for now
+    boolean success = false;
     for (final WriteModel<DocumentT> write : writeModels) {
       if (write instanceof ReplaceOneModel) {
         final ReplaceOneModel<DocumentT> replaceModel = ((ReplaceOneModel) write);
-        collection.updateOne(replaceModel.getFilter(), (Bson) replaceModel.getReplacement());
+        RemoteUpdateResult result =
+            collection.updateOne(replaceModel.getFilter(), (Bson) replaceModel.getReplacement());
+        success = success ||
+            (result != null && result.getModifiedCount() == result.getMatchedCount());
       } else if (write instanceof UpdateOneModel) {
         final UpdateOneModel<DocumentT> updateModel = ((UpdateOneModel) write);
-        collection.updateOne(updateModel.getFilter(), updateModel.getUpdate());
+        RemoteUpdateResult result =
+            collection.updateOne(updateModel.getFilter(), updateModel.getUpdate());
+        success = success ||
+            (result != null && result.getModifiedCount() == result.getMatchedCount());
       } else if (write instanceof UpdateManyModel) {
         final UpdateManyModel<DocumentT> updateModel = ((UpdateManyModel) write);
-        collection.updateMany(updateModel.getFilter(), updateModel.getUpdate());
+        RemoteUpdateResult result =
+            collection.updateMany(updateModel.getFilter(), updateModel.getUpdate());
+        success = success ||
+            (result != null && result.getModifiedCount() == result.getMatchedCount());
       }
     }
+    return success;
   }
 }

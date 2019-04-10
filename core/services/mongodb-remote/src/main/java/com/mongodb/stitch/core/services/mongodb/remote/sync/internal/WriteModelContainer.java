@@ -50,9 +50,10 @@ public abstract class WriteModelContainer<CollectionT, DocumentT> {
     this.bulkWriteModels.addAll(container.bulkWriteModels);
   }
 
-  final void commitAndClear() {
-    this.commit();
+  final boolean commitAndClear() {
+    boolean success = this.commit();
     this.bulkWriteModels.clear();
+    return success;
   }
 
   protected CollectionT getCollection() {
@@ -63,5 +64,5 @@ public abstract class WriteModelContainer<CollectionT, DocumentT> {
     return bulkWriteModels;
   }
 
-  abstract void commit();
+  abstract boolean commit();
 }

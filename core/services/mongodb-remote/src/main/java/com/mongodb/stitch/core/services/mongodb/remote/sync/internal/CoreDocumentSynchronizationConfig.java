@@ -154,7 +154,7 @@ public class CoreDocumentSynchronizationConfig {
    *
    * @param isPaused whether or not this config is frozen
    */
-  public void setPaused(final boolean isPaused) {
+  void setPaused(final boolean isPaused) {
     docLock.writeLock().lock();
     try {
       docsColl.updateOne(
@@ -171,7 +171,7 @@ public class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public boolean isPaused() {
+  boolean isPaused() {
     return isPaused;
   }
 
@@ -239,7 +239,7 @@ public class CoreDocumentSynchronizationConfig {
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  public void setSomePendingWrites(
+  void setSomePendingWrites(
       final long atTime,
       final BsonDocument atVersion,
       final ChangeEvent<BsonDocument> changeEvent
@@ -254,7 +254,7 @@ public class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public void setPendingWritesComplete(final BsonDocument atVersion) {
+  void setPendingWritesComplete(final BsonDocument atVersion) {
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent = null;
@@ -328,7 +328,7 @@ public class CoreDocumentSynchronizationConfig {
     }
   }
 
-  public long getLastResolution() {
+  long getLastResolution() {
     docLock.readLock().lock();
     try {
       return lastResolution;

@@ -226,6 +226,24 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
+    fun testLastKnownRemoteVersionHashIsPersisted() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        val docConfig = ctx.findTestDocumentConfig()
+
+        assertNotNull(docConfig?.lastKnownRemoteVersion)
+
+        val docVersionInfo =
+                DocumentVersionInfo.fromVersionDoc(docConfig?.lastKnownRemoteVersion)
+        assertNotNull(docVersionInfo.version)
+        assertNotNull(docVersionInfo.version.hash)
+        assertTrue(docVersionInfo.version.hash != 0L)
+    }
+
+    @Test
     fun testPendingWriteRemoteUpdateLocalAndRemoteEmptyVersionHashDifferent() {
         val ctx = harness.freshTestContext()
 
@@ -1057,10 +1075,11 @@ class DataSynchronizerUnitTests {
         val id = doc["_id"]
         val filter = BsonDocument("_id", id)
         val batchOps = LocalSyncWriteModelContainer(
+                ctx.dataSynchronizer.syncConfig.getNamespaceConfig(ctx.namespace),
                 ctx.dataSynchronizer.getLocalCollection(ctx.namespace),
                 ctx.collectionMock,
                 ctx.dataSynchronizer.getUndoCollection(ctx.namespace),
-                ctx.dataSynchronizer.syncConfig.getNamespaceConfig(ctx.namespace).docsColl)
+                EventDispatcher(ctx.instanceKey, ctx.dispatcher))
         batchOps.addDocIDs(id)
 
         // cause the batching to fail after the undo docs have been inserted

@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
+import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.WriteModel;
 
@@ -35,7 +36,7 @@ public class MongoCollectionWriteModelContainer<DocumentT>
   }
 
   @Override
-  void commit() {
+  boolean commit() {
     final MongoCollection<DocumentT> collection = getCollection();
     final List<WriteModel<DocumentT>> writes = getBulkWriteModels();
 
@@ -43,7 +44,9 @@ public class MongoCollectionWriteModelContainer<DocumentT>
       throw new IllegalStateException("cannot commit a container with no associated collection");
     }
     if (writes.size() > 0) {
-      collection.bulkWrite(writes);
+      BulkWriteResult result = collection.bulkWrite(writes);
+      return result.wasAcknowledged() && result.getMatchedCount() > 0;
     }
+    return false;
   }
 }
