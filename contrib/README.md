@@ -49,3 +49,13 @@ The general publishing flow can be followed using `major` as the bump type in `b
     * You must run at least one ```mongod``` instance with replica sets initiated or a ```mongos``` instance with same locally on port 26000
     * You must run the Stitch server locally using the Android-specific configuration:
         ```--configFile ./etc/configs/test_config_sdk_base.json --configFile ./etc/configs/test_config_sdk_android.json```
+    * For example, here's how to start mongod (using mlaunch), start the Stitch server, then run the tests:
+```
+mlaunch init --replicaset --port 26000
+
+# in stitch source directory
+go run cmd/server/main.go --configFile ./etc/configs/test_config_sdk_base.json --configFile ./etc/configs/test_config_sdk_android.json
+
+# in android SDK directory
+./gradlew connectedDebugAndroidTest
+```

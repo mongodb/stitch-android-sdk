@@ -139,23 +139,23 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.2.1'
 ##### Logging In
 1. Since we enabled anonymous log in, let's log in with it; add the following anywhere in your code:
 
-	```java
-	final StitchAppClient client = Stitch.getDefaultAppClient();
+  ```java
+    final StitchAppClient client = Stitch.getDefaultAppClient();
     client.getAuth().loginWithCredential(new AnonymousCredential()).addOnCompleteListener(
         new OnCompleteListener<StitchUser>() {
-      @Override
-      public void onComplete(@NonNull final Task<StitchUser> task) {
-        if (task.isSuccessful()) {
-          Log.d("myApp", String.format(
-              "logged in as user %s with provider %s",
-              task.getResult().getId(),
-              task.getResult().getLoggedInProviderType()));
-        } else {
-          Log.e("myApp", "failed to log in", task.getException());
-        }
-      }
+          @Override
+          public void onComplete(@NonNull final Task<StitchUser> task) {
+            if (task.isSuccessful()) {
+              Log.d("myApp", String.format(
+                  "logged in as user %s with provider %s",
+                  task.getResult().getId(),
+                  task.getResult().getLoggedInProviderType()));
+            } else {
+              Log.e("myApp", "failed to log in", task.getException());
+            }
+          }
     });
-	```
+  ```
 
 2. Now run your app in Android Studio by going to run, Run 'app'. Use the Android Virtual Device you created previously
 3. Once the app is running, open up Logcat in the bottom of Android studio and you should see the following log message:
@@ -166,7 +166,7 @@ implementation 'org.mongodb:stitch-server-services-twilio:4.2.1'
 	
 ##### Getting a StitchAppClient without Stitch.getDefaultAppClient
 
-In the case that you don't want a default initialized StitchAppClient by setting up the resource values, you can use the following code once to initialize a client for a given app id that you copied earlier:
+In the case that you don't want a default initialized [StitchAppClient](https://docs.mongodb.com/stitch-sdks/java/4/com/mongodb/stitch/android/core/StitchAppClient.html) by setting up the resource values, you can use the following code once to initialize a client for a given app id that you copied earlier:
 
 ```java
 final StitchAppClient client = Stitch.initializeAppClient("YOUR_APP_ID");

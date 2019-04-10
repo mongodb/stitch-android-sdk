@@ -4,11 +4,11 @@ apply plugin: 'digital.wup.android-maven-publish'
 apply plugin: 'jacoco-android'
 apply plugin: 'com.jfrog.bintray'
 
-ext.pomDisplayName = "Android AWS SES Service"
+ext.pomDisplayName = "Code example snippet tests"
 
 buildscript {
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.3.2'
+        classpath 'com.android.tools.build:gradle:3.3.0'
         classpath 'digital.wup:android-maven-publish:3.6.2'
         classpath 'com.dicedmelon.gradle:jacoco-android:0.1.4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
@@ -22,25 +22,24 @@ android {
         minSdkVersion min_api
         targetSdkVersion target_api
 
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
         Properties properties = new Properties()
         File file = project.rootProject.file('local.properties')
         if (file.exists()) {
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
         }
-        if (!properties.getProperty("test.stitch.awsAccessKeyId", "").isEmpty()) {
-            testInstrumentationRunnerArgument "test.stitch.awsAccessKeyId", properties.getProperty("test.stitch.awsAccessKeyId", "")
-        }
-        if (!properties.getProperty("test.stitch.awsSecretAccessKey", "").isEmpty()) {
-            testInstrumentationRunnerArgument "test.stitch.awsSecretAccessKey", properties.getProperty("test.stitch.awsSecretAccessKey", "")
-        }
+        testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
     }
 }
 
 dependencies {
-    implementation project(':android:stitch-android-core')
-    api project(':core:core-services:stitch-core-services-aws-ses')
+    api project(':core:core-services:stitch-core-services-mongodb-remote')
+    api project(':android:android-services:stitch-android-services-mongodb-local')
 
     androidTestImplementation project(':android:stitch-android-testutils')
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    androidTestCompile project(path: ':android:android-services:stitch-android-services-mongodb-remote')
 }
+
