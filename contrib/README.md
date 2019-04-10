@@ -6,11 +6,12 @@ This project follows [Semantic Versioning 2.0](https://semver.org/). In general,
 
 ### Publishing a New SDK version
 ```bash
-# run bump_version.bash with either patch, minor, or major
-./bump_version.bash <snapshot|beta|patch|minor|major>
-
-# send an email detailing the changes to the https://groups.google.com/d/forum/mongodb-stitch-announce mailing list
+# run bump_version.bash with either patch, minor, or major followed by the JIRA ticket number (you may omit the STITCH keyword if you would like).
+./bump_version.bash <snapshot|beta|patch|minor|major> <STITCH-1234|1234>
 ```
+
+* send an email detailing the changes to the https://groups.google.com/d/forum/mongodb-stitch-announce mailing list
+* go to [Android SDK](https://github.com/mongodb/stitch-android-sdk/pulls) and request a reviewer on the pull request (mandatory) before merging and deleting the release branch
 
 #### Configuring Bintray Upload
 For the `./gradlew bintrayUpload` command to work properly, you must locally specify your Bintray credentials. You can do this by adding the following lines to your `local.properties` file:
@@ -22,6 +23,9 @@ publish.bintray.gpgPassphrase=<gpg_passphrase># optional
 publish.bintray.mavenSyncUser=<maven_central_sync_user> # optional
 publish.bintray.mavenSyncPassword=<maven_central_sync_password> # optional
 ```
+
+#### Configuring Hub
+For the `./gradlew bintrayUpload` command to work properly, you must have ```hub``` installed. Please see [Hub](https://github.com/github/hub) for installation details.
 
 ### Snapshot Versions
 

@@ -12,6 +12,19 @@ if [ "$BUMP_TYPE" != "snapshot" ] && [ "$BUMP_TYPE" != "beta" ] && [ "$BUMP_TYPE
 	exit 1
 fi
 
+JIRA_TICKET=$2
+if [ -z "$JIRA_TICKET" ]
+    then
+        echo $"Usage: must provide Jira ticket number (Ex: STITCH-1234, or 1234)"
+        exit 1
+fi
+
+if [[ $JIRA_TICKET != *"-"* ]] ; then
+    JIRA_TICKET="STITCH-$JIRA_TICKET"
+fi
+echo "Jira Ticket: $JIRA_TICKET"
+
+
 # Get current package version
 LAST_VERSION=`cat gradle.properties | grep VERSION | sed s/VERSION=//`
 LAST_VERSION_MAJOR=$(echo $LAST_VERSION | cut -d. -f1)
@@ -76,7 +89,7 @@ echo "Updating gradle.properties"
 sed -i "" "s/^VERSION=.*$/VERSION=$NEW_VERSION/" gradle.properties
 
 git add gradle.properties
-
+git checkout -b "Release-$NEW_VERSION"
 if [[ ! $NEW_VERSION_QUALIFIER = "SNAPSHOT" ]]
 then
 	git commit -m "Release $NEW_VERSION"
@@ -87,14 +100,17 @@ $BODY"
 
 	git tag -a "$NEW_VERSION" -m "$BODY"
 
-	echo "pushing to git..."
-	git push upstream && git push upstream $NEW_VERSION
+	echo "creating pull request in github..."
+	git push -u origin "Release-$NEW_VERSION"
+	hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
 else
 	set +e
-	git commit -m "Update $NEW_VERSION"
+	git commit -m "$JIRA_TICKET: Update $NEW_VERSION"
 	if [ $? -eq 0 ]; then
+	    echo "creating pull request in github..."
 		set -e
-		git push upstream
+		git push -u origin "Release-$NEW_VERSION"
+	    hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
 	fi
 	set -e
 fi
