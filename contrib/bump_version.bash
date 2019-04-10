@@ -114,26 +114,3 @@ else
 	fi
 	set -e
 fi
-
-echo "uploading to bintray..."
-./gradlew bintrayUpload
-
-echo "pushing to docs..."
-./contrib/generate_docs.sh analytics
-
-if ! which aws; then
-   echo "aws CLI not found. see: https://docs.aws.amazon.com/cli/latest/userguide/installing.html"
-   exit 1
-fi
-
-if [ -z "$NEW_VERSION_QUALIFIER" ]; then
-	# Publish to MAJOR, MAJOR.MINOR
-	aws s3 cp ./build/docs/javadoc s3://stitch-sdks/stitch-sdks/java/$NEW_VERSION_MAJOR --recursive --acl public-read
-	aws s3 cp ./build/docs/javadoc s3://stitch-sdks/stitch-sdks/java/$NEW_VERSION_MAJOR.$NEW_VERSION_MINOR --recursive --acl public-read
-fi
-
-# Publish to full version
-aws s3 cp ./build/docs/javadoc s3://stitch-sdks/stitch-sdks/java/$NEW_VERSION --recursive --acl public-read
-
-BRANCH_NAME=`git branch | grep -e "^*" | cut -d' ' -f 2`
-aws s3 cp ./build/docs/javadoc s3://stitch-sdks/stitch-sdks/java/branch/$BRANCH_NAME --recursive --acl public-read
