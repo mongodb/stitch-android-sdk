@@ -30,6 +30,7 @@ import java.util.concurrent.Callable;
 
 import javax.annotation.Nonnull;
 
+import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 import org.bson.Document;
@@ -101,8 +102,11 @@ class LocalSyncWriteModelContainer {
   }
 
   boolean wrapForRecovery(final Callable<Boolean> callable) {
+    final List<BsonValue> idsAsList = new ArrayList<>();
+    idsAsList.addAll(ids);
+
     final List<BsonDocument> oldDocs = localCollection.find(
-        new Document("_id", new Document("$in", ids))
+        new BsonDocument("_id", new BsonDocument("$in", new BsonArray(idsAsList)))
     ).into(new ArrayList<>());
 
     if (oldDocs.size() > 0) {
@@ -116,7 +120,7 @@ class LocalSyncWriteModelContainer {
       result = false;
     }
 
-    if (oldDocs.size() > 0) {
+    if (result && oldDocs.size() > 0) {
       undoCollection.deleteMany(new Document("_id", new Document("$in", ids)));
     }
 

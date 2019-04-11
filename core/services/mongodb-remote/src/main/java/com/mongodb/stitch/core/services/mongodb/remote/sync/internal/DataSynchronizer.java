@@ -205,7 +205,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
     try {
       for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
-        recoverNamespace(nsConfig);
+        nsConfig.getLock().writeLock().lock();
+        try {
+          recoverNamespace(nsConfig);
+        } finally {
+          nsConfig.getLock().writeLock().unlock();
+        }
       }
     } finally {
       for (final NamespaceSynchronizationConfig nsConfig : nsConfigs) {
@@ -225,9 +230,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         getUndoCollection(nsConfig.getNamespace());
     final MongoCollection<BsonDocument> localCollection =
         getLocalCollection(nsConfig.getNamespace());
-    final List<BsonDocument> undoDocs =
-        undoCollection.find().into(new ArrayList<>());
+    final List<BsonDocument> undoDocs = undoCollection.find().into(new ArrayList<>());
     final Set<BsonValue> recoveredIds = new HashSet<>();
+
 
     // Replace local docs with undo docs. Presence of an undo doc implies we had a system failure
     // during a write. This covers updates and deletes.
@@ -2765,7 +2770,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         instanceChangeStreamListener.removeNamespace(namespace);
         return;
       }
-      if (!this.syncConfig.getNamespaceConfig(namespace).isConfigured()) {
+      if (!nsConfig.isConfigured()) {
         return;
       }
       instanceChangeStreamListener.addNamespace(namespace);
