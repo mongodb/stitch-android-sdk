@@ -51,7 +51,7 @@ public abstract class WriteModelContainer<CollectionT, DocumentT> {
   }
 
   final boolean commitAndClear() {
-    boolean success = this.commit();
+    final boolean success = this.commit();
     this.bulkWriteModels.clear();
     return success;
   }

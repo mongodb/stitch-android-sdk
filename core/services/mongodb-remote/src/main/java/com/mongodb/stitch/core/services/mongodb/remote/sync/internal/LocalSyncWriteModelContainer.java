@@ -60,7 +60,8 @@ class LocalSyncWriteModelContainer {
     this.undoCollection = undoCollection;
     this.eventDispatcher = eventDispatcher;
 
-    MongoCollection<CoreDocumentSynchronizationConfig> docsCollection = nsConfig.getDocsColl();
+    final MongoCollection<CoreDocumentSynchronizationConfig> docsCollection =
+        nsConfig.getDocsColl();
     this.localWrites = new MongoCollectionWriteModelContainer<>(localCollection);
     this.configWrites = new MongoCollectionWriteModelContainer<>(docsCollection);
     this.remoteWrites = new CoreRemoteMongoCollectionWriteModelContainer<>(remoteCollection);
@@ -132,9 +133,9 @@ class LocalSyncWriteModelContainer {
     });
 
     if (shouldEmitEvents) { // temporary: change this to a success indicator
-      int numEvents = localChangeEvents.size();
+      final int numEvents = localChangeEvents.size();
       for (int i = 0; i < numEvents; i++) {
-        ChangeEvent<BsonDocument> event = localChangeEvents.get(i);
+        final ChangeEvent<BsonDocument> event = localChangeEvents.get(i);
         eventDispatcher.emitEvent(nsConfig, event);
       }
       localChangeEvents.clear();

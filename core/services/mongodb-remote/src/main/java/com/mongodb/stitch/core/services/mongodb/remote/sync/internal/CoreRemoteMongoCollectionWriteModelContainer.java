@@ -54,22 +54,22 @@ public class CoreRemoteMongoCollectionWriteModelContainer<DocumentT>
     for (final WriteModel<DocumentT> write : writeModels) {
       if (write instanceof ReplaceOneModel) {
         final ReplaceOneModel<DocumentT> replaceModel = ((ReplaceOneModel) write);
-        RemoteUpdateResult result =
+        final RemoteUpdateResult result =
             collection.updateOne(replaceModel.getFilter(), (Bson) replaceModel.getReplacement());
-        success = success &&
-            (result != null && result.getModifiedCount() == result.getMatchedCount());
+        success = success
+            && (result != null && result.getModifiedCount() == result.getMatchedCount());
       } else if (write instanceof UpdateOneModel) {
         final UpdateOneModel<DocumentT> updateModel = ((UpdateOneModel) write);
-        RemoteUpdateResult result =
+        final RemoteUpdateResult result =
             collection.updateOne(updateModel.getFilter(), updateModel.getUpdate());
-        success = success &&
-            (result != null && result.getModifiedCount() == result.getMatchedCount());
+        success = success
+            && (result != null && result.getModifiedCount() == result.getMatchedCount());
       } else if (write instanceof UpdateManyModel) {
         final UpdateManyModel<DocumentT> updateModel = ((UpdateManyModel) write);
-        RemoteUpdateResult result =
+        final RemoteUpdateResult result =
             collection.updateMany(updateModel.getFilter(), updateModel.getUpdate());
-        success = success &&
-            (result != null && result.getModifiedCount() == result.getMatchedCount());
+        success = success
+            && (result != null && result.getModifiedCount() == result.getMatchedCount());
       }
     }
     return success;

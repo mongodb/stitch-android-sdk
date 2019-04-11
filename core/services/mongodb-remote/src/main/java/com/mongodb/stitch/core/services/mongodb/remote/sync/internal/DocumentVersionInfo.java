@@ -17,7 +17,6 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
-import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeDocument;
 
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 
@@ -30,7 +29,6 @@ import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-
 
 final class DocumentVersionInfo {
   @Nullable private final Version version;

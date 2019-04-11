@@ -47,7 +47,7 @@ public class MongoCollectionWriteModelContainer<DocumentT>
     boolean success = true;
 
     if (writes.size() > 0) {
-      BulkWriteResult result = collection.bulkWrite(writes);
+      final BulkWriteResult result = collection.bulkWrite(writes);
       success = result.wasAcknowledged();
     }
 
