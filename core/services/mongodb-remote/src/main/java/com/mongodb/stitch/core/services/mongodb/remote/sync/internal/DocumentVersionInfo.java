@@ -240,6 +240,9 @@ final class DocumentVersionInfo {
    * @return a BsonDocument representing a synchronization version
    */
   BsonDocument getNextVersion() {
+    if (!this.hasVersion() || this.getVersionDoc() == null) {
+      return getFreshVersionDocument();
+    }
     final BsonDocument nextVersion = BsonUtils.copyOfDocument(this.getVersionDoc());
     nextVersion.put(
             Fields.VERSION_COUNTER_FIELD,

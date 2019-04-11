@@ -1093,7 +1093,7 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testBatchOps() {
+    fun testRecovery() {
         val ctx = harness.freshTestContext()
 
         ctx.reconfigure()
