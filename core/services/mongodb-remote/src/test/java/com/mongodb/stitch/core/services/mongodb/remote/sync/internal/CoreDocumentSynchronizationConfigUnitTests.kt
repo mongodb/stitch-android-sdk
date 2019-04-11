@@ -95,9 +95,11 @@ class CoreDocumentSynchronizationConfigUnitTests {
         var config = CoreDocumentSynchronizationConfig(coll, namespace, id)
         val expectedTestVersion = BsonDocument("dummy", BsonString("version"))
         val expectedEvent = ChangeEvents.changeEventForLocalDelete(namespace, id, false)
+        val expectedHash = 12345L
         config.setSomePendingWritesAndSave(
             1,
             expectedTestVersion,
+            expectedHash,
             expectedEvent)
         config.isPaused = true
         config.isStale = true
@@ -121,6 +123,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
         assertEquals(namespace, config.namespace)
         assertEquals(expectedTestVersion, config.lastKnownRemoteVersion)
         compareEvents(expectedEvent, config.lastUncommittedChangeEvent)
+        assertEquals(expectedHash, config.lastKnownHash)
         assertEquals(id, config.documentId)
     }
 }

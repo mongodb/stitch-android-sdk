@@ -60,6 +60,7 @@ public class CoreDocumentSynchronizationConfig {
   private ChangeEvent<BsonDocument> lastUncommittedChangeEvent;
   private long lastResolution;
   private BsonDocument lastKnownRemoteVersion;
+  private long lastKnownHash;
   private boolean isStale;
   private boolean isPaused;
 
@@ -69,7 +70,7 @@ public class CoreDocumentSynchronizationConfig {
       final BsonValue documentId
   ) {
     this(docsColl, namespace, documentId, null, -1, null, new ReentrantReadWriteLock(),
-        false, false);
+        false, false, 0L);
   }
 
   CoreDocumentSynchronizationConfig(
@@ -78,7 +79,7 @@ public class CoreDocumentSynchronizationConfig {
   ) {
     this(docsColl, config.namespace, config.documentId, config.lastUncommittedChangeEvent,
         config.lastResolution, config.lastKnownRemoteVersion, config.docLock, config.isStale,
-        config.isPaused);
+        config.isPaused, config.lastKnownHash);
   }
 
   private CoreDocumentSynchronizationConfig(
@@ -90,7 +91,8 @@ public class CoreDocumentSynchronizationConfig {
       final BsonDocument lastVersion,
       final ReadWriteLock docsLock,
       final boolean isStale,
-      final boolean isPaused
+      final boolean isPaused,
+      final long lastKnownHash
   ) {
     this.docsColl = docsColl;
     this.namespace = namespace;
@@ -101,6 +103,7 @@ public class CoreDocumentSynchronizationConfig {
     this.docLock = docsLock;
     this.isStale = isStale;
     this.isPaused = isPaused;
+    this.lastKnownHash = lastKnownHash;
   }
 
   static BsonDocument getDocFilter(
@@ -218,11 +221,12 @@ public class CoreDocumentSynchronizationConfig {
   public void setSomePendingWritesAndSave(
       final long atTime,
       final BsonDocument atVersion,
+      final long atHash,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
     docLock.writeLock().lock();
     try {
-      this.setSomePendingWrites(atTime, atVersion, changeEvent);
+      this.setSomePendingWrites(atTime, atVersion, atHash, changeEvent);
       docsColl.replaceOne(
           getDocFilter(namespace, documentId),
           this);
@@ -242,6 +246,7 @@ public class CoreDocumentSynchronizationConfig {
   void setSomePendingWrites(
       final long atTime,
       final BsonDocument atVersion,
+      final long atHash,
       final ChangeEvent<BsonDocument> changeEvent
   ) {
     docLock.writeLock().lock();
@@ -249,16 +254,18 @@ public class CoreDocumentSynchronizationConfig {
       this.lastUncommittedChangeEvent = changeEvent;
       this.lastResolution = atTime;
       this.lastKnownRemoteVersion = atVersion;
+      this.lastKnownHash = atHash;
     } finally {
       docLock.writeLock().unlock();
     }
   }
 
-  void setPendingWritesComplete(final BsonDocument atVersion) {
+  void setPendingWritesComplete(final long atHash, final BsonDocument atVersion) {
     docLock.writeLock().lock();
     try {
       this.lastUncommittedChangeEvent = null;
       this.lastKnownRemoteVersion = atVersion;
+      this.lastKnownHash = atHash;
     } finally {
       docLock.writeLock().unlock();
     }
@@ -346,6 +353,15 @@ public class CoreDocumentSynchronizationConfig {
     }
   }
 
+  public long getLastKnownHash() {
+    docLock.readLock().lock();
+    try {
+      return lastKnownHash;
+    } finally {
+      docLock.readLock().unlock();
+    }
+  }
+
   /**
    * Possibly coalesces the newest change event to match the user's original intent. For example,
    * an unsynchronized insert and update is still an insert.
@@ -422,6 +438,7 @@ public class CoreDocumentSynchronizationConfig {
       if (getLastKnownRemoteVersion() != null) {
         asDoc.put(ConfigCodec.Fields.LAST_KNOWN_REMOTE_VERSION_FIELD, getLastKnownRemoteVersion());
       }
+      asDoc.put(ConfigCodec.Fields.LAST_KNOWN_HASH_FIELD, new BsonInt64(lastKnownHash));
 
       if (lastUncommittedChangeEvent != null) {
         final BsonDocument ceDoc = lastUncommittedChangeEvent.toBsonDocument();
@@ -488,7 +505,9 @@ public class CoreDocumentSynchronizationConfig {
         lastVersion,
         new ReentrantReadWriteLock(),
         document.getBoolean(ConfigCodec.Fields.IS_STALE).getValue(),
-        document.getBoolean(ConfigCodec.Fields.IS_PAUSED, new BsonBoolean(false)).getValue());
+        document.getBoolean(ConfigCodec.Fields.IS_PAUSED, new BsonBoolean(false)).getValue(),
+        document.getInt64(ConfigCodec.Fields.LAST_KNOWN_HASH_FIELD, new BsonInt64(0))
+          .getValue());
   }
 
   static final ConfigCodec configCodec = new ConfigCodec();
@@ -520,6 +539,7 @@ public class CoreDocumentSynchronizationConfig {
       static final String NAMESPACE_FIELD = "namespace";
       static final String LAST_RESOLUTION_FIELD = "last_resolution";
       static final String LAST_KNOWN_REMOTE_VERSION_FIELD = "last_known_remote_version";
+      static final String LAST_KNOWN_HASH_FIELD = "last_known_hash";
       static final String LAST_UNCOMMITTED_CHANGE_EVENT = "last_uncommitted_change_event";
       static final String IS_STALE = "is_stale";
       static final String IS_PAUSED = "is_paused";

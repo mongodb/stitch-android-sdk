@@ -236,11 +236,8 @@ class DataSynchronizerUnitTests {
 
         assertNotNull(docConfig?.lastKnownRemoteVersion)
 
-        val docVersionInfo =
-                DocumentVersionInfo.fromVersionDoc(docConfig?.lastKnownRemoteVersion)
-        assertNotNull(docVersionInfo.version)
-        assertNotNull(docVersionInfo.version.hash)
-        assertTrue(docVersionInfo.version.hash != 0L)
+        assertNotNull(docConfig?.lastKnownHash)
+        assertTrue(docConfig?.lastKnownHash != 0L)
     }
 
     @Test
@@ -321,9 +318,7 @@ class DataSynchronizerUnitTests {
         ctx.setPendingWritesForDocId(ctx.testDocumentId,
                 ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
 
-        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument(
-                ctx.testDocument.clone().append("hello", BsonString("dolly"))
-        )
+        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument()
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append(
                         DataSynchronizer.DOCUMENT_VERSION_FIELD,
@@ -499,7 +494,7 @@ class DataSynchronizerUnitTests {
         val ctx = harness.freshTestContext()
 
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument(ctx.testDocument)
+        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument()
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append(
                         DataSynchronizer.DOCUMENT_VERSION_FIELD,
@@ -526,9 +521,7 @@ class DataSynchronizerUnitTests {
         val ctx = harness.freshTestContext()
 
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument(
-                ctx.testDocument.clone().append("hello", BsonString("dolly"))
-        )
+        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument()
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append("hello", BsonString("dolly"))
                 .append(

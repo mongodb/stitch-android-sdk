@@ -795,7 +795,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 docConfig.getLastUncommittedChangeEvent().getFullDocument()));
           } else {
             // use the last seen hash version
-            lastSeenHash = lastSeenHasNoVersion ? 0L : lastSeenVersion.getHash();
+            lastSeenHash = docConfig.getLastKnownHash();
           }
           final long remoteHash = HashUtils.hash(sanitizeDocument(remoteFullDocument));
 
@@ -1017,8 +1017,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   // 1. INSERT
                   case INSERT: {
                     nextVersion =
-                        DocumentVersionInfo.getFreshVersionDocument(
-                            localChangeEvent.getFullDocument());
+                        DocumentVersionInfo.getFreshVersionDocument();
 
                     // It's possible that we may insert after a delete happened and we didn't get a
                     // notification for it. There's nothing we can do about this.
@@ -1061,7 +1060,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       );
                       continue;
                     }
-                    nextVersion = localVersionInfo.getNextVersion(localDoc);
+                    nextVersion = localVersionInfo.getNextVersion();
                     final BsonDocument nextDoc = withNewVersion(localDoc, nextVersion);
 
                     // a. Update the document in the remote database using a query for the _id and
@@ -1112,7 +1111,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         // create an update document from the local change event's update
                         // description, and set the version of the new document to the next logical
                         // version
-                        nextVersion = localVersionInfo.getNextVersion(localDoc);
+                        nextVersion = localVersionInfo.getNextVersion();
 
                         final BsonDocument translatedUpdate = new BsonDocument();
                         final BsonDocument sets = new BsonDocument();
@@ -1255,7 +1254,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           }
 
           if (setPendingWritesComplete) {
-            docConfig.setPendingWritesComplete(nextVersion);
+            docConfig.setPendingWritesComplete(
+                HashUtils.hash(
+                    sanitizeDocument(docConfig.getLastUncommittedChangeEvent().getFullDocument())
+                ), nextVersion);
           }
 
           if (action != null) { // for now, since we do remote ops inline
@@ -1313,7 +1315,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return null;
       case APPLY_AND_VERSION_FROM_REMOTE:
         final BsonDocument applyNewVersion =
-            DocumentVersionInfo.getFreshVersionDocument(remoteChangeEvent.getFullDocument());
+            DocumentVersionInfo.getFreshVersionDocument();
         final LocalSyncWriteModelContainer writeContainer =
             replaceOrUpsertOneFromRemote(nsConfig, docConfig.getDocumentId(),
                 remoteChangeEvent.getFullDocument(), applyNewVersion);
@@ -1323,7 +1325,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             withNewVersion(remoteChangeEvent.getFullDocument(), applyNewVersion)
         ));
 
-        docConfig.setPendingWritesComplete(applyNewVersion);
+        docConfig.setPendingWritesComplete(
+            HashUtils.hash(sanitizeDocument(remoteChangeEvent.getFullDocument())),
+            applyNewVersion
+        );
         writeContainer.addConfigWrite(new ReplaceOneModel<>(
             CoreDocumentSynchronizationConfig.getDocFilter(
                 nsConfig.getNamespace(), docConfig.getDocumentId()),
@@ -2442,6 +2447,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     config.setSomePendingWrites(
         logicalT,
         atVersion,
+        HashUtils.hash(docForStorage),
         event);
     eventDispatcher.emitEvent(nsConfig, event);
     final LocalSyncWriteModelContainer syncWriteModelContainer = newWriteModelContainer(nsConfig);
@@ -2488,7 +2494,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
       docForStorage = sanitizeDocument(remoteDocument);
 
-      config.setPendingWritesComplete(atVersion);
+      config.setPendingWritesComplete(HashUtils.hash(docForStorage), atVersion);
 
       event = ChangeEvents.changeEventForLocalReplace(namespace, documentId, docForStorage, false);
     } finally {
@@ -2677,7 +2683,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       event = ChangeEvents.changeEventForLocalDelete(namespace, documentId, true);
-      config.setSomePendingWrites(logicalT, atVersion, event);
+      config.setSomePendingWrites(logicalT, atVersion, 0L, event);
     } finally {
       lock.unlock();
     }

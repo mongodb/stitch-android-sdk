@@ -41,24 +41,20 @@ final class DocumentVersionInfo {
     private static final String SYNC_PROTOCOL_VERSION_FIELD = "spv";
     private static final String INSTANCE_ID_FIELD = "id";
     private static final String VERSION_COUNTER_FIELD = "v";
-    private static final String HASH_FIELD = "h";
   }
 
   static class Version {
     final int syncProtocolVersion;
     final String instanceId;
     final long versionCounter;
-    final Long hash;
 
     Version(
             final int syncProtocolVersion,
             final String instanceId,
-            final long versionCounter,
-            final Long hash) {
+            final long versionCounter) {
       this.syncProtocolVersion = syncProtocolVersion;
       this.instanceId = instanceId;
       this.versionCounter = versionCounter;
-      this.hash = hash;
     }
 
     /**
@@ -84,18 +80,6 @@ final class DocumentVersionInfo {
     long getVersionCounter() {
       return versionCounter;
     }
-
-    /**
-     * Returns the hash code of this version. This hash is intended to be the locally
-     * calculated hash even if it is incidentally stored with version information on the
-     * server. Remote calculation of this hash as part of version information should not
-     * be relied upon.
-     * @return a long representing the hash code of the data in this version or null if hash
-     * has not been calculated.
-     */
-    Long getHash() {
-      return hash;
-    }
   }
 
   private DocumentVersionInfo(
@@ -105,12 +89,10 @@ final class DocumentVersionInfo {
     if (version != null) {
       this.versionDoc = version;
 
-      final BsonInt64 versionDocHash = versionDoc.getInt64(Fields.HASH_FIELD, null);
       this.version = new Version(
         versionDoc.getInt32(Fields.SYNC_PROTOCOL_VERSION_FIELD).getValue(),
         versionDoc.getString(Fields.INSTANCE_ID_FIELD).getValue(),
-        versionDoc.getInt64(Fields.VERSION_COUNTER_FIELD).getValue(),
-        versionDocHash == null ? null : versionDocHash.longValue()
+        versionDoc.getInt64(Fields.VERSION_COUNTER_FIELD).getValue()
       );
     } else {
       this.versionDoc = null;
@@ -206,18 +188,14 @@ final class DocumentVersionInfo {
   /**
    * Returns a BSON version document representing a new version with a new instance ID, and
    * version counter of zero.
-   * @param fullDocument the full document that this version corresponds to
    * @return a BsonDocument representing a synchronization version
    */
-  static BsonDocument getFreshVersionDocument(final BsonDocument fullDocument) {
+  static BsonDocument getFreshVersionDocument() {
     final BsonDocument versionDoc = new BsonDocument();
 
     versionDoc.append(Fields.SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(1));
     versionDoc.append(Fields.INSTANCE_ID_FIELD, new BsonString(UUID.randomUUID().toString()));
     versionDoc.append(Fields.VERSION_COUNTER_FIELD, new BsonInt64(0L));
-
-    final BsonDocument sanitizedDocument = sanitizeDocument(fullDocument);
-    versionDoc.append(Fields.HASH_FIELD, new BsonInt64(HashUtils.hash(sanitizedDocument)));
 
     return versionDoc;
   }
@@ -263,10 +241,7 @@ final class DocumentVersionInfo {
    * empty version.
    * @return a BsonDocument representing a synchronization version
    */
-  BsonDocument getNextVersion(final BsonDocument localDoc) {
-    if (!this.hasVersion() || this.getVersionDoc() == null) {
-      return getFreshVersionDocument(localDoc);
-    }
+  BsonDocument getNextVersion() {
     final BsonDocument nextVersion = BsonUtils.copyOfDocument(this.getVersionDoc());
     nextVersion.put(
             Fields.VERSION_COUNTER_FIELD,

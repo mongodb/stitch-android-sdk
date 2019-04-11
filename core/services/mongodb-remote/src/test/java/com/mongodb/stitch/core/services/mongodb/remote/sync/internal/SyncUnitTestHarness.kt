@@ -549,9 +549,9 @@ class SyncUnitTestHarness : Closeable {
                     TestVersionState.SAME ->
                         fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.versionDoc
                     TestVersionState.NEXT ->
-                        fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.getNextVersion(document)
+                        fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.getNextVersion()
                     TestVersionState.NEW ->
-                        fakeUpdateDoc["__stitch_sync_version"] = DocumentVersionInfo.getFreshVersionDocument(document)
+                        fakeUpdateDoc["__stitch_sync_version"] = DocumentVersionInfo.getFreshVersionDocument()
                 }
             }
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
