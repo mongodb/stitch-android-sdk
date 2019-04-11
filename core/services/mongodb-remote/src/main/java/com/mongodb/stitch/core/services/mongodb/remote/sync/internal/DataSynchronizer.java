@@ -717,6 +717,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
     docConfig.getLock().readLock().lock();
     try {
+      // if logical time hasn't advanced...
       if (docConfig.hasUncommittedWrites() && docConfig.getLastResolution() == logicalT) {
         action = SyncAction.WAIT;
         message = SyncMessage.SIMULTANEOUS_WRITES_MESSAGE;
@@ -733,6 +734,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             remoteChangeEvent.getOperationType().toString()));
       }
 
+      // record whether this is a delete operation
       final boolean isDelete;
       switch (remoteChangeEvent.getOperationType()) {
         case INSERT:
@@ -744,6 +746,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           isDelete = true;
           break;
         default:
+          // unknown operation
           isDelete = false;
           action = SyncAction.DROP_EVENT_AND_PAUSE;
           message = SyncMessage.UNKNOWN_OPTYPE_MESSAGE;
@@ -771,6 +774,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           action = SyncAction.DROP_EVENT_AND_DESYNC;
           message = SyncMessage.UNKNOWN_REMOTE_PROTOCOL_VERSION_MESSAGE;
         } else {
+          // sync protocol versions match
           final DocumentVersionInfo lastSeenVersionInfo =
               DocumentVersionInfo.fromVersionDoc(docConfig.getLastKnownRemoteVersion());
 
@@ -788,8 +792,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           if (lastSeenHasNoVersion && docConfig.getLastUncommittedChangeEvent() != null) {
             // do a hash calculation if local is unversioned and we have a pending write
             lastSeenHash = HashUtils.hash(sanitizeDocument(
-                        docConfig.getLastUncommittedChangeEvent().getFullDocument()));
+                docConfig.getLastUncommittedChangeEvent().getFullDocument()));
           } else {
+            // use the last seen hash version
             lastSeenHash = lastSeenHasNoVersion ? 0L : lastSeenVersion.getHash();
           }
           final long remoteHash = HashUtils.hash(sanitizeDocument(remoteFullDocument));
@@ -800,6 +805,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               message = SyncMessage.DELETE_FROM_REMOTE_MESSAGE;
               action = SyncAction.DELETE_LOCAL_DOC;
             } else if (remoteHasNoVersion) {
+              // apply appropriate unversioned event logic
               message = SyncMessage.EMPTY_VERSION_MESSAGE;
               if (lastSeenHasNoVersion) {
                 action = SyncAction.APPLY_AND_VERSION_FROM_REMOTE;
@@ -812,26 +818,30 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   ? SyncAction.APPLY_FROM_REMOTE : SyncAction.DROP_EVENT;
               message = SyncMessage.EMPTY_VERSION_MESSAGE;
             } else {
-              final long remoteVersionCounter = remoteVersion.getVersionCounter();
-              final long lastSeenVersionCounter = lastSeenVersion.getVersionCounter();
-
-              final boolean instanceIdMatch =
-                  lastSeenVersion.getInstanceId().equals(remoteVersion.getInstanceId());
-              if (remoteVersionCounter > lastSeenVersionCounter) {
-                action = SyncAction.APPLY_FROM_REMOTE;
-                message = SyncMessage.APPLY_FROM_REMOTE_MESSAGE;
+              if (lastSeenVersion.getSyncProtocolVersion() != SYNC_PROTOCOL_VERSION) {
+                action = SyncAction.DELETE_LOCAL_DOC_AND_DESYNC; // until we implement migrations
+                message = SyncMessage.STALE_PROTOCOL_VERSION_MESSAGE;
               } else {
-                if (lastSeenVersion.getSyncProtocolVersion() == SYNC_PROTOCOL_VERSION
-                    && instanceIdMatch) {
-                  message = SyncMessage.PROBABLY_GENERATED_BY_US_MESSAGE;
-                  action = SyncAction.DROP_EVENT;
-                } else if (remoteVersionCounter == lastSeenVersionCounter
-                    && lastSeenHash != remoteHash) {
-                  message = SyncMessage.REMOTE_UPDATE_WITHOUT_VERSION_MESSAGE;
-                  action = SyncAction.SYNTHETIC_CONFLICT;
+                if (!lastSeenVersion.getInstanceId().equals(remoteVersion.getInstanceId())) {
+                  // different client generated the remote event
+                  action = SyncAction.REMOTE_FIND;
+                  message = SyncMessage.INSTANCE_ID_MISMATCH_MESSAGE;
                 } else {
-                  message = SyncMessage.STALE_EVENT_MESSAGE;
-                  action = SyncAction.DROP_EVENT;
+                  // check versions and apply corresponding logic
+                  final long remoteVersionCounter = remoteVersion.getVersionCounter();
+                  final long lastSeenVersionCounter = lastSeenVersion.getVersionCounter();
+
+                  if (remoteVersionCounter > lastSeenVersionCounter) {
+                    action = SyncAction.APPLY_FROM_REMOTE;
+                    message = SyncMessage.APPLY_FROM_REMOTE_MESSAGE;
+                  } else if (remoteVersionCounter == lastSeenVersionCounter
+                      && lastSeenHash != remoteHash) {
+                    action = SyncAction.APPLY_FROM_REMOTE;
+                    message = SyncMessage.REMOTE_UPDATE_WITHOUT_VERSION_MESSAGE;
+                  } else {
+                    action = SyncAction.DROP_EVENT;
+                    message = SyncMessage.PROBABLY_GENERATED_BY_US_MESSAGE;
+                  }
                 }
               }
             }
@@ -841,26 +851,30 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               message = SyncMessage.PENDING_WRITE_DELETE_MESSAGE;
               action = SyncAction.CONFLICT;
             } else if (remoteHasNoVersion || lastSeenHasNoVersion) {
+              // apply appropriate unversioned event logic
               message = SyncMessage.PENDING_WRITE_EMPTY_VERSION_MESSAGE;
               if (remoteHasNoVersion == lastSeenHasNoVersion) {
                 action = lastSeenHash != remoteHash ? SyncAction.CONFLICT : SyncAction.DROP_EVENT;
               } else {
                 action = SyncAction.CONFLICT;
               }
-            } else if (!lastSeenVersion.getInstanceId().equals(remoteVersion.getInstanceId())) {
-              // different client generated the remote event
-              action = SyncAction.REMOTE_FIND;
-              message = SyncMessage.PENDING_WRITE_INSTANCE_ID_MISMATCH_MESSAGE;
             } else {
-              final long remoteVersionCounter = remoteVersion.getVersionCounter();
-              final long lastSeenVersionCounter = lastSeenVersion.getVersionCounter();
-
-              if (remoteVersionCounter > lastSeenVersionCounter) {
-                message = SyncMessage.STALE_LOCAL_WRITE_MESSAGE;
-                action = SyncAction.CONFLICT;
+              if (!lastSeenVersion.getInstanceId().equals(remoteVersion.getInstanceId())) {
+                // different client generated the remote event
+                action = SyncAction.REMOTE_FIND;
+                message = SyncMessage.INSTANCE_ID_MISMATCH_MESSAGE;
               } else {
-                message = SyncMessage.STALE_EVENT_MESSAGE;
-                action = lastSeenHash != remoteHash ? SyncAction.CONFLICT : SyncAction.DROP_EVENT;
+                // check versions and apply corresponding logic
+                final long remoteVersionCounter = remoteVersion.getVersionCounter();
+                final long lastSeenVersionCounter = lastSeenVersion.getVersionCounter();
+
+                if (remoteVersionCounter > lastSeenVersionCounter) {
+                  message = SyncMessage.STALE_LOCAL_WRITE_MESSAGE;
+                  action = SyncAction.CONFLICT;
+                } else {
+                  message = SyncMessage.STALE_EVENT_MESSAGE;
+                  action = lastSeenHash != remoteHash ? SyncAction.CONFLICT : SyncAction.DROP_EVENT;
+                }
               }
             }
           }
@@ -1209,6 +1223,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
                 localSyncWriteModelContainer.addLocalChangeEvent(localEventToEmit);
 
+                // do this later before change is committed since it requires a write lock which we
+                // cannot own while locking for read
                 setPendingWritesComplete = true;
                 if (committedEvent.getOperationType() != OperationType.DELETE) {
                   localSyncWriteModelContainer.addConfigWrite(
@@ -1276,7 +1292,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       @Nonnull final SyncMessage message,
       @Nonnull final String caller,
       @Nullable final Exception ex) {
-
     String formattedMessage = null;
     if (message != null) {
       final String syncMessage = SyncMessage.constructMessage(action, message);
@@ -1323,24 +1338,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             remoteChangeEvent.getFullDocument(), remoteVersion);
       case CONFLICT:
         return resolveConflict(nsConfig, docConfig, remoteChangeEvent);
-      case SYNTHETIC_CONFLICT:
-        final BsonDocument localDoc = getLocalCollection(nsConfig.getNamespace())
-            .find(getDocumentIdFilter(docConfig.getDocumentId())).first();
-        if (localDoc == null) {
-          return emitErrorAndDesync(nsConfig, docConfig, "missing local document", null);
-        }
-        return resolveConflict(
-            nsConfig,
-            docConfig,
-            ChangeEvents.changeEventForLocalReplace(
-                nsConfig.getNamespace(),
-                docConfig.getDocumentId(),
-                localDoc,
-                false),
-            remoteChangeEvent
-        );
       case REMOTE_FIND:
-        return remoteFind(nsConfig, docConfig);
+        return remoteFind(nsConfig, docConfig, caller);
       case DROP_EVENT_AND_DESYNC:
         return emitErrorAndDesync(nsConfig, docConfig, formattedMessage, ex);
       case DROP_EVENT_AND_PAUSE:
@@ -1357,102 +1356,74 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   private LocalSyncWriteModelContainer remoteFind(
       final NamespaceSynchronizationConfig nsConfig,
-      final CoreDocumentSynchronizationConfig docConfig) {
+      final CoreDocumentSynchronizationConfig docConfig,
+      final String caller) {
     final DocumentVersionInfo lastSeenVersionInfo =
         DocumentVersionInfo.getLocalVersionInfo(docConfig);
 
-    // b.  If the GUIDs are different, do a full document lookup against the remote server to
-    //     fetch the latest version (this is to guard against the case where the unprocessed
-    //     change event is stale).
+    SyncAction action = null;
+    SyncMessage message = null;
+    ChangeEvent<BsonDocument> remoteChangeEvent = null;
+
+    // fetch the latest version to guard against stale events from other clients
     final BsonDocument newestRemoteDocument = this.getRemoteCollection(nsConfig.getNamespace())
         .find(new BsonDocument("_id", docConfig.getDocumentId())).first();
 
-    SyncAction action = null;
-    SyncMessage message = null;
+    final boolean isPendingWrite = docConfig.getLastUncommittedChangeEvent() != null;
+
     if (newestRemoteDocument == null) {
-      // i. If the document is not found with a remote lookup, this means the document was
-      //    deleted remotely, so raise a conflict using a synthesized delete event as the remote
-      //    change event.
-      if (logger.isDebugEnabled()) {
-        logger.debug(String.format(
-            Locale.US,
-            "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s remote event version "
-                + "stale and latest document lookup indicates a remote delete occurred, but "
-                + "a write is pending; raising conflict",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId()));
-      }
-      return resolveConflict(
-          nsConfig, docConfig,
-          ChangeEvents.changeEventForLocalDelete(
-              nsConfig.getNamespace(),
-              docConfig.getDocumentId(),
-              docConfig.hasUncommittedWrites()));
-    }
-
-    final DocumentVersionInfo newestRemoteVersionInfo;
-    try {
-      newestRemoteVersionInfo = DocumentVersionInfo
-          .getRemoteVersionInfo(newestRemoteDocument);
-    } catch (final Exception e) {
-      return emitErrorAndDesync(nsConfig, docConfig,
-          String.format(
-              Locale.US,
-              "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s got a remote "
-                  + "document that could not have its version info parsed "
-                  + "; dropping the event, and desyncing the document",
-              logicalT,
-              nsConfig.getNamespace(),
-              docConfig.getDocumentId()),
-          null);
-    }
-
-    final boolean newestRemoteHasNoVersion = !newestRemoteVersionInfo.hasVersion();
-    final boolean lastSeenHasNoVersion = !lastSeenVersionInfo.hasVersion();
-
-    final DocumentVersionInfo.Version lastSeenVersion =
-        lastSeenHasNoVersion ? null : lastSeenVersionInfo.getVersion();
-    final DocumentVersionInfo.Version newestRemoteVersion =
-        newestRemoteHasNoVersion ? null : newestRemoteVersionInfo.getVersion();
-    // ii. If the current GUID of the remote document (as determined by this lookup) is equal
-    //     to the GUID of the local document, drop the event. We're believed to be behind in
-    //     the change stream at this point.
-    if (!newestRemoteHasNoVersion && !lastSeenHasNoVersion
-        && lastSeenVersion.getInstanceId().equals(newestRemoteVersion.getInstanceId())) {
-      if (logger.isDebugEnabled()) {
-        logger.debug(String.format(
-            Locale.US,
-            "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
-                + "indicates that this is a stale event; dropping the event",
-            logicalT,
-            nsConfig.getNamespace(),
-            docConfig.getDocumentId()));
-      }
-      return null;
-    }
-
-    // iii. If the current GUID of the remote document is not equal to the GUID of the local
-    //      document, raise a conflict using a synthesized replace event as the remote change
-    //      event. This means the remote document is a legitimately new document and we should
-    //      handle the conflict.
-    if (logger.isDebugEnabled()) {
-      logger.debug(String.format(
-          Locale.US,
-          "t='%d': syncRemoteChangeEventToLocal ns=%s documentId=%s latest document lookup "
-              + "indicates a remote replace occurred, but a local write is pending; raising "
-              + "conflict with synthesized replace event",
-          logicalT,
-          nsConfig.getNamespace(),
-          docConfig.getDocumentId()));
-    }
-    return resolveConflict(
-        nsConfig, docConfig,
-        ChangeEvents.changeEventForLocalReplace(
+      // document was deleted remotely
+      if (isPendingWrite) {
+        action = SyncAction.CONFLICT;
+        remoteChangeEvent = ChangeEvents.changeEventForLocalDelete(
             nsConfig.getNamespace(),
             docConfig.getDocumentId(),
-            newestRemoteDocument,
-            docConfig.hasUncommittedWrites()));
+            docConfig.hasUncommittedWrites());
+      } else {
+        action = SyncAction.DELETE_LOCAL_DOC_AND_DESYNC;
+      }
+      message = SyncMessage.REMOTE_FIND_DELETED_DOC_MESSAGE;
+    } else {
+      DocumentVersionInfo newestRemoteVersionInfo = null;
+      try {
+        newestRemoteVersionInfo = DocumentVersionInfo.getRemoteVersionInfo(newestRemoteDocument);
+      } catch (final Exception e) {
+        action = SyncAction.DROP_EVENT_AND_DESYNC;
+        message = SyncMessage.CANNOT_PARSE_REMOTE_VERSION_MESSAGE;
+      }
+
+      if (newestRemoteVersionInfo != null) { // if no error has occurred
+        final boolean newestRemoteHasNoVersion = !newestRemoteVersionInfo.hasVersion();
+        final boolean lastSeenHasNoVersion = !lastSeenVersionInfo.hasVersion();
+
+        @Nullable final DocumentVersionInfo.Version lastSeenVersion =
+            lastSeenHasNoVersion ? null : lastSeenVersionInfo.getVersion();
+        @Nullable final DocumentVersionInfo.Version newestRemoteVersion =
+            newestRemoteHasNoVersion ? null : newestRemoteVersionInfo.getVersion();
+
+        // if newest version is from us...
+        if (!newestRemoteHasNoVersion && !lastSeenHasNoVersion
+            && lastSeenVersion.getInstanceId().equals(newestRemoteVersion.getInstanceId())) {
+          // since we believe we're behind, assume event is stale
+          action = SyncAction.DROP_EVENT;
+          message = SyncMessage.STALE_EVENT_MESSAGE;
+        } else { // newest version is from somewhere else
+          if (isPendingWrite) {
+            action = SyncAction.CONFLICT;
+          } else {
+            action = SyncAction.APPLY_FROM_REMOTE;
+          }
+          message = SyncMessage.REMOTE_FIND_REPLACED_DOC_MESSAGE;
+          remoteChangeEvent = ChangeEvents.changeEventForLocalReplace(
+              nsConfig.getNamespace(),
+              docConfig.getDocumentId(),
+              newestRemoteDocument,
+              docConfig.hasUncommittedWrites());
+        }
+      }
+    }
+
+    return enqueueAction(nsConfig, docConfig, remoteChangeEvent, action, message, caller, null);
   }
 
   private LocalSyncWriteModelContainer emitErrorAndPause(
@@ -3013,16 +2984,20 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     EXCEPTION_UPDATE("exception on update: %s"),
     EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE("expected document to exist for local update change "
         + "event"),
+    INSTANCE_ID_MISMATCH_MESSAGE("remote event created by different device from last seen event"),
     PENDING_WRITE_DELETE_MESSAGE("remote delete but a write is pending"),
     PENDING_WRITE_EMPTY_VERSION_MESSAGE("remote or local have an empty version but a write is "
         + "pending"),
-    PENDING_WRITE_INSTANCE_ID_MISMATCH_MESSAGE("pending write and remote events created by "
-        + "different devices"),
     PROBABLY_GENERATED_BY_US_MESSAGE("remote change event was generated by us"),
+    REMOTE_FIND_DELETED_DOC_MESSAGE("remote event generated by a different client and latest "
+        + "document lookup indicates a remote delete occurred"),
+    REMOTE_FIND_REPLACED_DOC_MESSAGE("latest document lookup indicates a remote replace occurred"),
     REMOTE_UPDATE_WITHOUT_VERSION_MESSAGE("remote document changed but version was unmodified"),
     SIMULTANEOUS_WRITES_MESSAGE("has multiple events at same logical time"),
     STALE_LOCAL_WRITE_MESSAGE("remote event version has higher counter than local pending write"),
     STALE_EVENT_MESSAGE("remote change event is stale"),
+    STALE_PROTOCOL_VERSION_MESSAGE("last seen change event has an unsupported synchronization"
+        + " protocol version"),
     UNKNOWN_OPTYPE_MESSAGE("unknown operation type: %s"),
     UNKNOWN_REMOTE_PROTOCOL_VERSION_MESSAGE("got a remote document with an unsupported "
         + "synchronization protocol version %d"),
@@ -3058,7 +3033,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   private enum SyncAction {
-    APPLY_FROM_REMOTE("; applying the remote event"),
+    APPLY_FROM_REMOTE("; applying changes from the remote document"),
     APPLY_AND_VERSION_FROM_REMOTE("; applying changes from the remote document"),
     CONFLICT("; raising conflict"),
     DELETE_LOCAL_DOC_AND_DESYNC("; deleting and desyncing the document"),
@@ -3067,8 +3042,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     DROP_EVENT_AND_PAUSE("; dropping the event and pausing the document"),
     DROP_EVENT_AND_DESYNC("; dropping the event and desyncing the document"),
     WAIT("; waiting until next pass"),
-    REMOTE_FIND("; re-checking against remote collection"),
-    SYNTHETIC_CONFLICT("; raising conflict");
+    REMOTE_FIND("; re-checking against remote collection");
 
     private final String description;
 
