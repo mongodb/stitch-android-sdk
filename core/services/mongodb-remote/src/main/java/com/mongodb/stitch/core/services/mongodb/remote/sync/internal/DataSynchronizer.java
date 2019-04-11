@@ -1299,12 +1299,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   private LocalSyncWriteModelContainer enqueueAction(
-      @Nonnull final NamespaceSynchronizationConfig nsConfig,
-      @Nonnull final CoreDocumentSynchronizationConfig docConfig,
-      @Nonnull final ChangeEvent<BsonDocument> remoteChangeEvent,
-      @Nonnull final SyncAction action,
-      @Nonnull final SyncMessage message,
-      @Nonnull final String caller,
+      @Nonnull  final NamespaceSynchronizationConfig nsConfig,
+      @Nonnull  final CoreDocumentSynchronizationConfig docConfig,
+      @Nullable final ChangeEvent<BsonDocument> remoteChangeEvent,
+      @Nonnull  final SyncAction action,
+      @Nonnull  final SyncMessage message,
+      @Nonnull  final String caller,
       @Nullable final Exception ex) {
     String formattedMessage = null;
     if (message != null) {
