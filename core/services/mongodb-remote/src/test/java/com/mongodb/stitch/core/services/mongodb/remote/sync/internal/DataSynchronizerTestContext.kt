@@ -64,7 +64,7 @@ interface DataSynchronizerTestContext : Closeable {
     /**
      * The dispatcher for asynchronous events to be used by the data synchronizer.
      */
-    val dispatcher : Dispatcher
+    val dispatcher: Dispatcher
 
     /**
      * The data synchronizer.

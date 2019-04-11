@@ -346,7 +346,7 @@ class SyncUnitTestHarness : Closeable {
         }
         private val remoteClient = Mockito.mock(CoreRemoteMongoClientImpl::class.java)
 
-        override val dispatcher : Dispatcher = ThreadDispatcher()
+        override val dispatcher: Dispatcher = ThreadDispatcher()
 
         override val dataSynchronizer: DataSynchronizer by lazy {
             // Insert any documents that we want to be recovered by the recovery sequence.
