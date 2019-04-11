@@ -99,7 +99,7 @@ class LocalSyncWriteModelContainer {
     this.localChangeEvents.addAll(localSyncWriteModelContainer.localChangeEvents);
   }
 
-  void wrapForRecovery(final Runnable callable) {
+  boolean wrapForRecovery(final Callable<Boolean> callable) {
     final List<BsonDocument> oldDocs = localCollection.find(
         new Document("_id", new Document("$in", ids))
     ).into(new ArrayList<>());
@@ -108,21 +108,30 @@ class LocalSyncWriteModelContainer {
       undoCollection.insertMany(oldDocs);
     }
 
-    callable.run();
+    boolean result;
+    try {
+      result = callable.call();
+    } catch (Exception e) {
+      result = false;
+    }
 
     if (oldDocs.size() > 0) {
       undoCollection.deleteMany(new Document("_id", new Document("$in", ids)));
     }
+
+    return result;
   }
 
   void commitAndClear() {
-    wrapForRecovery(() -> {
+    final boolean shouldEmitEvents = wrapForRecovery(() -> {
       localWrites.commitAndClear();
       configWrites.commitAndClear();
-      remoteWrites.commitAndClear();
+      final boolean result = remoteWrites.commitAndClear();
+
+      return result;
     });
 
-    if (true) { // temporary: change this to a success indicator
+    if (shouldEmitEvents) { // temporary: change this to a success indicator
       int numEvents = localChangeEvents.size();
       for (int i = 0; i < numEvents; i++) {
         ChangeEvent<BsonDocument> event = localChangeEvents.get(i);

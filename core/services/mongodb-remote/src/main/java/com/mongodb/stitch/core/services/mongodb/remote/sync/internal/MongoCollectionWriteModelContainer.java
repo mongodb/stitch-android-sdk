@@ -43,10 +43,14 @@ public class MongoCollectionWriteModelContainer<DocumentT>
     if (collection == null) {
       throw new IllegalStateException("cannot commit a container with no associated collection");
     }
+
+    boolean success = true;
+
     if (writes.size() > 0) {
       BulkWriteResult result = collection.bulkWrite(writes);
-      return result.wasAcknowledged() && result.getMatchedCount() > 0;
+      success = result.wasAcknowledged();
     }
-    return false;
+
+    return success;
   }
 }

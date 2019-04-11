@@ -50,25 +50,25 @@ public class CoreRemoteMongoCollectionWriteModelContainer<DocumentT>
     final List<WriteModel<DocumentT>> writeModels = getBulkWriteModels();
 
     // define success as any one operation succeeding for now
-    boolean success = false;
+    boolean success = true;
     for (final WriteModel<DocumentT> write : writeModels) {
       if (write instanceof ReplaceOneModel) {
         final ReplaceOneModel<DocumentT> replaceModel = ((ReplaceOneModel) write);
         RemoteUpdateResult result =
             collection.updateOne(replaceModel.getFilter(), (Bson) replaceModel.getReplacement());
-        success = success ||
+        success = success &&
             (result != null && result.getModifiedCount() == result.getMatchedCount());
       } else if (write instanceof UpdateOneModel) {
         final UpdateOneModel<DocumentT> updateModel = ((UpdateOneModel) write);
         RemoteUpdateResult result =
             collection.updateOne(updateModel.getFilter(), updateModel.getUpdate());
-        success = success ||
+        success = success &&
             (result != null && result.getModifiedCount() == result.getMatchedCount());
       } else if (write instanceof UpdateManyModel) {
         final UpdateManyModel<DocumentT> updateModel = ((UpdateManyModel) write);
         RemoteUpdateResult result =
             collection.updateMany(updateModel.getFilter(), updateModel.getUpdate());
-        success = success ||
+        success = success &&
             (result != null && result.getModifiedCount() == result.getMatchedCount());
       }
     }

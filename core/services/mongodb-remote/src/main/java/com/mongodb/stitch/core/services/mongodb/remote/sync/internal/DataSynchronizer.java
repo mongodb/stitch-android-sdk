@@ -932,6 +932,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           ChangeEvent<BsonDocument> remoteChangeEvent = null;
           Exception syncException = null;
 
+          boolean suppressLocalEvent = false;
+
           try {
             if (docConfig.getLastResolution() == logicalT) {
               action = SyncAction.WAIT;
@@ -977,6 +979,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   action = SyncAction.DROP_EVENT_AND_DESYNC;
                   message = SyncMessage.CANNOT_PARSE_REMOTE_VERSION_MESSAGE;
                   unprocessedEventVersionInfo = null;
+                  suppressLocalEvent = true;
                 }
 
                 if (unprocessedEventVersionInfo != null) {
@@ -1036,6 +1039,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         action = SyncAction.DROP_EVENT_AND_PAUSE;
                         message = SyncMessage.EXCEPTION_INSERT;
                         syncException = ex;
+                        suppressLocalEvent = true;
                       } else {
                         // ii. Otherwise record that a conflict has occurred.
                         action = SyncAction.CONFLICT;
@@ -1075,6 +1079,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       action = SyncAction.DROP_EVENT_AND_PAUSE;
                       message = SyncMessage.EXCEPTION_REPLACE;
                       syncException = ex;
+                      suppressLocalEvent = true;
                     }
                     // c. If no documents are matched, record that a conflict has occurred.
                     if (result != null && result.getMatchedCount() == 0) {
@@ -1093,6 +1098,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       action = SyncAction.DROP_EVENT_AND_PAUSE;
                       message = SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE;
                       syncException = illegalStateException;
+                      suppressLocalEvent = true;
                     } else {
                       final UpdateDescription localUpdateDescription =
                           localChangeEvent.getUpdateDescription();
@@ -1103,6 +1109,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         // information.
                         action = SyncAction.DROP_EVENT;
                         message = SyncMessage.EMPTY_UPDATE_DESCRIPTION;
+                        suppressLocalEvent = true;
                       } else {
                         // a. Update the document in the remote database using a query for the _id
                         // and the version with an update containing the replacement document with
@@ -1145,6 +1152,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                           action = SyncAction.DROP_EVENT_AND_PAUSE;
                           message = SyncMessage.EXCEPTION_UPDATE;
                           syncException = ex;
+                          suppressLocalEvent = true;
                         }
                         if (action == null && result.getMatchedCount() == 0) {
                           // c. If no documents are matched and we haven't already registered
@@ -1169,6 +1177,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       action = SyncAction.DROP_EVENT_AND_PAUSE;
                       message = SyncMessage.EXCEPTION_DELETE;
                       syncException = ex;
+                      suppressLocalEvent = true;
                     }
                     // c. If no documents are matched and we haven't already registered an error
                     // condition, record that a conflict has occurred.
@@ -1195,6 +1204,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         return localChangeEvent.getOperationType().toString();
                       }
                     };
+                    suppressLocalEvent = true;
                 }
               } else {
                 nextVersion = null;
@@ -1217,10 +1227,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 // we don't have to worry about a stale document version in the event here.
                 final ChangeEvent<BsonDocument> committedEvent =
                     docConfig.getLastUncommittedChangeEvent();
-                final ChangeEvent<BsonDocument> localEventToEmit =
-                    committedEvent.withoutUncommittedWrites();
+                if (!suppressLocalEvent) {
+                  final ChangeEvent<BsonDocument> localEventToEmit =
+                      committedEvent.withoutUncommittedWrites();
 
-                localSyncWriteModelContainer.addLocalChangeEvent(localEventToEmit);
+                  localSyncWriteModelContainer.addLocalChangeEvent(localEventToEmit);
+                }
 
                 // do this later before change is committed since it requires a write lock which we
                 // cannot own while locking for read
