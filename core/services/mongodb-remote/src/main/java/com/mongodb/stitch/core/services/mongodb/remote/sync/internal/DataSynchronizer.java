@@ -781,6 +781,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             && remoteVersionInfo.getVersion().getSyncProtocolVersion() != SYNC_PROTOCOL_VERSION) {
           action = SyncAction.DROP_EVENT_AND_DESYNC;
           message = SyncMessage.UNKNOWN_REMOTE_PROTOCOL_VERSION_MESSAGE;
+          final DocumentVersionInfo versionInfoForSyncException = remoteVersionInfo;
+          syncException = new Exception() {
+            @Override
+            public String toString() {
+              return Integer.toString(
+                  versionInfoForSyncException.getVersion().getSyncProtocolVersion());
+            }
+          };
         } else {
           // sync protocol versions match
           final DocumentVersionInfo lastSeenVersionInfo =
@@ -829,6 +837,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               if (lastSeenVersion.getSyncProtocolVersion() != SYNC_PROTOCOL_VERSION) {
                 action = SyncAction.DELETE_LOCAL_DOC_AND_DESYNC; // until we implement migrations
                 message = SyncMessage.STALE_PROTOCOL_VERSION_MESSAGE;
+                syncException = new Exception() {
+                  @Override
+                  public String toString() {
+                    return Integer.toString(lastSeenVersion.getSyncProtocolVersion());
+                  }
+                };
               } else {
                 if (!lastSeenVersion.getInstanceId().equals(remoteVersion.getInstanceId())) {
                   // different client generated the remote event
@@ -3023,10 +3037,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     STALE_LOCAL_WRITE_MESSAGE("remote event version has higher counter than local pending write"),
     STALE_EVENT_MESSAGE("remote change event is stale"),
     STALE_PROTOCOL_VERSION_MESSAGE("last seen change event has an unsupported synchronization"
-        + " protocol version"),
+        + " protocol version %s"),
     UNKNOWN_OPTYPE_MESSAGE("unknown operation type: %s"),
     UNKNOWN_REMOTE_PROTOCOL_VERSION_MESSAGE("got a remote document with an unsupported "
-        + "synchronization protocol version %d"),
+        + "synchronization protocol version %s"),
     VERSION_DIFFERENT_DELETED_DOC_MESSAGE("version different on removed document"),
     VERSION_DIFFERENT_REPLACED_DOC_MESSAGE("version different on replaced document or document was "
         + "deleted"),
