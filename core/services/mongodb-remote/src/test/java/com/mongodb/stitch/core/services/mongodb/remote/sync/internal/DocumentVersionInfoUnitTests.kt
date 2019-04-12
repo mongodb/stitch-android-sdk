@@ -1,7 +1,5 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
-import org.bson.BsonDocument
-import org.bson.BsonObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
