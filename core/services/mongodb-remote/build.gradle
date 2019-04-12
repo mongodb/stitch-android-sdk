@@ -18,7 +18,7 @@ dependencies {
     testImplementation project(':core:stitch-core-admin-client')
     testImplementation project(':core:stitch-core-testutils')
     testImplementation project(':server:server-services:stitch-server-services-mongodb-local')
-    testImplementation "org.mongodb:mongodb-driver-embedded:3.9.0-SNAPSHOT"
+    testImplementation "org.mongodb:mongodb-driver-embedded:3.10.1"
     testImplementation 'junit:junit:4.12'
     testImplementation "org.mockito:mockito-core:2.18.3"
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
