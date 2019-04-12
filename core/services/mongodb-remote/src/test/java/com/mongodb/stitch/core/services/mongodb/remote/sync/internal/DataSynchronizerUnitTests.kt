@@ -6,13 +6,14 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIt
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterableImpl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
+
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonObjectId
 import org.bson.BsonString
-import org.junit.After
 
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -21,6 +22,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
@@ -156,6 +158,7 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
 
         // do a sync pass, addressing the conflict
+        ctx.shouldConflictBeResolvedByRemote = true
         ctx.doSyncPass()
         ctx.waitForEvents(1)
         val captor = ArgumentCaptor.forClass(BsonDocument::class.java)
@@ -223,179 +226,488 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
+    fun testLastKnownRemoteVersionHashIsPersisted() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        val docConfig = ctx.findTestDocumentConfig()
+
+        assertNotNull(docConfig?.lastKnownRemoteVersion)
+
+        assertNotNull(docConfig?.lastKnownHash)
+        assertTrue(docConfig?.lastKnownHash != 0L)
+    }
+
+    @Test
+    fun testPendingWriteRemoteUpdateLocalAndRemoteEmptyVersionHashDifferent() {
+        val ctx = harness.freshTestContext()
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.insertTestDocument()
+        ctx.setPendingWritesForDocId(ctx.testDocumentId,
+                ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NONE)
+
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(1)
+
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testPendingWriteRemoteUpdateLocalAndRemoteEmptyVersionHashSame() {
+        val ctx = harness.freshTestContext()
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.insertTestDocument()
+        ctx.setPendingWritesForDocId(ctx.testDocumentId,
+                ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NONE)
+
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testPendingWriteRemoteUpdateRemoteEmptyVersion() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        ctx.updateTestDocument()
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+            ctx.testDocumentId,
+            pseudoUpdatedDocument,
+            TestVersionState.NONE)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(1)
+
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testPendingWriteRemoteUpdateLocalEmptyVersion() {
+        val ctx = harness.freshTestContext()
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+        ctx.setPendingWritesForDocId(ctx.testDocumentId,
+                ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+
+        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument()
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append(
+                        DataSynchronizer.DOCUMENT_VERSION_FIELD,
+                        remoteVersion
+                )
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEW)
+
+        ctx.doSyncPass()
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        ctx.verifyConflictHandlerCalledForActiveDoc(1)
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testPendingWriteRemoteUpdateLocalVersionEqualHashSame() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        ctx.updateTestDocument()
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.SAME)
+
+        ctx.doSyncPass()
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(ctx.testDocument.append("count", BsonInt32(2)),
+                ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testPendingWriteRemoteUpdateLocalVersionEqualHashDifferentRemoteEventSameDevice() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        ctx.updateTestDocument()
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.SAME)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+
+        ctx.doSyncPass()
+        ctx.verifyConflictHandlerCalledForActiveDoc(1)
+
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testPendingWriteRemoteUpdateLocalVersionEqualHashDifferentRemoteEventDifferentDevice() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        ctx.updateTestDocument()
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEW)
+
+        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
+        @Suppress("UNCHECKED_CAST")
+        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        ctx.doSyncPass()
+        ctx.verifyConflictHandlerCalledForActiveDoc(1)
+
+        assertEquals(ctx.testDocument.append("count", BsonInt32(1)),
+                ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateLocalVersionEqualHashDifferentRemoteEventDifferentDevice() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEW)
+
+        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
+        @Suppress("UNCHECKED_CAST")
+        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+
+        ctx.doSyncPass()
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateVersionDifferentDeviceDeletesLocalDocumentIfFindOperationReturnsNull() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEW)
+
+        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(findMock.first()).thenReturn(null)
+        @Suppress("UNCHECKED_CAST")
+        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+
+        ctx.doSyncPass()
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertNull(ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
     fun testRemoteUpdateLocalAndRemoteEmptyVersion() {
         val ctx = harness.freshTestContext()
 
-        // insert a new document and sync it to the remote
-        ctx.insertTestDocument()
-        ctx.doSyncPass()
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
-        // update the doc locally and queue a fake update remotely.
-        // neither of these will have versions.
-        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
-        ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
-            pseudoUpdatedDocument,
-            TestVersionState.NONE)
-
-        ctx.shouldConflictBeResolvedByRemote = true
-        // sync, creating a conflict. because they have the same empty version,
-        // there will be a conflict on the next L2R pass that we will resolve
-        // with remote.
-        ctx.doSyncPass()
-
-        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
-    }
-
-    @Test
-    fun testRemoteUpdateLocalOrRemoteEmptyVersion() {
-        val ctx = harness.freshTestContext()
-
-        // insert a new document and sync it to the remote.
-        // this time, add a version to the local doc
-        ctx.insertTestDocument()
-        ctx.doSyncPass()
-        // update the doc locally and queue a fake update remotely.
-        // neither of these will have versions.
-        ctx.updateTestDocument()
-        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
-        ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
-            pseudoUpdatedDocument,
-            TestVersionState.NONE)
-
-        ctx.shouldConflictBeResolvedByRemote = true
-        // sync, creating a conflict. because remote has an empty version,
-        // there will be a conflict on the next L2R pass that we will resolve
-        // with remote.
-        ctx.doSyncPass()
-
-        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
-    }
-
-    @Test
-    fun testRemoteUpdateLocalVersionEqual() {
-        val ctx = harness.freshTestContext()
-
-        // insert a new document and sync it to the remote.
-        // this time, add a version to the local doc
-        ctx.insertTestDocument()
-        ctx.doSyncPass()
-        // update the doc locally and queue a fake update remotely.
-        // local and remote will have equal versions
-        ctx.updateTestDocument()
-        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
-        ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
-            pseudoUpdatedDocument,
-            TestVersionState.SAME)
-
-        ctx.shouldConflictBeResolvedByRemote = false
-        // sync, creating a conflict. because remote and local have equal versions,
-        // there will be a conflict on the next L2R pass that we will resolve
-        // with remote.
-        ctx.doSyncPass()
-
-        assertEquals(BsonDocument("_id", ctx.testDocumentId).append("count", BsonInt32(2)),
-            ctx.findTestDocumentFromLocalCollection())
-    }
-
-    @Test
-    fun testRemoteUpdateLocalVersionHigher() {
-        val ctx = harness.freshTestContext()
-
-        // insert a new document and sync it to the remote.
-        // this time, add a version to the local doc
-        ctx.insertTestDocument()
-        ctx.doSyncPass()
-        // update the doc locally and queue a fake update remotely.
-        // the local version will be higher than the remote version
-        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val pseudoUpdatedDocument = ctx.testDocument.append("hello", BsonString("dolly"))
-        ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
-            pseudoUpdatedDocument,
-            TestVersionState.NEXT)
-
-        ctx.shouldConflictBeResolvedByRemote = true
-        // sync, creating a conflict. because local version has a higher version,
-        // the update will not have gone through
-        ctx.doSyncPass()
-
-        ctx.updateTestDocument()
-
-        ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
-            pseudoUpdatedDocument.append("oh", BsonString("joy")),
-            TestVersionState.PREVIOUS)
-
-        ctx.doSyncPass()
-
-        // the update should not have gone through
-        assertEquals(
-            BsonDocument("count", BsonInt32(2))
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append("hello", BsonString("dolly"))
-                .append("_id", ctx.testDocumentId),
-            ctx.findTestDocumentFromLocalCollection())
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NONE)
+
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        val lastKnownVersion = ctx.findTestDocumentConfig()?.lastKnownRemoteVersion
+
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+        assertNotNull(lastKnownVersion)
+        assertEquals(0, DocumentVersionInfo.fromVersionDoc(lastKnownVersion)
+                .version.versionCounter)
+        verify(ctx.collectionMock).updateOne(eq(ctx.testDocumentFilter),
+                eq(pseudoUpdatedDocument.append(DataSynchronizer.DOCUMENT_VERSION_FIELD,
+                        lastKnownVersion)))
+    }
+
+    @Test
+    fun testRemoteUpdateLocalEmptyVersionHashSame() {
+        val ctx = harness.freshTestContext()
+
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument()
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append(
+                        DataSynchronizer.DOCUMENT_VERSION_FIELD,
+                        remoteVersion
+                )
+
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.SAME)
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateLocalEmptyVersionHashDifferent() {
+        val ctx = harness.freshTestContext()
+
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val remoteVersion = DocumentVersionInfo.getFreshVersionDocument()
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append("hello", BsonString("dolly"))
+                .append(
+                        DataSynchronizer.DOCUMENT_VERSION_FIELD,
+                        remoteVersion
+                )
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.SAME)
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(withoutSyncVersion(pseudoUpdatedDocument),
+                ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateRemoteEmptyVersionHashSame() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NONE)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateRemoteEmptyVersionHashDifferent() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NONE)
+
+        ctx.shouldConflictBeResolvedByRemote = true
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateLocalVersionEqualHashSame() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.SAME)
+
+        ctx.doSyncPass()
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateLocalVersionEqualHashSameRemoteEventDifferentDevice() {
+        val ctx = harness.freshTestContext()
+
+        ctx.insertTestDocument()
+        ctx.doSyncPass()
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEW)
+
+        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
+        @Suppress("UNCHECKED_CAST")
+        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+
+        ctx.doSyncPass()
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        assertEquals(withoutSyncVersion(pseudoUpdatedDocument),
+                ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateLocalVersionHigherRemoteEventDifferentDevice() {
+        val ctx = harness.freshTestContext()
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEXT)
+
+        ctx.doSyncPass()
+
+        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
+        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
+        @Suppress("UNCHECKED_CAST")
+        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEW)
+
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
+    }
+
+    @Test
+    fun testRemoteUpdateLocalVersionHigherRemoteEventSameDevice() {
+        val ctx = harness.freshTestContext()
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        val pseudoUpdatedDocument = ctx.testDocument.clone()
+                .append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.NEXT)
+
+        ctx.doSyncPass()
+
+        ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                pseudoUpdatedDocument,
+                TestVersionState.SAME)
+
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+        assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
     }
 
     @Test
     fun testRemoteUpdateRemoteVersionHigher() {
         val ctx = harness.freshTestContext()
 
-        // insert a new document and sync it to the remote.
-        // this time, add a version to the local doc
         ctx.insertTestDocument()
         ctx.doSyncPass()
-        // update the doc locally and queue a fake update remotely.
-        // the remote doc will have a higher version than the local
-        ctx.updateTestDocument()
-        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
             ctx.testDocumentId,
             pseudoUpdatedDocument,
             TestVersionState.NEXT)
 
-        ctx.shouldConflictBeResolvedByRemote = true
-        // sync, creating a conflict. because remote has a higher version,
-        // there will be a conflict on the next L2R pass that we will resolve
-        // with remote.
         ctx.doSyncPass()
 
-        // the update will go through
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
         assertEquals(withoutSyncVersion(pseudoUpdatedDocument),
             ctx.findTestDocumentFromLocalCollection())
-    }
-
-    @Test
-    fun testRemoteUpdateDifferentGUIDs() {
-        val ctx = harness.freshTestContext()
-
-        // insert a new document and sync it to the remote.
-        // this time, add a version to the local doc
-        ctx.insertTestDocument()
-        ctx.doSyncPass()
-        // update the doc locally and queue a fake update remotely.
-        // neither of these will have versions.
-        ctx.updateTestDocument()
-        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
-        val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
-        ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
-            pseudoUpdatedDocument,
-            TestVersionState.NEW)
-
-        ctx.shouldConflictBeResolvedByRemote = true
-        // sync, creating a conflict. because remote has an empty version,
-        // there will be a conflict on the next L2R pass that we will resolve
-        // with remote. however, this will be resolved as a delete event due
-        // to the different guids and lack of a (mocked) remote document
-        ctx.doSyncPass()
-
-        assertNull(ctx.findTestDocumentFromLocalCollection())
     }
 
     @Test
@@ -781,7 +1093,7 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testBatchOps() {
+    fun testRecovery() {
         val ctx = harness.freshTestContext()
 
         ctx.reconfigure()
@@ -793,13 +1105,17 @@ class DataSynchronizerUnitTests {
 
         val id = doc["_id"]
         val filter = BsonDocument("_id", id)
-        val batchOps = SyncWriteModelContainer()
-        batchOps.ids.add(id)
+        val batchOps = LocalSyncWriteModelContainer(
+                ctx.dataSynchronizer.syncConfig.getNamespaceConfig(ctx.namespace),
+                ctx.dataSynchronizer.getLocalCollection(ctx.namespace),
+                ctx.collectionMock,
+                ctx.dataSynchronizer.getUndoCollection(ctx.namespace),
+                EventDispatcher(ctx.instanceKey, ctx.dispatcher))
+        batchOps.addDocIDs(id)
 
         // cause the batching to fail after the undo docs have been inserted
         try {
-            batchOps.wrapForRecovery(ctx.dataSynchronizer.getLocalCollection(ctx.namespace),
-                ctx.dataSynchronizer.getUndoCollection(ctx.namespace)) {
+            batchOps.wrapForRecovery {
                 throw Exception()
             }
         } catch (e: Exception) {

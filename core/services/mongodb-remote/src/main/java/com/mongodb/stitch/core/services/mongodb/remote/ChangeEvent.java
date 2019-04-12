@@ -35,7 +35,6 @@ import org.bson.BsonValue;
  *
  * @param <DocumentT> The underlying type of document for which this change event was produced.
  */
-// TODO: Should there be a local and remote type for the pending part?
 public final class ChangeEvent<DocumentT> {
   private final BsonDocument id; // Metadata related to the operation (the resumeToken).
   private final OperationType operationType;
@@ -137,6 +136,21 @@ public final class ChangeEvent<DocumentT> {
    */
   public boolean hasUncommittedWrites() {
     return hasUncommittedWrites;
+  }
+
+  /**
+   * Creates a copy of this change event with uncommitted writes flag set to false.
+   *
+   * @return new change event without uncommitted writes flag
+   */
+  public ChangeEvent<DocumentT> withoutUncommittedWrites() {
+    return new ChangeEvent<>(this.getId(),
+        this.getOperationType(),
+        this.getFullDocument(),
+        this.getNamespace(),
+        this.getDocumentKey(),
+        this.getUpdateDescription(),
+        false);
   }
 
   /**

@@ -21,7 +21,8 @@ class NamespaceSynchronizationConfigUnitTests {
         val docsColl = mock(MongoCollection::class.java) as MongoCollection<CoreDocumentSynchronizationConfig>
         val findIterable = mock(FindIterable::class.java) as FindIterable<CoreDocumentSynchronizationConfig>
 
-        `when`(docsColl.find(any(BsonDocument::class.java))).thenReturn(findIterable)
+        `when`(docsColl.find(any(BsonDocument::class.java), any(Class::class.java)))
+            .thenReturn(findIterable)
 
         val nsConfig = NamespaceSynchronizationConfig(
             mock(MongoCollection::class.java) as MongoCollection<NamespaceSynchronizationConfig>,

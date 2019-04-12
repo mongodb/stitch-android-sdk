@@ -30,7 +30,6 @@ import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 
-
 final class DocumentVersionInfo {
   @Nullable private final Version version;
   @Nullable private final BsonDocument versionDoc;
@@ -87,6 +86,7 @@ final class DocumentVersionInfo {
   ) {
     if (version != null) {
       this.versionDoc = version;
+
       this.version = new Version(
         versionDoc.getInt32(Fields.SYNC_PROTOCOL_VERSION_FIELD).getValue(),
         versionDoc.getString(Fields.INSTANCE_ID_FIELD).getValue(),
