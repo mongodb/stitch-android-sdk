@@ -4,12 +4,22 @@
 
 This project follows [Semantic Versioning 2.0](https://semver.org/). In general, every release is associated with a tag and a changelog. `master` serves as the mainline branch for the project and represent the latest state of development.
 
-### Publishing a New SDK version
+### 1. Incrementing the SDK version
 ```bash
-# run bump_version.bash with either patch, minor, or major
-./bump_version.bash <snapshot|beta|patch|minor|major>
+# run bump_version.bash with either patch, minor, or major followed by the JIRA ticket number (you may omit the STITCH keyword if you would like).
+./bump_version.bash <snapshot|beta|patch|minor|major> <STITCH-1234|1234>
+```
 
-# send an email detailing the changes to the https://groups.google.com/d/forum/mongodb-stitch-announce mailing list
+* go to [Android SDK](https://github.com/mongodb/stitch-android-sdk/pulls) and request a reviewer on the pull request (mandatory) before merging and deleting the release branch
+
+#### Configuring Hub
+For `bump_version.bash` to work properly, you must have ```hub``` installed. Please see [Hub](https://github.com/github/hub) for installation details.
+
+### 2. Publishing the new SDK
+
+Once the Pull Request created by `bump_version.bash` is successfully merged into Github publish the SDK using the following command:
+```bash
+./publish_sdk.bash
 ```
 
 #### Configuring Bintray Upload
@@ -22,6 +32,9 @@ publish.bintray.gpgPassphrase=<gpg_passphrase># optional
 publish.bintray.mavenSyncUser=<maven_central_sync_user> # optional
 publish.bintray.mavenSyncPassword=<maven_central_sync_password> # optional
 ```
+
+### 3. Publish the release on Github
+Publish a release for the new SDK version on the GitHub repository and include relevant release notes. See https://help.github.com/en/articles/creating-releases for context, and follow the general format of our previous releases.
 
 ### Snapshot Versions
 
@@ -49,3 +62,13 @@ The general publishing flow can be followed using `major` as the bump type in `b
     * You must run at least one ```mongod``` instance with replica sets initiated or a ```mongos``` instance with same locally on port 26000
     * You must run the Stitch server locally using the Android-specific configuration:
         ```--configFile ./etc/configs/test_config_sdk_base.json --configFile ./etc/configs/test_config_sdk_android.json```
+    * For example, here's how to start mongod (using mlaunch), start the Stitch server, then run the tests:
+```
+mlaunch init --replicaset --port 26000
+
+# in stitch source directory
+go run cmd/server/main.go --configFile ./etc/configs/test_config_sdk_base.json --configFile ./etc/configs/test_config_sdk_android.json
+
+# in android SDK directory
+./gradlew connectedDebugAndroidTest
+```

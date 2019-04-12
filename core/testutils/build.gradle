@@ -11,7 +11,7 @@ dependencies {
     implementation project(':core:stitch-core-sdk')
     implementation project(':core:core-services:stitch-core-services-mongodb-remote')
     compile project(path: ':core:stitch-core-admin-client')
-    api 'org.mongodb:bson:3.9.0'
+    api 'org.mongodb:bson:3.10.1'
     implementation 'junit:junit:4.12'
     implementation 'com.squareup.okhttp3:okhttp:3.11.0'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"

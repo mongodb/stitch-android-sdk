@@ -43,6 +43,7 @@ include ':core:sdk',
         ':android:examples:stress-tests',
         ':android:examples:todo',
         ':android:examples:todo-sync',
+        ':android:examples:snippets',
         ':android:testutils'
 
 project(':core:sdk').name = 'stitch-core-sdk'
@@ -87,4 +88,5 @@ project(':android:examples:fcm').name = 'stitch-android-examples-fcm'
 project(':android:examples:todo').name = 'stitch-android-examples-todo'
 project(':android:examples:todo-sync').name = 'stitch-android-examples-todo-sync'
 project(':android:examples:stress-tests').name = 'stitch-android-examples-stress-tests'
+project(':android:examples:snippets').name = 'stitch-android-examples-snippets'
 project(':android:testutils').name = 'stitch-android-testutils'
