@@ -650,36 +650,39 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
           final BsonDocument version;
           final boolean isPaused;
+          final boolean hasUncommittedWrites;
           try {
             isPaused = docConfig.isPaused();
             version = docConfig.getLastKnownRemoteVersion();
-            if (latestDocumentMap.containsKey(docId) && !docConfig.isPaused()) {
-              localSyncWriteModelContainer.merge(syncRemoteChangeEventToLocal(
-                  nsConfig,
-                  docConfig,
-                  ChangeEvents.changeEventForLocalReplace(
-                      nsConfig.getNamespace(),
-                      docId,
-                      latestDocumentMap.get(docId),
-                      false
-                  )));
-              continue;
-            }
+            hasUncommittedWrites = docConfig.hasUncommittedWrites();
           } finally {
             docConfig.getLock().readLock().unlock();
+          }
+
+          if (latestDocumentMap.containsKey(docId) && !isPaused) {
+            localSyncWriteModelContainer.merge(syncRemoteChangeEventToLocal(
+                nsConfig,
+                docConfig,
+                ChangeEvents.changeEventForLocalReplace(
+                    nsConfig.getNamespace(),
+                    docId,
+                    latestDocumentMap.get(docId),
+                    false
+                )));
+            continue;
           }
 
           // For synchronized documents that had no unprocessed change event, and did not have a
           // latest version when stale documents were queried, synthesize a remote delete event to
           // delete the local document.
-          if (docConfig.getLastKnownRemoteVersion() != null && !docConfig.isPaused()) {
+          if (version != null && !isPaused) {
             localSyncWriteModelContainer.merge(syncRemoteChangeEventToLocal(
                 nsConfig,
                 docConfig,
                 ChangeEvents.changeEventForLocalDelete(
                     nsConfig.getNamespace(),
                     docId,
-                    docConfig.hasUncommittedWrites()
+                    hasUncommittedWrites
                 )));
           }
 
