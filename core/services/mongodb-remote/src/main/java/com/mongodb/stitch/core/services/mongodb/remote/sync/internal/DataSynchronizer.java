@@ -742,20 +742,27 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             remoteChangeEvent.getOperationType().toString()));
       }
 
-      // record whether this is a delete operation
+      // record whether this is an insert or delete operation
+      final boolean isInsert;
       final boolean isDelete;
       switch (remoteChangeEvent.getOperationType()) {
         case INSERT:
+          isDelete = false;
+          isInsert = true;
+          break;
         case REPLACE:
         case UPDATE:
           isDelete = false;
+          isInsert = false;
           break;
         case DELETE:
           isDelete = true;
+          isInsert = false;
           break;
         default:
           // unknown operation
           isDelete = false;
+          isInsert = false;
           action = SyncAction.DROP_EVENT_AND_PAUSE;
           message = SyncMessage.UNKNOWN_OPTYPE_MESSAGE;
           syncException = new Exception() {
@@ -857,7 +864,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     action = SyncAction.APPLY_FROM_REMOTE;
                     message = SyncMessage.APPLY_FROM_REMOTE_MESSAGE;
                   } else if (remoteVersionCounter == lastSeenVersionCounter
-                      && lastSeenHash != remoteHash) {
+                      && lastSeenHash != remoteHash && !isInsert) {
                     action = SyncAction.APPLY_FROM_REMOTE;
                     message = SyncMessage.REMOTE_UPDATE_WITHOUT_VERSION_MESSAGE;
                   } else {
@@ -895,7 +902,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                   action = SyncAction.CONFLICT;
                 } else {
                   message = SyncMessage.STALE_EVENT_MESSAGE;
-                  action = lastSeenHash != remoteHash ? SyncAction.CONFLICT : SyncAction.DROP_EVENT;
+                  action = lastSeenHash != remoteHash && !isInsert
+                      ? SyncAction.CONFLICT : SyncAction.DROP_EVENT;
                 }
               }
             }
@@ -905,7 +913,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } finally {
       docConfig.getLock().readLock().unlock();
     }
-
     return enqueueAction(nsConfig, docConfig, remoteChangeEvent, action, message,
         SyncMessage.R2L_METHOD, syncException);
   }
