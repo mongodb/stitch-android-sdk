@@ -41,55 +41,55 @@ class SyncPerformanceTestUtils {
         private const val preserveRawOutputProp = "test.stitch.perf.rawOutput"
         private const val defaultPreserveRawOutput = "false"
 
-        internal fun getConfiguredStitchHostname(): String {
+        internal fun getStitchHostname(): String {
             return InstrumentationRegistry.getArguments().getString(
                     stitchHostnameProp, defaultStitchHostname
             )
         }
 
-        internal fun getConfiguredHostname(): String {
+        internal fun getHostname(): String {
             return InstrumentationRegistry.getArguments().getString(hostnameProp, defaultHostname)
         }
 
-        internal fun getConfiguredIters(): Int {
+        internal fun getNumIters(): Int {
             return Integer.parseInt(InstrumentationRegistry.getArguments().getString(
                     itersProp, defaultIters
             ))
         }
 
-        internal fun getConfiguredDocSizes(): IntArray {
+        internal fun getDocSizes(): IntArray {
             return InstrumentationRegistry.getArguments().getString(docSizesProp, defaultDocSizes)
                 .split(",").map { Integer.parseInt(it) }.toIntArray()
         }
 
-        internal fun getConfiguredNumDocs(): IntArray {
+        internal fun getNumDocs(): IntArray {
             return InstrumentationRegistry.getArguments().getString(numDocsProp, defaultNumDocs)
                 .split(",").map { Integer.parseInt(it) }.toIntArray()
         }
 
-        internal fun getConfiguredDataGranularity(): Long {
+        internal fun getDataGranularity(): Long {
             return Integer.parseInt(InstrumentationRegistry.getArguments().getString(
                 dataGranularityProp, defaultDataGranularity
             )).toLong()
         }
 
-        internal fun getConfiguredNumOutliers(): Int {
+        internal fun getNumOutliers(): Int {
             return Integer.parseInt(InstrumentationRegistry.getArguments().getString(
                 numOutliersProp, defaultNumOutliers
             ))
         }
 
-        internal fun getConfigureOutputToStdOut(): Boolean {
+        internal fun shouldOutputToStdOut(): Boolean {
             return InstrumentationRegistry.getArguments().getString(
                 outputToStdOutProp, defaultOutputToStdOut)!!.toBoolean()
         }
 
-        internal fun getConfigureOutputToStitch(): Boolean {
+        internal fun shouldOutputToStitch(): Boolean {
             return InstrumentationRegistry.getArguments().getString(
                 outputToStitchProp, defaultOutputToStitch)!!.toBoolean()
         }
 
-        internal fun getConfigurePreserveRawOutput(): Boolean {
+        internal fun shouldPreserveRawOutput(): Boolean {
             return InstrumentationRegistry.getArguments().getString(
                 preserveRawOutputProp, defaultPreserveRawOutput)!!.toBoolean()
         }

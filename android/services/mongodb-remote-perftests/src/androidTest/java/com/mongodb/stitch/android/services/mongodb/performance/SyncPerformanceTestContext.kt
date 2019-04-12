@@ -54,7 +54,7 @@ open abstract class SyncPerformanceTestContext(
                 memoryData.add(runtime.totalMemory() - runtime.freeMemory())
                 threadData.add(Thread.activeCount())
                 try {
-                    sleep(testParams.dataProbeGranularityMs)
+                    sleep(SyncPerformanceTestUtils.getDataGranularity())
                 } catch (_: InterruptedException) {
                     break
                 }

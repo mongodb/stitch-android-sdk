@@ -691,11 +691,17 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-twilio:connectedAndroidTest
+            echo "Test Done: run_android_services_twilio_tests"
     post:
       - command: attach.xunit_results
         params:
         files:
           - "./stitch-java-sdk/android/services/twilio/build/outputs/androidTest-results/test/*.xml"
+      - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            echo "Should have uploaded docs"
 
 task_groups:
   - name: run_core_tests
