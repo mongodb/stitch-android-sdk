@@ -5,7 +5,7 @@ apply plugin: 'kotlin-android'
 
 buildscript {
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.3.0'
+        classpath 'com.android.tools.build:gradle:3.3.2'
         classpath 'digital.wup:android-maven-publish:3.3.0'
         classpath 'com.dicedmelon.gradle:jacoco-android:0.1.4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
@@ -36,7 +36,11 @@ dependencies {
     implementation "com.android.support:recyclerview-v7:${support_library_version}"
     implementation "com.android.support.constraint:constraint-layout:1.1.0"
     androidTestImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.1.1"
-
-
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.1.1") {
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+    }
+    // instead of transitively getting wrong version from coroutines library
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 }

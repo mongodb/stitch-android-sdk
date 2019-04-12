@@ -1155,7 +1155,11 @@ class DataSynchronizerCRUDUnitTests {
         // called (coalescence). verify desync was called
         assertEquals(1, deleteResult.deletedCount)
         assertTrue(deleteResult.wasAcknowledged())
-        verify(ctx.dataSynchronizer).desyncDocumentsFromRemote(eq(ctx.namespace), eq(ctx.testDocumentId))
+
+        val nsConfig = ctx.findTestNamespaceConfig()
+        verify(ctx.dataSynchronizer).desyncDocumentsFromRemote(
+                eq(nsConfig),
+                eq(ctx.testDocumentId))
         // assert that the updated document equals what we've expected
         assertNull(ctx.findTestDocumentFromLocalCollection())
 

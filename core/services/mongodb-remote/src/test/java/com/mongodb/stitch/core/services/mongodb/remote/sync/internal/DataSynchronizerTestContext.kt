@@ -5,6 +5,7 @@ import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.result.DeleteResult
 import com.mongodb.client.result.UpdateResult
+import com.mongodb.stitch.core.internal.common.Dispatcher
 import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
@@ -59,6 +60,15 @@ interface DataSynchronizerTestContext : Closeable {
      * A stream event to be consumed. Should be written to.
      */
     var nextStreamEvent: Event
+
+    /**
+     * The dispatcher for asynchronous events to be used by the data synchronizer.
+     */
+    val dispatcher: Dispatcher
+
+    /**
+     * The data synchronizer.
+     */
     val dataSynchronizer: DataSynchronizer
 
     /**
@@ -116,6 +126,16 @@ interface DataSynchronizerTestContext : Closeable {
      * Attempt to find the contextual test document locally.
      */
     fun findTestDocumentFromLocalCollection(): BsonDocument?
+
+    /**
+     * Attempt to find the contextual test namespace's sync configuration
+     */
+    fun findTestNamespaceConfig(): NamespaceSynchronizationConfig?
+
+    /**
+     * Attempt to find the contextual test document's sync configuration
+     */
+    fun findTestDocumentConfig(): CoreDocumentSynchronizationConfig?
 
     /**
      * Verify the changeEventListener was called for the test document.
