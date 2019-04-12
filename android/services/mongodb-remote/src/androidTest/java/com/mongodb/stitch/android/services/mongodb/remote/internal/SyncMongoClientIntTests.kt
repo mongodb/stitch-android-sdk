@@ -407,8 +407,8 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     }
 
     @Test
-    override fun testConflictForEmptyVersionDocuments() {
-        testProxy.testConflictForEmptyVersionDocuments()
+    override fun testVersionApplicationForEmptyVersionDocuments() {
+        testProxy.testVersionApplicationForEmptyVersionDocuments()
     }
 
     @Test

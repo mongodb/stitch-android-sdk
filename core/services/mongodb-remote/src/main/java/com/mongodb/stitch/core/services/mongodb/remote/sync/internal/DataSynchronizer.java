@@ -877,8 +877,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           } else {
             /* Pending Write Exists */
             if (isDelete) {
+              final OperationType uncommittedOpType =
+                  docConfig.getLastUncommittedChangeEvent().getOperationType();
+
               message = SyncMessage.PENDING_WRITE_DELETE_MESSAGE;
-              action = SyncAction.CONFLICT;
+              action = uncommittedOpType == OperationType.REPLACE
+                  || uncommittedOpType == OperationType.UPDATE
+                  ? SyncAction.CONFLICT : SyncAction.DROP_EVENT;
             } else if (remoteHasNoVersion || lastSeenHasNoVersion) {
               // apply appropriate unversioned event logic
               message = SyncMessage.PENDING_WRITE_EMPTY_VERSION_MESSAGE;
@@ -1219,7 +1224,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                       }
                     }
 
-                    if (action == null) { // if we encountered an error/conflict already
+                    if (action == null) { // if we haven't encountered an error/conflict already
                       action = SyncAction.DELETE_LOCAL_DOC_AND_DESYNC;
                     }
                     break;

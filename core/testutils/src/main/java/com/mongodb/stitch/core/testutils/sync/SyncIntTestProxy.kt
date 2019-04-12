@@ -85,7 +85,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
         // sync on the remote document
         syncOperations.syncOne(doc1Id)
-        streamAndSync()
+        streamAndSync() // remote insert propagates to local
+        streamAndSync() // remote version replace propagates to local
 
         // 1. updating a document remotely should not be reflected until coming back online.
         goOffline()
@@ -100,6 +101,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // go back online, and sync
         // the remote document should now equal our expected update
         goOnline()
+        streamAndSync()
+
         streamAndSync()
         val expectedDocument = Document(doc)
         expectedDocument["foo"] = 1
@@ -744,9 +747,13 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         goOffline()
         Assert.assertNull(coll.find(doc1Filter).firstOrNull())
 
-        // go online and sync. the deletion should be reflected remotely and locally now
+        // go online and sync. the remote update vs local delete should generate a conflict
+        // resolved as remote wins
         goOnline()
         streamAndSync()
+        // because of the conflict it takes an extra pass to reach consistency
+        streamAndSync()
+
         Assert.assertNull(remoteColl.find(doc1Filter).firstOrNull())
         Assert.assertNull(coll.find(doc1Filter).firstOrNull())
         assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
@@ -819,6 +826,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
 
         // sync. assert that the update was reflected remotely
+        streamAndSync()
+        // sync one more time for change to get applied to remote
         streamAndSync()
         assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
         assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
@@ -1632,7 +1641,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     }
 
     @Test
-    fun testConflictForEmptyVersionDocuments() {
+    fun testVersionApplicationForEmptyVersionDocuments() {
         val coll = syncTestRunner.syncMethods()
         val remoteColl = syncTestRunner.remoteMethods()
 
@@ -1666,11 +1675,10 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
         Assert.assertNull(coll.find(doc1Filter).firstOrNull())
 
-        // go online to begin the syncing process. When doing R2L first, a conflict should have
-        // occurred because both the local and remote instance of this document have no version
-        // information, meaning that the sync pass was forced to raise a conflict. our local
-        // delete should be synced to the remote, because we set up the conflict handler to
-        // have local always win. assert that this is reflected remotely and locally.
+        // go online to begin the syncing process. When doing R2L first, a version and
+        // apply operation should have occurred because both the local and remote instance of this
+        // document have no version. our local delete should then cause syncing to stop and
+        // the local document deleted.
         // (As a historical note, when we used to permit L2R first, no conflict would be raised
         // since we didn't get a chance to fetch stale documents, potentially resulting in the
         // loss of events
@@ -1680,8 +1688,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // do another sync pass to get the local delete resolution committed to the remote
         streamAndSync()
 
-        // make sure that a conflict was raised
-        Assert.assertTrue(conflictRaised)
+        // make sure that a conflict was not raised
+        Assert.assertFalse(conflictRaised)
 
         Assert.assertNull(coll.find(doc1Filter).firstOrNull())
         Assert.assertNull(remoteColl.find(doc1Filter).firstOrNull())
