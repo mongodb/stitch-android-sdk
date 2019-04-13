@@ -45,12 +45,6 @@ class SyncPerformanceTests {
 
     // Placeholder tests until the whole performance testing suite is in place
     @Test
-    fun sampleTest2() {
-
-
-    }
-
-    @Test
     fun sampleTest1() {
         var documents1 = arrayListOf<Document>().toList()
         var documents2 = arrayListOf<Document>().toList()

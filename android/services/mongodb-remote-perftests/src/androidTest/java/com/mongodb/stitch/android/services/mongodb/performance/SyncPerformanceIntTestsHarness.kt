@@ -121,48 +121,22 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             .getCollection(stitchOutputCollName)
     }
 
-    fun handleTestResult(
-        testParams: TestParams,
-        runResult: RunResult,
-        resultId: ObjectId,
-        numDoc: Int,
-        docSize: Int
-    ): Boolean {
-        val failuresBson = runResult.failures.map { it.asBson }
-        if (failuresBson.size >= (SyncPerformanceTestUtils.getNumIters() + 1) / 2) {
-            logMessage(String.format("(FAILED) %s failed %d times (docSize=%d, numDocs=%d",
-                testParams.testName, failuresBson.size, docSize, numDoc))
-            failuresBson.forEach { logMessage(it.toJson()) }
-
-            if (SyncPerformanceTestUtils.shouldOutputToStitch()) {
-                val filterDocument = Document("_id", resultId)
-                val updateDocument = Document(mapOf(
-                    "\$push" to Document("results", Document(mapOf(
-                        "numDocs" to numDoc,
-                        "docSize" to docSize,
-                        "success" to false,
-                        "failures" to failuresBson)))
-                ))
-                Tasks.await(outputColl.updateOne(filterDocument, updateDocument))
-            }
-
-            return false
-        } else {
-            logMessage(String.format("(SUCCESS): %s (docSize: %d, numDocs=%d): %s",
-                testParams.testName, docSize, numDoc, runResult.asBson.toJson()))
-
-            if (SyncPerformanceTestUtils.shouldOutputToStitch()) {
-                val filterDocument = Document("_id", resultId)
-                var runResultBson = runResult.asBson
-                if (failuresBson.size > 0) {
-                    runResultBson.append("failures", failuresBson)
-                }
-                val updateDocument = Document("\$push", Document("results", runResultBson))
-                Tasks.await(outputColl.updateOne(filterDocument, updateDocument))
-            }
-
-            return true
+    fun handleTestResult(runResult: RunResult, resultId: ObjectId): Boolean {
+        val runResultsBson = runResult.asBson
+        val success = runResultsBson.containsKey("timeMs")
+        var successMsg = "FAILED"
+        if (success) {
+            successMsg = "SUCCESS"
         }
+
+        logMessage(String.format("(%s) %s", successMsg, runResultsBson.toJson()))
+        if (SyncPerformanceTestUtils.shouldOutputToStitch()) {
+            val filter = Document("_id", resultId)
+            val update = Document("\$push", Document("results", runResultsBson))
+            Tasks.await(outputColl.updateOne(filter, update))
+        }
+
+        return success
     }
 
     private fun getPerformanceTestingContext(testParams: TestParams): SyncPerformanceTestContext {
@@ -223,7 +197,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                     }
                 }
 
-                if (!handleTestResult(testParams, runResult, resultId, numDoc, docSize)) {
+                if (!handleTestResult(runResult, resultId)) {
                     testSuccess = false
                 }
             }
@@ -322,19 +296,32 @@ open class RunResult(numDocs: Int, docSize: Int) {
     val numOutliers = SyncPerformanceTestUtils.getNumOutliers()
 
     val asBson by lazy {
-        Document(
-            mapOf(
-                "numDocs" to BsonInt32(numDocs),
-                "docSize" to BsonInt32(docSize),
-                "success" to true,
-                "timeMs" to DataBlock(runTimes.toDoubleArray(), numOutliers).toBson(),
-                "networkSentBytes" to DataBlock(networkSentBytes.toDoubleArray(), numOutliers).toBson(),
-                "networkReceivedBytes" to DataBlock(networkReceivedBytes.toDoubleArray(), numOutliers).toBson(),
-                "memoryBytes" to DataBlock(memoryUsages.toDoubleArray(), numOutliers).toBson(),
-                "diskBytes" to DataBlock(diskUsages.toDoubleArray(), numOutliers).toBson(),
-                "activeThreadCounts" to DataBlock(activeThreadCounts.toDoubleArray(), numOutliers).toBson(),
-                "numFailures" to failures.size
+        if (failures.size < (SyncPerformanceTestUtils.getNumIters() + 1) / 2) {
+            Document(
+                mapOf(
+                    "numDocs" to BsonInt32(numDocs),
+                    "docSize" to BsonInt32(docSize),
+                    "success" to true,
+                    "timeMs" to DataBlock(runTimes.toDoubleArray(), numOutliers).toBson(),
+                    "networkSentBytes" to DataBlock(networkSentBytes.toDoubleArray(), numOutliers).toBson(),
+                    "networkReceivedBytes" to DataBlock(networkReceivedBytes.toDoubleArray(), numOutliers).toBson(),
+                    "memoryBytes" to DataBlock(memoryUsages.toDoubleArray(), numOutliers).toBson(),
+                    "diskBytes" to DataBlock(diskUsages.toDoubleArray(), numOutliers).toBson(),
+                    "activeThreadCounts" to DataBlock(activeThreadCounts.toDoubleArray(), numOutliers).toBson(),
+                    "numFailures" to failures.size,
+                    "failures" to failures.map { it.asBson }
+                )
             )
-        )
+        } else {
+            Document(
+                mapOf(
+                    "numDocs" to BsonInt32(numDocs),
+                    "docSize" to BsonInt32(docSize),
+                    "success" to false,
+                    "numFailures" to failures.size,
+                    "failures" to failures.map { it.asBson }
+                )
+            )
+        }
     }
 }
