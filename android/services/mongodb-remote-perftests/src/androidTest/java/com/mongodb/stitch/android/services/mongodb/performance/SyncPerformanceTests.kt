@@ -17,7 +17,6 @@ val testHarness = SyncPerformanceIntTestsHarness()
 
 @RunWith(AndroidJUnit4::class)
 class SyncPerformanceTests {
-    private val outputToStitch = false
 
     companion object {
         private val runId by lazy {

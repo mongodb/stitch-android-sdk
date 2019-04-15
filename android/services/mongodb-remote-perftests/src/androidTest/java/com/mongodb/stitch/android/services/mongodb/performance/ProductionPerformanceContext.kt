@@ -14,9 +14,8 @@ import org.bson.Document
 
 class ProductionPerformanceContext(
     private val harness: SyncPerformanceIntTestsHarness,
-    private val testParams: TestParams,
-    private val transport: OkHttpInstrumentedTransport
-) : SyncPerformanceTestContext(harness, testParams, transport) {
+    private val testName: String
+) : SyncPerformanceTestContext(harness, testName) {
     // Public variables
     override lateinit var testClient: StitchAppClient
     override lateinit var testMongoClient: RemoteMongoClient

@@ -18,8 +18,7 @@ import org.bson.types.ObjectId
 
 open abstract class SyncPerformanceTestContext(
     private val harness: SyncPerformanceIntTestsHarness,
-    private val testParams: TestParams,
-    private val transport: OkHttpInstrumentedTransport
+    private val testName: String
 ) {
     // Public variables
     protected var testDbName: String = ObjectId().toHexString()
@@ -46,7 +45,7 @@ open abstract class SyncPerformanceTestContext(
 
     private fun generateMemoryAndThreadData(partialResult: PartialResult) = object : Thread() {
         override fun run() {
-            this.name = "${testParams.testName}_memory_and_thread_monitor"
+            this.name = "${testName}_memory_and_thread_monitor"
             val memoryData = arrayListOf<Long>()
             val threadData = arrayListOf<Int>()
 
@@ -77,8 +76,8 @@ open abstract class SyncPerformanceTestContext(
 
         // Get the before values for necessary metrics
         val memFreeBeforeData = StatFs(Environment.getDataDirectory().path).freeBytes
-        val networkSentBefore = transport.bytesUploaded
-        val networkReceivedBefore = transport.bytesDownloaded
+        val networkSentBefore = harness.transport.bytesUploaded
+        val networkReceivedBefore = harness.transport.bytesDownloaded
         val timeBefore = Date().time
 
         testDefinition(this@SyncPerformanceTestContext, numDocs, docSize)
@@ -90,8 +89,8 @@ open abstract class SyncPerformanceTestContext(
         partialResult.timeTaken = (Date().time - timeBefore).toDouble()
         val memFreeAfterData = StatFs(Environment.getDataDirectory().path).freeBytes
         partialResult.diskUsage = (memFreeBeforeData - memFreeAfterData).toDouble()
-        partialResult.networkSent = (transport.bytesUploaded - networkSentBefore).toDouble()
-        partialResult.networkReceived = (transport.bytesDownloaded - networkReceivedBefore)
+        partialResult.networkSent = (harness.transport.bytesUploaded - networkSentBefore).toDouble()
+        partialResult.networkReceived = (harness.transport.bytesDownloaded - networkReceivedBefore)
             .toDouble()
 
         return partialResult

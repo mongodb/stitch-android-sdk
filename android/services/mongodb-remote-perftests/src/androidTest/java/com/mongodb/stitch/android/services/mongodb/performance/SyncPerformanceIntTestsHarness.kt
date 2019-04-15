@@ -58,7 +58,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     internal val stitchTestDbName = "performance"
     internal val stitchTestCollName = "rawTestCollAndroid"
 
-    private val transport by lazy { OkHttpInstrumentedTransport() }
+    internal val transport by lazy { OkHttpInstrumentedTransport() }
 
     // Private variables
     internal lateinit var outputClient: StitchAppClient
@@ -139,13 +139,13 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         return success
     }
 
-    private fun getPerformanceTestingContext(testParams: TestParams): SyncPerformanceTestContext {
+    private fun createPerformanceTestingContext(testName: String): SyncPerformanceTestContext {
         if (SyncPerformanceTestUtils.getStitchHostname() == SyncPerformanceTestUtils.STITCH_PROD_HOST) {
             return ProductionPerformanceContext(
-                this@SyncPerformanceIntTestsHarness, testParams, transport)
+                this@SyncPerformanceIntTestsHarness, testName)
         } else {
             return LocalPerformanceTestContext(
-                this@SyncPerformanceIntTestsHarness, testParams, transport)
+                this@SyncPerformanceIntTestsHarness, testName)
         }
     }
 
@@ -171,11 +171,10 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         var testSuccess = true
         for (docSize in SyncPerformanceTestUtils.getDocSizes()) {
             for (numDoc in SyncPerformanceTestUtils.getNumDocs()) {
-                val ctx = getPerformanceTestingContext(testParams)
-
                 val runResult = RunResult(numDoc, docSize)
 
                 for (iter in 1..SyncPerformanceTestUtils.getNumIters()) {
+                    var ctx = createPerformanceTestingContext(testName)
                     try {
                         ctx.setup()
                         beforeEach(ctx, numDoc, docSize)

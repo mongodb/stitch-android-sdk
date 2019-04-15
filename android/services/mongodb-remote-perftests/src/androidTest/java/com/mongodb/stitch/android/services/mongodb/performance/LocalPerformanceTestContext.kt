@@ -19,9 +19,8 @@ import org.bson.types.ObjectId
 
 class LocalPerformanceTestContext(
     private val harness: SyncPerformanceIntTestsHarness,
-    private val testParams: TestParams,
-    private val transport: OkHttpInstrumentedTransport
-) : SyncPerformanceTestContext(harness, testParams, transport) {
+    private val testName: String
+) : SyncPerformanceTestContext(harness, testName) {
     // Public variables
     override lateinit var testClient: StitchAppClient
     override lateinit var testMongoClient: RemoteMongoClient
@@ -55,7 +54,7 @@ class LocalPerformanceTestContext(
                 read = true, write = true
             )),
             schema = RuleCreator.MongoDb.Schema())
-        val mdbRule = harness.addRule(mdbService, rule)
+        harness.addRule(mdbService, rule)
 
         testClient = harness.getAppClient(app.first)
         testUserId = Tasks.await(testClient.auth.loginWithCredential(AnonymousCredential())).id
