@@ -426,11 +426,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:stitch-core-sdk:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/sdk/build/test-results/test/*.xml"
 
   - name: run_android_sdk_tests
     commands:
@@ -440,11 +435,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:stitch-android-coretest:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/coretest/build/outputs/androidTest-results/connected/*.xml"
 
   - name: run_core_services_aws_tests
     commands:
@@ -454,11 +444,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-aws:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/aws/build/test-results/test/*.xml"
 
   - name: run_android_services_aws_tests
     commands:
@@ -469,11 +454,6 @@ tasks:
             set -e
             ps aux
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-aws:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/services/aws/build/outputs/androidTest-results/test/*.xml"
 
   - name: run_core_services_aws_s3_tests
     commands:
@@ -483,11 +463,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-aws-s3:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/aws-s3/build/test-results/test/*.xml"
 
   - name: run_android_services_aws_s3_tests
     commands:
@@ -497,11 +472,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-aws-s3:connectedAndroidTest
-    post:
-    - command: attach.xunit_results
-      params:
-      files:
-        - "./stitch-java-sdk/android/services/aws-s3/build/outputs/androidTest-results/test/*.xml"
 
   - name: run_core_services_aws_ses_tests
     commands:
@@ -511,11 +481,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-aws-ses:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/aws-ses/build/test-results/test/*.xml"
 
   - name: run_android_services_aws_ses_tests
     commands:
@@ -525,11 +490,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-aws-ses:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/services/aws-ses/build/outputs/androidTest-results/test/*.xml"
 
   - name: run_core_services_fcm_tests
     commands:
@@ -539,11 +499,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh  :core:core-services:stitch-core-services-fcm:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/fcm/build/test-results/test/*.xml"
 
   - name: run_android_services_fcm_tests
     commands:
@@ -553,11 +508,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh  :android:android-services:stitch-android-services-fcm:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/services/fcm/build/outputs/androidTest-results/test/*.xml"
 
   - name: run_core_services_http_tests
     commands:
@@ -567,11 +517,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-http:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/http/build/test-results/test/*.xml"
 
   - name: run_android_services_http_tests
     commands:
@@ -581,11 +526,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-http:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/services/http/build/outputs/androidTest-results/test/*.xml"
 
   - name: run_core_services_mongodb_local_tests
     commands:
@@ -595,11 +535,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-mongodb-local:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/mongodb-local/build/test-results/test/*.xml"
 
   - name: run_android_services_mongodb_local_tests
     commands:
@@ -609,11 +544,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-mongodb-local:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/services/mongodb-local/build/outputs/androidTest-results/test/*.xml"
 
   - name: run_core_services_mongodb_remote_tests
     commands:
@@ -623,11 +553,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-mongodb-remote:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/mongodb-remote/build/test-results/test/*.xml"
 
   - name: run_android_services_mongodb_remote_tests
     commands:
@@ -637,11 +562,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-mongodb-remote:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/services/mongodb-remote/build/outputs/androidTest-results/connected/*.xml"
 
   - name: run_core_services_twilio_tests
     commands:
@@ -651,11 +571,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :core:core-services:stitch-core-services-twilio:test
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/core/services/twilio/build/test-results/test/*.xml"
 
   - name: run_android_services_twilio_tests
     commands:
@@ -665,11 +580,6 @@ tasks:
           script: |
             set -e
             sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-twilio:connectedAndroidTest
-    post:
-      - command: attach.xunit_results
-        params:
-        files:
-          - "./stitch-java-sdk/android/services/twilio/build/outputs/androidTest-results/test/*.xml"
 
 task_groups:
   - name: run_core_tests
@@ -688,6 +598,19 @@ task_groups:
       - run_core_services_http_tests
       - run_core_services_mongodb_local_tests
       - run_core_services_twilio_tests
+    teardown_task:
+    - command: shell.exec
+      params:
+        shell: "bash"
+        script: |
+          set -e
+          ls -l
+          ls -l ./stitch-java-sdk/
+          ls -l ./stitch-java-sdk/test_results/
+    - command: attach.xunit_results
+      params:
+      files:
+      - "./stitch-java-sdk/test_results/*.xml"
   - name: run_android_tests
     setup_group_can_fail_task: true
     max_hosts: 4
@@ -716,6 +639,21 @@ task_groups:
       - run_android_services_http_tests
       - run_android_services_mongodb_local_tests
       - run_android_services_twilio_tests
+    teardown_task:
+    - command: shell.exec
+      params:
+        shell: "bash"
+        script: |
+          set -e
+          ls -l
+          ls -l ./stitch-java-sdk/
+          ls -l ./stitch-java-sdk/build
+          ls -l ./stitch-java-sdk/android
+          ls -l ./stitch-java-sdk/android/build
+    - command: attach.xunit_results
+      params:
+      files:
+      - "./stitch-java-sdk/test_results/*.xml"
   - name: run_linter
     setup_group_can_fail_task: true
     max_hosts: 2

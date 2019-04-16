@@ -51,6 +51,9 @@ subprojects {
                     release {
                     }
                 }
+                testOptions {
+                    resultsDir = "$project.buildDir/test-results"
+                }
             }
 
             task findbugs(type: FindBugs, dependsOn: "assembleDebug") {
