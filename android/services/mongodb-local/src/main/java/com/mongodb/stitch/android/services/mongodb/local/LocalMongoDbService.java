@@ -56,6 +56,17 @@ public final class LocalMongoDbService {
         }
       };
 
+  /**
+   * Helper function that drops all local databases for every client.
+   */
+  public static void clearallLocalDBs() {
+    for (final Map.Entry<MongoClient, Boolean> entry : localInstances.entrySet()) {
+      for (final String dbName : entry.getKey().listDatabaseNames()) {
+        entry.getKey().getDatabase(dbName).drop();
+      }
+    }
+  }
+
   static  {
     MongoDbMobileProvider.addEventListener(
         new MongoDbMobileProvider.EventListener() {

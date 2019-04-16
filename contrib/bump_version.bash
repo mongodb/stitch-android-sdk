@@ -6,6 +6,9 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $DIR
 cd ..
 
+# Ensure that 'hub' is installed
+which hub || (echo "hub is not installed. Please see contrib/README.md for more info" && exit 1)
+
 BUMP_TYPE=$1
 if [ "$BUMP_TYPE" != "snapshot" ] && [ "$BUMP_TYPE" != "beta" ] && [ "$BUMP_TYPE" != "patch" ] && [ "$BUMP_TYPE" != "minor" ] && [ "$BUMP_TYPE" != "major" ] && [ "$BUMP_TYPE" != "release" ]; then
 	echo $"Usage: $0 <snapshot|beta|patch|minor|major|release>"
