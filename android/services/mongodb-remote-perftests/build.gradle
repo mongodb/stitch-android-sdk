@@ -28,25 +28,14 @@ android {
         if (file.exists()) {
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
         }
-
-        String[] propertyNames = [
-                "test.stitch.androidPerfStitchAPIKey",
-                "test.stitch.perf.stitchHost",
-                "test.stitch.perf.iters",
-                "test.stitch.perf.hostname",
-                "test.stitch.perf.docSizes",
-                "test.stitch.perf.numDocs",
-                "test.stitch.perf.dataGranularity",
-                "test.stitch.perf.outliers",
-                "test.stitch.perf.outputStdout",
-                "test.stitch.perf.outputStitch",
-                "test.stitch.perf.rawOutput"
-        ]
-
-        for (final String propertyName : propertyNames) {
-            if (!properties.getProperty(propertyName, "").isEmpty()) {
-                testInstrumentationRunnerArgument propertyName, properties.getProperty(propertyName, "")
-            }
+        if (!properties.getProperty("test.stitch.androidPerfStitchAPIKey", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfStitchAPIKey", properties.getProperty("test.stitch.androidPerfStitchAPIKey", "")
+        }
+        if (!properties.getProperty("test.stitch.androidPerfStitchHostname", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfStitchHostname", properties.getProperty("test.stitch.androidPerfStitchHostname", "")
+        }
+        if (!properties.getProperty("test.stitch.androidPerfIters", "").isEmpty()) {
+            testInstrumentationRunnerArgument "test.stitch.androidPerfIters", properties.getProperty("test.stitch.androidPerfIters", "")
         }
 
         testInstrumentationRunnerArgument "test.stitch.mongodbURI", properties.getProperty("test.stitch.mongodbURI", "mongodb://localhost:26000")
