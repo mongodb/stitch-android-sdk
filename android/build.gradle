@@ -53,6 +53,7 @@ subprojects {
                 }
                 testOptions {
                     resultsDir = "$project.buildDir/test-results"
+                    reportDir = "$project.buildDir/test-results"
                 }
             }
 
