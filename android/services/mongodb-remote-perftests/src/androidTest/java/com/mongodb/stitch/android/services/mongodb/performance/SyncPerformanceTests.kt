@@ -24,8 +24,6 @@ class SyncPerformanceTests {
         }
     }
 
-    // private var testHarness = SyncPerformanceIntTestsHarness()
-
     // Tests for L2R-only scenarios
     @Test
     fun testL2ROnlyInitialSync() {
