@@ -21,12 +21,24 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             val testName = "testL2R_InitialSync"
             Log.d(TAG, testName)
 
+            val params = TestParams(
+                    runId = runId,
+                    testName = testName,
+                    dataProbeGranularityMs = 400L,
+                    docSizes = docSizes,
+                    numDocs = numDocs,
+                    numIters = SyncPerformanceTestUtils.getConfiguredIters(),
+                    numOutliersEachSide = 0,
+                    outputToStitch = true,
+                    stitchHostName = SyncPerformanceTestUtils.getConfiguredStitchHostname()
+            )
+
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
             var documentsForCurrentTest: List<Document>? = null
 
             testHarness.runPerformanceTestWithParams(
-                    testName, runId,
+                    params,
                     beforeEach = { _, numDocs, docSize ->
                         // Generate the documents that are to be synced via L2R
                         Log.i(TAG, "Setting up $testName for $numDocs $docSize-byte docs")
@@ -77,8 +89,20 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             val testName = "testL2R_DisconnectReconnect"
             Log.d(TAG, testName)
 
+            val params = TestParams(
+                    runId = runId,
+                    testName = testName,
+                    dataProbeGranularityMs = 400L,
+                    docSizes = docSizes,
+                    numDocs = numDocs,
+                    numIters = SyncPerformanceTestUtils.getConfiguredIters(),
+                    numOutliersEachSide = 0,
+                    outputToStitch = true,
+                    stitchHostName = SyncPerformanceTestUtils.getConfiguredStitchHostname()
+            )
+
             testHarness.runPerformanceTestWithParams(
-                    testName, runId,
+                    params,
                     beforeEach = { ctx, numDocs: Int, docSize: Int ->
                         // Generate and insert the documents, and perform the initial sync.
                         Log.i(TAG, "Setting up $testName for $numDocs $docSize-byte docs")
@@ -178,12 +202,24 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             val testName = "testL2R_SyncPass_${pctOfDocsWithChangeEvents}DocsChanged"
             Log.d(TAG, testName)
 
+            val params = TestParams(
+                    runId = runId,
+                    testName = testName,
+                    dataProbeGranularityMs = 400L,
+                    docSizes = docSizes,
+                    numDocs = numDocs,
+                    numIters = SyncPerformanceTestUtils.getConfiguredIters(),
+                    numOutliersEachSide = 0,
+                    outputToStitch = true,
+                    stitchHostName = SyncPerformanceTestUtils.getConfiguredStitchHostname()
+            )
+
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
             var numberOfChangedDocs: Int? = null
 
             testHarness.runPerformanceTestWithParams(
-                    testName, runId,
+                    params,
                     beforeEach = { ctx, numDocs: Int, docSize: Int ->
                         // Generate and insert the documents, and perform the initial sync.
                         Log.i(TAG, "Setting up $testName test for $numDocs $docSize-byte docs")

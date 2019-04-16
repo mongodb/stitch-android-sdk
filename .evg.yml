@@ -147,18 +147,6 @@ functions:
           echo "test.stitch.fcmSenderId=${test_fcm_sender_id}" >> local.properties
           echo "test.stitch.fcmApiKey=${test_fcm_api_key}" >> local.properties
           echo "test.stitch.androidPerfStitchAPIKey=${perf_android_api_key}" >> local.properties
-
-          echo "test.stitch.perf.stitchHost=http://localhost:9090" >> local.properties
-          echo "test.stitch.perf.iters=5" >> local.properties
-          echo "test.stitch.perf.hostname=Evergreen" >> local.properties
-          echo "test.stitch.perf.docSizes=1024,2048,4096,8192" >> local.properties
-          echo "test.stitch.perf.numDocs=100,500,1000,2000,4000" >> local.properties
-          echo "test.stitch.perf.dataGranularity=1000" >> local.properties
-          echo "test.stitch.perf.outliers=0" >> local.properties
-          echo "test.stitch.perf.outputStdout=true" >> local.properties
-          echo "test.stitch.perf.outputStitch=true" >> local.properties
-          echo "test.stitch.perf.rawOutput=false" >> local.properties
-
   "create_emulator":
     - command: shell.exec
       params:
@@ -654,20 +642,6 @@ tasks:
         params:
         files:
           - "./stitch-java-sdk/android/services/mongodb-remote/build/outputs/androidTest-results/connected/*.xml"
-
-  - name: run_android_services_mongodb_remote_perftests_tests
-    commands:
-    - command: shell.exec
-      params:
-        shell: "bash"
-        script: |
-          set -e
-          sh stitch-java-sdk/etc/run_core_test.sh :android:android-services:stitch-android-services-mongodb-remote-perftests:connectedAndroidTest
-    post:
-    - command: attach.xunit_results
-      params:
-      files:
-      - "./stitch-java-sdk/android/services/mongodb-remote-perftests/build/outputs/androidTest-results/connected/*.xml"
 
   - name: run_core_services_twilio_tests
     commands:
