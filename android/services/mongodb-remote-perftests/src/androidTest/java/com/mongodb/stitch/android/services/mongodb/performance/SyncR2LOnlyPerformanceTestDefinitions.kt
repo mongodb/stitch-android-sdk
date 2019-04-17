@@ -160,7 +160,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
 
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
-            var numberOfChangedDocs = -1
+            var numberOfChangedDocs: Int? = null
 
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
@@ -212,10 +212,10 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     // Randomly sample a percentage of the documents
                     // that will be locally updated
                     val shuffledDocIds = ids.shuffled()
-                    numberOfChangedDocs = Math.round(pctOfDocsWithChangeEvents*numDocs).toInt()
+                    val numChangedDocs = Math.round(pctOfDocsWithChangeEvents*numDocs).toInt()
                     val docsToUpdate =
                         if (pctOfDocsWithChangeEvents > 0.0)
-                            shuffledDocIds.subList(0, numberOfChangedDocs)
+                            shuffledDocIds.subList(0, numChangedDocs)
                         else
                             emptyList()
 
@@ -225,17 +225,19 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     ))
 
                     // Assert that the update worked
-                    assertIntsAreEqualOrThrow(updateResult.matchedCount.toInt(), numberOfChangedDocs,
+                    assertIntsAreEqualOrThrow(updateResult.matchedCount.toInt(), numChangedDocs,
                         "RemoteUpdateResult.matchedCount")
-                    assertIntsAreEqualOrThrow(updateResult.modifiedCount.toInt(), numberOfChangedDocs,
+                    assertIntsAreEqualOrThrow(updateResult.modifiedCount.toInt(), numChangedDocs,
                         "RemoteUpdateResult.modifiedCount")
 
                     val numDocsChangedRemotely = Tasks.await(ctx.testColl.count(
                         Document("newField", Document("\$exists", true))
                     ))
                     SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                        numberOfChangedDocs, numDocsChangedRemotely.toInt(), "Remote document updates"
+                        numChangedDocs, numDocsChangedRemotely.toInt(), "Remote document updates"
                     )
+
+                    numberOfChangedDocs = numChangedDocs
                 },
                 testDefinition = { ctx, _, _ ->
                     // Do the sync pass that will sync the remote changes to the local collection
@@ -253,11 +255,12 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     SyncPerformanceTestUtils.asertLocalAndRemoteDBCount(ctx, numDocs)
 
                     // Verify the updates were applied locally
+                    val numChangedDocs = numberOfChangedDocs ?: -1
                     val numDocsChangedLocally = Tasks.await(ctx.testColl.sync().count(
                         Document("newField", Document("\$exists", true))
                     )).toInt()
                     SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                        numDocsChangedLocally, numberOfChangedDocs, "Local document updates"
+                        numDocsChangedLocally, numChangedDocs, "Local document updates"
                     )
                 }
             )

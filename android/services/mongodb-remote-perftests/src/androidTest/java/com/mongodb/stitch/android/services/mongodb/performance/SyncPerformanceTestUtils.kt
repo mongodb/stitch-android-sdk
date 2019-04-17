@@ -142,22 +142,6 @@ class SyncPerformanceTestUtils {
             return ctx.testDataSynchronizer.doSyncPass()
         }
 
-        internal fun chunkedInsertToRemote(
-            ctx: SyncPerformanceTestContext,
-            numDocs: Int,
-            docSize: Int
-        ): List<BsonValue> {
-            val docs = SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
-            var ids = arrayListOf<BsonValue>()
-
-            for (it in docs.chunked(500)) {
-                var insertManyResult = Tasks.await(ctx.testColl.insertMany(it))
-                ids.addAll(insertManyResult.insertedIds.map { it.value })
-            }
-            assertIntsAreEqualOrThrow(ids.size, numDocs)
-            return ids
-        }
-
         internal fun insertToRemote(
             ctx: SyncPerformanceTestContext,
             numDocs: Int,
@@ -176,14 +160,14 @@ class SyncPerformanceTestUtils {
             // To generate the documents, we use 7-character field names, and 54-character
             // strings as the field values. For each field, we expect 3 bytes of overhead.
             // (the BSON string type code, and two null terminators). This way, each field is 64
-            // bytes. All of the doc sizes we use in this test are divisible by 16, so the number
+            // bytes. All of the doc sizes we use in this test are divisible by 64, so the number
             // of fields we generate in the document will be the desired document size divided by
-            // 16. To account for the 5 byte overhead of defining a BSON document, and the 17 bytes
+            // 64. To account for the 5 byte overhead of defining a BSON document, and the 17 bytes
             // overhead of defining the objectId _id, the first field will have 32 characters.
             repeat(numDocs) {
                 val doc = Document()
                         .append(generateRandomString(7), generateRandomString(32))
-                repeat(docSizeInBytes / 16 - 1) {
+                repeat(docSizeInBytes / 64 - 1) {
                     doc.append(generateRandomString(7), generateRandomString(54))
                 }
 

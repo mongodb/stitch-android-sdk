@@ -19,6 +19,8 @@ package com.mongodb.stitch.core.internal.net;
 import java.io.IOException;
 
 public interface Transport {
+  // This is how Stitch Server calculates the maximum request size
+  // This number is equal to 4,194,304 or ~ 4Mb
   int MAX_REQUEST_SIZE = 1 << 22;
 
   Response roundTrip(Request request) throws Exception;

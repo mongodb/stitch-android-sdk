@@ -190,10 +190,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
                         afterEach(ctx, numDoc, docSize)
                     } catch (e: Exception) {
-                        var failureMessage = e.toString()
-                        if (e.localizedMessage != null) {
-                            failureMessage = e.localizedMessage
-                        }
+                        val failureMessage = e.localizedMessage ?: e.toString()
                         runResult.failures.add(FailureResult(iter, failureMessage,
                             e.stackTrace.map { BsonString(it.toString()) }))
                         logMessage("Failure: $failureMessage")
