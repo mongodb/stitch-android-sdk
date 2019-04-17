@@ -161,7 +161,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
             pctOfDocsWithChangeEvents: Double,
             pctOfDocsWithConflicts: Double
         ) {
-            val testName = "testR2L_SyncPass_${(pctOfDocsWithChangeEvents * 100).toInt()}" +
+            val testName = "R2L_SyncPass_${(pctOfDocsWithChangeEvents * 100).toInt()}" +
                 "_PctDocsChanged_${(pctOfDocsWithConflicts * 100).toInt()}_PctDocsConflicts"
 
             // Local variable for the number of docs updated in the test
@@ -183,7 +183,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
 
                     // If sync fails for any reason, halt the test
                     Tasks.await(ctx.testColl.sync().configure(
-                        DefaultSyncConflictResolvers.localWins(),
+                        DefaultSyncConflictResolvers.remoteWins(),
                         null,
                         ExceptionListener { id, ex ->
                             testHarness.logMessage(
@@ -230,7 +230,6 @@ class SyncR2LOnlyPerformanceTestDefinitions {
 
                     // Verify the updates were applied locally
                     val numRemoteUpdates = numberOfChangedDocs ?: -1
-                    val numLocalUpdates =  numberOfConflicts ?: -1
 
                     // Both the local and remote should have
                     //      numRemoteUpdates documents with {newField: "remote"}
@@ -251,7 +250,8 @@ class SyncR2LOnlyPerformanceTestDefinitions {
             ctx: SyncPerformanceTestContext,
             ids: List<BsonValue>,
             numDocs: Int,
-            percentage: Double): Int {
+            percentage: Double
+        ): Int {
 
             val numChangedDocs = Math.round(percentage*numDocs).toInt()
             val docsToUpdate = ids.subList(0, numChangedDocs)
@@ -288,7 +288,8 @@ class SyncR2LOnlyPerformanceTestDefinitions {
             ctx: SyncPerformanceTestContext,
             ids: List<BsonValue>,
             numDocs: Int,
-            percentage: Double): Int {
+            percentage: Double
+        ): Int {
 
             val numChangedDocs = Math.round(percentage*numDocs).toInt()
             val docsToUpdate = ids.subList(0, numChangedDocs)

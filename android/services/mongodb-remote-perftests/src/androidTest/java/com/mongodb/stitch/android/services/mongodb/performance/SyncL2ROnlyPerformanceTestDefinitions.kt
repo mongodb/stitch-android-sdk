@@ -10,7 +10,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
     companion object {
 
         fun testInitialSync(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
-            val testName = "testL2R_InitialSync"
+            val testName = "L2R_InitialSync"
 
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
@@ -58,7 +58,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
         }
 
         fun testDisconnectReconnect(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
-            val testName = "testL2R_DisconnectReconnect"
+            val testName = "L2R_DisconnectReconnect"
 
             testHarness.runPerformanceTestWithParams(
                     testName, runId,
@@ -145,7 +145,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             runId: ObjectId,
             pctOfDocsWithChangeEvents: Double
         ) {
-            val testName = "testL2R_SyncPass_${pctOfDocsWithChangeEvents}DocsChanged"
+            val testName = "L2R_SyncPass_${(pctOfDocsWithChangeEvents * 100).toInt()}_DocsChanged"
 
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
