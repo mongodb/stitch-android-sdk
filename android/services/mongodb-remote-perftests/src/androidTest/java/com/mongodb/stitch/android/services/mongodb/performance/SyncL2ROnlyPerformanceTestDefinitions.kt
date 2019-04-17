@@ -210,7 +210,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                             Document("newField", Document("\$exists", true))
                         ))
                         SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                            numberOfChangedDocs, numDocsChangedLocally.toInt(), "Remote document updates"
+                            numberOfChangedDocs, numDocsChangedLocally.toInt(), "Local document updates"
                         )
                     },
                     testDefinition = { ctx, _, _ ->
