@@ -640,18 +640,22 @@ task_groups:
       - run_android_services_twilio_tests
     teardown_task:
     - command: shell.exec
-      params:
-        shell: "bash"
-        script: |
-          set -e
-          ls -l
-          ls -l ./stitch-java-sdk/
-          ls -l ./stitch-java-sdk/build
-          ls -l ./stitch-java-sdk/android
-          ls -l ./stitch-java-sdk/android/build
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            ls -l
+            ls -l ./stitch-java-sdk/
+            ls -l ./stitch-java-sdk/test_results/
     - command: attach.xunit_results
       params:
         file: "./stitch-java-sdk/test_results/*.xml"
+    - command: shell.exec
+        params:
+          shell: "bash"
+          script: |
+            set -e
+            rm -rf ./stitch-java-sdk/test_results/
   - name: run_linter
     setup_group_can_fail_task: true
     max_hosts: 2

@@ -35,9 +35,11 @@ subprojects {
                     testInstrumentationRunnerArgument "test.stitch.baseURL",
                             properties.getProperty("test.stitch.baseURL", "http://10.0.2.2:9090")
                 }
+
                 lintOptions {
                     disable 'InvalidPackage'
                 }
+
                 buildTypes {
                     debug {
                         if (project.hasProperty('withProguardMinification')) {
@@ -51,9 +53,9 @@ subprojects {
                     release {
                     }
                 }
+
                 testOptions {
-                    resultsDir = "$project.buildDir/test-results"
-                    reportDir = "$project.buildDir/test-results"
+                    resultsDir = "$project.rootDir/test_results"
                 }
             }
 
