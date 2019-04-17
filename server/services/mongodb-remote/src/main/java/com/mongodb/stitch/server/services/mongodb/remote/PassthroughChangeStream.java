@@ -30,7 +30,7 @@ import java.io.IOException;
  * @param <ChangeEventT> The type of MongoDB change event that this stream internally returns.
  */
 public class PassthroughChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>>
-    extends ChangeStream<ChangeEventT, ChangeEventT> {
+    extends ChangeStream<ChangeEventT> {
   /**
    * Initializes a passthrough change stream with the provided underlying event stream.
    * @param stream The event stream.
@@ -40,8 +40,10 @@ public class PassthroughChangeStream<DocumentT, ChangeEventT extends BaseChangeE
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public ChangeEventT nextEvent() throws IOException {
-    final StitchEvent<ChangeEventT> nextEvent = getStream().nextEvent();
+    final StitchEvent<ChangeEventT> nextEvent =
+        (StitchEvent<ChangeEventT>) getInternalStream().nextEvent();
 
     if (nextEvent == null) {
       return null;

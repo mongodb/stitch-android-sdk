@@ -479,9 +479,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids unique object identifiers of the IDs to watch.
    * @return the stream of change events.
    */
-  Task<ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>> watch(
-      final ObjectId... ids
-  );
+  Task<ChangeStream<Task<ChangeEvent<DocumentT>>>> watch(final ObjectId... ids);
 
   /**
    * Watches specified IDs in a collection.
@@ -489,9 +487,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids the ids to watch.
    * @return the stream of change events.
    */
-  Task<ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>> watch(
-      final BsonValue... ids
-  );
+  Task<ChangeStream<Task<ChangeEvent<DocumentT>>>> watch(final BsonValue... ids);
 
   /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
@@ -504,8 +500,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids unique object identifiers of the IDs to watch.
    * @return the stream of change events.
    */
-  Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>>
-      watchCompact(final ObjectId... ids);
+  Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>>> watchCompact(final ObjectId... ids);
 
   /**
    * Watches specified IDs in a collection. This convenience overload supports the use case of
@@ -516,8 +511,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids the ids to watch.
    * @return the stream of change events.
    */
-  Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>>
-      watchCompact(final BsonValue... ids);
+  Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>>> watchCompact(final BsonValue... ids);
 
   /**
    * A set of synchronization related operations on this collection.

@@ -525,28 +525,26 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
-  public ChangeStream<ChangeEvent<DocumentT>, ChangeEvent<DocumentT>> watch(final ObjectId... ids)
+  public ChangeStream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
       throws InterruptedException, IOException {
     return new PassthroughChangeStream<>(proxy.watch(ids));
   }
 
   @Override
-  public ChangeStream<ChangeEvent<DocumentT>, ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+  public ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
       throws InterruptedException, IOException {
     return new PassthroughChangeStream<>(proxy.watch(ids));
   }
 
   @Override
-  public ChangeStream<CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>> watchCompact(
-      final ObjectId... ids
-  ) throws InterruptedException, IOException {
+  public ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
+      throws InterruptedException, IOException {
     return new PassthroughChangeStream<>(proxy.watchCompact(ids));
   }
 
   @Override
-  public ChangeStream<CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>> watchCompact(
-      final BsonValue... ids
-  ) throws InterruptedException, IOException {
+  public ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
+      throws InterruptedException, IOException {
     return new PassthroughChangeStream<>(proxy.watchCompact(ids));
   }
 }

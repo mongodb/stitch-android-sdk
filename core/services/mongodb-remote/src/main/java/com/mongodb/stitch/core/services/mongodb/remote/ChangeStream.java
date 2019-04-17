@@ -29,19 +29,18 @@ import org.bson.BsonValue;
  *
  * @param <EventT> The type returned to users of this API when the next event is requested. May be
  *                 the same as ChangeEventT, or may be an async wrapper around ChangeEventT.
- * @param <ChangeEventT> The underlying change event type returned to users by this API.
  */
-public abstract class ChangeStream<EventT, ChangeEventT extends BaseChangeEvent>
+public abstract class ChangeStream<EventT>
     implements Closeable {
-  private final Stream<ChangeEventT> stream;
+  private final Stream<? extends BaseChangeEvent> internalStream;
 
   private ExceptionListener exceptionListener = null;
 
-  protected ChangeStream(final Stream<ChangeEventT> stream) {
+  protected ChangeStream(final Stream<? extends BaseChangeEvent> stream) {
     if (stream == null) {
       throw new IllegalArgumentException("null stream passed to change stream");
     }
-    this.stream = stream;
+    this.internalStream = stream;
   }
 
   /**
@@ -67,7 +66,7 @@ public abstract class ChangeStream<EventT, ChangeEventT extends BaseChangeEvent>
    * @return True if the underlying change stream is open.
    */
   public boolean isOpen() {
-    return stream.isOpen();
+    return internalStream.isOpen();
   }
 
   /**
@@ -76,18 +75,18 @@ public abstract class ChangeStream<EventT, ChangeEventT extends BaseChangeEvent>
    */
   @Override
   public void close() throws IOException {
-    stream.close();
+    internalStream.close();
   }
 
-  protected Stream<ChangeEventT> getStream() {
-    return this.stream;
+  protected Stream<? extends BaseChangeEvent> getInternalStream() {
+    return this.internalStream;
   }
 
   protected ExceptionListener getExceptionListener() {
     return this.exceptionListener;
   }
 
-  protected void dispatchError(final StitchEvent<ChangeEventT> event) {
+  protected void dispatchError(final StitchEvent<? extends BaseChangeEvent> event) {
     if (exceptionListener != null) {
       BsonValue documentId = null;
       if (event.getData() != null) {

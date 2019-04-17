@@ -36,7 +36,7 @@ import java.util.concurrent.Callable;
  * @param <ChangeEventT> The type of MongoDB change event that this stream internally returns.
  */
 public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>> extends
-    ChangeStream<Task<ChangeEventT>, ChangeEventT> {
+    ChangeStream<Task<ChangeEventT>> {
   private final TaskDispatcher dispatcher;
 
   /**
@@ -57,11 +57,13 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    * @throws IOException if the underlying stream throws an {@link IOException}
    */
   @Override
+  @SuppressWarnings("unchecked")
   public Task<ChangeEventT> nextEvent() throws IOException {
     return dispatcher.dispatchTask(new Callable<ChangeEventT>() {
       @Override
       public ChangeEventT call() throws Exception {
-        final StitchEvent<ChangeEventT> nextEvent = getStream().nextEvent();
+        final StitchEvent<ChangeEventT> nextEvent =
+            (StitchEvent<ChangeEventT>) getInternalStream().nextEvent();
 
         if (nextEvent == null) {
           return null;

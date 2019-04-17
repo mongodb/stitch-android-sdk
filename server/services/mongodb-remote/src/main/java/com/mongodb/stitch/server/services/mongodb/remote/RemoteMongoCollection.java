@@ -450,8 +450,6 @@ public interface RemoteMongoCollection<DocumentT> {
       final Bson update,
       final RemoteUpdateOptions updateOptions);
 
-
-
   /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
    * of non-{@link BsonValue} instances of {@link ObjectId}.
@@ -461,7 +459,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws InterruptedException if the operation is interrupted.
    * @throws IOException if the operation fails.
    */
-  ChangeStream<ChangeEvent<DocumentT>, ChangeEvent<DocumentT>> watch(final ObjectId... ids)
+  ChangeStream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
       throws InterruptedException, IOException;
 
   /**
@@ -472,7 +470,7 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws InterruptedException if the operation is interrupted.
    * @throws IOException if the operation fails.
    */
-  ChangeStream<ChangeEvent<DocumentT>, ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+  ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
       throws InterruptedException, IOException;
 
   /**
@@ -487,9 +485,8 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws InterruptedException if the operation is interrupted.
    * @throws IOException if the operation fails.
    */
-  ChangeStream<CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>> watchCompact(
-      final ObjectId... ids
-  ) throws InterruptedException, IOException;
+  ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
+      throws InterruptedException, IOException;
 
   /**
    * Watches specified IDs in a collection. Requests a stream where the full document of update
@@ -501,7 +498,6 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws InterruptedException if the operation is interrupted.
    * @throws IOException if the operation fails.
    */
-  ChangeStream<CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>> watchCompact(
-      final BsonValue... ids
-  ) throws InterruptedException, IOException;
+  ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
+      throws InterruptedException, IOException;
 }
