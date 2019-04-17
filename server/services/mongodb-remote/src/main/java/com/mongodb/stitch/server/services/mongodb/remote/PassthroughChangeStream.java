@@ -29,10 +29,8 @@ import java.io.IOException;
  * @param <DocumentT> The type of full document on the change event.
  * @param <ChangeEventT> The type of MongoDB change event that this stream internally returns.
  */
-public class PassthroughChangeStream<
-    DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>
-> extends
-    ChangeStream<ChangeEventT, ChangeEventT> {
+public class PassthroughChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>>
+    extends ChangeStream<ChangeEventT, ChangeEventT> {
   /**
    * Initializes a passthrough change stream with the provided underlying event stream.
    * @param stream The event stream.

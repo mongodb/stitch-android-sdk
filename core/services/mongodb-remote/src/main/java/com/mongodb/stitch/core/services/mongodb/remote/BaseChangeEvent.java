@@ -16,10 +16,10 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote;
 
-import org.bson.BsonDocument;
-
-import javax.annotation.Nullable;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import org.bson.BsonDocument;
 
 /**
  * Represents the set of properties that exist on all MongoDB change events produced

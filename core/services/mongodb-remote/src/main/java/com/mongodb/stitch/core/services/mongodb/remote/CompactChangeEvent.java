@@ -20,15 +20,14 @@ import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DocumentVersionInfo;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 
 /**
  * Represents a change event communicated via a MongoDB change stream from Stitch where

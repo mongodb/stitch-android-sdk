@@ -683,15 +683,14 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
-  public Task<
-      ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>
-  > watch(final ObjectId... ids) {
+  public Task<ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>> watch(
+      final ObjectId... ids
+  ) {
     return dispatcher.dispatchTask(
         new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>>() {
         @Override
-        public ChangeStream<
-            Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>
-        > call() throws Exception {
+        public ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>> call()
+            throws Exception {
           return new AsyncChangeStream<>(proxy.watch(ids), dispatcher);
         }
       }
@@ -699,15 +698,14 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
-  public Task<
-      ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>
-  > watch(final BsonValue... ids) {
+  public Task<ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>> watch(
+      final BsonValue... ids
+  ) {
     return dispatcher.dispatchTask(
         new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>>>() {
           @Override
-          public ChangeStream<
-              Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>
-          > call() throws Exception {
+          public ChangeStream<Task<ChangeEvent<DocumentT>>, ChangeEvent<DocumentT>> call()
+              throws Exception {
             return new AsyncChangeStream<>(proxy.watch(ids), dispatcher);
           }
         }
@@ -715,17 +713,14 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
-  public Task<
-      ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>
-  > watchCompact(final ObjectId... ids) {
+  public Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>>
+      watchCompact(final ObjectId... ids) {
     return dispatcher.dispatchTask(
         new Callable<
-            ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>
-        >() {
+            ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>>() {
           @Override
-          public ChangeStream<
-              Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>
-          > call() throws Exception {
+          public ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>
+              call() throws Exception {
             return new AsyncChangeStream<>(proxy.watchCompact(ids), dispatcher);
           }
         }
@@ -733,17 +728,14 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
-  public Task<
-      ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>
-  > watchCompact(final BsonValue... ids) {
+  public Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>>
+      watchCompact(final BsonValue... ids) {
     return dispatcher.dispatchTask(
-        new Callable<
-            ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>
-        >() {
+        new Callable<ChangeStream<
+            Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>>() {
           @Override
-          public ChangeStream<
-              Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>
-          > call() throws Exception {
+          public ChangeStream<Task<CompactChangeEvent<DocumentT>>, CompactChangeEvent<DocumentT>>
+              call() throws Exception {
             return new AsyncChangeStream<>(proxy.watchCompact(ids), dispatcher);
           }
         }
