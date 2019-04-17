@@ -136,7 +136,7 @@ public abstract class SyncFrequency {
    * the application will queue the event to be synchronized when back online.
    * @return a reactive configuration
    */
-  public static SyncFrequency newReactiveConfiguration() {
+  public static SyncFrequency reactive() {
     return new ReactiveFrequency();
   }
 
@@ -149,9 +149,9 @@ public abstract class SyncFrequency {
    *                    applying events by maintaining a sync stream
    * @return a scheduled configuration
    */
-  public static SyncFrequency newScheduledConfiguration(final long timeInterval,
-                                                        @Nonnull final TimeUnit timeUnit,
-                                                        final boolean isConnected) {
+  public static SyncFrequency scheduled(final long timeInterval,
+                                        @Nonnull final TimeUnit timeUnit,
+                                        final boolean isConnected) {
     return new ScheduledFrequency(timeInterval, timeUnit, isConnected);
   }
 
@@ -160,7 +160,7 @@ public abstract class SyncFrequency {
    * specified by the application.
    * @return an on-demand configuration
    */
-  public static SyncFrequency newOnDemandConfiguration() {
+  public static SyncFrequency onDemand() {
     return new OnDemandFrequency();
   }
 
