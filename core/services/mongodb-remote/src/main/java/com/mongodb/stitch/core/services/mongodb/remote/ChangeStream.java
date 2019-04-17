@@ -27,15 +27,16 @@ import org.bson.BsonValue;
 /**
  * User-level abstraction for a stream returning {@link ChangeEvent}s from the server.
  *
- * @param <EventT> The type returned to users of this API when the next event is requested.
- * @param <DocumentT> The type of the full document on the underlying change event.
+ * @param <EventT> The type returned to users of this API when the next event is requested. May be
+ *                 the same as ChangeEventT, or may be an async wrapper around ChangeEventT.
+ * @param <ChangeEventT> The underlying change event type returned to users by this API.
  */
-public abstract class ChangeStream<EventT, DocumentT> implements Closeable {
-  private final Stream<ChangeEvent<DocumentT>> stream;
+public abstract class ChangeStream<EventT, ChangeEventT extends BaseChangeEvent> implements Closeable {
+  private final Stream<ChangeEventT> stream;
 
   private ExceptionListener exceptionListener = null;
 
-  protected ChangeStream(final Stream<ChangeEvent<DocumentT>> stream) {
+  protected ChangeStream(final Stream<ChangeEventT> stream) {
     if (stream == null) {
       throw new IllegalArgumentException("null stream passed to change stream");
     }
@@ -77,7 +78,7 @@ public abstract class ChangeStream<EventT, DocumentT> implements Closeable {
     stream.close();
   }
 
-  protected Stream<ChangeEvent<DocumentT>> getStream() {
+  protected Stream<ChangeEventT> getStream() {
     return this.stream;
   }
 
@@ -85,7 +86,7 @@ public abstract class ChangeStream<EventT, DocumentT> implements Closeable {
     return this.exceptionListener;
   }
 
-  protected void dispatchError(final StitchEvent<ChangeEvent<DocumentT>> event) {
+  protected void dispatchError(final StitchEvent<ChangeEventT> event) {
     if (exceptionListener != null) {
       BsonValue documentId = null;
       if (event.getData() != null) {

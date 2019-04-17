@@ -227,8 +227,14 @@ public class Operations<DocumentT> {
 
   <ResultT> WatchOperation<ResultT> watch(
                        final Set<BsonValue> ids,
+                       final boolean useCompactEvents,
                        final Class<ResultT> resultClass) {
-    return new WatchOperation<>(namespace, ids, codecRegistry.get(resultClass));
+    return new WatchOperation<>(
+        namespace,
+        ids,
+        useCompactEvents,
+        codecRegistry.get(resultClass)
+    );
   }
 
   private List<BsonDocument> toBsonDocumentList(final List<? extends Bson> bsonList) {

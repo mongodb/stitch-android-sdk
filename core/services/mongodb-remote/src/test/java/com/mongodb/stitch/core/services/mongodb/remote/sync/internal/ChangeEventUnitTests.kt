@@ -126,8 +126,8 @@ class ChangeEventUnitTests {
         assertEquals(expectedId, changeEventFromDocument.id)
         assertEquals(expectedOperationType, changeEventFromDocument.operationType)
         assertEquals(expectedDocumentKey, changeEventFromDocument.documentKey)
-        assertEquals(expectedUpdateDescription.updatedFields, changeEventFromDocument.updateDescription.updatedFields)
-        assertEquals(expectedUpdateDescription.removedFields, changeEventFromDocument.updateDescription.removedFields)
+        assertEquals(expectedUpdateDescription.updatedFields, changeEventFromDocument.updateDescription!!.updatedFields)
+        assertEquals(expectedUpdateDescription.removedFields, changeEventFromDocument.updateDescription!!.removedFields)
         assertEquals(true, changeEventFromDocument.hasUncommittedWrites())
     }
 

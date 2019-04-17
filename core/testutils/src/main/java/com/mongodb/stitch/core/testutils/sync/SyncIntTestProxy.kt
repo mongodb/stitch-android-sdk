@@ -69,12 +69,12 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // start watching it and always set the value to hello world in a conflict
         syncOperations.configure(ConflictHandler { id: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
             // ensure that there is no version information on the documents in the conflict handler
-            assertNoVersionFieldsInDoc(localEvent.fullDocument)
-            assertNoVersionFieldsInDoc(remoteEvent.fullDocument)
+            assertNoVersionFieldsInDoc(localEvent.fullDocument!!)
+            assertNoVersionFieldsInDoc(remoteEvent.fullDocument!!)
 
             if (id == doc1Id) {
-                val merged = localEvent.fullDocument.getInteger("foo") +
-                    remoteEvent.fullDocument.getInteger("foo")
+                val merged = localEvent.fullDocument!!.getInteger("foo") +
+                    remoteEvent.fullDocument!!.getInteger("foo")
                 val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
                 newDocument["foo"] = merged
                 newDocument
@@ -166,8 +166,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
         coll.configure(ConflictHandler { _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
             val merged = Document(localEvent.fullDocument)
-            remoteEvent.fullDocument.forEach {
-                if (localEvent.fullDocument.containsKey(it.key)) {
+            remoteEvent.fullDocument!!.forEach {
+                if (localEvent.fullDocument!!.containsKey(it.key)) {
                     return@forEach
                 }
                 merged[it.key] = it.value
@@ -904,7 +904,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         coll.configure(
             ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 hasConflictHandlerBeenInvoked = true
-                assertEquals(remoteEvent.fullDocument["fly"], "away")
+                assertEquals(remoteEvent.fullDocument!!["fly"], "away")
                 remoteEvent.fullDocument
             },
             ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
@@ -1214,17 +1214,17 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val eventSemaphore = Semaphore(0)
         coll.configure(failingConflictHandler, ChangeEventListener { _, event ->
             // ensure that there is no version information in the event document.
-            assertNoVersionFieldsInDoc(event.fullDocument)
+            assertNoVersionFieldsInDoc(event.fullDocument!!)
 
             if (event.operationType == OperationType.UPDATE &&
                 !event.hasUncommittedWrites()) {
                 assertEquals(
                     updateDoc["\$set"],
-                    event.updateDescription.updatedFields)
+                    event.updateDescription!!.updatedFields)
                 assertEquals(
                     updateDoc["\$unset"],
                     BsonDocument(
-                        event.updateDescription.removedFields.map { BsonElement(it, BsonBoolean(true)) }))
+                        event.updateDescription!!.removedFields.map { BsonElement(it, BsonBoolean(true)) }))
                 eventSemaphore.release()
             }
         }, null)
@@ -1924,12 +1924,12 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: ChangeEvent<Document> ->
         val localEventDescription = when (event1.operationType == OperationType.DELETE) {
             true -> "delete"
-            false -> event1.fullDocument.toJson()
+            false -> event1.fullDocument!!.toJson()
         }
 
         val remoteEventDescription = when (event2.operationType == OperationType.DELETE) {
             true -> "delete"
-            false -> event2.fullDocument.toJson()
+            false -> event2.fullDocument!!.toJson()
         }
 
         println("conflict local event: $localEventDescription")

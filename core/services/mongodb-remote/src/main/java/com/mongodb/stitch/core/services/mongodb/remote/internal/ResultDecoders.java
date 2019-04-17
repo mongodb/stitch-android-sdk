@@ -19,6 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
@@ -130,12 +131,44 @@ public class ResultDecoders {
     return new ChangeEventDecoder<>(codec);
   }
 
-  private static final class ChangeEventDecoder<DocumentT> implements
+  @SuppressWarnings("unused")
+  static <DocumentT> Decoder<CompactChangeEvent<DocumentT>>
+      compactChangeEventDecoder(final Codec<DocumentT> codec) {
+    return new CompactChangeEventDecoder<>(codec);
+  }
+
+  private static abstract class BaseChangeEventDecoder<DocumentT> {
+    protected final Codec<DocumentT> codec;
+
+    BaseChangeEventDecoder(final Codec<DocumentT> codec) {
+      this.codec = codec;
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+      if (obj == null || obj.getClass() != this.getClass()) {
+        return false;
+      }
+      final BaseChangeEventDecoder<?> other = (BaseChangeEventDecoder) obj;
+
+      // caveat: if someone writes a stateful codec then this logic won't hold up, but we
+      // can't use .equals without opening a can of worms
+      return other.codec.getClass() == this.codec.getClass();
+    }
+
+    @Override
+    public int hashCode() {
+      return this.codec.hashCode();
+    }
+  }
+
+  private static final class ChangeEventDecoder<DocumentT>
+      extends BaseChangeEventDecoder<DocumentT>
+      implements
       Decoder<ChangeEvent<DocumentT>> {
-    private final Codec<DocumentT> codec;
 
     ChangeEventDecoder(final Codec<DocumentT> codec) {
-      this.codec = codec;
+      super(codec);
     }
 
     @Override
@@ -161,22 +194,40 @@ public class ResultDecoders {
           rawChangeEvent.getUpdateDescription(),
           rawChangeEvent.hasUncommittedWrites());
     }
+  }
 
-    @Override
-    public boolean equals(final Object obj) {
-      if (obj == null || obj.getClass() != ChangeEventDecoder.class) {
-        return false;
-      }
-      final ChangeEventDecoder<?> other = (ChangeEventDecoder) obj;
+  private static final class CompactChangeEventDecoder<DocumentT> extends
+      BaseChangeEventDecoder<DocumentT>
+      implements
+      Decoder<CompactChangeEvent<DocumentT>> {
 
-      // caveat: if someone writes a stateful codec then this logic won't hold up, but we
-      // can't use .equals without opening a can of worms
-      return other.codec.getClass() == this.codec.getClass();
+    CompactChangeEventDecoder(final Codec<DocumentT> codec) {
+      super(codec);
     }
 
     @Override
-    public int hashCode() {
-      return this.codec.hashCode();
+    @SuppressWarnings("unchecked")
+    public CompactChangeEvent<DocumentT> decode(
+        final BsonReader reader,
+        final DecoderContext decoderContext
+    ) {
+      final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
+      final CompactChangeEvent<BsonDocument> rawChangeEvent =
+          CompactChangeEvent.fromBsonDocument(document);
+
+      if (codec == null || codec.getClass().equals(BsonDocumentCodec.class)) {
+        return (CompactChangeEvent<DocumentT>)rawChangeEvent;
+      }
+      return new CompactChangeEvent<>(
+          rawChangeEvent.getOperationType(),
+          rawChangeEvent.getFullDocument() == null ? null : codec.decode(
+              rawChangeEvent.getFullDocument().asBsonReader(),
+              DecoderContext.builder().build()),
+          rawChangeEvent.getDocumentKey(),
+          rawChangeEvent.getUpdateDescription(),
+          rawChangeEvent.getStitchDocumentVersion(),
+          rawChangeEvent.getStitchDocumentHash(),
+          rawChangeEvent.hasUncommittedWrites());
     }
   }
 }

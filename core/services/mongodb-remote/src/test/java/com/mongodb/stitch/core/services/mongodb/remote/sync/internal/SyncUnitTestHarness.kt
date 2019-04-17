@@ -196,8 +196,8 @@ class SyncUnitTestHarness : Closeable {
             }
             Assert.assertEquals(expectedEvent.id, actualEvent.id)
             Assert.assertEquals(expectedEvent.namespace, actualEvent.namespace)
-            Assert.assertEquals(expectedEvent.updateDescription.removedFields, actualEvent.updateDescription.removedFields)
-            Assert.assertEquals(expectedEvent.updateDescription.updatedFields, actualEvent.updateDescription.updatedFields)
+            Assert.assertEquals(expectedEvent.updateDescription!!.removedFields, actualEvent.updateDescription!!.removedFields)
+            Assert.assertEquals(expectedEvent.updateDescription!!.updatedFields, actualEvent.updateDescription!!.updatedFields)
 
             Assert.assertEquals(expectedEvent.hasUncommittedWrites(), actualEvent.hasUncommittedWrites())
         }
