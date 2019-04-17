@@ -1,6 +1,9 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.support.test.InstrumentationRegistry
+import android.util.Log
+import com.google.android.gms.tasks.Tasks
+import org.bson.BsonValue
 import org.bson.Document
 import kotlin.random.Random
 
@@ -9,7 +12,7 @@ import kotlin.random.Random
  */
 class SyncPerformanceTestUtils {
     companion object {
-        public const val STITCH_PROD_HOST = "https://stitch.mongodb.com"
+        const val STITCH_PROD_HOST = "https://stitch.mongodb.com"
 
         private const val stitchHostnameProp = "test.stitch.perf.stitchHost"
         private const val defaultStitchHostname = "http://10.0.2.2:9090"
@@ -40,6 +43,9 @@ class SyncPerformanceTestUtils {
 
         private const val preserveRawOutputProp = "test.stitch.perf.rawOutput"
         private const val defaultPreserveRawOutput = "false"
+
+        private const val changeEventPercentagesProp = "test.stitch.perf.changeEventPercentages"
+        private const val defaultChangeEventPercentages = "0.0,0.01,0.10,0.25,0.50,1.0"
 
         internal fun getStitchHostname(): String {
             return InstrumentationRegistry.getArguments().getString(
@@ -79,6 +85,12 @@ class SyncPerformanceTestUtils {
             ))
         }
 
+        internal fun getChangeEventPercentages(): DoubleArray {
+            return InstrumentationRegistry.getArguments()
+                .getString(changeEventPercentagesProp, defaultChangeEventPercentages)
+                .split(",").map { it.toDouble() }.toDoubleArray()
+        }
+
         internal fun shouldOutputToStdOut(): Boolean {
             return InstrumentationRegistry.getArguments().getString(
                 outputToStdOutProp, defaultOutputToStdOut)!!.toBoolean()
@@ -92,6 +104,70 @@ class SyncPerformanceTestUtils {
         internal fun shouldPreserveRawOutput(): Boolean {
             return InstrumentationRegistry.getArguments().getString(
                 preserveRawOutputProp, defaultPreserveRawOutput)!!.toBoolean()
+        }
+
+        internal fun asertLocalAndRemoteDBCount(ctx: SyncPerformanceTestContext, numDocs: Int) {
+            // Verify that the test did indeed synchronize the updates remotely
+            val numSyncedIds = Tasks.await(ctx.testColl.sync().syncedIds).size
+            val numLocalDocs = Tasks.await(ctx.testColl.sync().count()).toInt()
+            val numRemoteDocs = Tasks.await(ctx.testColl.count()).toInt()
+
+            SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                numSyncedIds, numDocs, "Number of Synced Ids")
+            SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                numLocalDocs, numDocs, "Number of Local Documents")
+            SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                numRemoteDocs, numDocs, "Number of Remote Documents")
+        }
+
+        internal fun assertIntsAreEqualOrThrow(actual: Int, expected: Int, message: String = "") {
+            if (expected == actual) {
+                return
+            }
+            throw Exception(String.format("Expected: %s but found %s: %s", expected, actual, message))
+        }
+
+        internal fun doSyncPass(ctx: SyncPerformanceTestContext): Boolean {
+            ctx.testNetworkMonitor.connectedState = true
+            var counter = 0
+            while (!ctx.testDataSynchronizer.areAllStreamsOpen()) {
+                Thread.sleep(5)
+                // if this hangs longer than 30 seconds, throw an error
+                counter += 1
+                if (counter > 500) {
+                    Log.e("perfTests", "stream never opened after reconnect")
+                    error("stream never opened after reconnect")
+                }
+            }
+            return ctx.testDataSynchronizer.doSyncPass()
+        }
+
+        internal fun chunkedInsertToRemote(
+            ctx: SyncPerformanceTestContext,
+            numDocs: Int,
+            docSize: Int
+        ): List<BsonValue> {
+            val docs = SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
+            var ids = arrayListOf<BsonValue>()
+
+            for (it in docs.chunked(500)) {
+                var insertManyResult = Tasks.await(ctx.testColl.insertMany(it))
+                ids.addAll(insertManyResult.insertedIds.map { it.value })
+            }
+            assertIntsAreEqualOrThrow(ids.size, numDocs)
+            return ids
+        }
+
+        internal fun insertToRemote(
+            ctx: SyncPerformanceTestContext,
+            numDocs: Int,
+            docSize: Int
+        ): List<BsonValue> {
+            val docs = SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
+            var insertManyResult = Tasks.await(ctx.testColl.insertMany(docs))
+            assertIntsAreEqualOrThrow(insertManyResult.insertedIds.size, numDocs)
+
+            return insertManyResult.insertedIds.map { it.value }
         }
 
         internal fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {

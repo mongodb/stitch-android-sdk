@@ -19,6 +19,8 @@ package com.mongodb.stitch.core.internal.net;
 import java.io.IOException;
 
 public interface Transport {
+  int MAX_REQUEST_SIZE = 1 << 22;
+
   Response roundTrip(Request request) throws Exception;
 
   EventStream stream(Request request) throws IOException;
