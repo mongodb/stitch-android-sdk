@@ -523,7 +523,7 @@ public final class RemoteMongoCollectionImpl<DocumentT>
           final Class<ResultT> resultClass) {
     return proxy.findOneAndDelete(filter, options, resultClass);
   }
-  
+
   @Override
   public ChangeStream<ChangeEvent<DocumentT>, ChangeEvent<DocumentT>> watch(final ObjectId... ids)
       throws InterruptedException, IOException {

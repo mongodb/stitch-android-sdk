@@ -60,7 +60,7 @@ public final class DocumentVersionInfo {
       );
     }
 
-    private Version(
+    public Version(
             final int syncProtocolVersion,
             final String instanceId,
             final long versionCounter) {
