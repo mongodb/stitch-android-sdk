@@ -1059,7 +1059,6 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         }
     }
 
-
     private fun withoutIds(documents: Collection<Document>): Collection<Document> {
         val list = ArrayList<Document>(documents.size)
         documents.forEach { list.add(withoutId(it)) }
