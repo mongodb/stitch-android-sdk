@@ -184,9 +184,6 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         // Randomly sample a percentage of the documents
                         // that will be locally updated
                         val shuffledDocs = documentsForCurrentTest.shuffled()
-
-                        // Randomly sample a percentage of the documents
-                        // that will be locally updated
                         val numDocsChanged = Math.round(pctOfDocsWithChangeEvents*numDocs).toInt()
                         val docsToUpdate =
                             if (pctOfDocsWithChangeEvents > 0.0)
@@ -200,17 +197,23 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         ))
 
                         // Assert that the update worked
-                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(updateResult.matchedCount.toInt(), numDocsChanged,
+                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                            updateResult.matchedCount.toInt(),
+                            numDocsChanged,
                             "RemoteUpdateResult.matchedCount"
                         )
-                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(updateResult.modifiedCount.toInt(), numDocsChanged,
+                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                            updateResult.modifiedCount.toInt(),
+                            numDocsChanged,
                             "RemoteUpdateResult.modifiedCount"
                         )
                         val numDocsChangedLocally = Tasks.await(sync.count(
                             Document("newField", Document("\$exists", true))
                         ))
                         SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                            numDocsChanged, numDocsChangedLocally.toInt(), "Local document updates"
+                            numDocsChanged,
+                            numDocsChangedLocally.toInt(),
+                            "Local document updates"
                         )
 
                         numberOfChangedDocs = numDocsChanged

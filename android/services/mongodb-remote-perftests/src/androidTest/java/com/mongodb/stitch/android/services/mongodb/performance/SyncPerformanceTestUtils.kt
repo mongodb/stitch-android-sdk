@@ -47,6 +47,9 @@ class SyncPerformanceTestUtils {
         private const val changeEventPercentagesProp = "test.stitch.perf.changeEventPercentages"
         private const val defaultChangeEventPercentages = "0.0,0.01,0.10,0.25,0.50,1.0"
 
+        private const val conflictPercentagesProp = "test.stitch.perf.conflictPercentages"
+        private const val defaultConflictPercentagesProp = "0.1,0.5,1.0"
+
         internal fun getStitchHostname(): String {
             return InstrumentationRegistry.getArguments().getString(
                     stitchHostnameProp, defaultStitchHostname
@@ -91,6 +94,12 @@ class SyncPerformanceTestUtils {
                 .split(",").map { it.toDouble() }.toDoubleArray()
         }
 
+        internal fun getConflictPercentages(): DoubleArray {
+            return InstrumentationRegistry.getArguments()
+                .getString(conflictPercentagesProp, defaultConflictPercentagesProp)
+                .split(",").map { it.toDouble() }.toDoubleArray()
+        }
+
         internal fun shouldOutputToStdOut(): Boolean {
             return InstrumentationRegistry.getArguments().getString(
                 outputToStdOutProp, defaultOutputToStdOut)!!.toBoolean()
@@ -124,17 +133,18 @@ class SyncPerformanceTestUtils {
             if (expected == actual) {
                 return
             }
-            throw Exception(String.format("Expected: %s but found %s: %s", expected, actual, message))
+            throw PerformanceTestingException(
+                String.format("Expected: %s but found %s: %s", expected, actual, message))
         }
 
         internal fun doSyncPass(ctx: SyncPerformanceTestContext): Boolean {
             ctx.testNetworkMonitor.connectedState = true
             var counter = 0
             while (!ctx.testDataSynchronizer.areAllStreamsOpen()) {
-                Thread.sleep(5)
+                Thread.sleep(30)
                 // if this hangs longer than 30 seconds, throw an error
                 counter += 1
-                if (counter > 500) {
+                if (counter > 1000) {
                     Log.e("perfTests", "stream never opened after reconnect")
                     error("stream never opened after reconnect")
                 }
