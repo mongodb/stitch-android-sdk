@@ -52,7 +52,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                 },
                 afterEach = { ctx, numDocs, _ ->
                     // Verify that the test did indeed synchronize the provided documents locally
-                    SyncPerformanceTestUtils.asertLocalAndRemoteDBCount(ctx, numDocs)
+                    SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
                 }
             )
         }
@@ -139,7 +139,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                 },
                 afterEach = { ctx, numDocs, _ ->
                     // Verify that the test did indeed synchronize the updates locally
-                    SyncPerformanceTestUtils.asertLocalAndRemoteDBCount(ctx, numDocs)
+                    SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
                 }
             )
         }
@@ -252,7 +252,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                 },
                 afterEach = { ctx, numDocs: Int, _ ->
                     // Verify that the test did indeed synchronize the updates locally
-                    SyncPerformanceTestUtils.asertLocalAndRemoteDBCount(ctx, numDocs)
+                    SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
 
                     // Verify the updates were applied locally
                     val numChangedDocs = numberOfChangedDocs ?: -1

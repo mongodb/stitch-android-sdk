@@ -106,7 +106,7 @@ class SyncPerformanceTestUtils {
                 preserveRawOutputProp, defaultPreserveRawOutput)!!.toBoolean()
         }
 
-        internal fun asertLocalAndRemoteDBCount(ctx: SyncPerformanceTestContext, numDocs: Int) {
+        internal fun assertLocalAndRemoteDBCount(ctx: SyncPerformanceTestContext, numDocs: Int) {
             // Verify that the test did indeed synchronize the updates remotely
             val numSyncedIds = Tasks.await(ctx.testColl.sync().syncedIds).size
             val numLocalDocs = Tasks.await(ctx.testColl.sync().count()).toInt()

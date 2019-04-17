@@ -52,7 +52,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                     },
                     afterEach = { ctx, numDocs, _ ->
                         // Verify that the test did indeed synchronize the updates remotely
-                        SyncPerformanceTestUtils.asertLocalAndRemoteDBCount(ctx, numDocs)
+                        SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
                     }
             )
         }
@@ -128,7 +128,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                     },
                     afterEach = { ctx, numDocs: Int, _ ->
                         // Verify that the test did indeed synchronize the updates remotely
-                        SyncPerformanceTestUtils.asertLocalAndRemoteDBCount(ctx, numDocs)
+                        SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
                     }
             )
         }
@@ -227,7 +227,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                     },
                     afterEach = { ctx, numDocs: Int, _ ->
                         // Verify that the test did indeed synchronize the updates remotely
-                        SyncPerformanceTestUtils.asertLocalAndRemoteDBCount(ctx, numDocs)
+                        SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
 
                         // Verify that the test did indeed synchronize the provided documents
                         // remotely, and that the documents that were supposed to be updated got
