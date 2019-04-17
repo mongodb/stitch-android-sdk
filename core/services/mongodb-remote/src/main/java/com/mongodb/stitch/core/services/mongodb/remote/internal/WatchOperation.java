@@ -58,9 +58,9 @@ public class WatchOperation<DocumentT> {
     args.put("useCompactEvents", useCompactEvents);
     args.put("ids", ids);
 
-    final Decoder<ChangeEventT> decoder = useCompactEvents ?
-        (Decoder<ChangeEventT>) ResultDecoders.compactChangeEventDecoder(fullDocumentCodec) :
-        (Decoder<ChangeEventT>) ResultDecoders.changeEventDecoder(fullDocumentCodec);
+    final Decoder<ChangeEventT> decoder = useCompactEvents
+        ? (Decoder<ChangeEventT>) ResultDecoders.compactChangeEventDecoder(fullDocumentCodec)
+        : (Decoder<ChangeEventT>) ResultDecoders.changeEventDecoder(fullDocumentCodec);
 
     return service.streamFunction(
         "watch",

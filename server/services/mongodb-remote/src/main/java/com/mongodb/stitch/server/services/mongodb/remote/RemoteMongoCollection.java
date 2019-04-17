@@ -487,7 +487,9 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws InterruptedException if the operation is interrupted.
    * @throws IOException if the operation fails.
    */
-  ChangeStream<CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
+  ChangeStream<
+      CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>
+  > watchCompact(final ObjectId... ids)
       throws InterruptedException, IOException;
 
   /**
@@ -500,6 +502,8 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws InterruptedException if the operation is interrupted.
    * @throws IOException if the operation fails.
    */
-  ChangeStream<CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
+  ChangeStream<
+      CompactChangeEvent<DocumentT>, CompactChangeEvent<DocumentT>
+  > watchCompact(final BsonValue... ids)
       throws InterruptedException, IOException;
 }

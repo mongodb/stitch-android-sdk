@@ -22,7 +22,6 @@ import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.BaseChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 
 import java.io.IOException;
@@ -33,7 +32,8 @@ import java.util.concurrent.Callable;
  * returns each event as a {@link Task}.
  *
  * @param <DocumentT> The type of the full document on the underlying change event to be returned
- *                   asynchronously.
+ *                    asynchronously.
+ * @param <ChangeEventT> The type of MongoDB change event that this stream internally returns.
  */
 public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>> extends
     ChangeStream<Task<ChangeEventT>, ChangeEventT> {

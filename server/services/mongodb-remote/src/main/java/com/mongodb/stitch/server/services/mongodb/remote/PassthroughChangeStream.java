@@ -19,7 +19,6 @@ package com.mongodb.stitch.server.services.mongodb.remote;
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.BaseChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 
 import java.io.IOException;
@@ -28,8 +27,11 @@ import java.io.IOException;
  * Simple {@link ChangeStream} implementation that unwraps and returns the same change event
  * provided on the internal {@link StitchEvent}.
  * @param <DocumentT> The type of full document on the change event.
+ * @param <ChangeEventT> The type of MongoDB change event that this stream internally returns.
  */
-public class PassthroughChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>> extends
+public class PassthroughChangeStream<
+    DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>
+> extends
     ChangeStream<ChangeEventT, ChangeEventT> {
   /**
    * Initializes a passthrough change stream with the provided underlying event stream.

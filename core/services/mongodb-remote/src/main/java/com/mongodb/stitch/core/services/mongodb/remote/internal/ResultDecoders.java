@@ -137,7 +137,7 @@ public class ResultDecoders {
     return new CompactChangeEventDecoder<>(codec);
   }
 
-  private static abstract class BaseChangeEventDecoder<DocumentT> {
+  private abstract static class BaseChangeEventDecoder<DocumentT> {
     protected final Codec<DocumentT> codec;
 
     BaseChangeEventDecoder(final Codec<DocumentT> codec) {

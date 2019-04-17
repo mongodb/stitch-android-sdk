@@ -1,4 +1,22 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.services.mongodb.remote;
+
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DocumentVersionInfo;
 
@@ -11,7 +29,6 @@ import org.bson.BsonValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 /**
  * Represents a change event communicated via a MongoDB change stream from Stitch where
@@ -28,8 +45,11 @@ public final class CompactChangeEvent<DocumentT> extends BaseChangeEvent<Documen
    * Constructs a change event.
    *
    * @param operationType The operation type represented by the change event.
+   * @param fullDocument The full document of this change event (for inserts and updates)
    * @param documentKey The id if the underlying document that changed.
    * @param updateDescription The description of what has changed (for updates only).
+   * @param stitchDocumentVersion The Stitch sync version of this document at the time of the event.
+   * @param stitchDocumentHash The Stitch sync hash of this document at the time of the event.
    * @param hasUncommittedWrites Whether this represents a local uncommitted write.
    */
   public CompactChangeEvent(
@@ -49,7 +69,7 @@ public final class CompactChangeEvent<DocumentT> extends BaseChangeEvent<Documen
 
   /**
    * Returns the MongoDB Mobile Sync version of the document after this event, if it exists on the
-   * document after the update
+   * document after the update.
    *
    * @return the sync document version
    */

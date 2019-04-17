@@ -1,10 +1,32 @@
+/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.mongodb.stitch.core.services.mongodb.remote;
 
 import org.bson.BsonDocument;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
+/**
+ * Represents the set of properties that exist on all MongoDB change events produced
+ * by watch streams in this SDK. Other change event types inherit from this type.
+ *
+ * @param <DocumentT> The type of the full document in the change event.
+ */
 public abstract class BaseChangeEvent<DocumentT> {
   @Nonnull private final OperationType operationType;
   @Nullable private final DocumentT fullDocument;
@@ -78,5 +100,11 @@ public abstract class BaseChangeEvent<DocumentT> {
     this.hasUncommittedWrites = hasUncommittedWrites;
   }
 
+  /**
+   * Converts the change event to a BSON representation, as it would look on a MongoDB change
+   * stream, or a Stitch compact watch stream.
+   *
+   * @return The BSON document representation of the change event.
+   */
   public abstract BsonDocument toBsonDocument();
 }

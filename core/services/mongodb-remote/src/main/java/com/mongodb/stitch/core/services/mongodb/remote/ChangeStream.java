@@ -31,7 +31,9 @@ import org.bson.BsonValue;
  *                 the same as ChangeEventT, or may be an async wrapper around ChangeEventT.
  * @param <ChangeEventT> The underlying change event type returned to users by this API.
  */
-public abstract class ChangeStream<EventT, ChangeEventT extends BaseChangeEvent> implements Closeable {
+public abstract class ChangeStream<
+    EventT, ChangeEventT extends BaseChangeEvent
+> implements Closeable {
   private final Stream<ChangeEventT> stream;
 
   private ExceptionListener exceptionListener = null;
