@@ -609,8 +609,7 @@ task_groups:
           ls -l ./stitch-java-sdk/test_results/
     - command: attach.xunit_results
       params:
-      files:
-      - "./stitch-java-sdk/test_results/*.xml"
+        file: "./stitch-java-sdk/test_results/*.xml"
   - name: run_android_tests
     setup_group_can_fail_task: true
     max_hosts: 4
@@ -652,8 +651,7 @@ task_groups:
           ls -l ./stitch-java-sdk/android/build
     - command: attach.xunit_results
       params:
-      files:
-      - "./stitch-java-sdk/test_results/*.xml"
+        file: "./stitch-java-sdk/test_results/*.xml"
   - name: run_linter
     setup_group_can_fail_task: true
     max_hosts: 2
