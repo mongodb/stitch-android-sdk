@@ -3,6 +3,7 @@ package com.mongodb.stitch.android.services.mongodb.performance
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import org.bson.BsonObjectId
 import org.bson.Document
 import org.bson.types.ObjectId
 
@@ -184,39 +185,12 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         // Randomly sample a percentage of the documents
                         // that will be locally updated
                         val shuffledDocs = documentsForCurrentTest.shuffled()
-                        val numDocsChanged = Math.round(pctOfDocsWithChangeEvents*numDocs).toInt()
-                        val docsToUpdate =
-                            if (pctOfDocsWithChangeEvents > 0.0)
-                                shuffledDocs.subList(0, numDocsChanged)
-                            else
-                                emptyList()
+                        val ids = shuffledDocs.map { BsonObjectId(it.getObjectId("_id")) }
 
-                        val updateResult = Tasks.await(sync.updateMany(
-                            Document("_id", Document("\$in", docsToUpdate.map { it["_id"] })),
-                            Document("\$set", Document("newField", "blah"))
-                        ))
-
-                        // Assert that the update worked
-                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                            updateResult.matchedCount.toInt(),
-                            numDocsChanged,
-                            "RemoteUpdateResult.matchedCount"
+                        // Perform the local update and ensure it worked properly
+                        numberOfChangedDocs = SyncPerformanceTestUtils.performLocalUpdate(
+                            ctx, ids, numDocs, pctOfDocsWithChangeEvents
                         )
-                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                            updateResult.modifiedCount.toInt(),
-                            numDocsChanged,
-                            "RemoteUpdateResult.modifiedCount"
-                        )
-                        val numDocsChangedLocally = Tasks.await(sync.count(
-                            Document("newField", Document("\$exists", true))
-                        ))
-                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                            numDocsChanged,
-                            numDocsChangedLocally.toInt(),
-                            "Local document updates"
-                        )
-
-                        numberOfChangedDocs = numDocsChanged
                     },
                     testDefinition = { ctx, _, _ ->
                         // Do the sync pass that will sync the

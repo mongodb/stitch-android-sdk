@@ -3,6 +3,7 @@ package com.mongodb.stitch.android.services.mongodb.performance
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.assertIntsAreEqualOrThrow
 import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.doSyncPass
+import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.performLocalUpdate
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import org.bson.BsonValue
@@ -208,12 +209,12 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     val shuffledDocIds = ids.shuffled()
 
                     // Remotely update the desired percentage of documents and check it works
-                    numberOfChangedDocs = performRemoteUpdate(
+                    numberOfChangedDocs = SyncPerformanceTestUtils.performRemoteUpdate(
                         ctx, ids, numDocs, pctOfDocsWithChangeEvents
                     )
 
                     // Locally update the desired percentage of documents and check it works
-                    numberOfConflicts = performLocalUpdate(
+                    numberOfConflicts = SyncPerformanceTestUtils.performLocalUpdate(
                         ctx, ids, numDocs, pctOfDocsWithChangeEvents * pctOfDocsWithConflicts
                     )
                 },
@@ -244,82 +245,6 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     )
                 }
             )
-        }
-
-        private fun performRemoteUpdate(
-            ctx: SyncPerformanceTestContext,
-            ids: List<BsonValue>,
-            numDocs: Int,
-            percentage: Double
-        ): Int {
-
-            val numChangedDocs = Math.round(percentage*numDocs).toInt()
-            val docsToUpdate = ids.subList(0, numChangedDocs)
-
-            val updateResult = Tasks.await(ctx.testColl.updateMany(
-                Document("_id", Document("\$in", docsToUpdate)),
-                Document("\$set", Document("newField", "remote"))
-            ))
-
-            // Assert that the remote update worked
-            assertIntsAreEqualOrThrow(
-                updateResult.matchedCount.toInt(),
-                numChangedDocs,
-                "RemoteUpdateResult.matchedCount")
-            assertIntsAreEqualOrThrow(
-                updateResult.modifiedCount.toInt(),
-                numChangedDocs,
-                "RemoteUpdateResult.modifiedCount")
-
-            val numDocsChangedRemotely = Tasks.await(ctx.testColl.count(
-                Document("newField", Document("\$exists", true))
-            ))
-
-            SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                numChangedDocs,
-                numDocsChangedRemotely.toInt(),
-                "Remote document updates"
-            )
-
-            return numChangedDocs
-        }
-
-        private fun performLocalUpdate(
-            ctx: SyncPerformanceTestContext,
-            ids: List<BsonValue>,
-            numDocs: Int,
-            percentage: Double
-        ): Int {
-
-            val numChangedDocs = Math.round(percentage*numDocs).toInt()
-            val docsToUpdate = ids.subList(0, numChangedDocs)
-
-            val updateResult = Tasks.await(ctx.testColl.sync().updateMany(
-                Document("_id", Document("\$in", docsToUpdate)),
-                Document("\$set", Document("newField", "local"))
-            ))
-
-            // Assert that the remote update worked
-            assertIntsAreEqualOrThrow(
-                updateResult.matchedCount.toInt(),
-                numChangedDocs,
-                "LocalUpdateResult.matchedCount")
-            assertIntsAreEqualOrThrow(
-                updateResult.modifiedCount.toInt(),
-                numChangedDocs,
-                "LocalUpdateResult.modifiedCount")
-
-            val numDocsChangedLocally = Tasks.await(ctx.testColl.sync().count(
-                Document("newField", Document("\$exists", true))
-            ))
-
-            SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                numChangedDocs,
-                numDocsChangedLocally.toInt(),
-                "Remote document updates"
-            )
-
-            return numChangedDocs
         }
     }
 }

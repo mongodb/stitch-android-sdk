@@ -194,5 +194,81 @@ class SyncPerformanceTestUtils {
             }
             return str
         }
+
+        fun performRemoteUpdate(
+            ctx: SyncPerformanceTestContext,
+            ids: List<BsonValue>,
+            numDocs: Int,
+            percentage: Double
+        ): Int {
+
+            val numChangedDocs = Math.round(percentage*numDocs).toInt()
+            val docsToUpdate = ids.subList(0, numChangedDocs)
+
+            val updateResult = Tasks.await(ctx.testColl.updateMany(
+                Document("_id", Document("\$in", docsToUpdate)),
+                Document("\$set", Document("newField", "remote"))
+            ))
+
+            // Assert that the remote update worked
+            assertIntsAreEqualOrThrow(
+                updateResult.matchedCount.toInt(),
+                numChangedDocs,
+                "RemoteUpdateResult.matchedCount")
+            assertIntsAreEqualOrThrow(
+                updateResult.modifiedCount.toInt(),
+                numChangedDocs,
+                "RemoteUpdateResult.modifiedCount")
+
+            val numDocsChangedRemotely = Tasks.await(ctx.testColl.count(
+                Document("newField", Document("\$exists", true))
+            ))
+
+            SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                numChangedDocs,
+                numDocsChangedRemotely.toInt(),
+                "Remote document updates"
+            )
+
+            return numChangedDocs
+        }
+
+        fun performLocalUpdate(
+            ctx: SyncPerformanceTestContext,
+            ids: List<BsonValue>,
+            numDocs: Int,
+            percentage: Double
+        ): Int {
+
+            val numChangedDocs = Math.round(percentage*numDocs).toInt()
+            val docsToUpdate = ids.subList(0, numChangedDocs)
+
+            val updateResult = Tasks.await(ctx.testColl.sync().updateMany(
+                Document("_id", Document("\$in", docsToUpdate)),
+                Document("\$set", Document("newField", "local"))
+            ))
+
+            // Assert that the remote update worked
+            assertIntsAreEqualOrThrow(
+                updateResult.matchedCount.toInt(),
+                numChangedDocs,
+                "LocalUpdateResult.matchedCount")
+            assertIntsAreEqualOrThrow(
+                updateResult.modifiedCount.toInt(),
+                numChangedDocs,
+                "LocalUpdateResult.modifiedCount")
+
+            val numDocsChangedLocally = Tasks.await(ctx.testColl.sync().count(
+                Document("newField", Document("\$exists", true))
+            ))
+
+            SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                numChangedDocs,
+                numDocsChangedLocally.toInt(),
+                "Remote document updates"
+            )
+
+            return numChangedDocs
+        }
     }
 }
