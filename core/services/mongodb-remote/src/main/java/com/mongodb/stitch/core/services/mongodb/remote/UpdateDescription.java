@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
 
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonElement;
+import org.bson.BsonString;
 import org.bson.BsonValue;
 
 /**
@@ -94,6 +96,50 @@ public final class UpdateDescription {
     }
 
     return updateDocument;
+  }
+
+  /**
+   * Converts this update description to its document representation as it would appear in a
+   * MongoDB Change Event.
+   *
+   * @return the update description document as it would appear in a change event
+   */
+  public BsonDocument toBsonDocument() {
+    final BsonDocument updateDescDoc = new BsonDocument();
+    updateDescDoc.put(
+        Fields.UPDATED_FIELDS_FIELD,
+        this.getUpdatedFields());
+
+    final BsonArray removedFields = new BsonArray();
+    for (final String field : this.getRemovedFields()) {
+      removedFields.add(new BsonString(field));
+    }
+    updateDescDoc.put(
+        Fields.REMOVED_FIELDS_FIELD,
+        removedFields);
+
+    return updateDescDoc;
+  }
+
+  /**
+   * Converts an update description BSON document from a MongoDB Change Event into an
+   * UpdateDescription object.
+   *
+   * @param document the
+   * @return the converted UpdateDescription
+   */
+  public static UpdateDescription fromBsonDocument(final BsonDocument document) {
+    keyPresent(Fields.UPDATED_FIELDS_FIELD, document);
+    keyPresent(Fields.REMOVED_FIELDS_FIELD, document);
+
+    final BsonArray removedFieldsArr =
+        document.getArray(Fields.REMOVED_FIELDS_FIELD);
+    final Collection<String> removedFields = new ArrayList<>(removedFieldsArr.size());
+    for (final BsonValue field : removedFieldsArr) {
+      removedFields.add(field.asString().getValue());
+    }
+
+    return new UpdateDescription(document.getDocument(Fields.UPDATED_FIELDS_FIELD), removedFields);
   }
 
   /**
@@ -213,5 +259,10 @@ public final class UpdateDescription {
   @Override
   public int hashCode() {
     return removedFields.hashCode() + 31 * updatedFields.hashCode();
+  }
+
+  private static final class Fields {
+    static final String UPDATED_FIELDS_FIELD = "updatedFields";
+    static final String REMOVED_FIELDS_FIELD = "removedFields";
   }
 }

@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
 
 import com.mongodb.stitch.core.internal.common.BsonUtils;
@@ -30,7 +31,8 @@ import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 
-final class DocumentVersionInfo {
+
+public final class DocumentVersionInfo {
   @Nullable private final Version version;
   @Nullable private final BsonDocument versionDoc;
   @Nullable private final BsonDocument filter;
@@ -41,12 +43,24 @@ final class DocumentVersionInfo {
     private static final String VERSION_COUNTER_FIELD = "v";
   }
 
-  static class Version {
+  public static class Version {
     final int syncProtocolVersion;
     final String instanceId;
     final long versionCounter;
 
-    Version(
+    public static Version fromBsonDocument(final BsonDocument versionDoc) {
+      keyPresent(Fields.SYNC_PROTOCOL_VERSION_FIELD, versionDoc);
+      keyPresent(Fields.INSTANCE_ID_FIELD, versionDoc);
+      keyPresent(Fields.VERSION_COUNTER_FIELD, versionDoc);
+
+      return new Version(
+          versionDoc.getInt32(Fields.SYNC_PROTOCOL_VERSION_FIELD).getValue(),
+          versionDoc.getString(Fields.INSTANCE_ID_FIELD).getValue(),
+          versionDoc.getInt64(Fields.VERSION_COUNTER_FIELD).getValue()
+      );
+    }
+
+    public Version(
             final int syncProtocolVersion,
             final String instanceId,
             final long versionCounter) {
@@ -59,7 +73,7 @@ final class DocumentVersionInfo {
      * Returns the synchronization protocol version of this version.
      * @return an int representing the synchronization protocol version of this version.
      */
-    int getSyncProtocolVersion() {
+    public int getSyncProtocolVersion() {
       return syncProtocolVersion;
     }
 
@@ -67,7 +81,7 @@ final class DocumentVersionInfo {
      * Returns the GUID instance id of this version.
      * @return a String representing the instance id of this version.
      */
-    String getInstanceId() {
+    public String getInstanceId() {
       return instanceId;
     }
 
@@ -75,8 +89,18 @@ final class DocumentVersionInfo {
      * Returns the version counter of this version.
      * @return a long representing the version counter of this version.
      */
-    long getVersionCounter() {
+    public long getVersionCounter() {
       return versionCounter;
+    }
+
+    public BsonDocument toBsonDocument() {
+      final BsonDocument asDoc = new BsonDocument();
+
+      asDoc.put(Fields.SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(syncProtocolVersion));
+      asDoc.put(Fields.INSTANCE_ID_FIELD, new BsonString(instanceId));
+      asDoc.put(Fields.VERSION_COUNTER_FIELD, new BsonInt64(versionCounter));
+
+      return asDoc;
     }
   }
 
@@ -86,12 +110,7 @@ final class DocumentVersionInfo {
   ) {
     if (version != null) {
       this.versionDoc = version;
-
-      this.version = new Version(
-        versionDoc.getInt32(Fields.SYNC_PROTOCOL_VERSION_FIELD).getValue(),
-        versionDoc.getString(Fields.INSTANCE_ID_FIELD).getValue(),
-        versionDoc.getInt64(Fields.VERSION_COUNTER_FIELD).getValue()
-      );
+      this.version = Version.fromBsonDocument(this.versionDoc);
     } else {
       this.versionDoc = null;
       this.version = null;

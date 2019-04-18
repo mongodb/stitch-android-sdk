@@ -19,6 +19,7 @@ package com.mongodb.stitch.server.services.mongodb.remote.internal;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
@@ -523,26 +524,27 @@ public final class RemoteMongoCollectionImpl<DocumentT>
     return proxy.findOneAndDelete(filter, options, resultClass);
   }
 
-
-  /**
-   * Watches specified IDs in a collection.
-   * @param ids unique object identifiers of the IDs to watch.
-   * @return the stream of change events.
-   */
   @Override
-  public ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final ObjectId... ids)
+  public ChangeStream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
       throws InterruptedException, IOException {
     return new PassthroughChangeStream<>(proxy.watch(ids));
   }
 
-  /**
-   * Watches specified IDs in a collection.
-   * @param ids the ids to watch.
-   * @return the stream of change events.
-   */
   @Override
-  public ChangeStream<ChangeEvent<DocumentT>, DocumentT> watch(final BsonValue... ids)
+  public ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
       throws InterruptedException, IOException {
     return new PassthroughChangeStream<>(proxy.watch(ids));
+  }
+
+  @Override
+  public ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
+      throws InterruptedException, IOException {
+    return new PassthroughChangeStream<>(proxy.watchCompact(ids));
+  }
+
+  @Override
+  public ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
+      throws InterruptedException, IOException {
+    return new PassthroughChangeStream<>(proxy.watchCompact(ids));
   }
 }

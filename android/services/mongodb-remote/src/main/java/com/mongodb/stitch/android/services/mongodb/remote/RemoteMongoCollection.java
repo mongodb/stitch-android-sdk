@@ -20,6 +20,7 @@ import com.google.android.gms.tasks.Task;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
@@ -474,17 +475,43 @@ public interface RemoteMongoCollection<DocumentT> {
   /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
    * of non-{@link BsonValue} instances of {@link ObjectId}.
+   *
    * @param ids unique object identifiers of the IDs to watch.
    * @return the stream of change events.
    */
-  Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final ObjectId... ids);
+  Task<ChangeStream<Task<ChangeEvent<DocumentT>>>> watch(final ObjectId... ids);
 
   /**
    * Watches specified IDs in a collection.
+   *
    * @param ids the ids to watch.
    * @return the stream of change events.
    */
-  Task<ChangeStream<Task<ChangeEvent<DocumentT>>, DocumentT>> watch(final BsonValue... ids);
+  Task<ChangeStream<Task<ChangeEvent<DocumentT>>>> watch(final BsonValue... ids);
+
+  /**
+   * Watches specified IDs in a collection.  This convenience overload supports the use case
+   * of non-{@link BsonValue} instances of {@link ObjectId}. This convenience overload supports the
+   * use case of non-{@link BsonValue} instances of {@link ObjectId}. Requests a stream where the
+   * full document of update events, and several other unnecessary fields are omitted from the
+   * change event objects returned by the server. This can save on network usage when watching
+   * large documents.
+   *
+   * @param ids unique object identifiers of the IDs to watch.
+   * @return the stream of change events.
+   */
+  Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>>> watchCompact(final ObjectId... ids);
+
+  /**
+   * Watches specified IDs in a collection. This convenience overload supports the use case of
+   * non-{@link BsonValue} instances of {@link ObjectId}. Requests a stream where the full document
+   * of update events, and several other unnecessary fields are omitted from the change event
+   * objects returned by the server. This can save on network usage when watching large documents.
+   *
+   * @param ids the ids to watch.
+   * @return the stream of change events.
+   */
+  Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>>> watchCompact(final BsonValue... ids);
 
   /**
    * A set of synchronization related operations on this collection.
