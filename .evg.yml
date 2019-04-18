@@ -644,7 +644,7 @@ task_groups:
           rm -rf ./stitch-java-sdk/test_results/
   - name: run_linter
     setup_group_can_fail_task: true
-    max_hosts: 1
+    max_hosts: 2
     setup_group:
       - func: "fetch_source"
       - func: "setup_android"
