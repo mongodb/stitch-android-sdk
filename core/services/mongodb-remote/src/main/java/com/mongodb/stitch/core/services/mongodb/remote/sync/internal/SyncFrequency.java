@@ -63,7 +63,7 @@ public abstract class SyncFrequency {
    * If offline and the change was local, the application will queue the event to
    * be synchronized when back online.
    */
-  static class Reactive extends SyncFrequency {
+  static final class Reactive extends SyncFrequency {
     static final Reactive instance = new Reactive();
 
     private Reactive() {
@@ -79,7 +79,7 @@ public abstract class SyncFrequency {
    * Local/remote events will be queued on the device for
    * a specified amount of time (configurable) before they are applied.
    */
-  static class Scheduled extends SyncFrequency {
+  static final class Scheduled extends SyncFrequency {
     private final long timeInterval;
     private final TimeUnit timeUnit;
     private final boolean isConnected;
@@ -127,7 +127,7 @@ public abstract class SyncFrequency {
    * The collection will only sync changes when
    * specified by the application.
    */
-  static class OnDemand extends SyncFrequency {
+  static final class OnDemand extends SyncFrequency {
     static final OnDemand instance = new OnDemand();
 
     private OnDemand() {
