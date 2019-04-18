@@ -16,7 +16,6 @@ import org.bson.BsonArray
 import org.bson.BsonDateTime
 import org.bson.BsonDouble
 import org.bson.BsonInt32
-import org.bson.BsonInt64
 import org.bson.BsonString
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -27,29 +26,20 @@ typealias TestDefinition = (ctx: SyncPerformanceTestContext, numDocs: Int, docSi
 typealias BeforeBlock = TestDefinition
 typealias AfterBlock = TestDefinition
 
-data class TestParams(
-    val runId: ObjectId,
-    val testName: String,
-    val numIters: Int = 12,
-    val numDocs: IntArray = intArrayOf(),
-    val docSizes: IntArray = intArrayOf(),
-    val dataProbeGranularityMs: Long = 1500L,
-    val numOutliersEachSide: Int = 1,
-    val stitchHostName: String = "",
-    val outputToStdOut: Boolean = true,
-    val outputToStitch: Boolean = true,
-    val preserveRawOutput: Boolean = false
-) {
+class TestParams(val runId: ObjectId, val testName: String) {
+
     val asBson by lazy {
         Document(
             mapOf(
                 "runId" to runId,
-                "name" to BsonString(this.testName),
-                "dataProbeGranularityMs" to BsonInt64(this.dataProbeGranularityMs),
-                "numOutliersEachSide" to BsonInt32(this.numOutliersEachSide),
-                "numIters" to BsonInt32(this.numIters),
+                "name" to this.testName,
+                "dataProbeGranularityMs" to SyncPerformanceTestUtils.getDataGranularity(),
+                "numOutliersEachSide" to SyncPerformanceTestUtils.getNumOutliers(),
+                "numIters" to SyncPerformanceTestUtils.getNumIters(),
                 "date" to BsonDateTime(Date().time),
-                "sdk" to BsonString("android"),
+                "sdk" to "android",
+                "host" to SyncPerformanceTestUtils.getHostname(),
+                "stitchHost" to SyncPerformanceTestUtils.getStitchHostname(),
                 "results" to BsonArray()
             )
         )
@@ -67,9 +57,8 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
     internal val stitchTestDbName = "performance"
     internal val stitchTestCollName = "rawTestCollAndroid"
-    internal var stitchTestHost = ""
 
-    private val transport by lazy { OkHttpInstrumentedTransport() }
+    internal val transport by lazy { OkHttpInstrumentedTransport() }
 
     // Private variables
     internal lateinit var outputClient: StitchAppClient
@@ -88,13 +77,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
     }
 
     override fun getStitchBaseURL(): String {
-        if (stitchTestHost.isNotEmpty()) {
-            return stitchTestHost
-        }
-        return InstrumentationRegistry.getArguments().getString(
-            "test.stitch.baseURL",
-            "http://10.0.2.2:9090"
-        )
+        return SyncPerformanceTestUtils.getStitchHostname()
     }
 
     override fun getAppClientConfigurationBuilder(): StitchAppClientConfiguration.Builder {
@@ -103,14 +86,27 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
     override fun setup() {
         super.setup()
+    }
 
+    override fun teardown() {
+        super.teardown()
+    }
+
+    fun logMessage(message: String) {
+        if (SyncPerformanceTestUtils.shouldOutputToStdOut()) {
+            Log.d("PerfLog", message)
+        }
+    }
+
+    fun setupOutputClient() {
         outputClient = when (Stitch.hasAppClient(stitchOutputAppName)) {
             true -> Stitch.getAppClient(stitchOutputAppName)
             false -> Stitch.initializeAppClient(
-                    stitchOutputAppName,
-                    StitchAppClientConfiguration.Builder()
-                            .withNetworkMonitor(testNetworkMonitor)
-                            .build()
+                stitchOutputAppName,
+                StitchAppClientConfiguration.Builder()
+                    .withNetworkMonitor(testNetworkMonitor)
+                    .withTransport(transport)
+                    .build()
             )
         }
 
@@ -125,74 +121,113 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             .getCollection(stitchOutputCollName)
     }
 
+    fun handleTestResult(runResult: RunResult, resultId: ObjectId): Boolean {
+        val runResultsBson = runResult.asBson
+        val success = runResultsBson.containsKey("timeMs")
+        var successMsg = "FAILED"
+        if (success) {
+            successMsg = "SUCCESS"
+        }
+
+        logMessage(String.format("(%s) %s", successMsg, runResultsBson.toJson()))
+        if (SyncPerformanceTestUtils.shouldOutputToStitch()) {
+            val filter = Document("_id", resultId)
+            val update = Document("\$push", Document("results", runResultsBson))
+            Tasks.await(outputColl.updateOne(filter, update))
+        }
+
+        return success
+    }
+
+    private fun createPerformanceTestingContext(testName: String): SyncPerformanceTestContext {
+        if (SyncPerformanceTestUtils.getStitchHostname() == SyncPerformanceTestUtils.STITCH_PROD_HOST) {
+            return ProductionPerformanceContext(
+                this@SyncPerformanceIntTestsHarness, testName)
+        } else {
+            return LocalPerformanceTestContext(
+                this@SyncPerformanceIntTestsHarness, testName)
+        }
+    }
+
     fun runPerformanceTestWithParams(
-        testParams: TestParams,
+        testName: String,
+        runId: ObjectId,
         testDefinition: TestDefinition,
         beforeEach: BeforeBlock = { _, _, _ -> },
         afterEach: AfterBlock = { _, _, _ -> }
     ) {
-        stitchTestHost = testParams.stitchHostName
+        val testParams = TestParams(runId, testName)
+        setupOutputClient()
 
         val resultId = ObjectId()
-        if (testParams.outputToStitch) {
+        if (SyncPerformanceTestUtils.shouldOutputToStitch()) {
             val doc = testParams.asBson.append("_id", resultId)
                 .append("stitchHostName", BsonString(getStitchBaseURL()))
+                .append("status", BsonString("In Progress"))
             Tasks.await(outputColl.insertOne(doc))
+            testHarness.logMessage(String.format("Starting Test: %s", doc.toJson()))
         }
 
-        try {
-            for (docSize in testParams.docSizes) {
-                for (numDoc in testParams.numDocs) {
-                    val ctx = SyncPerformanceTestContext(
-                        this@SyncPerformanceIntTestsHarness,
-                        testParams,
-                        transport
-                    )
+        var testSuccess = true
+        for (docSize in SyncPerformanceTestUtils.getDocSizes()) {
+            for (numDoc in SyncPerformanceTestUtils.getNumDocs()) {
+                val runResult = RunResult(numDoc, docSize)
 
-                    val runResult = (1..testParams.numIters).map {
+                for (iter in 1..SyncPerformanceTestUtils.getNumIters()) {
+                    var ctx = createPerformanceTestingContext(testName)
+                    try {
                         ctx.setup()
                         beforeEach(ctx, numDoc, docSize)
+
                         val result = ctx.runSingleIteration(numDoc, docSize, testDefinition)
+                        runResult.runTimes.add(result.timeTaken)
+                        runResult.diskUsages.add(result.diskUsage)
+                        runResult.memoryUsages.add(result.memoryUsage)
+                        runResult.activeThreadCounts.add(result.activeThreadCount)
+                        runResult.networkReceivedBytes.add(result.networkReceived)
+                        runResult.networkSentBytes.add(result.networkSent)
+
                         afterEach(ctx, numDoc, docSize)
+                    } catch (e: Exception) {
+                        runResult.failures.add(FailureResult(iter, e.localizedMessage,
+                            e.stackTrace.map { BsonString(it.toString()) }))
+                    } finally {
                         ctx.teardown()
-                        result
-                    }.fold(
-                        RunResult(numDoc, docSize, testParams.numOutliersEachSide)
-                    ) { acc: RunResult, partialResult: PartialResult ->
-                        acc.diskUsages.add(partialResult.diskUsage)
-                        acc.memoryUsages.add(partialResult.memoryUsage)
-                        acc.networkReceivedBytes.add(partialResult.networkReceived)
-                        acc.networkSentBytes.add(partialResult.networkSent)
-                        acc.activeThreadCounts.add(partialResult.activeThreadCount)
-                        acc.runTimes.add(partialResult.timeTaken)
-                        acc
-                    }
-
-                    // If we are logging to stdout
-                    if (testParams.outputToStdOut) {
-                        Log.d("perfTests", runResult.asBson.toJson())
-                    }
-
-                    // If we are inserting this into stitch
-                    if (testParams.outputToStitch) {
-                        val filterDocument = Document("_id", resultId)
-                        val updateDocument = Document()
-                            .append("\$push", Document("results", runResult.asBson))
-                            .append("\$set", Document("status", "Success"))
-                        Tasks.await(outputColl.updateOne(filterDocument, updateDocument))
                     }
                 }
+
+                if (!handleTestResult(runResult, resultId)) {
+                    testSuccess = false
+                }
             }
-        } catch (e: Exception) {
-            Tasks.await(outputColl.updateOne(
-                    Document("_id", resultId),
-                    Document("\$set", Document()
-                            .append("status", "Failure")
-                            .append("exception", e.localizedMessage)
-                            .append("stacktrace", e.stackTrace.map { it.toString() }))
-            ))
-            throw e
         }
+
+        if (SyncPerformanceTestUtils.shouldOutputToStitch()) {
+            val filter = Document("_id", resultId)
+            var update: Document
+            if (testSuccess) {
+                update = Document("\$set", Document("status", "Success"))
+            } else {
+                update = Document("\$set", Document("status", "Failure"))
+            }
+            Tasks.await(outputColl.updateOne(filter, update))
+        }
+    }
+}
+
+data class FailureResult(
+    val iteration: Int,
+    val reason: String,
+    val stackTrace: List<BsonString>
+) {
+    val asBson by lazy {
+        Document(
+            mapOf(
+                "iteration" to BsonInt32(iteration),
+                "reason" to BsonString(reason),
+                "stackTrace" to BsonArray(stackTrace)
+            )
+        )
     }
 }
 
@@ -249,26 +284,43 @@ class PartialResult {
     var networkReceived = 0.0
 }
 
-open class RunResult(numDocs: Int, docSize: Int, numOutliers: Int) {
+open class RunResult(numDocs: Int, docSize: Int) {
     val runTimes = arrayListOf<Double>()
     val networkSentBytes = arrayListOf<Double>()
     val networkReceivedBytes = arrayListOf<Double>()
     val memoryUsages = arrayListOf<Double>()
     val diskUsages = arrayListOf<Double>()
     var activeThreadCounts = arrayListOf<Double>()
+    var failures = arrayListOf<FailureResult>()
+    val numOutliers = SyncPerformanceTestUtils.getNumOutliers()
 
     val asBson by lazy {
-        Document(
-            mapOf(
-                "numDocs" to BsonInt32(numDocs),
-                "docSize" to BsonInt32(docSize),
-                "timeMs" to DataBlock(runTimes.toDoubleArray(), numOutliers).toBson(),
-                "networkSentBytes" to DataBlock(networkSentBytes.toDoubleArray(), numOutliers).toBson(),
-                "networkReceivedBytes" to DataBlock(networkReceivedBytes.toDoubleArray(), numOutliers).toBson(),
-                "memoryBytes" to DataBlock(memoryUsages.toDoubleArray(), numOutliers).toBson(),
-                "diskBytes" to DataBlock(diskUsages.toDoubleArray(), numOutliers).toBson(),
-                "activeThreadCounts" to DataBlock(activeThreadCounts.toDoubleArray(), numOutliers).toBson()
+        if (failures.size < (SyncPerformanceTestUtils.getNumIters() + 1) / 2) {
+            Document(
+                mapOf(
+                    "numDocs" to BsonInt32(numDocs),
+                    "docSize" to BsonInt32(docSize),
+                    "success" to true,
+                    "timeMs" to DataBlock(runTimes.toDoubleArray(), numOutliers).toBson(),
+                    "networkSentBytes" to DataBlock(networkSentBytes.toDoubleArray(), numOutliers).toBson(),
+                    "networkReceivedBytes" to DataBlock(networkReceivedBytes.toDoubleArray(), numOutliers).toBson(),
+                    "memoryBytes" to DataBlock(memoryUsages.toDoubleArray(), numOutliers).toBson(),
+                    "diskBytes" to DataBlock(diskUsages.toDoubleArray(), numOutliers).toBson(),
+                    "activeThreadCounts" to DataBlock(activeThreadCounts.toDoubleArray(), numOutliers).toBson(),
+                    "numFailures" to failures.size,
+                    "failures" to failures.map { it.asBson }
+                )
             )
-        )
+        } else {
+            Document(
+                mapOf(
+                    "numDocs" to BsonInt32(numDocs),
+                    "docSize" to BsonInt32(docSize),
+                    "success" to false,
+                    "numFailures" to failures.size,
+                    "failures" to failures.map { it.asBson }
+                )
+            )
+        }
     }
 }
