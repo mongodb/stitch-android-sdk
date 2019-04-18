@@ -51,7 +51,7 @@ public final class HashUtils {
     long hashValue = FNV_64BIT_OFFSET_BASIS;
 
     for (int offset = 0; offset < docBytes.length; offset++) {
-      hashValue ^= docBytes[offset];
+      hashValue ^= (0xFF & docBytes[offset]);
       hashValue *= FNV_64BIT_PRIME;
     }
 
