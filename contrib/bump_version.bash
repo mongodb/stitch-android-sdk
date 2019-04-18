@@ -101,7 +101,7 @@ $BODY"
     git tag -a "$NEW_VERSION" -m "$BODY"
 
     echo "creating pull request in github..."
-    git push -u origin "Release-$NEW_VERSION"
+    git push -u upstream "Release-$NEW_VERSION"
     hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
 else
     set +e
@@ -109,7 +109,7 @@ else
     if [ $? -eq 0 ]; then
 	    echo "creating pull request in github..."
         set -e
-        git push -u origin "Release-$NEW_VERSION"
+        git push -u upstream "Release-$NEW_VERSION"
         hub pull-request -m "$JIRA_TICKET: Release $NEW_VERSION" --base mongodb:master --head mongodb:"Release-$NEW_VERSION"
 	fi
 	set -e
