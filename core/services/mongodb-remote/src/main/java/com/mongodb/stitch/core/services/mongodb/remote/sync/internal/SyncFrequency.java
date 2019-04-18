@@ -63,7 +63,12 @@ public abstract class SyncFrequency {
    * If offline and the change was local, the application will queue the event to
    * be synchronized when back online.
    */
-  static class ReactiveFrequency extends SyncFrequency {
+  static class Reactive extends SyncFrequency {
+    static final Reactive instance = new Reactive();
+
+    private Reactive() {
+    }
+
     @Override
     SyncFrequencyType getType() {
       return SyncFrequencyType.REACTIVE;
@@ -74,14 +79,14 @@ public abstract class SyncFrequency {
    * Local/remote events will be queued on the device for
    * a specified amount of time (configurable) before they are applied.
    */
-  static class ScheduledFrequency extends SyncFrequency {
+  static class Scheduled extends SyncFrequency {
     private final long timeInterval;
     private final TimeUnit timeUnit;
     private final boolean isConnected;
 
-    ScheduledFrequency(final long timeInterval,
-                       final @Nonnull TimeUnit timeUnit,
-                       final boolean isConnected) {
+    Scheduled(final long timeInterval,
+              final @Nonnull TimeUnit timeUnit,
+              final boolean isConnected) {
       this.timeInterval = timeInterval;
       this.timeUnit = timeUnit;
       this.isConnected = isConnected;
@@ -122,7 +127,12 @@ public abstract class SyncFrequency {
    * The collection will only sync changes when
    * specified by the application.
    */
-  static class OnDemandFrequency extends SyncFrequency {
+  static class OnDemand extends SyncFrequency {
+    static final OnDemand instance = new OnDemand();
+
+    private OnDemand() {
+    }
+
     @Override
     SyncFrequencyType getType() {
       return SyncFrequencyType.ON_DEMAND;
@@ -137,7 +147,7 @@ public abstract class SyncFrequency {
    * @return a reactive configuration
    */
   public static SyncFrequency reactive() {
-    return new ReactiveFrequency();
+    return Reactive.instance;
   }
 
   /**
@@ -152,7 +162,7 @@ public abstract class SyncFrequency {
   public static SyncFrequency scheduled(final long timeInterval,
                                         @Nonnull final TimeUnit timeUnit,
                                         final boolean isConnected) {
-    return new ScheduledFrequency(timeInterval, timeUnit, isConnected);
+    return new Scheduled(timeInterval, timeUnit, isConnected);
   }
 
   /**
@@ -161,7 +171,7 @@ public abstract class SyncFrequency {
    * @return an on-demand configuration
    */
   public static SyncFrequency onDemand() {
-    return new OnDemandFrequency();
+    return OnDemand.instance;
   }
 
   abstract SyncFrequencyType getType();
