@@ -314,17 +314,16 @@ tasks:
             export ANDROID_SDK_HOME=$SDK_HOME
             cd stitch-java-sdk
             ./gradlew lint --continue --warning-mode=all < /dev/null
-    post:
-      command: s3.put
-      params:
-        aws_key: ${test_artifacts_aws_key}
-        aws_secret: ${test_artifacts_aws_secret}
-        local_files_include_filter:
-          - stitch-java-sdk/**/build/reports/**/*lint*.html
-        remote_file: ${build_id}/report
-        bucket: stitch-test-artifacts
-        content_type: text/html
-        permissions: public-read
+      - command: s3.put
+        params:
+          aws_key: ${test_artifacts_aws_key}
+          aws_secret: ${test_artifacts_aws_secret}
+          local_files_include_filter:
+            - stitch-java-sdk/**/build/reports/**/*lint*.html
+          remote_file: ${build_id}/report
+          bucket: stitch-test-artifacts
+          content_type: text/html
+          permissions: public-read
   - name: ktlint
     commands:
       - command: shell.exec
@@ -355,17 +354,16 @@ tasks:
             export ANDROID_SDK_HOME=$SDK_HOME
             cd stitch-java-sdk
             ./gradlew checkstyle --continue --warning-mode=all < /dev/null
-    post:
-      command: s3.put
-      params:
-        aws_key: ${test_artifacts_aws_key}
-        aws_secret: ${test_artifacts_aws_secret}
-        local_files_include_filter:
-          - stitch-java-sdk/**/build/outputs/**/*checkstyle*.html
-        remote_file: ${build_id}/report
-        bucket: stitch-test-artifacts
-        content_type: text/html
-        permissions: public-read
+      - command: s3.put
+        params:
+          aws_key: ${test_artifacts_aws_key}
+          aws_secret: ${test_artifacts_aws_secret}
+          local_files_include_filter:
+            - stitch-java-sdk/**/build/outputs/**/*checkstyle*.html
+          remote_file: ${build_id}/report
+          bucket: stitch-test-artifacts
+          content_type: text/html
+          permissions: public-read
   - name: findbugs
     commands:
       - command: shell.exec
@@ -381,17 +379,16 @@ tasks:
             export ANDROID_SDK_HOME=$SDK_HOME
             cd stitch-java-sdk
             ./gradlew findbugs --continue --warning-mode=all < /dev/null
-    post:
-      command: s3.put
-      params:
-        aws_key: ${test_artifacts_aws_key}
-        aws_secret: ${test_artifacts_aws_secret}
-        local_files_include_filter:
-          - stitch-java-sdk/**/build/outputs/**/*findbugs*.html
-        remote_file: ${build_id}/report
-        bucket: stitch-test-artifacts
-        content_type: text/html
-        permissions: public-read
+      - command: s3.put
+        params:
+          aws_key: ${test_artifacts_aws_key}
+          aws_secret: ${test_artifacts_aws_secret}
+          local_files_include_filter:
+            - stitch-java-sdk/**/build/outputs/**/*findbugs*.html
+          remote_file: ${build_id}/report
+          bucket: stitch-test-artifacts
+          content_type: text/html
+          permissions: public-read
   - name: pmd
     commands:
       - command: shell.exec
@@ -407,17 +404,16 @@ tasks:
             export ANDROID_SDK_HOME=$SDK_HOME
             cd stitch-java-sdk
             ./gradlew pmd --continue --warning-mode=all < /dev/null
-    post:
-      command: s3.put
-      params:
-        aws_key: ${test_artifacts_aws_key}
-        aws_secret: ${test_artifacts_aws_secret}
-        local_files_include_filter:
-          - stitch-java-sdk/**/build/outputs/**/*pmd*.html
-        remote_file: ${build_id}/report
-        bucket: stitch-test-artifacts
-        content_type: text/html
-        permissions: public-read
+        command: s3.put
+        params:
+          aws_key: ${test_artifacts_aws_key}
+          aws_secret: ${test_artifacts_aws_secret}
+          local_files_include_filter:
+            - stitch-java-sdk/**/build/outputs/**/*pmd*.html
+          remote_file: ${build_id}/report
+          bucket: stitch-test-artifacts
+          content_type: text/html
+          permissions: public-read
   - name: run_core_sdk_tests
     commands:
       - command: shell.exec
@@ -599,17 +595,15 @@ task_groups:
       - run_core_services_mongodb_local_tests
       - run_core_services_twilio_tests
     teardown_task:
+    - command: attach.xunit_results
+      params:
+        file: "./stitch-java-sdk/test_results/*.xml"
     - command: shell.exec
       params:
         shell: "bash"
         script: |
           set -e
-          ls -l
-          ls -l ./stitch-java-sdk/
-          ls -l ./stitch-java-sdk/test_results/
-    - command: attach.xunit_results
-      params:
-        file: "./stitch-java-sdk/test_results/*.xml"
+          rm -rf ./stitch-java-sdk/test_results/
   - name: run_android_tests
     setup_group_can_fail_task: true
     max_hosts: 4
@@ -639,26 +633,18 @@ task_groups:
       - run_android_services_mongodb_local_tests
       - run_android_services_twilio_tests
     teardown_task:
-    - command: shell.exec
-        params:
-          shell: "bash"
-          script: |
-            set -e
-            ls -l
-            ls -l ./stitch-java-sdk/
-            ls -l ./stitch-java-sdk/test_results/
     - command: attach.xunit_results
       params:
-        file: "./stitch-java-sdk/test_results/*.xml"
+        file: "./stitch-java-sdk/test_results/connected/*.xml"
     - command: shell.exec
-        params:
-          shell: "bash"
-          script: |
-            set -e
-            rm -rf ./stitch-java-sdk/test_results/
+      params:
+        shell: "bash"
+        script: |
+          set -e
+          rm -rf ./stitch-java-sdk/test_results/
   - name: run_linter
     setup_group_can_fail_task: true
-    max_hosts: 2
+    max_hosts: 1
     setup_group:
       - func: "fetch_source"
       - func: "setup_android"
