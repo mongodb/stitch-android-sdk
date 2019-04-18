@@ -1026,18 +1026,14 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
                     .getDocument("__stitch_sync_version")
             )
 
-            // TODO: for some reason, the hashing on the server of ObjectIds is different than
-            // the hashing locally. This should be investigated before merging this PR.
-
-            // rawDoc1.remove("__stitch_sync_version")
-            // rawDoc1.append("new", "field")
-            // assertEquals(
-            //    updateEvent1.stitchDocumentHash,
-            //    HashUtils.hash(rawDoc1.toBsonDocument(
-            //        Document::class.java,
-            //        BsonUtils.DEFAULT_CODEC_REGISTRY
-            //    ))
-            // )
+            rawDoc1.remove("__stitch_sync_version")
+            rawDoc1.append("new", "field")
+            assertEquals(
+                updateEvent1.stitchDocumentHash,
+                HashUtils.hash(rawDoc1.toBsonDocument(
+                    Document::class.java, BsonUtils.DEFAULT_CODEC_REGISTRY
+                ))
+            )
 
             assertEquals(OperationType.UPDATE, updateEvent2.operationType)
             assertEquals(
@@ -1046,14 +1042,13 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
             )
             assertNull(updateEvent2.stitchDocumentVersion)
 
-            // rawDoc2.append("new", "field")
-            // assertEquals(
-            //    updateEvent2.stitchDocumentHash,
-            //    HashUtils.hash(rawDoc2.toBsonDocument(
-            //        Document::class.java,
-            //        BsonUtils.DEFAULT_CODEC_REGISTRY
-            //    ))
-            // )
+            rawDoc2.append("new", "field")
+            assertEquals(
+                updateEvent2.stitchDocumentHash,
+                HashUtils.hash(rawDoc2.toBsonDocument(
+                    Document::class.java, BsonUtils.DEFAULT_CODEC_REGISTRY
+                ))
+            )
         } finally {
             stream.close()
         }
