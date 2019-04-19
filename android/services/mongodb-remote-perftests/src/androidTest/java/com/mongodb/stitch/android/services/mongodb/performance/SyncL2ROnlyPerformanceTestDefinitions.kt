@@ -8,6 +8,11 @@ import org.bson.types.ObjectId
 class SyncL2ROnlyPerformanceTestDefinitions {
     companion object {
 
+        /*
+         * Before: Perform local insert of numDoc documents
+         * Test: Configure sync to sync on the inserted docs and perform a sync pass
+         * After: Ensure that the initial sync worked as expected
+         */
         fun testInitialSync(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
             val testName = "L2R_InitialSync"
 
@@ -46,6 +51,12 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             )
         }
 
+        /*
+         * Before: Perform local insert of numDoc documents, configure sync(),
+         *              perform sync pass, disconnect networkMonitor
+         * Test: Reconnect the network monitor and perform sync pass
+         * After: Ensure that the sync pass worked as expected
+         */
         fun testDisconnectReconnect(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
             val testName = "L2R_DisconnectReconnect"
 
@@ -112,6 +123,12 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             )
         }
 
+        /*
+         * Before: Perform local insert of numDoc documents, configure sync(), perform sync pass
+         *              perform local update for numChangeEvent documents
+         * Test: Perform sync pass
+         * After: Ensure that the sync pass worked properly
+         */
         fun testSyncPass(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
             // Run doTestSyncPass() for all changeEvent Percentages found in SyncPerfTestUtils
             SyncPerformanceTestUtils.getChangeEventPercentages().forEach {

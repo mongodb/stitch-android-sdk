@@ -30,9 +30,10 @@ import org.bson.BsonString;
 import org.bson.BsonValue;
 
 /**
- * Represents a change event communicated via a MongoDB change stream from Stitch where
- * the fullDocument parameter passed to the stream is false. These change events omit full
- * documents from the event, as well as other fields that are unnecessary in the context of Stitch.
+ * Represents a change event communicated via a MongoDB change stream from
+ * Stitch when watchCompact is called. These change events omit full documents
+ * from the event for updates, as well as other fields that are unnecessary in
+ * the context of Stitch.
  *
  * @param <DocumentT> The underlying type of document for which this change event was produced.
  */
