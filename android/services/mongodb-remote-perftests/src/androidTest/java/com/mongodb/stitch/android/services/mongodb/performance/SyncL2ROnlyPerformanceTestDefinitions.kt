@@ -1,6 +1,7 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
 import com.google.android.gms.tasks.Tasks
+import org.bson.BsonDouble
 import org.bson.BsonObjectId
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -141,7 +142,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             runId: ObjectId,
             pctOfDocsWithChangeEvents: Double
         ) {
-            val testName = "L2R_SyncPass_${(pctOfDocsWithChangeEvents * 100).toInt()}_DocsChanged"
+            val testName = "L2R_SyncPass"
 
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
@@ -200,7 +201,9 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                                 Document("newField", Document("\$exists", true))))
                         SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
                             numDocsChanged, numDocsWithNewField.toInt(), "Remotely synced updates")
-                    }
+                    }, extraFields = mapOf(
+                        "percentageChangeEvent" to BsonDouble(pctOfDocsWithChangeEvents)
+                    )
             )
         }
     }

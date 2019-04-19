@@ -7,6 +7,8 @@ import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTe
 import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.performLocalUpdate
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import org.bson.BsonDouble
+import org.bson.BsonInt32
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -32,7 +34,7 @@ class SyncMixedPerformanceTestDefinitions {
             runId: ObjectId,
             conflictPercentage: Double
         ) {
-            val testName = "Mixed_InitialSync_${(conflictPercentage * 100).toInt()}__PctDocsConflicts"
+            val testName = "Mixed_InitialSync"
 
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
@@ -74,15 +76,7 @@ class SyncMixedPerformanceTestDefinitions {
                     val sync = ctx.testColl.sync()
 
                     // If sync fails for any reason, halt the test
-                    Tasks.await(sync.configure(
-                        DefaultSyncConflictResolvers.remoteWins(),
-                        null,
-                        ExceptionListener { id, ex ->
-                            testHarness.logMessage("unexpected sync error with id " +
-                                "$id: ${ex.localizedMessage}")
-                            error(ex)
-                        }
-                    ))
+                    SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync() on all of the inserted document ids
                     Tasks.await(sync.syncMany(*(documentIds!!.toTypedArray())))
@@ -94,7 +88,7 @@ class SyncMixedPerformanceTestDefinitions {
                     // Verify that the test did indeed synchronize the provided documents correctly
                     val numConflicts = (numDocs / 2 * conflictPercentage).toInt()
                     SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs - numConflicts)
-                }
+                }, extraFields = mapOf("percentageConflict" to BsonDouble(conflictPercentage))
             )
         }
         /*
@@ -122,15 +116,7 @@ class SyncMixedPerformanceTestDefinitions {
                     )
 
                     // If sync fails for any reason, halt the test
-                    Tasks.await(sync.configure(
-                        DefaultSyncConflictResolvers.remoteWins(),
-                        null,
-                        ExceptionListener { id, ex ->
-                            testHarness.logMessage("unexpected sync error with id " +
-                                "$id: ${ex.localizedMessage}")
-                            error(ex)
-                        }
-                    ))
+                    SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync() on all of the inserted document ids
                     Tasks.await(sync.syncMany(*(remoteIds.toTypedArray())))
@@ -215,8 +201,7 @@ class SyncMixedPerformanceTestDefinitions {
             pctOfDocsWithChangeEvents: Double,
             pctOfDocsWithConflicts: Double
         ) {
-            val testName = "Mixed_SyncPass_${(pctOfDocsWithChangeEvents * 100).toInt()}" +
-                "_PctDocsChanged_${(pctOfDocsWithConflicts * 100).toInt()}_PctDocsConflicts"
+            val testName = "Mixed_SyncPass"
 
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
@@ -232,16 +217,7 @@ class SyncMixedPerformanceTestDefinitions {
                     )
 
                     // If sync fails for any reason, halt the test
-                    Tasks.await(ctx.testColl.sync().configure(
-                        DefaultSyncConflictResolvers.remoteWins(),
-                        null,
-                        ExceptionListener { id, ex ->
-                            testHarness.logMessage(
-                                "unexpected sync error with id " +
-                                    "$id: ${ex.localizedMessage}")
-                            error(ex)
-                        }
-                    ))
+                    SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync on the ids inserted remotely
                     Tasks.await(sync.syncMany(*(remoteIds.toTypedArray())))
@@ -303,7 +279,10 @@ class SyncMixedPerformanceTestDefinitions {
                     SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
                         res.toInt(), numLocalUpdates  , "Num Local Updates After Test"
                     )
-                }
+                }, extraFields = mapOf(
+                    "percentageChangeEvent" to BsonDouble(pctOfDocsWithChangeEvents),
+                    "percentageConflict" to BsonDouble(pctOfDocsWithConflicts)
+                )
             )
         }
     }

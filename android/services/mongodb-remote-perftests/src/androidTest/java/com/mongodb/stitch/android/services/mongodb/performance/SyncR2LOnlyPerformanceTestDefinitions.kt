@@ -1,9 +1,29 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
 import com.google.android.gms.tasks.Tasks
+import org.bson.BsonDouble
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
+
+//<<<<<<< HEAD
+//||||||| merged common ancestors
+//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.assertIntsAreEqualOrThrow
+//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.doSyncPass
+//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.performLocalUpdate
+//import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
+//import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+//=======
+//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.assertIntsAreEqualOrThrow
+//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.doSyncPass
+//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.performLocalUpdate
+//import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
+//import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+//import org.bson.BsonDouble
+//>>>>>>> fixes
+//import org.bson.BsonValue
+//import org.bson.Document
+//import org.bson.types.ObjectId
 
 class SyncR2LOnlyPerformanceTestDefinitions {
     companion object {
@@ -153,8 +173,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
             pctOfDocsWithChangeEvents: Double,
             pctOfDocsWithConflicts: Double
         ) {
-            val testName = "R2L_SyncPass_${(pctOfDocsWithChangeEvents * 100).toInt()}" +
-                "_PctDocsChanged_${(pctOfDocsWithConflicts * 100).toInt()}_PctDocsConflicts"
+            val testName = "R2L_SyncPass"
 
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
@@ -217,7 +236,10 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
                         res.toInt(), numRemoteUpdates, "Num Local Updates After Test"
                     )
-                }
+                }, extraFields = mapOf(
+                    "percentageChangeEvent" to BsonDouble(pctOfDocsWithChangeEvents),
+                    "percentageConflict" to BsonDouble(pctOfDocsWithConflicts)
+                )
             )
         }
     }
