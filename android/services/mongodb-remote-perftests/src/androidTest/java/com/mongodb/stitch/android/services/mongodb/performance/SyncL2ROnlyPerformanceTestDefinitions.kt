@@ -190,6 +190,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         // Perform the local update and ensure it worked properly
                         val numChange = (numDocs * pctOfDocsWithChangeEvents).toInt()
                         SyncPerformanceTestUtils.performLocalUpdate(ctx, ids.subList(0, numChange))
+                        numberOfChangedDocs = numChange
                     },
                     testDefinition = { ctx, _, _ ->
                         // Do the sync pass that will sync the

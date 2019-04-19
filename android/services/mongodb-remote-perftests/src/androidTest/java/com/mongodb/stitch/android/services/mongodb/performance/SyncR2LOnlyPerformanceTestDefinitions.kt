@@ -201,7 +201,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     // Remotely update the desired percentage of documents and check it works
                     var numChange = (pctOfDocsWithChangeEvents * numDocs).toInt()
                     SyncPerformanceTestUtils.performRemoteUpdate(ctx, ids.subList(0, numChange))
-                    numberOfChangedDocs = numDocs
+                    numberOfChangedDocs = numChange
 
                     // Locally update the desired percentage of documents and check it works
                     numChange = (pctOfDocsWithChangeEvents * pctOfDocsWithConflicts * numDocs).toInt()
