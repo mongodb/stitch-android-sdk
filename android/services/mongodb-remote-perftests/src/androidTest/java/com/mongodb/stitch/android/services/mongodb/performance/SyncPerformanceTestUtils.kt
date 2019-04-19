@@ -1,7 +1,6 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.support.test.InstrumentationRegistry
-import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import org.bson.BsonValue
 import org.bson.Document
@@ -48,7 +47,7 @@ class SyncPerformanceTestUtils {
         private const val defaultChangeEventPercentages = "0.0,0.01,0.10,0.25,0.50,1.0"
 
         private const val conflictPercentagesProp = "test.stitch.perf.conflictPercentages"
-        private const val defaultConflictPercentagesProp = "0.1,0.5,1.0"
+        private const val defaultConflictPercentagesProp = "0.0,0.1,0.5,1.0"
 
         internal fun getStitchHostname(): String {
             return InstrumentationRegistry.getArguments().getString(
@@ -137,19 +136,21 @@ class SyncPerformanceTestUtils {
                 String.format("Expected: %s but found %s: %s", expected, actual, message))
         }
 
-        internal fun doSyncPass(ctx: SyncPerformanceTestContext): Boolean {
+        internal fun doSyncPass(ctx: SyncPerformanceTestContext) {
             ctx.testNetworkMonitor.connectedState = true
             var counter = 0
             while (!ctx.testDataSynchronizer.areAllStreamsOpen()) {
                 Thread.sleep(30)
-                // if this hangs longer than 30 seconds, throw an error
+                // if this hangs longer than 30 seconds, throw a PerformanceTestingException
                 counter += 1
                 if (counter > 1000) {
-                    Log.e("perfTests", "stream never opened after reconnect")
-                    error("stream never opened after reconnect")
+                    throw PerformanceTestingException("Stream never opened after reconnect")
                 }
             }
-            return ctx.testDataSynchronizer.doSyncPass()
+
+            if (!ctx.testDataSynchronizer.doSyncPass()) {
+                throw PerformanceTestingException("Sync Pass Failed")
+            }
         }
 
         internal fun insertToRemote(
@@ -197,27 +198,21 @@ class SyncPerformanceTestUtils {
 
         fun performRemoteUpdate(
             ctx: SyncPerformanceTestContext,
-            ids: List<BsonValue>,
-            numDocs: Int,
-            percentage: Double
-        ): Int {
-
-            val numChangedDocs = Math.round(percentage*numDocs).toInt()
-            val docsToUpdate = ids.subList(0, numChangedDocs)
-
+            ids: List<BsonValue>
+        ) {
             val updateResult = Tasks.await(ctx.testColl.updateMany(
-                Document("_id", Document("\$in", docsToUpdate)),
+                Document("_id", Document("\$in", ids)),
                 Document("\$set", Document("newField", "remote"))
             ))
 
             // Assert that the remote update worked
             assertIntsAreEqualOrThrow(
                 updateResult.matchedCount.toInt(),
-                numChangedDocs,
+                ids.size,
                 "RemoteUpdateResult.matchedCount")
             assertIntsAreEqualOrThrow(
                 updateResult.modifiedCount.toInt(),
-                numChangedDocs,
+                ids.size,
                 "RemoteUpdateResult.modifiedCount")
 
             val numDocsChangedRemotely = Tasks.await(ctx.testColl.count(
@@ -225,37 +220,29 @@ class SyncPerformanceTestUtils {
             ))
 
             SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                numChangedDocs,
+                ids.size,
                 numDocsChangedRemotely.toInt(),
                 "Remote document updates"
             )
-
-            return numChangedDocs
         }
 
         fun performLocalUpdate(
             ctx: SyncPerformanceTestContext,
-            ids: List<BsonValue>,
-            numDocs: Int,
-            percentage: Double
-        ): Int {
-
-            val numChangedDocs = Math.round(percentage*numDocs).toInt()
-            val docsToUpdate = ids.subList(0, numChangedDocs)
-
+            ids: List<BsonValue>
+        ) {
             val updateResult = Tasks.await(ctx.testColl.sync().updateMany(
-                Document("_id", Document("\$in", docsToUpdate)),
+                Document("_id", Document("\$in", ids)),
                 Document("\$set", Document("newField", "local"))
             ))
 
             // Assert that the remote update worked
             assertIntsAreEqualOrThrow(
                 updateResult.matchedCount.toInt(),
-                numChangedDocs,
+                ids.size,
                 "LocalUpdateResult.matchedCount")
             assertIntsAreEqualOrThrow(
                 updateResult.modifiedCount.toInt(),
-                numChangedDocs,
+                ids.size,
                 "LocalUpdateResult.modifiedCount")
 
             val numDocsChangedLocally = Tasks.await(ctx.testColl.sync().count(
@@ -263,12 +250,10 @@ class SyncPerformanceTestUtils {
             ))
 
             SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                numChangedDocs,
+                ids.size,
                 numDocsChangedLocally.toInt(),
                 "Remote document updates"
             )
-
-            return numChangedDocs
         }
     }
 }

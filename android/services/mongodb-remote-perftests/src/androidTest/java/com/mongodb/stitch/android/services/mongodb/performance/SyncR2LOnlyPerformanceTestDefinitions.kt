@@ -48,9 +48,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     Tasks.await(sync.syncMany(*(documentIdsForCurrentTest!!.toTypedArray())))
 
                     // Perform syncPass() and halt the test if the pass fails
-                    if (!SyncPerformanceTestUtils.doSyncPass(ctx)) {
-                        error("sync pass failed")
-                    }
+                    SyncPerformanceTestUtils.doSyncPass(ctx)
                 },
                 afterEach = { ctx, numDocs, _ ->
                     // Verify that the test did indeed synchronize the provided documents locally
@@ -88,12 +86,10 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     ))
 
                     // Sync() on all of the inserted document ids
-                    Tasks.await(sync.syncMany(*(ids!!.toTypedArray())))
+                    Tasks.await(sync.syncMany(*(ids.toTypedArray())))
 
-                    // Halt the test if the sync pass failed
-                    if (!SyncPerformanceTestUtils.doSyncPass(ctx)) {
-                        error("sync pass failed")
-                    }
+                    // Perform sync pass, it will throw an exception if it fails
+                    SyncPerformanceTestUtils.doSyncPass(ctx)
 
                     // Verify that the test did indeed synchronize the provided documents locally
                     val numSyncedIds = Tasks.await(sync.syncedIds).size
@@ -148,10 +144,9 @@ class SyncR2LOnlyPerformanceTestDefinitions {
 
         fun testSyncPass(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
             // Run doTestSyncPass() for all changeEvent Percentages found in SyncPerfTestUtils
-            SyncPerformanceTestUtils.getChangeEventPercentages().forEach {
-                val cePercentage = it
-                SyncPerformanceTestUtils.getConflictPercentages().forEach {
-                    doTestSyncPass(testHarness, runId, cePercentage, it)
+            SyncPerformanceTestUtils.getChangeEventPercentages().forEach { changeEventPercentage ->
+                SyncPerformanceTestUtils.getConflictPercentages().forEach { conflictPercentage ->
+                    doTestSyncPass(testHarness, runId, changeEventPercentage, conflictPercentage)
                 }
             }
         }
@@ -169,16 +164,13 @@ class SyncR2LOnlyPerformanceTestDefinitions {
             // This should change for each iteration of the test.
             var numberOfChangedDocs: Int? = null
 
-            // Local variable for the number of conflicts the test should have
-            var numberOfConflicts: Int? = null
-
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
                 beforeEach = { ctx, numDocs: Int, docSize: Int ->
                     val sync = ctx.testColl.sync()
 
                     // Generate the documents that are to be synced via R2L and insert remotely
-                    val ids = SyncPerformanceTestUtils.insertToRemote(
+                    var ids = SyncPerformanceTestUtils.insertToRemote(
                         ctx, numDocs, docSize
                     )
 
@@ -195,35 +187,30 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     ))
 
                     // Sync on the ids inserted remotely
-                    Tasks.await(sync.syncMany(*(ids!!.toTypedArray())))
+                    Tasks.await(sync.syncMany(*(ids.toTypedArray())))
 
-                    // Halt the test if the sync pass failed
-                    if (!SyncPerformanceTestUtils.doSyncPass(ctx)) {
-                        error("sync pass failed")
-                    }
+                    // Perform sync pass, it will throw an exception if it fails
+                    SyncPerformanceTestUtils.doSyncPass(ctx)
 
                     // Verify that the test did indeed synchronize the provided documents locally
                     SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
 
                     // Shuffle the documents
-                    val shuffledDocIds = ids.shuffled()
+                    ids = ids.shuffled()
 
                     // Remotely update the desired percentage of documents and check it works
-                    numberOfChangedDocs = SyncPerformanceTestUtils.performRemoteUpdate(
-                        ctx, ids, numDocs, pctOfDocsWithChangeEvents
-                    )
+                    var numChange = (pctOfDocsWithChangeEvents * numDocs).toInt()
+                    SyncPerformanceTestUtils.performRemoteUpdate(ctx, ids.subList(0, numChange))
+                    numberOfChangedDocs = numDocs
 
                     // Locally update the desired percentage of documents and check it works
-                    numberOfConflicts = SyncPerformanceTestUtils.performLocalUpdate(
-                        ctx, ids, numDocs, pctOfDocsWithChangeEvents * pctOfDocsWithConflicts
-                    )
+                    numChange = (pctOfDocsWithChangeEvents * pctOfDocsWithConflicts * numDocs).toInt()
+                    SyncPerformanceTestUtils.performLocalUpdate(ctx, ids.subList(0, numChange))
                 },
                 testDefinition = { ctx, _, _ ->
                     // Do the sync pass that will sync the remote changes to the local collection
                     // Perform syncPass() and halt the test if the pass fails
-                    if (!SyncPerformanceTestUtils.doSyncPass(ctx)) {
-                        error("sync pass failed")
-                    }
+                    SyncPerformanceTestUtils.doSyncPass(ctx)
                 },
                 afterEach = { ctx, numDocs: Int, _ ->
                     // Verify that the test did indeed synchronize the updates locally

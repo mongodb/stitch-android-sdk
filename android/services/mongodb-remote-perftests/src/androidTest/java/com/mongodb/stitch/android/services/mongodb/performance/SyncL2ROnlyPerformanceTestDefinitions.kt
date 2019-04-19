@@ -188,9 +188,8 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         val ids = shuffledDocs.map { BsonObjectId(it.getObjectId("_id")) }
 
                         // Perform the local update and ensure it worked properly
-                        numberOfChangedDocs = SyncPerformanceTestUtils.performLocalUpdate(
-                            ctx, ids, numDocs, pctOfDocsWithChangeEvents
-                        )
+                        val numChange = (numDocs * pctOfDocsWithChangeEvents).toInt()
+                        SyncPerformanceTestUtils.performLocalUpdate(ctx, ids.subList(0, numChange))
                     },
                     testDefinition = { ctx, _, _ ->
                         // Do the sync pass that will sync the
