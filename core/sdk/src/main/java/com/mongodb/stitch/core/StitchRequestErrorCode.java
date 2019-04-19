@@ -18,6 +18,7 @@ package com.mongodb.stitch.core;
 
 /** StitchRequestErrorCode represents the reasons that a request may fail. */
 public enum StitchRequestErrorCode {
+  REQUEST_SIZE_ERROR("the request was too large to be processed by Stitch"),
   TRANSPORT_ERROR("the request transport encountered an error communicating with Stitch"),
   DECODING_ERROR("an error occurred while decoding a response from Stitch"),
   ENCODING_ERROR("an error occurred while encoding a request for Stitch"),

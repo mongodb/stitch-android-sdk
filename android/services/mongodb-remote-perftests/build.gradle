@@ -40,7 +40,9 @@ android {
                 "test.stitch.perf.outliers",
                 "test.stitch.perf.outputStdout",
                 "test.stitch.perf.outputStitch",
-                "test.stitch.perf.rawOutput"
+                "test.stitch.perf.rawOutput",
+                "test.stitch.perf.changeEventPercentages",
+                "test.stitch.perf.conflictPercentages"
         ]
 
         for (final String propertyName : propertyNames) {

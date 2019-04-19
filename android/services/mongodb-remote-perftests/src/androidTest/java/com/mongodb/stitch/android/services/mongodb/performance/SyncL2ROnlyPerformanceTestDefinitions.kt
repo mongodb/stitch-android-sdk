@@ -1,25 +1,17 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
-import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import org.bson.BsonObjectId
 import org.bson.Document
 import org.bson.types.ObjectId
 
 class SyncL2ROnlyPerformanceTestDefinitions {
     companion object {
-        private val TAG = SyncL2ROnlyPerformanceTestDefinitions::class.java.simpleName
-
-        // NOTE: Many of the tests above 1024 bytes and above 500 docs will fail for various
-        // reasons because they hit undocumented limits. These failures along with stacktraces will
-        // be present in the reported results
-        private val docSizes = intArrayOf(1024, 2048, 5120, 10240, 25600, 51200, 102400)
-        private val numDocs = intArrayOf(100, 500, 1000, 5000, 10000, 25000)
 
         fun testInitialSync(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
-            val testName = "testL2R_InitialSync"
-            Log.d(TAG, testName)
+            val testName = "L2R_InitialSync"
 
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
@@ -29,7 +21,6 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                     testName, runId,
                     beforeEach = { _, numDocs, docSize ->
                         // Generate the documents that are to be synced via L2R
-                        Log.i(TAG, "Setting up $testName for $numDocs $docSize-byte docs")
                         documentsForCurrentTest =
                                 SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
                     },
@@ -43,8 +34,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                                 DefaultSyncConflictResolvers.remoteWins(),
                                 null,
                                 ExceptionListener { id, ex ->
-                                    Log.e(
-                                            TAG,
+                                    testHarness.logMessage(
                                             "unexpected sync error with id " +
                                             "$id: ${ex.localizedMessage}"
                                     )
@@ -62,26 +52,19 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         }
                     },
                     afterEach = { ctx, numDocs, _ ->
-                        // Verify that the test did indeed synchronize
-                        // the provided documents remotely
-                        val numOfDocsSynced = Tasks.await(ctx.testColl.count())
-                        if (numDocs.toLong() != numOfDocsSynced) {
-                            Log.e(TAG, "$numDocs != $numOfDocsSynced")
-                            error("test did not correctly perform the initial sync")
-                        }
+                        // Verify that the test did indeed synchronize the updates remotely
+                        SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
                     }
             )
         }
 
         fun testDisconnectReconnect(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
-            val testName = "testL2R_DisconnectReconnect"
-            Log.d(TAG, testName)
+            val testName = "L2R_DisconnectReconnect"
 
             testHarness.runPerformanceTestWithParams(
                     testName, runId,
                     beforeEach = { ctx, numDocs: Int, docSize: Int ->
                         // Generate and insert the documents, and perform the initial sync.
-                        Log.i(TAG, "Setting up $testName for $numDocs $docSize-byte docs")
                         val documentsForCurrentTest =
                                 SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
 
@@ -92,8 +75,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                                 DefaultSyncConflictResolvers.remoteWins(),
                                 null,
                                 ExceptionListener { id, ex ->
-                                    Log.e(
-                                            TAG,
+                                    testHarness.logMessage(
                                             "unexpected sync error with id " +
                                             "$id: ${ex.localizedMessage}"
                                     )
@@ -114,7 +96,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         // for the underlying streams to close
                         ctx.testNetworkMonitor.connectedState = false
                         while (ctx.testDataSynchronizer.areAllStreamsOpen()) {
-                            Log.i(TAG, "waiting for streams to close")
+                            testHarness.logMessage("waiting for streams to close")
                             Thread.sleep(1000)
                         }
                     },
@@ -132,7 +114,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                             // if this hangs longer than 30 seconds, throw an error
                             counter += 1
                             if (counter > 3000) {
-                                Log.e(TAG, "stream never opened after reconnect")
+                                testHarness.logMessage("stream never opened after reconnect")
                                 error("stream never opened after reconnect")
                             }
                         }
@@ -146,28 +128,17 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         }
                     },
                     afterEach = { ctx, numDocs: Int, _ ->
-                        // Verify that the test did indeed synchronize
-                        // the provided documents remotely
-                        val numOfDocsSynced = Tasks.await(ctx.testColl.count())
-                        if (numDocs.toLong() != numOfDocsSynced) {
-                            Log.e(TAG, "$numDocs != $numOfDocsSynced")
-                            error("test did not correctly perform the initial sync")
-                        }
+                        // Verify that the test did indeed synchronize the updates remotely
+                        SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
                     }
             )
         }
 
         fun testSyncPass(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
-            // Do an L2R sync pass test where
-            // - no documents are changed
-            // - 1% of documents are changed
-            // - 10% of documents are changed
-            // - 25% of documents are changed
-            // - 50% of documents are changed
-            // - 100% of documents are changed
-            val changeEventPercentages = doubleArrayOf(0.0, 0.01, 0.10, 0.25, 0.50, 1.0)
-
-            changeEventPercentages.forEach { doTestSyncPass(testHarness, runId, it) }
+            // Run doTestSyncPass() for all changeEvent Percentages found in SyncPerfTestUtils
+            SyncPerformanceTestUtils.getChangeEventPercentages().forEach {
+                doTestSyncPass(testHarness, runId, it)
+            }
         }
 
         private fun doTestSyncPass(
@@ -175,8 +146,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
             runId: ObjectId,
             pctOfDocsWithChangeEvents: Double
         ) {
-            val testName = "testL2R_SyncPass_${pctOfDocsWithChangeEvents}DocsChanged"
-            Log.d(TAG, testName)
+            val testName = "L2R_SyncPass_${(pctOfDocsWithChangeEvents * 100).toInt()}_DocsChanged"
 
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
@@ -186,7 +156,6 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                     testName, runId,
                     beforeEach = { ctx, numDocs: Int, docSize: Int ->
                         // Generate and insert the documents, and perform the initial sync.
-                        Log.i(TAG, "Setting up $testName test for $numDocs $docSize-byte docs")
                         val documentsForCurrentTest =
                                 SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
 
@@ -197,8 +166,8 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                                 DefaultSyncConflictResolvers.remoteWins(),
                                 null,
                                 ExceptionListener { id, ex ->
-                                    Log.e(
-                                            TAG, "unexpected sync error with id " +
+                                    testHarness.logMessage(
+                                            "unexpected sync error with id " +
                                             "$id: ${ex.localizedMessage}")
                                     error(ex)
                                 }
@@ -216,23 +185,12 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         // Randomly sample a percentage of the documents
                         // that will be locally updated
                         val shuffledDocs = documentsForCurrentTest.shuffled()
+                        val ids = shuffledDocs.map { BsonObjectId(it.getObjectId("_id")) }
 
-                        val docsToUpdate =
-                                if (pctOfDocsWithChangeEvents > 0.0)
-                                    shuffledDocs.subList(
-                                        0,
-                                        Math.round(pctOfDocsWithChangeEvents*numDocs).toInt())
-                                else
-                                    emptyList()
-
-                        docsToUpdate.forEach {
-                            Tasks.await(sync.updateOne(
-                                    Document("_id", it["_id"]),
-                                    Document("\$set", Document("newField", "blah"))
-                            ))
-                        }
-
-                        numberOfChangedDocs = docsToUpdate.size
+                        // Perform the local update and ensure it worked properly
+                        val numChange = (numDocs * pctOfDocsWithChangeEvents).toInt()
+                        SyncPerformanceTestUtils.performLocalUpdate(ctx, ids.subList(0, numChange))
+                        numberOfChangedDocs = numChange
                     },
                     testDefinition = { ctx, _, _ ->
                         // Do the sync pass that will sync the
@@ -245,23 +203,17 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         }
                     },
                     afterEach = { ctx, numDocs: Int, _ ->
-                        // Verify that the test did indeed synchronize
-                        // the provided documents remotely
-                        val numOfDocsSynced = Tasks.await(ctx.testColl.count())
-                        if (numDocs.toLong() != numOfDocsSynced) {
-                            Log.e(TAG, "$numDocs != $numOfDocsSynced")
-                            error("test did not correctly perform the initial sync")
-                        }
+                        // Verify that the test did indeed synchronize the updates remotely
+                        SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
 
                         // Verify that the test did indeed synchronize the provided documents
                         // remotely, and that the documents that were supposed to be updated got
                         // updated.
-                        val numOfDocsWithNewField = Tasks.await(ctx.testColl.count(
+                        val numDocsChanged = numberOfChangedDocs ?: -1
+                        val numDocsWithNewField = Tasks.await(ctx.testColl.count(
                                 Document("newField", Document("\$exists", true))))
-                        if (numberOfChangedDocs!!.toLong() != numOfDocsWithNewField) {
-                            Log.e(TAG, "$numberOfChangedDocs != $numOfDocsWithNewField")
-                            error("test did not correctly perform the l2r pass")
-                        }
+                        SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                            numDocsChanged, numDocsWithNewField.toInt(), "Remotely synced updates")
                     }
             )
         }

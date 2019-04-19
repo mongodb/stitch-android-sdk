@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.internal.net;
 
+import com.mongodb.stitch.core.StitchRequestErrorCode;
+import com.mongodb.stitch.core.StitchRequestException;
 import com.mongodb.stitch.core.internal.common.StitchError;
 
 import java.io.IOException;
@@ -105,6 +107,10 @@ public class OkHttpTransport implements Transport {
   @Override
   // This executes a request synchronously
   public Response roundTrip(final Request request) throws IOException {
+    if (request.getBody() != null && request.getBody().length >= MAX_REQUEST_SIZE) {
+      throw new StitchRequestException(String.format("body was %d bytes", request.getBody().length),
+        StitchRequestErrorCode.REQUEST_SIZE_ERROR);
+    }
     final OkHttpClient reqClient = newClientBuilder(
         request.getTimeout(), request.getTimeout(), request.getTimeout()
     ).build();

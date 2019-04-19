@@ -174,6 +174,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                 val runResult = RunResult(numDoc, docSize)
 
                 for (iter in 1..SyncPerformanceTestUtils.getNumIters()) {
+                    logMessage("Testing (docSize: $docSize, numDocs: $numDoc, iter: $iter)")
                     var ctx = createPerformanceTestingContext(testName)
                     try {
                         ctx.setup()
@@ -189,8 +190,10 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
                         afterEach(ctx, numDoc, docSize)
                     } catch (e: Exception) {
-                        runResult.failures.add(FailureResult(iter, e.localizedMessage,
+                        val failureMessage = e.localizedMessage ?: e.toString()
+                        runResult.failures.add(FailureResult(iter, failureMessage,
                             e.stackTrace.map { BsonString(it.toString()) }))
+                        logMessage("Failure: $failureMessage")
                     } finally {
                         ctx.teardown()
                     }
