@@ -150,7 +150,7 @@ public final class UpdateDescription {
    */
   public UpdateDescription merge(@Nullable final UpdateDescription otherDescription) {
     if (otherDescription != null) {
-      for (Map.Entry<String, BsonValue> entry : this.updatedFields.entrySet()) {
+      for (final Map.Entry<String, BsonValue> entry : this.updatedFields.entrySet()) {
         if (otherDescription.removedFields.contains(entry.getKey())) {
           this.updatedFields.remove(entry.getKey());
         }
