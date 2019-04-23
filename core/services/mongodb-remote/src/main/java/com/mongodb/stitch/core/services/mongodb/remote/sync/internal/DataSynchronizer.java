@@ -56,6 +56,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoC
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.OnDemand;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.Scheduled;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -357,10 +359,137 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
+  public void configureSyncFrequency(@Nonnull final MongoNamespace namespace,
+                                     @Nullable final SyncFrequency syncFrequency) {
+    SyncFrequency newFrequency = syncFrequency != null ? syncFrequency : SyncFrequency.reactive();
+
+    // Set old frequency to onDemand preliminarily because that had no streams or timers
+    SyncFrequency oldFrequency = SyncFrequency.onDemand();
+
+    // Get the nsConfig and get its syncFrequency
+    NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
+    if (nsConfig != null && nsConfig.getSyncFrequency() != null) {
+      oldFrequency = nsConfig.getSyncFrequency();
+    }
+
+    // Set the nsConfig to have a new syncFrequency
+    nsConfig.setSyncFrequency(newFrequency);
+
+    // Iterate over all possible values for oldFrequency
+    switch(oldFrequency.getType()) {
+      case REACTIVE:
+        switch(newFrequency.getType()) {
+          case REACTIVE:
+            // REACTIVE -> REACTIVE: Nothing should change, just return
+            return;
+          case SCHEDULED:
+            if (((Scheduled) newFrequency).isConnected()) {
+              // REACTIVE --> SCHEDULED AND isConnected is TRUE:
+              // Schedule a new timer AND maintain the existing stream
+              // TODO schedule a new timer
+              return;
+            } else {
+              // REACTIVE --> SCHEDULED AND isConnected is FALSE:
+              // Schedule a new timer AND close the existing stream
+              instanceChangeStreamListener.removeNamespace(namespace);
+              // TODO schedule a new timer
+              return;
+            }
+          case ON_DEMAND:
+            // REACTIVE --> ON_DEMAND:
+            // Close the existing change stream
+            instanceChangeStreamListener.removeNamespace(namespace);
+            return;
+        }
+      case SCHEDULED:
+        if (((Scheduled) oldFrequency).isConnected()) {
+          switch(newFrequency.getType()) {
+            case REACTIVE:
+              // SCHEDULED AND isConnected is TRUE --> REACTIVE:
+              // Cancel the scheduled time AND do a sync pass on the collection
+              // TODO cancel the timer and do sync pass on the namespace
+              return;
+            case SCHEDULED:
+              if (((Scheduled) newFrequency).isConnected()) {
+                // SCHEDULED AND isConnected is TRUE --> SCHEDULED and isConnected is TRUE:
+                // Cancel the scheduled time AND schedule a new timer
+                // TODO schedule a new timer and delete the old one
+                return;
+              } else {
+                // SCHEDULED AND isConnected is TRUE --> SCHEDULED and isConnected is FALSE:
+                // Cancel the scheduled time AND schedule a new timer AND close the existing stream
+                instanceChangeStreamListener.removeNamespace(namespace);
+                // TODO schedule a new timer and delete the old one
+                return;
+              }
+            case ON_DEMAND:
+              // If a user changes from SCHEDULED AND isConnected is TRUE to ON_DEMAND:
+              // Cancel the scheduled timer and close the existing stream
+              instanceChangeStreamListener.removeNamespace(namespace);
+              // TODO cancel the scheduled timer
+              return;
+          }
+        } else {
+          switch(newFrequency.getType()) {
+            case REACTIVE:
+              // SCHEDULED AND isConnected is FALSE --> REACTIVE:
+              // Cancel the scheduled time AND do a sync pass on the collection
+              // AND open a new change stream
+              triggerListeningToNamespace(namespace);
+              // TODO cancel the timer and do sync pass on the namespace
+              return;
+            case SCHEDULED:
+              if (((Scheduled) newFrequency).isConnected()) {
+                // SCHEDULED AND isConnected is FALSE --> SCHEDULED and isConnected is TRUE:
+                // Cancel the scheduled time AND schedule a new timer AND open a new stream
+                triggerListeningToNamespace(namespace);
+                // TODO schedule a new timer and delete the old one
+                return;
+              } else {
+                // SCHEDULED AND isConnected is FALSE --> SCHEDULED and isConnected is FALSE:
+                // Cancel the scheduled time AND schedule a new timer
+                // TODO schedule a new timer and delete the old one
+                return;
+              }
+            case ON_DEMAND:
+              // SCHEDULED AND isConnected is FALSE --> ON_DEMAND:
+              // Cancel the scheduled timer
+              // TODO cancel the scheduled timer
+              return;
+          }
+        }
+      case ON_DEMAND:
+        switch(newFrequency.getType()) {
+          case REACTIVE:
+            // ON_DEMAND --> REACTIVE:
+            // Open a new change stream listener
+            triggerListeningToNamespace(namespace);
+            return;
+          case SCHEDULED:
+            if (((Scheduled) newFrequency).isConnected()) {
+              // ON_DEMAND --> SCHEDULED AND isConnected is TRUE:
+              // Schedule a new timer AND open a new stream
+              triggerListeningToNamespace(namespace);
+              // TODO schedule a new timer
+              return;
+            } else {
+              // ON_DEMAND --> SCHEDULED AND isConnected is FALSE:
+              // Schedule a new sync pass timer
+              // TODO schedule a new timer
+              return;
+            }
+          case ON_DEMAND:
+            // ON_DEMAND --> ON_DEMAND: nothing to change, just return
+            return;
+        }
+    }
+  }
+
   public <T> void configure(@Nonnull final MongoNamespace namespace,
                             @Nullable final ConflictHandler<T> conflictHandler,
                             @Nullable final ChangeEventListener<T> changeEventListener,
                             @Nullable final ExceptionListener exceptionListener,
+                            @Nullable final SyncFrequency syncFrequency,
                             @Nonnull final Codec<T> codec) {
     this.waitUntilInitialized();
 
@@ -377,6 +506,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     this.syncConfig.getNamespaceConfig(namespace).configure(
         conflictHandler,
         changeEventListener,
+        syncFrequency,
         codec
     );
 
@@ -384,7 +514,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (!this.isConfigured) {
       this.isConfigured = true;
       syncLock.unlock();
-      this.triggerListeningToNamespace(namespace);
+      this.configureSyncFrequency(namespace, syncFrequency);
     } else {
       syncLock.unlock();
     }

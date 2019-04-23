@@ -62,6 +62,7 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
 
   private NamespaceListenerConfig namespaceListenerConfig;
   private ConflictHandler conflictHandler;
+  private SyncFrequency syncFrequency;
   private Codec documentCodec;
 
   NamespaceSynchronizationConfig(
@@ -132,11 +133,13 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
 
   <T> void configure(final ConflictHandler<T> conflictHandler,
                      final ChangeEventListener<T> changeEventListener,
+                     final SyncFrequency syncFrequency,
                      final Codec<T> codec) {
     nsLock.writeLock().lock();
     try {
       this.conflictHandler = conflictHandler;
       this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
+      this.syncFrequency = syncFrequency;
       this.documentCodec = codec;
     } finally {
       nsLock.writeLock().unlock();
@@ -330,6 +333,26 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
       nsLock.readLock().unlock();
     }
   }
+
+  public SyncFrequency getSyncFrequency() {
+    nsLock.readLock().lock();
+    try {
+      return syncFrequency;
+    } finally {
+      nsLock.readLock().unlock();
+    }
+  }
+
+  void setSyncFrequency(final SyncFrequency syncFrequency) {
+      nsLock.writeLock().lock();
+      try {
+        this.syncFrequency = syncFrequency;
+      } finally {
+        nsLock.writeLock().unlock();
+      }
+  }
+
+
 
   void setStale(final boolean stale) throws InterruptedException {
     nsLock.writeLock().lockInterruptibly();

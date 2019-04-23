@@ -24,7 +24,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import com.google.android.gms.tasks.Tasks
-
 import com.mongodb.stitch.android.core.Stitch
 import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient
@@ -35,21 +34,20 @@ import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
-
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.bson.BsonObjectId
+import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.Binary
 import org.bson.types.ObjectId
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Dispatchers.Main
-import org.bson.BsonObjectId
-import org.bson.BsonValue
 import kotlin.system.measureTimeMillis
 
 class MainActivity : AppCompatActivity(), CoroutineScope by MainScope() {

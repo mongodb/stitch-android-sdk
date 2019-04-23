@@ -29,6 +29,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
 
 import java.util.List;
 import java.util.Set;
@@ -57,7 +58,8 @@ public interface Sync<DocumentT> {
    */
   Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                       @Nullable final ExceptionListener exceptionListener);
+                       @Nullable final ExceptionListener exceptionListener,
+                       @Nullable final SyncFrequency syncFrequency);
 
   /**
    * Requests that the given document _id be synchronized.

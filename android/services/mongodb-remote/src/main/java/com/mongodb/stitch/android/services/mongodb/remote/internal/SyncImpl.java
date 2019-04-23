@@ -34,6 +34,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
 
 import java.util.List;
 import java.util.Set;
@@ -56,11 +57,17 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   @Override
   public Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
                               @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                              @Nullable final ExceptionListener exceptionListener) {
+                              @Nullable final ExceptionListener exceptionListener,
+                              @Nullable final SyncFrequency syncFrequency) {
     return this.dispatcher.dispatchTask(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        SyncImpl.this.proxy.configure(conflictHandler, changeEventListener, exceptionListener);
+        SyncImpl.this.proxy.configure(
+            conflictHandler,
+            changeEventListener,
+            exceptionListener,
+            syncFrequency
+        );
         return null;
       }
     });

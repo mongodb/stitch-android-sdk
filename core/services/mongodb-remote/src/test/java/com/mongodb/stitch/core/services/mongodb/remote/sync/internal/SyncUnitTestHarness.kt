@@ -418,6 +418,7 @@ class SyncUnitTestHarness : Closeable {
                 conflictHandler,
                 changeEventListener,
                 errorListener,
+                null,
                 bsonDocumentCodec)
         }
 
