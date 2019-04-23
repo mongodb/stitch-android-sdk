@@ -417,6 +417,48 @@ public class CoreDocumentSynchronizationConfig {
             break;
         }
         break;
+      case UPDATE:
+        switch (newestChangeEvent.getOperationType()) {
+          case UPDATE:
+            return new ChangeEvent<>(
+                newestChangeEvent.getId(),
+                OperationType.UPDATE,
+                newestChangeEvent.getFullDocument(),
+                newestChangeEvent.getNamespace(),
+                newestChangeEvent.getDocumentKey(),
+                lastUncommittedChangeEvent.getUpdateDescription() != null ?
+                    lastUncommittedChangeEvent
+                        .getUpdateDescription()
+                        .merge(newestChangeEvent.getUpdateDescription()) :
+                    newestChangeEvent.getUpdateDescription(),
+                newestChangeEvent.hasUncommittedWrites()
+            );
+          case REPLACE:
+            return new ChangeEvent<>(
+                newestChangeEvent.getId(),
+                OperationType.REPLACE,
+                newestChangeEvent.getFullDocument(),
+                newestChangeEvent.getNamespace(),
+                newestChangeEvent.getDocumentKey(),
+                null,
+                newestChangeEvent.hasUncommittedWrites()
+            );
+        }
+      case REPLACE:
+        switch (newestChangeEvent.getOperationType()) {
+          case UPDATE:
+            return new ChangeEvent<>(
+                newestChangeEvent.getId(),
+                OperationType.REPLACE,
+                newestChangeEvent.getFullDocument(),
+                newestChangeEvent.getNamespace(),
+                newestChangeEvent.getDocumentKey(),
+                null,
+                newestChangeEvent.hasUncommittedWrites()
+            );
+          default:
+            break;
+        }
       default:
         break;
     }

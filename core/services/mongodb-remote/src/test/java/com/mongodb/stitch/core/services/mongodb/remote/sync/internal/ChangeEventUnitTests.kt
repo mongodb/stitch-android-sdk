@@ -24,7 +24,7 @@ class ChangeEventUnitTests {
         val expectedDocumentKey = BsonDocument("_id", expectedFullDocument["_id"])
         val expectedUpdateDescription = UpdateDescription(
             BsonDocument("foo", BsonString("bar")),
-            listOf("baz"))
+            setOf("baz"))
 
         val changeEvent = ChangeEvent(
                 expectedId,
@@ -33,8 +33,7 @@ class ChangeEventUnitTests {
                 expectedNamespace,
                 expectedDocumentKey,
                 expectedUpdateDescription,
-                true
-        )
+                true)
 
         assertEquals(expectedId, changeEvent.id)
         assertEquals(expectedOperationType, changeEvent.operationType)
@@ -54,7 +53,7 @@ class ChangeEventUnitTests {
         val expectedDocumentKey = BsonDocument("_id", expectedFullDocument["_id"])
         val expectedUpdateDescription = UpdateDescription(
             BsonDocument("foo", BsonString("bar")),
-            listOf("baz"))
+            setOf("baz"))
 
         val changeEvent = ChangeEvent(
                 expectedId,
