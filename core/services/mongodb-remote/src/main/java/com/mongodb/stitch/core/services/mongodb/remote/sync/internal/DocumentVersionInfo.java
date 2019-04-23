@@ -123,6 +123,20 @@ public final class DocumentVersionInfo {
     }
   }
 
+  public DocumentVersionInfo(
+      @Nullable final Version version,
+      @Nullable final BsonValue documentId
+  ) {
+    this.version = version;
+    this.versionDoc = (version != null) ? version.toBsonDocument() : null;
+
+    if (documentId != null) {
+      this.filter = getVersionedFilter(documentId, this.versionDoc);
+    } else {
+      this.filter = null;
+    }
+  }
+
   @Nullable BsonDocument getVersionDoc() {
     return versionDoc;
   }

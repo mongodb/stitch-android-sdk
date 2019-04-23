@@ -21,6 +21,7 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Data
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 
@@ -107,11 +108,35 @@ public final class ChangeEvents {
   }
 
   /**
+   * Generates a change event for a local replacement of a document in the given namespace referring
+   * to the given document _id.
+   *
+   * @param documentId the _id of the document that was updated.
+   * @param document the replacement document.
+   * @return a change event for a local replacement of a document in the given namespace referring
+   *         to the given document _id.
+   */
+  static CompactChangeEvent<BsonDocument> compactChangeEventForLocalReplace(
+      final BsonValue documentId,
+      final BsonDocument document,
+      final boolean writePending
+  ) {
+    return new CompactChangeEvent<>(
+        OperationType.REPLACE,
+        document,
+        new BsonDocument("_id", documentId),
+        null,
+        versionForDocument(document),
+        hashForDocument(document),
+        writePending);
+  }
+
+  /**
    * Generates a change event for a local deletion of a document in the given namespace referring
    * to the given document _id.
    *
-   * @param namespace the namespace where the document was inserted.
-   * @param documentId the _id of the document that was updated.
+   * @param namespace the namespace where the document was deleted.
+   * @param documentId the _id of the document that was deleted.
    * @return a change event for a local deletion of a document in the given namespace referring
    *         to the given document _id.
    */
@@ -126,6 +151,28 @@ public final class ChangeEvents {
         null,
         namespace,
         new BsonDocument("_id", documentId),
+        null,
+        writePending);
+  }
+
+  /**
+   * Generates a change event for a local deletion of a document in the given namespace referring
+   * to the given document _id.
+   *
+   * @param documentId the _id of the document that was deleted.
+   * @return a change event for a local deletion of a document in the given namespace referring
+   *         to the given document _id.
+   */
+  static CompactChangeEvent<BsonDocument> compactChangeEventForLocalDelete(
+      final BsonValue documentId,
+      final boolean writePending
+  ) {
+    return new CompactChangeEvent<>(
+        OperationType.DELETE,
+        null,
+        new BsonDocument("_id", documentId),
+        null,
+        null,
         null,
         writePending);
   }
@@ -150,5 +197,41 @@ public final class ChangeEvents {
         event.getDocumentKey(),
         event.getUpdateDescription(),
         event.hasUncommittedWrites());
+  }
+
+  /**
+   * Transforms a {@link ChangeEvent} into one that can be used by a user defined conflict resolver.
+   * @param event the event to transform.
+   * @param codec the codec to use to transform any documents specific to the collection.
+   * @return the transformed {@link ChangeEvent}
+   */
+  static CompactChangeEvent transformCompactChangeEventForUser(
+      final CompactChangeEvent<BsonDocument> event,
+      final Codec codec
+  ) {
+    return new CompactChangeEvent<>(
+        event.getOperationType(),
+        event.getFullDocument() == null ? null : codec.decode(
+            sanitizeDocument(event.getFullDocument()).asBsonReader(),
+            DecoderContext.builder().build()),
+        event.getDocumentKey(),
+        event.getUpdateDescription(),
+        event.getStitchDocumentVersion(),
+        event.getStitchDocumentHash(),
+        event.hasUncommittedWrites());
+  }
+
+  private static DocumentVersionInfo.Version versionForDocument(final BsonDocument doc) {
+    if (!doc.containsKey(DataSynchronizer.DOCUMENT_VERSION_FIELD)) {
+      return null;
+    }
+
+    return DocumentVersionInfo.Version.fromBsonDocument(
+        doc.getDocument(DataSynchronizer.DOCUMENT_VERSION_FIELD)
+    );
+  }
+
+  private static Long hashForDocument(final BsonDocument doc) {
+    return HashUtils.hash(DataSynchronizer.sanitizeDocument(doc));
   }
 }

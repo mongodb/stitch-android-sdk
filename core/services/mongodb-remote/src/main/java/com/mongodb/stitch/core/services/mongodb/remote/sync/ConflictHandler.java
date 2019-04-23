@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 
 import org.bson.BsonValue;
 
@@ -34,8 +35,8 @@ public interface ConflictHandler<DocumentT> {
    * @param remoteEvent the conflicting remote event.
    * @return a resolution to the conflict between the given local and remote {@link ChangeEvent}s.
    */
-  DocumentT resolveConflict(
+  ConflictResolution resolveConflict(
       final BsonValue documentId,
       final ChangeEvent<DocumentT> localEvent,
-      final ChangeEvent<DocumentT> remoteEvent);
+      final CompactChangeEvent<DocumentT> remoteEvent);
 }

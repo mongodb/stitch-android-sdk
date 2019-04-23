@@ -18,7 +18,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.Callback;
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -64,10 +64,10 @@ interface InstanceChangeStreamListener {
    * Queue a one-off watcher for the next event pass.
    */
   void addWatcher(final MongoNamespace namespace,
-                              final Callback<ChangeEvent<BsonDocument>, Object> watcher);
+                              final Callback<CompactChangeEvent<BsonDocument>, Object> watcher);
 
   void removeWatcher(final MongoNamespace namespace,
-                     final Callback<ChangeEvent<BsonDocument>, Object> watcher);
+                     final Callback<CompactChangeEvent<BsonDocument>, Object> watcher);
 
   /**
    * Requests that the given namespace be started listening to for change events.
@@ -89,7 +89,7 @@ interface InstanceChangeStreamListener {
    * @param namespace the namespace to get events for.
    * @return the latest change events for a given namespace.
    */
-  Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(
+  Map<BsonValue, CompactChangeEvent<BsonDocument>> getEventsForNamespace(
       final MongoNamespace namespace);
 
   /**
@@ -111,7 +111,7 @@ interface InstanceChangeStreamListener {
    * @return the latest unprocessed change event for the given document ID and namespace, or null
    *         if none exists.
    */
-  @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+  @Nullable CompactChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
           final MongoNamespace namespace,
           final BsonValue documentId);
 }

@@ -8,10 +8,12 @@ import com.mongodb.stitch.core.admin.services.rules.rule
 import com.mongodb.stitch.core.internal.common.Callback
 import com.mongodb.stitch.core.internal.common.OperationResult
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictResolution
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
 import org.bson.BsonBoolean
@@ -67,19 +69,20 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc1Filter = Document("_id", doc1Id)
 
         // start watching it and always set the value to hello world in a conflict
-        syncOperations.configure(ConflictHandler { id: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+        syncOperations.configure(ConflictHandler { id: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
             // ensure that there is no version information on the documents in the conflict handler
             assertNoVersionFieldsInDoc(localEvent.fullDocument!!)
-            assertNoVersionFieldsInDoc(remoteEvent.fullDocument!!)
 
             if (id == doc1Id) {
+
+                val fetchedRemoteDoc = remoteMethods.find(doc1Filter).first()!!
                 val merged = localEvent.fullDocument!!.getInteger("foo") +
-                    remoteEvent.fullDocument!!.getInteger("foo")
-                val newDocument = Document(HashMap<String, Any>(remoteEvent.fullDocument))
+                    fetchedRemoteDoc.getInteger("foo")
+                val newDocument = Document(HashMap<String, Any>(fetchedRemoteDoc))
                 newDocument["foo"] = merged
-                newDocument
+                ConflictResolution.withDocument(newDocument)
             } else {
-                Document("hello", "world")
+                ConflictResolution.withDocument(Document("hello", "world"))
             }
         }, null, null)
 
@@ -164,15 +167,17 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
         val doc1Filter = Document("_id", doc1Id)
 
-        coll.configure(ConflictHandler { _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+        coll.configure(ConflictHandler { _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
             val merged = Document(localEvent.fullDocument)
-            remoteEvent.fullDocument!!.forEach {
+            val fetchedRemoteDoc = remoteColl
+                .find(Document("_id", localEvent.documentKey["_id"])).first()!!
+            fetchedRemoteDoc.forEach {
                 if (localEvent.fullDocument!!.containsKey(it.key)) {
                     return@forEach
                 }
                 merged[it.key] = it.value
             }
-            merged
+            ConflictResolution.withDocument(merged)
         }, null, null)
         coll.syncOne(doc1Id)
         streamAndSync()
@@ -373,8 +378,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
         // configure Sync to resolve a custom document on conflict.
         // sync on the id, and do a sync pass
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
-            Document("well", "shoot")
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
+            ConflictResolution.withDocument(Document("well", "shoot"))
         }, null, null)
         coll.syncOne(doc1Id)
         streamAndSync()
@@ -590,8 +595,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // configure Sync to resolve a custom document on conflict.
         // sync on the id, do a sync pass, and assert that the remote
         // insertion has been reflected locally
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
-            Document("hello", "world")
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
+            ConflictResolution.withDocument(Document("hello", "world"))
         }, null, null)
         coll.syncOne(doc1Id)
         streamAndSync()
@@ -636,8 +641,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // configure Sync to resolve a custom document on conflict.
         // sync on the id, do a sync pass, and assert that the remote
         // insertion has been reflected locally
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
-            Document("hello", "again")
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
+            ConflictResolution.withDocument(Document("hello", "again"))
         }, null, null)
         coll.syncOne(doc1Id)
         streamAndSync()
@@ -722,8 +727,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // the conflicted document.
         // sync the docId, and do a sync pass.
         // assert the remote insert is reflected locally
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
-            null
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
+            ConflictResolution.withDocument(null)
         }, null, null)
         coll.syncOne(doc1Id)
         streamAndSync()
@@ -864,8 +869,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
         // configure Sync to resolve a custom document when handling a conflict
         // insert and sync the same document locally, creating a conflict
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
-            Document("friend", "welcome")
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
+            ConflictResolution.withDocument(Document("friend", "welcome"))
         }, null, null)
         val doc1Id = coll.insertOne(docToInsert).insertedId
         val doc1Filter = Document("_id", doc1Id)
@@ -902,10 +907,12 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // that the listeners/handlers have been called
         val changeEventListenerSemaphore = Semaphore(0)
         coll.configure(
-            ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+            ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
                 hasConflictHandlerBeenInvoked = true
+
+                // we know there will be a full document since we're looking for an insert
                 assertEquals(remoteEvent.fullDocument!!["fly"], "away")
-                remoteEvent.fullDocument
+                ConflictResolution.withDocument(remoteEvent.fullDocument)
             },
             ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
                 hasChangeEventListenerBeenInvoked = true
@@ -1099,7 +1106,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
         val doc1Filter = Document("_id", doc1Id)
 
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
             throw IllegalStateException("failure")
         }, null, null)
         coll.syncOne(doc1Id)
@@ -1113,7 +1120,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
         assertEquals(1, remoteColl.deleteOne(doc1Filter).deletedCount)
         powerCycleDevice()
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
             throw IllegalStateException("failure")
         }, null, null)
 
@@ -1137,7 +1144,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc1Id = insertResult.insertedIds[0]
         val doc2Id = insertResult.insertedIds[1]
 
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
             throw IllegalStateException("failure")
         }, null, null)
         coll.syncOne(doc1Id!!)
@@ -1278,13 +1285,13 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         var conflictCounter = 0
 
         testSync.configure(
-            ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+            ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
                 if (conflictCounter == 0) {
                     conflictCounter++
                     errorEmitted = true
                     throw Exception("ouch")
                 }
-                remoteEvent.fullDocument
+                ConflictResolution.fromRemote()
             },
             ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
             },
@@ -1657,9 +1664,9 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // configure Sync to have local documents win conflicts
         var conflictRaised = false
         coll.configure(
-                ConflictHandler { _, localEvent, _ ->
+                ConflictHandler { _, _, _ ->
                     conflictRaised = true
-                    localEvent.fullDocument
+                    ConflictResolution.fromLocal()
                 }, null, null)
         coll.syncOne(doc1Id)
         streamAndSync()
@@ -1707,9 +1714,9 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val docToInsertUser3 = Document("hallo", "welt")
 
         // configure Sync
-        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
             fail()
-            Document()
+            ConflictResolution.withDocument(Document())
         }, null, null)
 
         val doc1Id = coll.insertOne(docToInsertUser1).insertedId
@@ -1804,8 +1811,8 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         println("watching for $n change event(s) ns=$namespace")
         val waitFor = AtomicInteger(n)
         val sem = Semaphore(0)
-        syncTestRunner.dataSynchronizer.addWatcher(namespace, object : Callback<ChangeEvent<BsonDocument>, Any> {
-            override fun onComplete(result: OperationResult<ChangeEvent<BsonDocument>, Any>) {
+        syncTestRunner.dataSynchronizer.addWatcher(namespace, object : Callback<CompactChangeEvent<BsonDocument>, Any> {
+            override fun onComplete(result: OperationResult<CompactChangeEvent<BsonDocument>, Any>) {
                 if (result.isSuccessful && result.geResult() != null) {
                     println("change event of operation ${result.geResult().operationType} ns=$namespace found!")
                 }
@@ -1921,15 +1928,21 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     private fun documentIdFilter(documentId: BsonValue) =
         BsonDocument("_id", documentId)
 
-    private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: ChangeEvent<Document> ->
+    private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: CompactChangeEvent<Document> ->
         val localEventDescription = when (event1.operationType == OperationType.DELETE) {
             true -> "delete"
-            false -> event1.fullDocument!!.toJson()
+            false -> when(event1.operationType == OperationType.UPDATE) {
+                true -> event1.updateDescription!!.toBsonDocument().toJson()
+                false -> event1.fullDocument!!.toJson()
+            }
         }
 
         val remoteEventDescription = when (event2.operationType == OperationType.DELETE) {
             true -> "delete"
-            false -> event2.fullDocument!!.toJson()
+            false -> when (event2.operationType == OperationType.UPDATE) {
+                true -> event2.updateDescription!!.toBsonDocument().toJson()
+                false -> event2.fullDocument!!.toJson()
+            }
         }
 
         println("conflict local event: $localEventDescription")

@@ -77,6 +77,18 @@ public final class CompactChangeEvent<DocumentT> extends BaseChangeEvent<Documen
   }
 
   /**
+   * Returns the MongoDB Mobile Sync version info of the document after this event.
+   *
+   * @return the sync document version info
+   */
+  public @Nonnull DocumentVersionInfo getStitchDocumentVersionInfo() {
+    return new DocumentVersionInfo(
+        stitchDocumentVersion,
+        getDocumentKey().get("_id")
+    );
+  }
+
+  /**
    * Returns the FNV-1a hash of the document as computed after the rules were applied, and after
    * the document version was removed from the document.
    *

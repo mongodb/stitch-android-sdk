@@ -132,7 +132,7 @@ public class ResultDecoders {
   }
 
   @SuppressWarnings("unused")
-  static <DocumentT> Decoder<CompactChangeEvent<DocumentT>>
+  public static <DocumentT> Decoder<CompactChangeEvent<DocumentT>>
       compactChangeEventDecoder(final Codec<DocumentT> codec) {
     return new CompactChangeEventDecoder<>(codec);
   }
