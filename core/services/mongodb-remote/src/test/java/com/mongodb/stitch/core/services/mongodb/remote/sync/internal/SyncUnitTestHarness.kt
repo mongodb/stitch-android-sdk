@@ -40,6 +40,7 @@ import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.Codec
 import org.bson.codecs.DocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
+import org.bson.conversions.Bson
 import org.bson.types.ObjectId
 import org.junit.Assert
 import org.junit.Assert.assertEquals
@@ -410,16 +411,17 @@ class SyncUnitTestHarness : Closeable {
         /**
          * Reconfigure the internal dataSynchronizer with
          * the current conflictHandler, changeEventListener, and
-         * errorListener.
+         * errorListener, and syncFrequency.
          */
         override fun reconfigure() {
-            dataSynchronizer.configure(
-                namespace,
-                conflictHandler,
-                changeEventListener,
-                errorListener,
-                null,
-                bsonDocumentCodec)
+            val syncConfig = SyncConfiguration.Builder()
+                .withChangeEventListener(changeEventListener)
+                .withConflictHandler(conflictHandler)
+                .withExceptionListener(errorListener)
+                .withCodec(bsonDocumentCodec)
+                .withSyncFrequency(SyncFrequency.reactive())
+                .build()
+            this.dataSynchronizer.configure(namespace, syncConfig)
         }
 
         override fun waitForEvents(amount: Int) {

@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
 
 import java.util.List;
@@ -37,17 +38,9 @@ import org.bson.conversions.Bson;
 public interface CoreSync<DocumentT> {
   /**
    * Set the conflict resolver and and change event listener on this collection.
-   * @param conflictHandler the conflict resolver to invoke when a conflict happens between local
-   *                        and remote events.
-   * @param changeEventListener the event listener to invoke when a change event happens for the
-   *                         document.
-   * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
-   * @param syncFrequency the sync frequency to use (reactive, scheduled, on-demand)
+   * @param syncConfig the SyncConfiguration<DocumentT> that contains relevant options
    */
-  void configure(@Nonnull final ConflictHandler<DocumentT> conflictHandler,
-                 @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                 @Nullable final ExceptionListener exceptionListener,
-                 @Nullable final SyncFrequency syncFrequency);
+  void configure(@Nonnull final SyncConfiguration syncConfig);
 
   /**
    * Requests that the given document _id be synchronized.

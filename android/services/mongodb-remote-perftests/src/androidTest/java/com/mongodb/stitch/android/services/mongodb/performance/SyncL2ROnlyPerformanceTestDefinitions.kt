@@ -30,17 +30,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         val sync = ctx.testColl.sync()
 
                         // If sync fails for any reason, halt the test
-                        Tasks.await(sync.configure(
-                                DefaultSyncConflictResolvers.remoteWins(),
-                                null,
-                                ExceptionListener { id, ex ->
-                                    testHarness.logMessage(
-                                            "unexpected sync error with id " +
-                                            "$id: ${ex.localizedMessage}"
-                                    )
-                                    error(ex)
-                                }
-                        ))
+                        SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                         Tasks.await(ctx.testColl.sync().insertMany(documentsForCurrentTest))
 
@@ -71,17 +61,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         val sync = ctx.testColl.sync()
 
                         // If sync fails for any reason, halt the test
-                        Tasks.await(sync.configure(
-                                DefaultSyncConflictResolvers.remoteWins(),
-                                null,
-                                ExceptionListener { id, ex ->
-                                    testHarness.logMessage(
-                                            "unexpected sync error with id " +
-                                            "$id: ${ex.localizedMessage}"
-                                    )
-                                    error(ex)
-                                }
-                        ))
+                        SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                         Tasks.await(sync.insertMany(documentsForCurrentTest))
 
@@ -162,16 +142,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
                         val sync = ctx.testColl.sync()
 
                         // If sync fails for any reason, halt the test
-                        Tasks.await(sync.configure(
-                                DefaultSyncConflictResolvers.remoteWins(),
-                                null,
-                                ExceptionListener { id, ex ->
-                                    testHarness.logMessage(
-                                            "unexpected sync error with id " +
-                                            "$id: ${ex.localizedMessage}")
-                                    error(ex)
-                                }
-                        ))
+                        SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                         Tasks.await(sync.insertMany(documentsForCurrentTest))
 

@@ -14,6 +14,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonElement
@@ -901,6 +902,46 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // configure Sync, each entry with flags checking
         // that the listeners/handlers have been called
         val changeEventListenerSemaphore = Semaphore(0)
+        val syncConfig = SyncConfiguration.Builder()
+            .withConflictHandler(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                hasConflictHandlerBeenInvoked = true
+                assertEquals(remoteEvent.fullDocument!!["fly"], "away")
+                remoteEvent.fullDocument
+            }).withChangeEventListener(ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+                changeEventListenerSemaphore.release()
+            }).withExceptionListener(ExceptionListener { _, _ -> }).build()
+        coll.configure(syncConfig)
+
+        waitForAllStreamsOpen()
+
+        // insert a document remotely
+        remoteColl.insertOne(Document("_id", insertedId).append("fly", "away"))
+
+        // sync. assert that the conflict handler and
+        // change event listener have been called
+        streamAndSync()
+
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        Assert.assertTrue(hasConflictHandlerBeenInvoked)
+        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
+    }
+
+    @Test
+    fun testConfigureDeprecated() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        // insert a document locally
+        val docToInsert = Document("hello", "world")
+        val insertedId = coll.insertOne(docToInsert).insertedId
+
+        var hasConflictHandlerBeenInvoked = false
+        var hasChangeEventListenerBeenInvoked = false
+
+        // configure Sync, each entry with flags checking
+        // that the listeners/handlers have been called
+        val changeEventListenerSemaphore = Semaphore(0)
         coll.configure(
             ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 hasConflictHandlerBeenInvoked = true
@@ -911,7 +952,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
                 hasChangeEventListenerBeenInvoked = true
                 changeEventListenerSemaphore.release()
             },
-                ExceptionListener { _, _ -> }
+            ExceptionListener { _, _ -> }
         )
 
         waitForAllStreamsOpen()

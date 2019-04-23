@@ -131,16 +131,17 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
     this.nsLock = new ReentrantReadWriteLock();
   }
 
-  <T> void configure(final ConflictHandler<T> conflictHandler,
-                     final ChangeEventListener<T> changeEventListener,
-                     final SyncFrequency syncFrequency,
-                     final Codec<T> codec) {
+  void configure(final SyncConfiguration syncConfiguration) {
     nsLock.writeLock().lock();
     try {
-      this.conflictHandler = conflictHandler;
-      this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
-      this.syncFrequency = syncFrequency;
-      this.documentCodec = codec;
+      this.conflictHandler = syncConfiguration.getConflictHandler();
+      this.syncFrequency = syncConfiguration.getSyncFrequency();
+      this.documentCodec = syncConfiguration.getCodec();
+      this.namespaceListenerConfig = new NamespaceListenerConfig(
+          syncConfiguration.getChangeEventListener(),
+          syncConfiguration.getCodec()
+      );
+
     } finally {
       nsLock.writeLock().unlock();
     }

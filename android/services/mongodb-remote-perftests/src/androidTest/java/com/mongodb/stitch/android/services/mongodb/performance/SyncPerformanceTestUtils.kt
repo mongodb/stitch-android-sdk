@@ -2,6 +2,10 @@ package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.support.test.InstrumentationRegistry
 import com.google.android.gms.tasks.Tasks
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonValue
 import org.bson.Document
 import kotlin.random.Random
@@ -254,6 +258,19 @@ class SyncPerformanceTestUtils {
                 numDocsChangedLocally.toInt(),
                 "Remote document updates"
             )
+        }
+
+        fun defaultConfigure(ctx: SyncPerformanceTestContext) {
+            val config = SyncConfiguration.Builder()
+                .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<Document>())
+                .withExceptionListener(ExceptionListener { id, ex ->
+                    testHarness.logMessage(
+                        "unexpected sync error with id " +
+                            "$id: ${ex.localizedMessage}")
+                    error(ex)
+                }).withSyncFrequency(SyncFrequency.onDemand()).build()
+
+            Tasks.await(ctx.testColl.sync().configure(config))
         }
     }
 }

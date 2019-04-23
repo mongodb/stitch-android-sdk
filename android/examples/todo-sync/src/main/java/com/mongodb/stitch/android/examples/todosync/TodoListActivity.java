@@ -37,6 +37,7 @@ import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
+import com.mongodb.stitch.android.services.mongodb.remote.Sync;
 import com.mongodb.stitch.core.auth.providers.serverapikey.ServerApiKeyCredential;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
@@ -44,6 +45,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncDeleteResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -96,16 +98,13 @@ public class TodoListActivity extends AppCompatActivity {
 
     // Configure sync to be remote wins on both collections meaning and conflict that occurs should
     // prefer the remote version as the resolution.
-    items.sync().configure(
-        DefaultSyncConflictResolvers.remoteWins(),
-        itemUpdateListener,
-        (documentId, error) -> Log.e(TAG, error.getLocalizedMessage()));
-
-    lists.sync().configure(
-        DefaultSyncConflictResolvers.remoteWins(),
-        listUpdateListener,
-        (documentId, error) -> Log.e(TAG, error.getLocalizedMessage()));
-
+    SyncConfiguration syncConfig = new SyncConfiguration.Builder()
+        .withConflictHandler(DefaultSyncConflictResolvers.remoteWins())
+        .withChangeEventListener(itemUpdateListener)
+        .withExceptionListener((documentId, error) -> Log.e(TAG, error.getLocalizedMessage()))
+        .build();
+    items.sync().configure(syncConfig);
+    lists.sync().configure(syncConfig);
     // Set up recycler view for to-do items
     final RecyclerView todoRecyclerView = findViewById(R.id.rv_todo_items);
     final RecyclerView.LayoutManager todoLayoutManager = new LinearLayoutManager(this);

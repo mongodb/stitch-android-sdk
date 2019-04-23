@@ -485,36 +485,19 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
-  public <T> void configure(@Nonnull final MongoNamespace namespace,
-                            @Nullable final ConflictHandler<T> conflictHandler,
-                            @Nullable final ChangeEventListener<T> changeEventListener,
-                            @Nullable final ExceptionListener exceptionListener,
-                            @Nullable final SyncFrequency syncFrequency,
-                            @Nonnull final Codec<T> codec) {
+  public void configure(@Nonnull final MongoNamespace namespace,
+                            @Nonnull final SyncConfiguration syncConfiguration) {
     this.waitUntilInitialized();
 
-    if (conflictHandler == null) {
-      logger.warn(
-          "Invalid configuration: conflictHandler should not be null. "
-              + "The DataSynchronizer will not begin syncing until a ConflictHandler has been "
-              + "provided.");
-      return;
-    }
+    this.exceptionListener = syncConfiguration.getExceptionListener();
 
-    this.exceptionListener = exceptionListener;
-
-    this.syncConfig.getNamespaceConfig(namespace).configure(
-        conflictHandler,
-        changeEventListener,
-        syncFrequency,
-        codec
-    );
+    this.syncConfig.getNamespaceConfig(namespace).configure(syncConfiguration);
 
     syncLock.lock();
     if (!this.isConfigured) {
       this.isConfigured = true;
       syncLock.unlock();
-      this.configureSyncFrequency(namespace, syncFrequency);
+      this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
     } else {
       syncLock.unlock();
     }

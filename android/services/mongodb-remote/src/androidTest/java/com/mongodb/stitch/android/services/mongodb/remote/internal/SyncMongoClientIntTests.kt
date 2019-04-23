@@ -35,6 +35,7 @@ import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
@@ -74,8 +75,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             exceptionListener: ExceptionListener?
         ): Void? {
             return Tasks.await(
-                sync.configure(conflictResolver, changeEventListener, exceptionListener)
+                sync.configure(conflictResolver, changeEventListener, exceptionListener, null)
             )
+        }
+
+        override fun configure(syncConfig: SyncConfiguration): Void? {
+            return Tasks.await(sync.configure(syncConfig))
         }
 
         override fun syncOne(id: BsonValue): Void? {
@@ -344,6 +349,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     override fun testConfigure() {
         testProxy.testConfigure()
+    }
+
+    @Test
+    override fun testConfigureDeprecated() {
+        testProxy.testConfigureDeprecated()
     }
 
     @Test

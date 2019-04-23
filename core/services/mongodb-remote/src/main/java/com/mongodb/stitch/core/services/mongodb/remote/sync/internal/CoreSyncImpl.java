@@ -62,18 +62,10 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
   }
 
   @Override
-  public void configure(@Nonnull final ConflictHandler<DocumentT> conflictHandler,
-                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                        @Nullable final ExceptionListener exceptionListener,
-                        @Nullable final SyncFrequency syncFrequency) {
-    this.dataSynchronizer.configure(
-        namespace,
-        conflictHandler,
-        changeEventListener,
-        exceptionListener,
-        syncFrequency,
-        this.service.getCodecRegistry().get(documentClass)
-    );
+  public void configure(@Nonnull final SyncConfiguration syncConfig) {
+      SyncConfiguration newConfig = new SyncConfiguration.Builder(syncConfig)
+          .withCodec(this.service.getCodecRegistry().get(documentClass)).build();
+      this.dataSynchronizer.configure(namespace, newConfig);
   }
 
   @Override

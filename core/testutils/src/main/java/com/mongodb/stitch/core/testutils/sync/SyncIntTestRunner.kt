@@ -132,6 +132,9 @@ interface SyncIntTestRunner {
     fun testConfigure()
 
     @Test
+    fun testConfigureDeprecated()
+
+    @Test
     fun testSyncVersioningScheme()
 
     @Test
