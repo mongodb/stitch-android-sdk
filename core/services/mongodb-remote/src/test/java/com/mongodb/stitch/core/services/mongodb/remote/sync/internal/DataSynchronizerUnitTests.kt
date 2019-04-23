@@ -30,7 +30,7 @@ import org.mockito.Mockito.verify
 import java.lang.Exception
 import java.util.Collections
 
-class  DataSynchronizerUnitTests {
+class DataSynchronizerUnitTests {
     private val harness = SyncUnitTestHarness()
 
     @After

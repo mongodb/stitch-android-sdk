@@ -36,6 +36,7 @@ import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbedde
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
@@ -75,7 +76,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             exceptionListener: ExceptionListener?
         ): Void? {
             return Tasks.await(
-                sync.configure(conflictResolver, changeEventListener, exceptionListener, null)
+                sync.configure(
+                    conflictResolver,
+                    changeEventListener,
+                    exceptionListener,
+                    SyncFrequency.reactive()
+                )
             )
         }
 

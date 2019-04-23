@@ -40,7 +40,6 @@ import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.Codec
 import org.bson.codecs.DocumentCodec
 import org.bson.codecs.configuration.CodecRegistries
-import org.bson.conversions.Bson
 import org.bson.types.ObjectId
 import org.junit.Assert
 import org.junit.Assert.assertEquals

@@ -486,7 +486,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   }
 
   public void configure(@Nonnull final MongoNamespace namespace,
-                            @Nonnull final SyncConfiguration syncConfiguration) {
+                        @Nonnull final SyncConfiguration syncConfiguration) {
     this.waitUntilInitialized();
 
     this.exceptionListener = syncConfiguration.getExceptionListener();
