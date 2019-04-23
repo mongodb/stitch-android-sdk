@@ -52,6 +52,13 @@ class UpdateDescriptionUnitTests {
         assertEquals(
             ud2.updatedFields,
             BsonDocument("bye", BsonString("there")))
+
+        val ud4 = UpdateDescription(BsonDocument("woof", BsonString("hello")), setOf("bye"))
+
+        ud2.merge(ud4)
+
+        assertEquals(ud2.removedFields, setOf("prr", "bye"))
+        assertEquals(ud2.updatedFields, BsonDocument("woof", BsonString("hello")))
     }
 
     @Test
