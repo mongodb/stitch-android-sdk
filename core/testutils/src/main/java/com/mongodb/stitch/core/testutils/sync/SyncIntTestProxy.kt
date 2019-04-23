@@ -19,10 +19,7 @@ import org.bson.BsonDocument
 import org.bson.BsonElement
 import org.bson.BsonObjectId
 import org.bson.BsonValue
-import org.bson.BsonWriter
 import org.bson.Document
-import org.bson.conversions.Bson
-import org.bson.types.ObjectId
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

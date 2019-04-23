@@ -264,7 +264,7 @@ class UpdateDescriptionUnitTests {
         ).toUpdateDocument()
 
         assertEquals(updatedFields, updateDoc["\$set"])
-        assertEquals(removedFields, updateDoc["\$unset"]?.asDocument()?.entries?.map { it.key })
+        assertEquals(removedFields, updateDoc["\$unset"]?.asDocument()?.entries?.map { it.key }?.toSet())
     }
 
     private fun testDiff(

@@ -426,11 +426,11 @@ public class CoreDocumentSynchronizationConfig {
                 newestChangeEvent.getFullDocument(),
                 newestChangeEvent.getNamespace(),
                 newestChangeEvent.getDocumentKey(),
-                lastUncommittedChangeEvent.getUpdateDescription() != null ?
-                    lastUncommittedChangeEvent
+                lastUncommittedChangeEvent.getUpdateDescription() != null
+                    ? lastUncommittedChangeEvent
                         .getUpdateDescription()
-                        .merge(newestChangeEvent.getUpdateDescription()) :
-                    newestChangeEvent.getUpdateDescription(),
+                        .merge(newestChangeEvent.getUpdateDescription())
+                    : newestChangeEvent.getUpdateDescription(),
                 newestChangeEvent.hasUncommittedWrites()
             );
           case REPLACE:
@@ -443,7 +443,10 @@ public class CoreDocumentSynchronizationConfig {
                 null,
                 newestChangeEvent.hasUncommittedWrites()
             );
+          default:
+            break;
         }
+        break;
       case REPLACE:
         switch (newestChangeEvent.getOperationType()) {
           case UPDATE:
@@ -459,6 +462,7 @@ public class CoreDocumentSynchronizationConfig {
           default:
             break;
         }
+        break;
       default:
         break;
     }

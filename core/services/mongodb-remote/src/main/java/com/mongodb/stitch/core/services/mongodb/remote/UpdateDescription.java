@@ -21,7 +21,6 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Data
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -145,6 +144,20 @@ public final class UpdateDescription {
   }
 
   /**
+   * Unilaterally merge an update description into this update description.
+   * @param otherDescription the update description to merge into this
+   * @return this merged update description
+   */
+  public UpdateDescription merge(@Nullable final UpdateDescription otherDescription) {
+    if (otherDescription != null) {
+      this.removedFields.addAll(otherDescription.removedFields);
+      this.updatedFields.putAll(otherDescription.updatedFields);
+    }
+
+    return this;
+  }
+
+  /**
    * Find the diff between two documents.
    *
    * <p>NOTE: This does not do a full diff on {@link BsonArray}. If there is
@@ -218,20 +231,6 @@ public final class UpdateDescription {
     }
 
     return new UpdateDescription(updatedFields, removedFields);
-  }
-
-  /**
-   * Unilaterally merge an update description into this update description.
-   * @param otherDescription the update description to merge into this
-   * @return this merged update description
-   */
-  public UpdateDescription merge(@Nullable UpdateDescription otherDescription) {
-    if (otherDescription != null) {
-      this.removedFields.addAll(otherDescription.removedFields);
-      this.updatedFields.putAll(otherDescription.updatedFields);
-    }
-
-    return this;
   }
 
   /**
