@@ -21,9 +21,10 @@ import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.Data
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,7 +41,7 @@ import org.bson.BsonValue;
  */
 public final class UpdateDescription {
   private final BsonDocument updatedFields;
-  private final Collection<String> removedFields;
+  private final Set<String> removedFields;
 
   /**
    * Creates an update descirption with the specified updated fields and removed field names.
@@ -49,10 +50,10 @@ public final class UpdateDescription {
    */
   public UpdateDescription(
       final BsonDocument updatedFields,
-      final Collection<String> removedFields
+      final Set<String> removedFields
   ) {
     this.updatedFields = updatedFields == null ? new BsonDocument() : updatedFields;
-    this.removedFields = removedFields == null ? Collections.<String>emptyList() : removedFields;
+    this.removedFields = removedFields == null ? new HashSet<>() : removedFields;
   }
 
   /**
@@ -134,12 +135,37 @@ public final class UpdateDescription {
 
     final BsonArray removedFieldsArr =
         document.getArray(Fields.REMOVED_FIELDS_FIELD);
-    final Collection<String> removedFields = new ArrayList<>(removedFieldsArr.size());
+    final Set<String> removedFields = new HashSet<>(removedFieldsArr.size());
     for (final BsonValue field : removedFieldsArr) {
       removedFields.add(field.asString().getValue());
     }
 
     return new UpdateDescription(document.getDocument(Fields.UPDATED_FIELDS_FIELD), removedFields);
+  }
+
+  /**
+   * Unilaterally merge an update description into this update description.
+   * @param otherDescription the update description to merge into this
+   * @return this merged update description
+   */
+  public UpdateDescription merge(@Nullable final UpdateDescription otherDescription) {
+    if (otherDescription != null) {
+      for (final Map.Entry<String, BsonValue> entry : this.updatedFields.entrySet()) {
+        if (otherDescription.removedFields.contains(entry.getKey())) {
+          this.updatedFields.remove(entry.getKey());
+        }
+      }
+      for (final String removedField : this.removedFields) {
+        if (otherDescription.updatedFields.containsKey(removedField)) {
+          this.removedFields.remove(removedField);
+        }
+      }
+
+      this.removedFields.addAll(otherDescription.removedFields);
+      this.updatedFields.putAll(otherDescription.updatedFields);
+    }
+
+    return this;
   }
 
   /**
@@ -163,7 +189,7 @@ public final class UpdateDescription {
       final @Nonnull BsonDocument afterDocument,
       final @Nullable String onKey,
       final BsonDocument updatedFields,
-      final List<String> removedFields) {
+      final Set<String> removedFields) {
     // for each key in this document...
     for (final Map.Entry<String, BsonValue> entry : beforeDocument.entrySet()) {
       final String key = entry.getKey();
@@ -233,7 +259,7 @@ public final class UpdateDescription {
       @Nullable final BsonDocument beforeDocument,
       @Nullable final BsonDocument afterDocument) {
     if (beforeDocument == null || afterDocument == null) {
-      return new UpdateDescription(new BsonDocument(), new ArrayList<>());
+      return new UpdateDescription(new BsonDocument(), new HashSet<>());
     }
 
     return UpdateDescription.diff(
@@ -241,7 +267,7 @@ public final class UpdateDescription {
         afterDocument,
         null,
         new BsonDocument(),
-        new ArrayList<>()
+        new HashSet<>()
     );
   }
 

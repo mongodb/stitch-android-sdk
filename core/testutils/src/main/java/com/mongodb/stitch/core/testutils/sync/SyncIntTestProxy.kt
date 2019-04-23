@@ -1800,6 +1800,42 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertNull(coll.find(doc3Filter).firstOrNull())
     }
 
+    fun testUpdateUpdateCoalescence() {
+        val coll = syncTestRunner.syncMethods()
+
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        val insertResult = remoteColl.insertOne(Document("hello", "world"))
+
+        // get the document
+        val doc1Id = insertResult.insertedId
+
+        coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
+            throw IllegalStateException("failure")
+        }, null, null)
+        coll.syncOne(doc1Id)
+
+        streamAndSync()
+
+        val filter = Document(mapOf("_id" to doc1Id.asObjectId().value))
+        assertNotNull(coll.find(filter))
+
+        coll.updateOne(filter, Document("\$set", Document("a", "foo")))
+        coll.updateOne(filter, Document("\$set", Document("b", "bar")))
+
+        streamAndSync()
+
+        val expectedDoc = Document(mapOf(
+            "hello" to "world",
+            "a" to "foo",
+            "b" to "bar"
+        ))
+
+        assertEquals(expectedDoc, withoutId(coll.find(filter).first()!!))
+        assertEquals(
+            coll.find(filter).first(), withoutSyncVersion(remoteColl.find(filter).first()!!))
+    }
+
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {
         println("watching for $n change event(s) ns=$namespace")
         val waitFor = AtomicInteger(n)

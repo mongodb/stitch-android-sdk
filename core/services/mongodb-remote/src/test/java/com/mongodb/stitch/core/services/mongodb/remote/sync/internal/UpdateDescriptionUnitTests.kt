@@ -15,6 +15,53 @@ import java.lang.IllegalArgumentException
 
 class UpdateDescriptionUnitTests {
     @Test
+    fun testUpdateDescriptionMerge() {
+        val ud1 = UpdateDescription(BsonDocument("hi", BsonString("there")), setOf("meow", "bark"))
+        val ud2 = UpdateDescription(BsonDocument("bye", BsonString("there")), setOf("prr", "woof"))
+
+        ud1.merge(ud2)
+
+        assertEquals(
+            ud1.removedFields,
+            setOf("meow", "bark", "prr", "woof"))
+        assertEquals(
+            ud1.updatedFields,
+            BsonDocument("hi", BsonString("there")).append("bye", BsonString("there")))
+
+        val ud3 = UpdateDescription(BsonDocument("hi", BsonString("bye")), setOf())
+        ud1.merge(ud3)
+
+        assertEquals(
+            ud1.removedFields,
+            setOf("meow", "bark", "prr", "woof"))
+        assertEquals(
+            ud1.updatedFields,
+            BsonDocument("hi", BsonString("bye")).append("bye", BsonString("there")))
+
+        ud1.merge(null)
+        assertEquals(
+            ud1.removedFields,
+            setOf("meow", "bark", "prr", "woof"))
+        assertEquals(
+            ud1.updatedFields,
+            BsonDocument("hi", BsonString("bye")).append("bye", BsonString("there")))
+
+        assertEquals(
+            ud2.removedFields,
+            setOf("prr", "woof"))
+        assertEquals(
+            ud2.updatedFields,
+            BsonDocument("bye", BsonString("there")))
+
+        val ud4 = UpdateDescription(BsonDocument("woof", BsonString("hello")), setOf("bye"))
+
+        ud2.merge(ud4)
+
+        assertEquals(ud2.removedFields, setOf("prr", "bye"))
+        assertEquals(ud2.updatedFields, BsonDocument("woof", BsonString("hello")))
+    }
+
+    @Test
     fun testUpdateDescriptionDiff() {
         val harness = SyncUnitTestHarness()
         val client = harness.freshTestContext().localClient
@@ -216,7 +263,7 @@ class UpdateDescriptionUnitTests {
     @Test
     fun testUpdateDescriptionToUpdateDoc() {
         val updatedFields = BsonDocument("hi", BsonString("there"))
-        val removedFields = listOf("meow", "bark")
+        val removedFields = setOf("meow", "bark")
 
         val updateDoc = UpdateDescription(
             updatedFields,
@@ -224,7 +271,7 @@ class UpdateDescriptionUnitTests {
         ).toUpdateDocument()
 
         assertEquals(updatedFields, updateDoc["\$set"])
-        assertEquals(removedFields, updateDoc["\$unset"]?.asDocument()?.entries?.map { it.key })
+        assertEquals(removedFields, updateDoc["\$unset"]?.asDocument()?.entries?.map { it.key }?.toSet())
     }
 
     private fun testDiff(

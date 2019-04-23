@@ -18,7 +18,7 @@ class CompactChangeEventUnitTests {
     private val expectedDocumentKey = BsonDocument("_id", expectedFullDocument.getObjectId("_id"))
     private val expectedUpdateDescription = UpdateDescription(
         BsonDocument("foo", BsonString("bar")),
-        listOf("blah")
+        setOf("blah")
     )
     private val expectedDocumentVersion = DocumentVersionInfo.Version(
         1,

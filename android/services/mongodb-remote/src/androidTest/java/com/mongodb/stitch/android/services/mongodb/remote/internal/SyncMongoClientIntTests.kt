@@ -415,6 +415,12 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     override fun testMultiUserSupport() {
         testProxy.testMultiUserSupport()
     }
+
+    @Test
+    fun testUpdateUpdateCoalescence() {
+        testProxy.testUpdateUpdateCoalescence()
+    }
+
     /**
      * Get the uri for where mongodb is running locally.
      */
