@@ -6,6 +6,8 @@ import com.mongodb.stitch.core.internal.common.AuthMonitor
 import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.internal.common.ThreadDispatcher
 import com.mongodb.stitch.core.internal.net.NetworkMonitor
+import com.mongodb.stitch.core.services.mongodb.remote.OperationType
+import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.compareEvents
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
@@ -125,5 +127,79 @@ class CoreDocumentSynchronizationConfigUnitTests {
         compareEvents(expectedEvent, config.lastUncommittedChangeEvent)
         assertEquals(expectedHash, config.lastKnownHash)
         assertEquals(id, config.documentId)
+    }
+
+    @Test
+    fun testPendingWritesCoalescenceUpdateUpdate() {
+        val config = CoreDocumentSynchronizationConfig(coll, namespace, id)
+        val ud = UpdateDescription(BsonDocument("foo", BsonString("bar")), hashSetOf("baz"))
+        val updateEvent1 = ChangeEvents.changeEventForLocalUpdate(
+            namespace,
+            id,
+            UpdateDescription(BsonDocument("foo", BsonString("bar")), hashSetOf("baz")),
+            null,
+            true)
+        config.setSomePendingWritesAndSave(0, updateEvent1)
+
+        assertEquals(ud, config.lastUncommittedChangeEvent.updateDescription)
+
+        val ud2 = UpdateDescription(BsonDocument("qux", BsonString("quux")), hashSetOf("corge"))
+        val updateEvent2 = ChangeEvents.changeEventForLocalUpdate(
+            namespace,
+            id,
+            ud2,
+            null,
+            true)
+        config.setSomePendingWritesAndSave(0, updateEvent2)
+        assertEquals(ud.merge(ud2), config.lastUncommittedChangeEvent.updateDescription)
+    }
+
+    @Test
+    fun testPendingWritesCoalescenceUpdateReplace() {
+        val config = CoreDocumentSynchronizationConfig(coll, namespace, id)
+        val ud = UpdateDescription(BsonDocument("foo", BsonString("bar")), hashSetOf("baz"))
+        val updateEvent1 = ChangeEvents.changeEventForLocalUpdate(
+            namespace,
+            id,
+            UpdateDescription(BsonDocument("foo", BsonString("bar")), hashSetOf("baz")),
+            null,
+            true)
+        config.setSomePendingWritesAndSave(0, updateEvent1)
+
+        assertEquals(ud, config.lastUncommittedChangeEvent.updateDescription)
+
+        val fullDoc = BsonDocument("grault", BsonString("garply"))
+        val replaceEvent = ChangeEvents.changeEventForLocalReplace(
+            namespace,
+            id,
+            fullDoc,
+            true)
+        config.setSomePendingWritesAndSave(0, replaceEvent)
+        assertEquals(OperationType.REPLACE, config.lastUncommittedChangeEvent.operationType)
+        assertEquals(fullDoc, config.lastUncommittedChangeEvent.fullDocument)
+    }
+
+    @Test
+    fun testPendingWritesCoalescenceReplaceUpdate() {
+        val config = CoreDocumentSynchronizationConfig(coll, namespace, id)
+        val replaceEvent = ChangeEvents.changeEventForLocalReplace(
+            namespace,
+            id,
+            BsonDocument("grault", BsonString("garply")),
+            true)
+        config.setSomePendingWritesAndSave(0, replaceEvent)
+
+
+        val ud2 = UpdateDescription(BsonDocument("qux", BsonString("quux")), hashSetOf("corge"))
+        val fullDoc = BsonDocument("qux", BsonString("quux"))
+        val updateEvent2 = ChangeEvents.changeEventForLocalUpdate(
+            namespace,
+            id,
+            ud2,
+            fullDoc,
+            true)
+        config.setSomePendingWritesAndSave(0, updateEvent2)
+        assertEquals(OperationType.REPLACE, config.lastUncommittedChangeEvent.operationType)
+        assertEquals(fullDoc, config.lastUncommittedChangeEvent.fullDocument)
     }
 }
