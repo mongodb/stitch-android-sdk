@@ -465,6 +465,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
         testProxy.testUpdateSyncFrequency()
     }
 
+    @Test
+    override fun testFindOnReceivingChangeEvent() {
+        testProxy.testFindOnReceivingChangeEvent()
+    }
+
     /**
      * Get the uri for where mongodb is running locally.
      */

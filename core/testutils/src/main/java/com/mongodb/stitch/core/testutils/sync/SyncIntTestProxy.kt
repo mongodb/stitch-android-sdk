@@ -2067,6 +2067,47 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertFalse(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
     }
 
+    @Test
+    fun testFindOnReceivingChangeEvent() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val numDocs = 20
+        val waitFor = AtomicInteger(numDocs)
+        var hasChangeEventListenerBeenInvoked = false
+
+        var ids = arrayListOf<BsonValue>()
+        repeat(numDocs) {
+            ids.add(remoteColl.insertOne(Document("hello", "world")).insertedId)
+        }
+        assertEquals(ids.size, numDocs)
+
+        val changeEventListenerSemaphore = Semaphore(0)
+        coll.configure(DefaultSyncConflictResolvers.remoteWins(),
+            ChangeEventListener { docId: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+                Thread(Runnable {
+                    if (coll.count(Document("_id", docId)) == 0L) {
+                        fail("Did not find document with id ${docId.toString()}")
+                    }
+                    if (waitFor.decrementAndGet() == 0) {
+                        changeEventListenerSemaphore.release()
+                    }
+                }).start()
+            },
+            ExceptionListener { _, _ -> }
+        )
+
+        waitForAllStreamsOpen()
+
+        // sync. assert that the conflict handler and
+        // change event listener have been called
+        coll.syncMany(*ids.toTypedArray())
+        streamAndSync()
+
+        assertTrue(changeEventListenerSemaphore.tryAcquire(20, TimeUnit.SECONDS))
+        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
+    }
+
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {
         println("watching for $n change event(s) ns=$namespace")
         val waitFor = AtomicInteger(n)

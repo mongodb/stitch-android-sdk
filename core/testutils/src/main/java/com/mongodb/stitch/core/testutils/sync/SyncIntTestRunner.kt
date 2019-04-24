@@ -190,4 +190,7 @@ interface SyncIntTestRunner {
 
     @Test
     fun testUpdateSyncFrequency()
+
+    @Test
+    fun testFindOnReceivingChangeEvent()
 }
