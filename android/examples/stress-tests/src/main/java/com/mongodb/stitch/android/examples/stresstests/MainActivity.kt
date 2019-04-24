@@ -32,8 +32,6 @@ import com.mongodb.stitch.android.services.mongodb.remote.Sync
 import com.mongodb.stitch.android.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO

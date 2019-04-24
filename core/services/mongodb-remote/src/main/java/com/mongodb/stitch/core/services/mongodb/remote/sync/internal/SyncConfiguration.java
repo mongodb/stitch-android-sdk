@@ -48,18 +48,18 @@ public final class SyncConfiguration {
   }
 
   /**
-   * Gets the ConflictHandler<T> for the SyncConfiguration
+   * Gets the ConflictHandler for the SyncConfiguration
    *
-   * @return the ConflictHandler<T> for the SyncConfiguration.
+   * @return the ConflictHandler for the SyncConfiguration.
    */
   public ConflictHandler<?> getConflictHandler() {
     return conflictHandler;
   }
 
   /**
-   * Gets the ChangeEventListener<T> for the SyncConfiguration
+   * Gets the ChangeEventListener for the SyncConfiguration
    *
-   * @return the ChangeEventListener<T> for the SyncConfiguration.
+   * @return the ChangeEventListener for the SyncConfiguration.
    */
   public ChangeEventListener<?> getChangeEventListener() {
     return changeEventListener;
@@ -84,9 +84,9 @@ public final class SyncConfiguration {
   }
 
   /**
-   * Gets the Codec<T> for the SyncConfiguration
+   * Gets the Codec for the SyncConfiguration
    *
-   * @return the Codec<T> for the SyncConfiguration.
+   * @return the Codec for the SyncConfiguration.
    */
   public Codec<?> getCodec() {
     return codec;
@@ -130,7 +130,7 @@ public final class SyncConfiguration {
     /**
      * Sets the conflictHandler for the SyncConfiguration.
      *
-     * @param conflictHandler the ConflictHandler<T> of the SyncConfiguration.
+     * @param conflictHandler the ConflictHandler of the SyncConfiguration.
      * @return the builder.
      */
     public Builder withConflictHandler(final ConflictHandler<?> conflictHandler) {
@@ -141,7 +141,7 @@ public final class SyncConfiguration {
     /**
      * Sets the changeEventListener for the SyncConfiguration.
      *
-     * @param changeEventListener the ChangeEventListener<T> of the SyncConfiguration.
+     * @param changeEventListener the ChangeEventListener of the SyncConfiguration.
      * @return the builder.
      */
     public Builder withChangeEventListener(final ChangeEventListener<?> changeEventListener) {
@@ -174,7 +174,7 @@ public final class SyncConfiguration {
     /**
      * Sets the codec for the SyncConfiguration.
      *
-     * @param codec the Codec<T> of the SyncConfiguration.
+     * @param codec the Codec of the SyncConfiguration.
      * @return the builder.
      */
     public Builder withCodec(final Codec<?> codec) {
