@@ -37,7 +37,6 @@ import com.mongodb.stitch.android.core.Stitch;
 import com.mongodb.stitch.android.core.StitchAppClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoClient;
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection;
-import com.mongodb.stitch.android.services.mongodb.remote.Sync;
 import com.mongodb.stitch.core.auth.providers.serverapikey.ServerApiKeyCredential;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
@@ -98,7 +97,7 @@ public class TodoListActivity extends AppCompatActivity {
 
     // Configure sync to be remote wins on both collections meaning and conflict that occurs should
     // prefer the remote version as the resolution.
-    SyncConfiguration syncConfig = new SyncConfiguration.Builder()
+    final SyncConfiguration syncConfig = new SyncConfiguration.Builder()
         .withConflictHandler(DefaultSyncConflictResolvers.remoteWins())
         .withChangeEventListener(itemUpdateListener)
         .withExceptionListener((documentId, error) -> Log.e(TAG, error.getLocalizedMessage()))

@@ -1,8 +1,6 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
 import com.google.android.gms.tasks.Tasks
-import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
-import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import org.bson.BsonObjectId
 import org.bson.Document
 import org.bson.types.ObjectId

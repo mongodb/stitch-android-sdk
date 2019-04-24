@@ -23,7 +23,6 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.DeleteManyModel;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
 import java.util.ArrayList;
@@ -345,15 +344,13 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
   }
 
   void setSyncFrequency(final SyncFrequency syncFrequency) {
-      nsLock.writeLock().lock();
-      try {
-        this.syncFrequency = syncFrequency;
-      } finally {
-        nsLock.writeLock().unlock();
-      }
+    nsLock.writeLock().lock();
+    try {
+      this.syncFrequency = syncFrequency;
+    } finally {
+      nsLock.writeLock().unlock();
+    }
   }
-
-
 
   void setStale(final boolean stale) throws InterruptedException {
     nsLock.writeLock().lockInterruptibly();

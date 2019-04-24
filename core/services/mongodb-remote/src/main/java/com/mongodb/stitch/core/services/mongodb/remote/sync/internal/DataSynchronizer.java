@@ -54,10 +54,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.OnDemand;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.Scheduled;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.SyncFrequencyType;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -83,7 +82,6 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonValue;
-import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -359,15 +357,26 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
+  public boolean hasNamespaceListener(@Nonnull final MongoNamespace namespace) {
+    this.waitUntilInitialized();
+    return instanceChangeStreamListener.hasNamespace(namespace);
+  }
+
+  public boolean isNamespaceListenerOpen(@Nonnull final MongoNamespace namespace) {
+    this.waitUntilInitialized();
+    return instanceChangeStreamListener.isOpen(namespace);
+  }
+
   public void configureSyncFrequency(@Nonnull final MongoNamespace namespace,
                                      @Nullable final SyncFrequency syncFrequency) {
-    SyncFrequency newFrequency = syncFrequency != null ? syncFrequency : SyncFrequency.reactive();
+    final SyncFrequency newFrequency = syncFrequency != null
+        ? syncFrequency : SyncFrequency.reactive();
 
     // Set old frequency to onDemand preliminarily because that had no streams or timers
     SyncFrequency oldFrequency = SyncFrequency.onDemand();
 
     // Get the nsConfig and get its syncFrequency
-    NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
+    final NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
     if (nsConfig != null && nsConfig.getSyncFrequency() != null) {
       oldFrequency = nsConfig.getSyncFrequency();
     }
@@ -375,10 +384,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // Set the nsConfig to have a new syncFrequency
     nsConfig.setSyncFrequency(newFrequency);
 
+    // Trigger listening on the namespace
+    triggerListeningToNamespace(namespace);
+
     // Iterate over all possible values for oldFrequency
-    switch(oldFrequency.getType()) {
+    switch (oldFrequency.getType()) {
       case REACTIVE:
-        switch(newFrequency.getType()) {
+        switch (newFrequency.getType()) {
           case REACTIVE:
             // REACTIVE -> REACTIVE: Nothing should change, just return
             return;
@@ -400,10 +412,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             // Close the existing change stream
             instanceChangeStreamListener.removeNamespace(namespace);
             return;
+          default:
+            return;
         }
       case SCHEDULED:
         if (((Scheduled) oldFrequency).isConnected()) {
-          switch(newFrequency.getType()) {
+          switch (newFrequency.getType()) {
             case REACTIVE:
               // SCHEDULED AND isConnected is TRUE --> REACTIVE:
               // Cancel the scheduled time AND do a sync pass on the collection
@@ -428,21 +442,21 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               instanceChangeStreamListener.removeNamespace(namespace);
               // TODO cancel the scheduled timer
               return;
+            default:
+              return;
           }
         } else {
-          switch(newFrequency.getType()) {
+          switch (newFrequency.getType()) {
             case REACTIVE:
               // SCHEDULED AND isConnected is FALSE --> REACTIVE:
               // Cancel the scheduled time AND do a sync pass on the collection
               // AND open a new change stream
-              triggerListeningToNamespace(namespace);
               // TODO cancel the timer and do sync pass on the namespace
               return;
             case SCHEDULED:
               if (((Scheduled) newFrequency).isConnected()) {
                 // SCHEDULED AND isConnected is FALSE --> SCHEDULED and isConnected is TRUE:
                 // Cancel the scheduled time AND schedule a new timer AND open a new stream
-                triggerListeningToNamespace(namespace);
                 // TODO schedule a new timer and delete the old one
                 return;
               } else {
@@ -456,20 +470,20 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               // Cancel the scheduled timer
               // TODO cancel the scheduled timer
               return;
+            default:
+              return;
           }
         }
       case ON_DEMAND:
-        switch(newFrequency.getType()) {
+        switch (newFrequency.getType()) {
           case REACTIVE:
             // ON_DEMAND --> REACTIVE:
             // Open a new change stream listener
-            triggerListeningToNamespace(namespace);
             return;
           case SCHEDULED:
             if (((Scheduled) newFrequency).isConnected()) {
               // ON_DEMAND --> SCHEDULED AND isConnected is TRUE:
               // Schedule a new timer AND open a new stream
-              triggerListeningToNamespace(namespace);
               // TODO schedule a new timer
               return;
             } else {
@@ -481,7 +495,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           case ON_DEMAND:
             // ON_DEMAND --> ON_DEMAND: nothing to change, just return
             return;
+          default:
+            return;
         }
+      default:
+        return;
     }
   }
 
@@ -2914,6 +2932,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
       if (!nsConfig.isConfigured()) {
         return;
+      }
+      if (nsConfig.getSyncFrequency().getType() == SyncFrequencyType.ON_DEMAND) {
+        return;
+      }
+      if (nsConfig.getSyncFrequency().getType() == SyncFrequencyType.SCHEDULED) {
+        if (!((Scheduled) nsConfig.getSyncFrequency()).isConnected()) {
+          return;
+        }
       }
       instanceChangeStreamListener.addNamespace(namespace);
       instanceChangeStreamListener.stop(namespace);

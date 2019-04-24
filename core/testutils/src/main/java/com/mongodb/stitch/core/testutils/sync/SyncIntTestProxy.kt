@@ -15,6 +15,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonElement
@@ -1875,6 +1876,195 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertEquals(expectedDoc, withoutId(coll.find(filter).first()!!))
         assertEquals(
             coll.find(filter).first(), withoutSyncVersion(remoteColl.find(filter).first()!!))
+    }
+
+    @Test
+    fun testConfigureWithReactiveSyncFrequency() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder().withSyncFrequency(SyncFrequency.reactive())
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+    }
+
+    @Test
+    fun testConfigureWithOnDemandSyncFrequency() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder().withSyncFrequency(SyncFrequency.onDemand())
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // There should still not be an entry because this is onDemand sync frequency
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+    }
+
+    @Test
+    fun testConfigureWithScheduledSyncFrequencyConnected() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder()
+            .withSyncFrequency(SyncFrequency.scheduled(1, TimeUnit.MINUTES, true))
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+    }
+
+    @Test
+    fun testConfigureWithScheduledSyncFrequencyNotConnected() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder()
+            .withSyncFrequency(SyncFrequency.scheduled(1, TimeUnit.MINUTES, false))
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+    }
+
+    @Test
+    fun testUpdateSyncFrequency() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder().withSyncFrequency(SyncFrequency.reactive())
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+
+        // Change to OnDemand frequency
+        coll.updateSyncFrequency(SyncFrequency.onDemand())
+        waitForAllStreamsOpen()
+
+        // Stream should close
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertFalse(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+
+        // Change to Scheduled with connected TRUE
+        coll.updateSyncFrequency(SyncFrequency.scheduled(1, TimeUnit.MINUTES, true))
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+
+        // Change to Scheduled with connected FALSE
+        coll.updateSyncFrequency(SyncFrequency.scheduled(2, TimeUnit.MINUTES, false))
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertFalse(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
     }
 
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {

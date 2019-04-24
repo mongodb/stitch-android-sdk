@@ -27,7 +27,7 @@ class SyncConfigurationUnitTests {
         builder.withSyncFrequency(syncFrequency)
         builder.withExceptionListener(exceptionListener)
         builder.withChangeEventListener(changeEventListener)
-         builder.withCodec(codec)
+        builder.withCodec(codec)
         var config = builder.build()
 
         Assert.assertEquals(config.conflictHandler, conflictHandler)
@@ -62,7 +62,7 @@ class SyncConfigurationUnitTests {
 
     private inner class CustomEventListener : ChangeEventListener<BsonDocument> {
         override fun onEvent(documentId: BsonValue, event: ChangeEvent<BsonDocument>) {
-            return;
+            return
         }
     }
 }

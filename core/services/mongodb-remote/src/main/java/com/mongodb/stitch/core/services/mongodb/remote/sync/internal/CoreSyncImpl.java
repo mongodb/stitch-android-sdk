@@ -18,10 +18,7 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncAggregateIterable;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSyncFindIterable;
@@ -36,7 +33,6 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
@@ -63,9 +59,16 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
 
   @Override
   public void configure(@Nonnull final SyncConfiguration syncConfig) {
-      SyncConfiguration newConfig = new SyncConfiguration.Builder(syncConfig)
-          .withCodec(this.service.getCodecRegistry().get(documentClass)).build();
-      this.dataSynchronizer.configure(namespace, newConfig);
+    this.dataSynchronizer.configure(namespace, new SyncConfiguration.Builder(syncConfig)
+        .withCodec(this.service.getCodecRegistry().get(documentClass)).build());
+  }
+
+  /**
+   * Set the SyncFrequency on this collection.
+   * @param syncFrequency the SyncFrequency that contains relevant options
+   */
+  public void updateSyncFrequency(@Nonnull final SyncFrequency syncFrequency) {
+    this.dataSynchronizer.configureSyncFrequency(namespace, syncFrequency);
   }
 
   @Override

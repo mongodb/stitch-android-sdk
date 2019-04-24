@@ -16,7 +16,6 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
-import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
@@ -25,7 +24,6 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
@@ -38,9 +36,15 @@ import org.bson.conversions.Bson;
 public interface CoreSync<DocumentT> {
   /**
    * Set the conflict resolver and and change event listener on this collection.
-   * @param syncConfig the SyncConfiguration<DocumentT> that contains relevant options
+   * @param syncConfig the SyncConfiguration that contains relevant options
    */
   void configure(@Nonnull final SyncConfiguration syncConfig);
+
+  /**
+   * Set the SyncFrequency on this collection.
+   * @param syncFrequency the SyncFrequency that contains relevant options
+   */
+  void updateSyncFrequency(@Nonnull final SyncFrequency syncFrequency);
 
   /**
    * Requests that the given document _id be synchronized.

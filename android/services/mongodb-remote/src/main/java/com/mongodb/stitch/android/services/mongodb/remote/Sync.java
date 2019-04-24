@@ -54,6 +54,7 @@ public interface Sync<DocumentT> {
    * @param changeEventListener the event listener to invoke when a change event happens for the
    *                         document.
    * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
+   * @param syncFrequency the syncFrequency at which to perform synchronization passes
    *
    * @return A Task that completes when Mobile Sync is configured, and the background sync thread
    *         has started.
@@ -63,6 +64,7 @@ public interface Sync<DocumentT> {
                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
                        @Nullable final ExceptionListener exceptionListener,
                        @Nullable final SyncFrequency syncFrequency);
+
   /**
    * Set the conflict handler and and change event listener on this collection. This will start
    * a background sync thread, and should be called before any CRUD operations are attempted.
@@ -73,6 +75,15 @@ public interface Sync<DocumentT> {
    *         has started.
    */
   Task<Void> configure(@NonNull final SyncConfiguration syncConfiguration);
+
+  /**
+   * Sets the SyncFrequency on this collection.
+   *
+   * @param syncFrequency the SyncFrequency that contains all the desired options
+   *
+   * @return A Task that completes when the SyncFrequency has been updated
+   */
+  Task<Void> updateSyncFrequency(@NonNull final SyncFrequency syncFrequency);
 
   /**
    * Requests that the given document _id be synchronized.

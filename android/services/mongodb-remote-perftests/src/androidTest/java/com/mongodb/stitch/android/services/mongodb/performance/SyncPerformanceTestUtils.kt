@@ -268,7 +268,7 @@ class SyncPerformanceTestUtils {
                         "unexpected sync error with id " +
                             "$id: ${ex.localizedMessage}")
                     error(ex)
-                }).withSyncFrequency(SyncFrequency.onDemand()).build()
+                }).withSyncFrequency(SyncFrequency.reactive()).build()
 
             Tasks.await(ctx.testColl.sync().configure(config))
         }

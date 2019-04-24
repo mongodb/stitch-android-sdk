@@ -89,6 +89,10 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             return Tasks.await(sync.configure(syncConfig))
         }
 
+        override fun updateSyncFrequency(syncFrequency: SyncFrequency): Void? {
+            return Tasks.await(sync.updateSyncFrequency(syncFrequency))
+        }
+
         override fun syncOne(id: BsonValue): Void? {
             return Tasks.await(sync.syncOne(id))
         }
@@ -435,6 +439,30 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     fun testUpdateUpdateCoalescence() {
         testProxy.testUpdateUpdateCoalescence()
+    }
+
+    override fun testConfigureWithReactiveSyncFrequency() {
+        testProxy.testConfigureWithReactiveSyncFrequency()
+    }
+
+    @Test
+    override fun testConfigureWithOnDemandSyncFrequency() {
+        testProxy.testConfigureWithOnDemandSyncFrequency()
+    }
+
+    @Test
+    override fun testConfigureWithScheduledSyncFrequencyConnected() {
+        testProxy.testConfigureWithScheduledSyncFrequencyConnected()
+    }
+
+    @Test
+    override fun testConfigureWithScheduledSyncFrequencyNotConnected() {
+        testProxy.testConfigureWithScheduledSyncFrequencyNotConnected()
+    }
+
+    @Test
+    override fun testUpdateSyncFrequency() {
+        testProxy.testUpdateSyncFrequency()
     }
 
     /**
