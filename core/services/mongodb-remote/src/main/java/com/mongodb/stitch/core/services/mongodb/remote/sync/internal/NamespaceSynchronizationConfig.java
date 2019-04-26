@@ -332,7 +332,6 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
   }
 
   void setStale(final boolean stale) throws InterruptedException {
-    System.err.println("SETTING A NAMESPACE STALENESS TO " + stale + "!!!!!!!");
     nsLock.writeLock().lockInterruptibly();
     try {
       namespacesColl.updateOne(

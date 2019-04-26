@@ -363,7 +363,6 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone()
 
-        System.err.println("pseudoUpdatedDocument" + pseudoUpdatedDocument.toJson())
         ctx.queueConsumableRemoteUpdateEvent(
             pseudoUpdatedDocument,
             TestVersionState.SAME

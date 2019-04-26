@@ -200,8 +200,6 @@ class SyncUnitTestHarness : Closeable {
         fun compareEvents(expectedEvent: CompactChangeEvent<BsonDocument>, actualEvent: CompactChangeEvent<BsonDocument>) {
             compareBaseEvents(expectedEvent, actualEvent)
 
-//            System.err.println(expectedEvent.stitchDocumentVersion!!.toBsonDocument().toJson())
-//            System.err.println(actualEvent.stitchDocumentVersion!!.toBsonDocument().toJson())
             Assert.assertEquals(expectedEvent.stitchDocumentVersion, actualEvent.stitchDocumentVersion)
             Assert.assertEquals(expectedEvent.stitchDocumentHash, actualEvent.stitchDocumentHash)
         }

@@ -790,8 +790,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           };
       }
 
-      System.err.println("HERE'S THE REMOTE EVENT: " + remoteChangeEvent.toBsonDocument().toJson());
-
       DocumentVersionInfo remoteVersionInfo = null;
       if (action == null) { // if we haven't encountered an error
         try {
@@ -844,12 +842,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           } else {
             // use the last seen hash version
             lastSeenHash = docConfig.getLastKnownHash();
-          }
-
-          System.err.println("REMOTE HAS NO VERSION: " + remoteHasNoVersion);
-          System.err.println("LAST SEEN HAS NO VERSION: " + lastSeenHasNoVersion);
-          if (!lastSeenHasNoVersion) {
-            System.err.println("LAST SEEN VERSION: " + lastSeenVersionInfo.getVersionDoc().toJson());
           }
 
           if (docConfig.getLastUncommittedChangeEvent() == null) {
@@ -1419,7 +1411,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       logger.debug(formattedMessage);
     }
 
-    System.err.println("WEVE ENQUEUED AN ACTION AND ITS " + action.description);
     switch (action) {
       case DROP_EVENT:
       case WAIT:
@@ -1822,22 +1813,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         documentId,
         localEvent,
         remoteEvent);
-    System.err.println("\n\nIN THE RESOLVER!!!");
 
     switch (resolution.getType()) {
       case FROM_LOCAL:
         return localEvent.getFullDocument();
       case FROM_REMOTE:
-        System.err.println("IN THE REMOTE HANDLER!!!");
         if (remoteEvent.getOperationType() == OperationType.UPDATE) {
-          System.err.println("IN THE REMOTE UPDATE HANDLER!!!");
           // we can compute the remote full document by fetching the full document
-          final BsonDocument remoteFindResult =
-              this.getRemoteCollection(ns).findOne(getDocumentIdFilter(documentId));
-
-          System.err.println("FOUND THE REMOTE DOC!!!");
-
-          return remoteFindResult ;
+          return this.getRemoteCollection(ns).findOne(getDocumentIdFilter(documentId));
         } else {
           // for inserts, replaces, and deletes, we always want the full document in the remote
           // update since it will be populated for inserts and replaced and null for deletes
@@ -3137,27 +3120,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private Set<BsonDocument> getLatestDocumentsForStaleFromRemote(
       final NamespaceSynchronizationConfig nsConfig,
       final Set<BsonValue> staleIds) {
-
-    System.err.println("GETTING SOME STALE STUFF!!!");
-    for (BsonValue staleId : staleIds) {
-      System.err.println("THIS IS A STALE ONE: " + staleId.toString());
-    }
-
     final BsonArray ids = new BsonArray();
     Collections.addAll(ids, staleIds.toArray(new BsonValue[0]));
 
     if (ids.size() == 0) {
       return new HashSet<>();
     }
-
-//    final HashSet<BsonDocument> debugResult = this.getRemoteCollection(nsConfig.getNamespace()).find(
-//        new BsonDocument("_id", new BsonDocument("$in", ids))
-//    ).into(new HashSet<>());
-//
-//    System.err.println("DEBUG STALE FIND RESULT:");
-//    for (BsonDocument bsonDocument : debugResult) {
-//      System.err.println(bsonDocument.toJson());
-//    }
 
     return this.getRemoteCollection(nsConfig.getNamespace()).find(
         new BsonDocument("_id", new BsonDocument("$in", ids))
