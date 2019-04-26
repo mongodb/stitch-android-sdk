@@ -629,10 +629,26 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             continue;
           }
 
+          // if this event is an update but there there is a stale document that we've fetched,
+          // we need to synthesize and apply a local replace event so that the update is applied to
+          // the latest version of the document
+          final BsonValue documentId = docConfig.getDocumentId();
+          if (eventEntry.getValue().getOperationType() == OperationType.UPDATE
+              && latestDocumentMap.containsKey(documentId)) {
+            localSyncWriteModelContainer.merge(syncRemoteChangeEventToLocal(
+                nsConfig,
+                docConfig,
+                ChangeEvents.compactChangeEventForLocalReplace(
+                    documentId,
+                    latestDocumentMap.get(documentId),
+                    false
+                )));
+          }
+
           docConfig.getLock().readLock().lock();
           try {
-            unseenIds.remove(docConfig.getDocumentId());
-            latestDocumentMap.remove(docConfig.getDocumentId());
+            unseenIds.remove(documentId);
+            latestDocumentMap.remove(documentId);
           } finally {
             docConfig.getLock().readLock().unlock();
           }
@@ -774,6 +790,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           };
       }
 
+      System.err.println("HERE'S THE REMOTE EVENT: " + remoteChangeEvent.toBsonDocument().toJson());
+
       DocumentVersionInfo remoteVersionInfo = null;
       if (action == null) { // if we haven't encountered an error
         try {
@@ -826,6 +844,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           } else {
             // use the last seen hash version
             lastSeenHash = docConfig.getLastKnownHash();
+          }
+
+          System.err.println("REMOTE HAS NO VERSION: " + remoteHasNoVersion);
+          System.err.println("LAST SEEN HAS NO VERSION: " + lastSeenHasNoVersion);
+          if (!lastSeenHasNoVersion) {
+            System.err.println("LAST SEEN VERSION: " + lastSeenVersionInfo.getVersionDoc().toJson());
           }
 
           if (docConfig.getLastUncommittedChangeEvent() == null) {
@@ -1394,6 +1418,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (logger.isDebugEnabled()) {
       logger.debug(formattedMessage);
     }
+
+    System.err.println("WEVE ENQUEUED AN ACTION AND ITS " + action.description);
     switch (action) {
       case DROP_EVENT:
       case WAIT:
@@ -1421,6 +1447,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               applyNewVersion,
               remoteHash
           );
+        }
+
+        if (writeContainer == null) {
+          return null;
         }
 
         // remotely update this document to have a version
@@ -1792,14 +1822,22 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         documentId,
         localEvent,
         remoteEvent);
+    System.err.println("\n\nIN THE RESOLVER!!!");
 
     switch (resolution.getType()) {
       case FROM_LOCAL:
         return localEvent.getFullDocument();
       case FROM_REMOTE:
+        System.err.println("IN THE REMOTE HANDLER!!!");
         if (remoteEvent.getOperationType() == OperationType.UPDATE) {
+          System.err.println("IN THE REMOTE UPDATE HANDLER!!!");
           // we can compute the remote full document by fetching the full document
-          return this.getRemoteCollection(ns).findOne(getDocumentIdFilter(documentId));
+          final BsonDocument remoteFindResult =
+              this.getRemoteCollection(ns).findOne(getDocumentIdFilter(documentId));
+
+          System.err.println("FOUND THE REMOTE DOC!!!");
+
+          return remoteFindResult ;
         } else {
           // for inserts, replaces, and deletes, we always want the full document in the remote
           // update since it will be populated for inserts and replaced and null for deletes
@@ -2574,9 +2612,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           event = ChangeEvents.changeEventForLocalUpdate(
               namespace,
               documentId,
-              UpdateDescription.diff(
+              sanitizeUpdateDescription(UpdateDescription.diff(
                   sanitizeDocument(remoteEvent.getFullDocument()),
-                  docForStorage),
+                  docForStorage)),
               docForStorage,
               true);
         } else {
@@ -2687,6 +2725,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonDocument atVersion,
       final long withHash
   ) {
+    if(updateDescription.isEmpty()) {
+      // don't do anything for completely no-op updates
+      return null;
+    }
+
+    final UpdateDescription sanitizedUpdateDescription =
+        sanitizeUpdateDescription(updateDescription);
+
     final MongoNamespace namespace = nsConfig.getNamespace();
     final ChangeEvent<BsonDocument> event;
     final Lock lock =
@@ -2700,32 +2746,39 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
 
       config.setPendingWritesComplete(withHash, atVersion);
-
-      event = ChangeEvents.changeEventForLocalUpdate(
-          namespace,
-          documentId,
-          updateDescription,
-          null,
-          false
-      );
     } finally {
       lock.unlock();
     }
 
-    eventDispatcher.emitEvent(nsConfig, event);
     final LocalSyncWriteModelContainer container = newWriteModelContainer(nsConfig);
 
-    container.addDocIDs(documentId);
-    container.addLocalWrite(new UpdateOneModel<>(
-        getDocumentIdFilter(documentId),
-        updateDescription.toUpdateDocument(),
-        new UpdateOptions().upsert(false) // we should not upsert. if the document does not exist,
-                                          // it means we are out of date on that document
-    ));
+    // only emit the event and execute the local write if the
+    // sanitized update description is non-empty
+    if (!sanitizedUpdateDescription.isEmpty()) {
+      container.addDocIDs(documentId);
+
+      event = ChangeEvents.changeEventForLocalUpdate(
+          namespace,
+          documentId,
+          sanitizedUpdateDescription,
+          null,
+          false
+      );
+      container.addLocalChangeEvent(event);
+
+      container.addLocalWrite(new UpdateOneModel<>(
+          getDocumentIdFilter(documentId),
+          sanitizedUpdateDescription.toUpdateDocument(),
+          new UpdateOptions().upsert(false) // we should not upsert. if the document does not exist,
+          // it means we are out of date on that document. we can
+          // not apply an update change event as an upsert
+      ));
+    }
 
     container.addConfigWrite(new ReplaceOneModel<>(
-        CoreDocumentSynchronizationConfig.getDocFilter(namespace, config.getDocumentId()
-        ), config));
+        CoreDocumentSynchronizationConfig.getDocFilter(namespace, config.getDocumentId()),
+        config
+    ));
 
     return container;
   }
@@ -3085,12 +3138,26 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final NamespaceSynchronizationConfig nsConfig,
       final Set<BsonValue> staleIds) {
 
+    System.err.println("GETTING SOME STALE STUFF!!!");
+    for (BsonValue staleId : staleIds) {
+      System.err.println("THIS IS A STALE ONE: " + staleId.toString());
+    }
+
     final BsonArray ids = new BsonArray();
     Collections.addAll(ids, staleIds.toArray(new BsonValue[0]));
 
     if (ids.size() == 0) {
       return new HashSet<>();
     }
+
+//    final HashSet<BsonDocument> debugResult = this.getRemoteCollection(nsConfig.getNamespace()).find(
+//        new BsonDocument("_id", new BsonDocument("$in", ids))
+//    ).into(new HashSet<>());
+//
+//    System.err.println("DEBUG STALE FIND RESULT:");
+//    for (BsonDocument bsonDocument : debugResult) {
+//      System.err.println(bsonDocument.toJson());
+//    }
 
     return this.getRemoteCollection(nsConfig.getNamespace()).find(
         new BsonDocument("_id", new BsonDocument("$in", ids))
@@ -3160,7 +3227,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *
    * @return a BsonDocument without any forbidden fields.
    */
-  static BsonDocument sanitizeDocument(final BsonDocument document) {
+  static BsonDocument sanitizeDocument(
+      final @Nullable BsonDocument document
+  ) {
     if (document == null) {
       return null;
     }
@@ -3171,6 +3240,28 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       return clonedDoc;
     }
     return document;
+  }
+
+  static UpdateDescription sanitizeUpdateDescription(
+      final @Nullable UpdateDescription updateDescription
+  ) {
+    if (updateDescription == null) {
+      return null;
+    }
+    final BsonDocument sanitizedUpdatedFields = updateDescription.getUpdatedFields().clone();
+    sanitizedUpdatedFields.remove(DOCUMENT_VERSION_FIELD);
+
+    final ArrayList<String> sanitizedRemovedFields = new ArrayList<>();
+    for (String removedField : updateDescription.getRemovedFields()) {
+      if (removedField.equals(DOCUMENT_VERSION_FIELD)) {
+        continue;
+      }
+      sanitizedRemovedFields.add(removedField);
+    }
+
+    return new UpdateDescription(
+        sanitizedUpdatedFields, sanitizedRemovedFields
+    );
   }
 
   /**
@@ -3254,7 +3345,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   private enum SyncAction {
     APPLY_FROM_REMOTE("; applying changes from the remote document"),
-    APPLY_AND_VERSION_FROM_REMOTE("; applying changes from the remote document"),
+    APPLY_AND_VERSION_FROM_REMOTE("; applying changes from the remote document, apply a new version"),
     CONFLICT("; raising conflict"),
     DELETE_LOCAL_DOC_AND_DESYNC("; deleting and desyncing the document"),
     DELETE_LOCAL_DOC("; applying the remote delete"),

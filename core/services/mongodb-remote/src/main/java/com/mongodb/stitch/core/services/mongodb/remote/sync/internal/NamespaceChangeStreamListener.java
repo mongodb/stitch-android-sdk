@@ -228,6 +228,7 @@ public class NamespaceChangeStreamListener implements Closeable {
         this.nsConfig.setStale(true);
         isOpen = true;
       } else {
+        System.err.println("OOOOPSIES WE DIDNT OPEN THE STREAM!!!!!!!!!!!!!!!" + currentStream);
         isOpen = false;
       }
     } finally {

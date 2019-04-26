@@ -102,6 +102,17 @@ public final class DocumentVersionInfo {
 
       return asDoc;
     }
+
+    @Override
+    public boolean equals(Object otherVersionObj) {
+      if (!(otherVersionObj instanceof Version)) {
+        return false;
+      }
+
+      final Version otherVersion = (Version) otherVersionObj;
+
+      return this.toBsonDocument().equals(otherVersion.toBsonDocument());
+    }
   }
 
   private DocumentVersionInfo(
@@ -222,6 +233,10 @@ public final class DocumentVersionInfo {
    * @return a BsonDocument representing a synchronization version
    */
   static BsonDocument getFreshVersionDocument() {
+    System.err.println("I'M PRODUCING A FRESH VERSION DOCUMENT!!");
+    for (StackTraceElement stackTraceElement : Thread.currentThread().getStackTrace()) {
+      System.err.println(stackTraceElement.toString());
+    }
     final BsonDocument versionDoc = new BsonDocument();
 
     versionDoc.append(Fields.SYNC_PROTOCOL_VERSION_FIELD, new BsonInt32(1));

@@ -69,7 +69,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc1Filter = Document("_id", doc1Id)
 
         // start watching it and always set the value to hello world in a conflict
-        syncOperations.configure(ConflictHandler { id: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
+        syncOperations.configure(ConflictHandler { id: BsonValue, localEvent: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
             // ensure that there is no version information on the documents in the conflict handler
             assertNoVersionFieldsInDoc(localEvent.fullDocument!!)
 
@@ -167,7 +167,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val doc1Id = BsonObjectId(doc.getObjectId("_id"))
         val doc1Filter = Document("_id", doc1Id)
 
-        coll.configure(ConflictHandler { _: BsonValue, localEvent: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
+        coll.configure(ConflictHandler { _: BsonValue, localEvent: ChangeEvent<Document>, _: CompactChangeEvent<Document> ->
             val merged = Document(localEvent.fullDocument)
             val fetchedRemoteDoc = remoteColl
                 .find(Document("_id", localEvent.documentKey["_id"])).first()!!

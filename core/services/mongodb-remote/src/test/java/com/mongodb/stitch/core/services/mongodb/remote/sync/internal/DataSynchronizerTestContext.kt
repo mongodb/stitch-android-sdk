@@ -8,8 +8,10 @@ import com.mongodb.client.result.UpdateResult
 import com.mongodb.stitch.core.internal.common.Dispatcher
 import com.mongodb.stitch.core.internal.net.Event
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
+import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
 import org.bson.BsonDocument
 import org.bson.BsonValue
@@ -36,6 +38,8 @@ interface DataSynchronizerTestContext : Closeable {
     val clientKey: String
     val instanceKey: String
     val testDocument: BsonDocument
+    val testDocumentVersion: BsonDocument?
+    val testDocumentHash: Long
     val testDocumentId: BsonValue
     val testDocumentFilter: BsonDocument
     var updateDocument: BsonDocument
@@ -138,6 +142,11 @@ interface DataSynchronizerTestContext : Closeable {
     fun findTestDocumentConfig(): CoreDocumentSynchronizationConfig?
 
     /**
+     * Set the test namespace as stale to simulate a stream opening.
+     */
+    fun setNamespaceStale(isStale: Boolean)
+
+    /**
      * Verify the changeEventListener was called for the test document.
      */
     fun verifyChangeEventListenerCalledForActiveDoc(times: Int, vararg expectedChangeEvents: ChangeEvent<BsonDocument> = arrayOf())
@@ -153,7 +162,7 @@ interface DataSynchronizerTestContext : Closeable {
     fun verifyConflictHandlerCalledForActiveDoc(
         times: Int,
         expectedLocalConflictEvent: ChangeEvent<BsonDocument>? = null,
-        expectedRemoteConflictEvent: ChangeEvent<BsonDocument>? = null
+        expectedRemoteConflictEvent: CompactChangeEvent<BsonDocument>? = null
     )
 
     /**
@@ -186,7 +195,19 @@ interface DataSynchronizerTestContext : Closeable {
      */
     fun queueConsumableRemoteUpdateEvent(
         id: BsonValue = testDocumentId,
-        document: BsonDocument = testDocument,
+        previousVersion: BsonDocument? = testDocumentVersion,
+        expectedNewHash: Long = testDocumentHash,
+        remoteUpdate: UpdateDescription = UpdateDescription(BsonDocument(), ArrayList()),
+        versionState: TestVersionState = TestVersionState.NEXT
+    )
+
+    fun queueConsumableRemoteUpdateEvent(
+        fromExpectedDoc: BsonDocument,
+        versionState: TestVersionState = TestVersionState.NEXT
+    )
+
+    fun queueConsumableRemoteReplaceEvent(
+        fromExpectedDoc: BsonDocument,
         versionState: TestVersionState = TestVersionState.NEXT
     )
 
@@ -224,4 +245,19 @@ interface DataSynchronizerTestContext : Closeable {
      * Mock an exception when deleting on the remote collection.
      */
     fun mockDeleteException(exception: Exception)
+
+    /**
+     * Mock a find one result on the remote collection.
+     */
+    fun mockFindOneResult(doc: BsonDocument?)
+
+    /**
+     * Mock a find result on the remote collection.
+     */
+    fun mockFindResult(vararg docs: BsonDocument?)
+
+    /**
+     * Return nothing when calling find one.
+     */
+    fun clearFindOneMock()
 }

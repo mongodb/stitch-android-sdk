@@ -245,6 +245,15 @@ public final class UpdateDescription {
     );
   }
 
+  /**
+   * Determines whether this update description is empty.
+   *
+   * @return true if the update description is empty, false otherwise
+   */
+  public boolean isEmpty() {
+    return this.updatedFields.size() == 0 && this.removedFields.size() == 0;
+  }
+
   @Override
   public boolean equals(final Object obj) {
     if (obj == null || !obj.getClass().equals(UpdateDescription.class)) {

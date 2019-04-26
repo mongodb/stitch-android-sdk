@@ -332,6 +332,7 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
   }
 
   void setStale(final boolean stale) throws InterruptedException {
+    System.err.println("SETTING A NAMESPACE STALENESS TO " + stale + "!!!!!!!");
     nsLock.writeLock().lockInterruptibly();
     try {
       namespacesColl.updateOne(
@@ -360,6 +361,17 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
       // eat this
     } finally {
       nsLock.writeLock().unlock();
+    }
+  }
+
+  public boolean isStale() {
+    nsLock.readLock().lock();
+    try {
+      final BsonDocument filter = getNsFilter(getNamespace());
+      filter.append(ConfigCodec.Fields.IS_STALE, BsonBoolean.TRUE);
+      return docsColl.countDocuments(filter) == 1;
+    } finally {
+      nsLock.readLock().unlock();
     }
   }
 
