@@ -20,7 +20,7 @@ import java.io.IOException;
 
 public interface Transport {
   // This is how Stitch Server calculates the maximum request size
-  // This number is equal to 4,194,304 or ~ 4Mb
+  // This number is equal to 17,825,792 or ~ 17Mb
   int MAX_REQUEST_SIZE = 17 * (1 << 20);
 
   Response roundTrip(Request request) throws Exception;
