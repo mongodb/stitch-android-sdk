@@ -409,7 +409,7 @@ class SyncUnitTestHarness : Closeable {
 
         /**
          * Reconfigure the internal dataSynchronizer with
-         * the current conflictHandler, changeEventListener, and
+         * the current conflictHandler, changeEventListener,
          * errorListener, and syncFrequency.
          */
         override fun reconfigure() {

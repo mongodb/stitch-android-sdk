@@ -357,11 +357,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
+  // Method used for testing: returns if the DataSynchronizer has an nsConfig for namespace
   public boolean hasNamespaceListener(@Nonnull final MongoNamespace namespace) {
     this.waitUntilInitialized();
     return instanceChangeStreamListener.hasNamespace(namespace);
   }
 
+  // Method used for testing: returns if the nsConfig's stream is open for namespace
   public boolean isNamespaceListenerOpen(@Nonnull final MongoNamespace namespace) {
     this.waitUntilInitialized();
     return instanceChangeStreamListener.isOpen(namespace);
@@ -515,10 +517,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (!this.isConfigured) {
       this.isConfigured = true;
       syncLock.unlock();
-      this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
     } else {
       syncLock.unlock();
     }
+
+    this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
 
     if (!isRunning) {
       this.start();
