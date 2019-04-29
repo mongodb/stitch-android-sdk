@@ -516,12 +516,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     syncLock.lock();
     if (!this.isConfigured) {
       this.isConfigured = true;
-      syncLock.unlock();
-    } else {
-      syncLock.unlock();
     }
 
     this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
+
+    syncLock.unlock();
 
     if (!isRunning) {
       this.start();
