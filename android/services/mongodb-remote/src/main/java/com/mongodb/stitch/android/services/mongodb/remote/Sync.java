@@ -35,10 +35,10 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequen
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.CheckReturnValue;
+
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
-
-import javax.annotation.CheckReturnValue;
 
 /**
  * A set of synchronization related operations for a collection.
