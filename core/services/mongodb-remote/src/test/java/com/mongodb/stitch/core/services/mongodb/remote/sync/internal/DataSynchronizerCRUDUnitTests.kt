@@ -30,7 +30,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import java.lang.Exception
-import java.util.Collections
 
 class DataSynchronizerCRUDUnitTests {
     companion object {

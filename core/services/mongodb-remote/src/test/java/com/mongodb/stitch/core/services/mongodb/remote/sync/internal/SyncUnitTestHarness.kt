@@ -329,7 +329,6 @@ class SyncUnitTestHarness : Closeable {
         override val testDocumentHash: Long
             get() = HashUtils.hash(DataSynchronizer.sanitizeDocument(this.testDocument))
 
-
         var changeEventListener = newChangeEventListener()
             private set
         var conflictHandler = newConflictHandler()
@@ -585,7 +584,6 @@ class SyncUnitTestHarness : Closeable {
                             "v",
                             BsonInt64(documentVersionInfo.version.versionCounter - 1)
                         )
-
                     }
                     TestVersionState.SAME ->
                         documentVersionInfo.versionDoc
@@ -602,7 +600,7 @@ class SyncUnitTestHarness : Closeable {
                 }
             }
 
-            if(newVersion == null) {
+            if (newVersion == null) {
                 remoteUpdate.removedFields.add("__stitch_sync_version")
             } else {
                 remoteUpdate.updatedFields.append("__stitch_sync_version", newVersion)
@@ -618,7 +616,6 @@ class SyncUnitTestHarness : Closeable {
                 )),
                 mapOf())
         }
-
 
         override fun queueConsumableRemoteUpdateEvent(
             fromExpectedDoc: BsonDocument,
@@ -642,7 +639,6 @@ class SyncUnitTestHarness : Closeable {
             val newVersion: BsonDocument?
             val newDoc = fromExpectedDoc.clone()
 
-
             if (previousVersion != null) {
                 val documentVersionInfo = DocumentVersionInfo.fromVersionDoc(previousVersion.asDocument())
                 newVersion = when (versionState) {
@@ -657,7 +653,6 @@ class SyncUnitTestHarness : Closeable {
                             "v",
                             BsonInt64(documentVersionInfo.version.versionCounter - 1)
                         )
-
                     }
                     TestVersionState.SAME ->
                         documentVersionInfo.versionDoc
@@ -674,7 +669,7 @@ class SyncUnitTestHarness : Closeable {
                 }
             }
 
-            if(newVersion == null) {
+            if (newVersion == null) {
                 newDoc.remove("__stitch_sync_version")
             } else {
                 newDoc.append("__stitch_sync_version", newVersion)

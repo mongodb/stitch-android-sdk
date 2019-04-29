@@ -6,7 +6,6 @@ import org.bson.BsonDocument
 import org.bson.BsonElement
 import org.bson.BsonInt32
 import org.bson.BsonString
-import org.bson.conversions.Bson
 import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

@@ -96,12 +96,14 @@ public abstract class ConflictResolution {
   }
 
   /**
-   * Constructs a new {@link WithDocument} resolution with the provided document.
+   * Returns a new {@link WithDocument} resolution with the provided document.
    *
    * @param fullDocumentForResolution The object representing the document that resolves the
    *                                  conflict
+   * @param <T> The Java type of the full document.
+   * @return the {@link WithDocument} conflict resolution with the provided full document.
    */
-  public static <T> ConflictResolution withDocument(T fullDocumentForResolution) {
+  public static <T> ConflictResolution withDocument(final T fullDocumentForResolution) {
     return new WithDocument<>(fullDocumentForResolution);
   }
 
@@ -123,5 +125,10 @@ public abstract class ConflictResolution {
     return FromLocal.instance;
   }
 
+  /**
+   * Returns the enum type of this {@link ConflictResolution}.
+   *
+   * @return the type of this {@link ConflictResolution}
+   */
   public abstract ConflictResolutionType getType();
 }

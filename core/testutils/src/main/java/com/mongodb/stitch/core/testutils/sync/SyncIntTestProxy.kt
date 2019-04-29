@@ -1974,7 +1974,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
     private val failingConflictHandler = ConflictHandler { _: BsonValue, event1: ChangeEvent<Document>, event2: CompactChangeEvent<Document> ->
         val localEventDescription = when (event1.operationType == OperationType.DELETE) {
             true -> "delete"
-            false -> when(event1.operationType == OperationType.UPDATE) {
+            false -> when (event1.operationType == OperationType.UPDATE) {
                 true -> event1.updateDescription!!.toBsonDocument().toJson()
                 false -> event1.fullDocument!!.toJson()
             }
