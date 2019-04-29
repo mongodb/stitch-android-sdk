@@ -1121,11 +1121,17 @@ class DataSynchronizerUnitTests {
         ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
         // this should not hang to wait for the missing document
+        ctx.waitForDataSynchronizerStreams()
+        ctx.doSyncPass()
+
+        // the initial stale fetch should have occurred
+        verify(ctx.collectionMock, times(1)).find(any())
+
         ctx.doSyncPass()
 
         // the remote collection should not have been polled to
         // see if the missing document is now present
-        verify(ctx.collectionMock, times(0)).find(any())
+        verify(ctx.collectionMock, times(1)).find(any())
 
         // simulate a disconnect/reconnect where the document appears after reconnect
         ctx.mockFindResult(ctx.testDocument)
@@ -1133,7 +1139,7 @@ class DataSynchronizerUnitTests {
 
         ctx.doSyncPass()
 
-        verify(ctx.collectionMock, times(1)).find(any())
+        verify(ctx.collectionMock, times(2)).find(any())
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
