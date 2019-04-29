@@ -1147,15 +1147,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
                   // 3. UPDATE
                   case UPDATE: {
-                    if (localDoc == null) {
-                      final IllegalStateException illegalStateException = new IllegalStateException(
-                          SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE.toString());
-
-                      action = SyncAction.DROP_EVENT_AND_PAUSE;
-                      message = SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE;
-                      syncException = illegalStateException;
-                      suppressLocalEvent = true;
-                    } else {
+//                    if (localDoc == null) {
+//                      final IllegalStateException illegalStateException = new IllegalStateException(
+//                          SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE.toString());
+//
+//                      action = SyncAction.DROP_EVENT_AND_PAUSE;
+//                      message = SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE;
+//                      syncException = illegalStateException;
+//                      suppressLocalEvent = true;
+//                    } else
+                    {
                       final UpdateDescription localUpdateDescription =
                           localChangeEvent.getUpdateDescription();
                       if (localUpdateDescription.getRemovedFields().isEmpty()

@@ -51,7 +51,7 @@ class DataSynchronizerCRUDUnitTests {
                 ctx.testDocumentId,
                 ctx.testDocumentVersion,
                 ctx.testDocumentHash,
-                UpdateDescription(BsonDocument(), ArrayList()),
+                UpdateDescription(BsonDocument(), HashSet()),
                 TestVersionState.NEXT
 
             )
@@ -347,7 +347,7 @@ class DataSynchronizerCRUDUnitTests {
             ChangeEvents.changeEventForLocalUpdate(
                 ctx.namespace,
                 ctx.testDocumentId,
-                UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+                UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
                 docAfterUpdate,
                 true
             ))
@@ -360,7 +360,7 @@ class DataSynchronizerCRUDUnitTests {
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
             docAfterUpdate,
             false
         ))
@@ -395,7 +395,7 @@ class DataSynchronizerCRUDUnitTests {
         var expectedLocalEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
             docAfterUpdate,
             true)
 
@@ -433,7 +433,7 @@ class DataSynchronizerCRUDUnitTests {
         expectedLocalEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
             docAfterUpdate,
             true)
         var expectedRemoteEvent = ChangeEvents.compactChangeEventForLocalDelete(ctx.testDocumentId, false)
@@ -478,7 +478,7 @@ class DataSynchronizerCRUDUnitTests {
         expectedLocalEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
-            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
             docAfterUpdate,
             true)
         expectedRemoteEvent = ChangeEvents.compactChangeEventForLocalDelete(ctx.testDocumentId, false)
@@ -545,7 +545,7 @@ class DataSynchronizerCRUDUnitTests {
         val expectedEvent = ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocument["_id"],
-            UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()),
+            UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
             docAfterUpdate,
             true
         )
@@ -670,7 +670,7 @@ class DataSynchronizerCRUDUnitTests {
         ctx.verifyConflictHandlerCalledForActiveDoc(1, expectedLocalEvent,
             ChangeEvents.compactChangeEventForLocalUpdate(
                 ctx.testDocumentId,
-                UpdateDescription(BsonDocument(), ArrayList()),
+                UpdateDescription(BsonDocument(), HashSet()),
                 ctx.testDocumentVersion,
                 HashUtils.hash(DataSynchronizer.sanitizeDocument(ctx.testDocument)),
                 false))
@@ -714,7 +714,7 @@ class DataSynchronizerCRUDUnitTests {
             ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, true),
             ChangeEvents.compactChangeEventForLocalUpdate(
                 ctx.testDocumentId,
-                UpdateDescription(BsonDocument(), ArrayList()),
+                UpdateDescription(BsonDocument(), HashSet()),
                 ctx.testDocumentVersion,
                 HashUtils.hash(DataSynchronizer.sanitizeDocument(ctx.testDocument)),
                 false
@@ -917,7 +917,7 @@ class DataSynchronizerCRUDUnitTests {
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
             ChangeEvents.changeEventForLocalUpdate(
-                ctx.namespace, ctx.testDocumentId, UpdateDescription(BsonDocument("count", BsonInt32(2)), listOf()), expectedDocumentAfterUpdate, true))
+                ctx.namespace, ctx.testDocumentId, UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()), expectedDocumentAfterUpdate, true))
         // assert that the updated document equals what we've expected
         assertEquals(ctx.testDocument["_id"], ctx.findTestDocumentFromLocalCollection()?.get("_id"))
         assertEquals(expectedDocumentAfterUpdate, ctx.findTestDocumentFromLocalCollection()!!)
@@ -1036,7 +1036,7 @@ class DataSynchronizerCRUDUnitTests {
                 doc1["_id"],
                 UpdateDescription(
                     BsonDocument("count", BsonInt32(2)),
-                    listOf()
+                    setOf()
                 ),
                 expectedDocAfterUpdate1,
                 true),
@@ -1045,7 +1045,7 @@ class DataSynchronizerCRUDUnitTests {
                 doc2["_id"],
                 UpdateDescription(
                     BsonDocument("count", BsonInt32(2)),
-                    listOf()
+                    setOf()
                 ),
                 expectedDocAfterUpdate2,
                 true))

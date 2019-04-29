@@ -417,6 +417,61 @@ public class CoreDocumentSynchronizationConfig {
             break;
         }
         break;
+      case UPDATE:
+        switch (newestChangeEvent.getOperationType()) {
+          case UPDATE:
+            return new ChangeEvent<>(
+                newestChangeEvent.getId(),
+                OperationType.UPDATE,
+                newestChangeEvent.getFullDocument(),
+                newestChangeEvent.getNamespace(),
+                newestChangeEvent.getDocumentKey(),
+                lastUncommittedChangeEvent.getUpdateDescription() != null
+                    ? lastUncommittedChangeEvent
+                        .getUpdateDescription()
+                        .merge(newestChangeEvent.getUpdateDescription())
+                    : newestChangeEvent.getUpdateDescription(),
+                newestChangeEvent.hasUncommittedWrites()
+            );
+          case REPLACE:
+            return new ChangeEvent<>(
+                newestChangeEvent.getId(),
+                OperationType.REPLACE,
+                newestChangeEvent.getFullDocument(),
+                newestChangeEvent.getNamespace(),
+                newestChangeEvent.getDocumentKey(),
+                null,
+                newestChangeEvent.hasUncommittedWrites()
+            );
+          default:
+            break;
+        }
+        break;
+      case REPLACE:
+        switch (newestChangeEvent.getOperationType()) {
+          case UPDATE:
+            if(newestChangeEvent.getUpdateDescription() == null) {
+              throw new IllegalStateException("UPDATE event should have update description");
+            }
+
+            if(lastUncommittedChangeEvent.getFullDocument() == null) {
+              throw new IllegalStateException("REPLACE event should have full document");
+            }
+
+            return new ChangeEvent<>(
+                newestChangeEvent.getId(),
+                OperationType.REPLACE,
+                newestChangeEvent.getUpdateDescription()
+                    .applyToBsonDocument(lastUncommittedChangeEvent.getFullDocument()),
+                newestChangeEvent.getNamespace(),
+                newestChangeEvent.getDocumentKey(),
+                null,
+                newestChangeEvent.hasUncommittedWrites()
+            );
+          default:
+            break;
+        }
+        break;
       default:
         break;
     }
