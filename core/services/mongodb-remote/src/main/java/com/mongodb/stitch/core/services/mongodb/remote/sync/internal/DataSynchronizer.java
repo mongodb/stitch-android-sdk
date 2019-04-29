@@ -1147,16 +1147,15 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
                   // 3. UPDATE
                   case UPDATE: {
-//                    if (localDoc == null) {
-//                      final IllegalStateException illegalStateException = new IllegalStateException(
-//                          SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE.toString());
-//
-//                      action = SyncAction.DROP_EVENT_AND_PAUSE;
-//                      message = SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE;
-//                      syncException = illegalStateException;
-//                      suppressLocalEvent = true;
-//                    } else
-                    {
+                    if (localDoc == null) {
+                      final IllegalStateException illegalStateException = new IllegalStateException(
+                          SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE.toString());
+
+                      action = SyncAction.DROP_EVENT_AND_PAUSE;
+                      message = SyncMessage.EXPECTED_LOCAL_DOCUMENT_TO_EXIST_MESSAGE;
+                      syncException = illegalStateException;
+                      suppressLocalEvent = true;
+                    } else {
                       final UpdateDescription localUpdateDescription =
                           localChangeEvent.getUpdateDescription();
                       if (localUpdateDescription.getRemovedFields().isEmpty()
@@ -2709,7 +2708,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final BsonDocument atVersion,
       final long withHash
   ) {
-    if(updateDescription.isEmpty()) {
+    if (updateDescription.isEmpty()) {
       // don't do anything for completely no-op updates
       return null;
     }
@@ -2750,12 +2749,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       );
       container.addLocalChangeEvent(event);
 
+      // we should not upsert. if the document does not exist,
+      // it means we are out of date on that document. we can
+      // not apply an update change event as an upsert
       container.addLocalWrite(new UpdateOneModel<>(
           getDocumentIdFilter(documentId),
           sanitizedUpdateDescription.toUpdateDocument(),
-          new UpdateOptions().upsert(false) // we should not upsert. if the document does not exist,
-          // it means we are out of date on that document. we can
-          // not apply an update change event as an upsert
+          new UpdateOptions().upsert(false)
       ));
     }
 
@@ -3221,7 +3221,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     sanitizedUpdatedFields.remove(DOCUMENT_VERSION_FIELD);
 
     final ArrayList<String> sanitizedRemovedFields = new ArrayList<>();
-    for (String removedField : updateDescription.getRemovedFields()) {
+    for (final String removedField : updateDescription.getRemovedFields()) {
       if (removedField.equals(DOCUMENT_VERSION_FIELD)) {
         continue;
       }
@@ -3314,7 +3314,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
 
   private enum SyncAction {
     APPLY_FROM_REMOTE("; applying changes from the remote document"),
-    APPLY_AND_VERSION_FROM_REMOTE("; applying changes from the remote document, apply a new version"),
+    APPLY_AND_VERSION_FROM_REMOTE(
+        "; applying changes from the remote document, apply a new version"
+    ),
     CONFLICT("; raising conflict"),
     DELETE_LOCAL_DOC_AND_DESYNC("; deleting and desyncing the document"),
     DELETE_LOCAL_DOC("; applying the remote delete"),

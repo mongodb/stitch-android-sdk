@@ -104,7 +104,7 @@ public final class DocumentVersionInfo {
     }
 
     @Override
-    public boolean equals(Object otherVersionObj) {
+    public boolean equals(final Object otherVersionObj) {
       if (!(otherVersionObj instanceof Version)) {
         return false;
       }
@@ -112,6 +112,11 @@ public final class DocumentVersionInfo {
       final Version otherVersion = (Version) otherVersionObj;
 
       return this.toBsonDocument().equals(otherVersion.toBsonDocument());
+    }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
     }
   }
 

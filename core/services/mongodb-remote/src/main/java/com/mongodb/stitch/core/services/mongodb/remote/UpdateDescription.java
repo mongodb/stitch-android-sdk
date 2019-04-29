@@ -165,11 +165,11 @@ public final class UpdateDescription {
   public BsonDocument applyToBsonDocument(final BsonDocument originalDoc) {
     final BsonDocument updatedDoc = originalDoc.clone();
 
-    for (Map.Entry<String, BsonValue> entry : this.getUpdatedFields().entrySet()) {
+    for (final Map.Entry<String, BsonValue> entry : this.getUpdatedFields().entrySet()) {
       updatedDoc.append(entry.getKey(), entry.getValue());
     }
 
-    for (String removedField : this.getRemovedFields()) {
+    for (final String removedField : this.getRemovedFields()) {
       updatedDoc.remove(removedField);
     }
 

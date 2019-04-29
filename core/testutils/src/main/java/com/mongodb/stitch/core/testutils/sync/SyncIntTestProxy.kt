@@ -855,6 +855,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // sync. assert that the desync'd document no longer exists locally
         streamAndSync()
         Assert.assertNull(coll.find(documentIdFilter(doc1Id)).firstOrNull())
+
         assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
     }
 
@@ -1863,6 +1864,12 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
 
     private fun waitForAllStreamsOpen() {
         while (!syncTestRunner.dataSynchronizer.areAllStreamsOpen()) {
+            if (syncTestRunner
+                    .dataSynchronizer
+                    .getSynchronizedDocuments(syncTestRunner.namespace).size > 0) {
+                println("there are no documents to watch, so the stream will never open")
+                break
+            }
             println("waiting for all streams to open before doing sync pass")
             Thread.sleep(1000)
         }

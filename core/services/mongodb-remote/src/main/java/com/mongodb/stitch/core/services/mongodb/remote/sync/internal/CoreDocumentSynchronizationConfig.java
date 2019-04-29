@@ -450,11 +450,11 @@ public class CoreDocumentSynchronizationConfig {
       case REPLACE:
         switch (newestChangeEvent.getOperationType()) {
           case UPDATE:
-            if(newestChangeEvent.getUpdateDescription() == null) {
+            if (newestChangeEvent.getUpdateDescription() == null) {
               throw new IllegalStateException("UPDATE event should have update description");
             }
 
-            if(lastUncommittedChangeEvent.getFullDocument() == null) {
+            if (lastUncommittedChangeEvent.getFullDocument() == null) {
               throw new IllegalStateException("REPLACE event should have full document");
             }
 
