@@ -1866,7 +1866,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         while (!syncTestRunner.dataSynchronizer.areAllStreamsOpen()) {
             if (syncTestRunner
                     .dataSynchronizer
-                    .getSynchronizedDocuments(syncTestRunner.namespace).size > 0) {
+                    .getSynchronizedDocuments(syncTestRunner.namespace).size == 0) {
                 println("there are no documents to watch, so the stream will never open")
                 break
             }
