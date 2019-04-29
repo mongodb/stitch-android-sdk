@@ -518,18 +518,17 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         @Nonnull final SyncConfiguration syncConfiguration) {
     this.waitUntilInitialized();
 
-    this.exceptionListener = syncConfiguration.getExceptionListener();
-
     this.syncConfig.getNamespaceConfig(namespace).configure(syncConfiguration);
 
     syncLock.lock();
-    if (!this.isConfigured) {
+    try {
+      this.exceptionListener = syncConfiguration.getExceptionListener();
       this.isConfigured = true;
+      this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
+    } finally {
+      syncLock.unlock();
     }
 
-    this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
-
-    syncLock.unlock();
 
     if (!isRunning) {
       this.start();
