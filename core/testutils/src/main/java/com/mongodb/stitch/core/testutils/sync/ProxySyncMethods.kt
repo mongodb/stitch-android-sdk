@@ -8,6 +8,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonDocument
 import org.bson.BsonValue
 import org.bson.Document
@@ -23,6 +25,10 @@ interface ProxySyncMethods {
         changeEventListener: ChangeEventListener<Document>?,
         exceptionListener: ExceptionListener?
     ): Void?
+
+    fun configure(syncConfig: SyncConfiguration): Void?
+
+    fun updateSyncFrequency(syncFrequency: SyncFrequency): Void?
 
     fun syncMany(vararg id: BsonValue)
 

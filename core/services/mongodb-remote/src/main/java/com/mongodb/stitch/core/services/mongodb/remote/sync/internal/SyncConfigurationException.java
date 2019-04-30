@@ -14,18 +14,13 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.internal.net;
+package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
-import java.io.IOException;
-
-public interface Transport {
-  // This is how Stitch Server calculates the maximum request size
-  // This number is equal to 17,825,792 or ~ 17Mb
-  int MAX_REQUEST_SIZE = 17 * (1 << 20);
-
-  Response roundTrip(Request request) throws Exception;
-
-  EventStream stream(Request request) throws IOException;
-
-  void close();
+/**
+ * Exception pertaining to any errors pertaining to SyncConfiguration
+ */
+public class SyncConfigurationException extends RuntimeException {
+  SyncConfigurationException(final String msg) {
+    super(msg);
+  }
 }

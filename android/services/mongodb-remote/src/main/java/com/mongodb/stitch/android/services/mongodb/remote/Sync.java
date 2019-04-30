@@ -29,9 +29,13 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertManyResult
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
 
 import java.util.List;
 import java.util.Set;
+
+import javax.annotation.CheckReturnValue;
 
 import org.bson.BsonValue;
 import org.bson.conversions.Bson;
@@ -45,19 +49,46 @@ public interface Sync<DocumentT> {
   /**
    * Set the conflict handler and and change event listener on this collection. This will start
    * a background sync thread, and should be called before any CRUD operations are attempted.
+   * @deprecated configure(SyncConfiguration syncConfig)
    *
    * @param conflictHandler the conflict resolver to invoke when a conflict happens between local
    *                         and remote events.
    * @param changeEventListener the event listener to invoke when a change event happens for the
    *                         document.
    * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
+   * @param syncFrequency the syncFrequency at which to perform synchronization passes
    *
    * @return A Task that completes when Mobile Sync is configured, and the background sync thread
    *         has started.
    */
+  @Deprecated
+  @CheckReturnValue
   Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
                        @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                       @Nullable final ExceptionListener exceptionListener);
+                       @Nullable final ExceptionListener exceptionListener,
+                       @Nullable final SyncFrequency syncFrequency);
+
+  /**
+   * Set the conflict handler and and change event listener on this collection. This will start
+   * a background sync thread, and should be called before any CRUD operations are attempted.
+   *
+   * @param syncConfiguration the SyncConfiguration that contains all the desired options
+   *
+   * @return A Task that completes when Mobile Sync is configured, and the background sync thread
+   *         has started.
+   */
+  @CheckReturnValue
+  Task<Void> configure(@NonNull final SyncConfiguration syncConfiguration);
+
+  /**
+   * Sets the SyncFrequency on this collection.
+   *
+   * @param syncFrequency the SyncFrequency that contains all the desired options
+   *
+   * @return A Task that completes when the SyncFrequency has been updated
+   */
+  @CheckReturnValue
+  Task<Void> updateSyncFrequency(@NonNull final SyncFrequency syncFrequency);
 
   /**
    * Requests that the given document _id be synchronized.
@@ -67,6 +98,7 @@ public interface Sync<DocumentT> {
    *         actual document may not be in sync with the remote collection until the next sync
    *         pass.
    */
+  @CheckReturnValue
   Task<Void> syncOne(final BsonValue id);
 
   /**
@@ -77,6 +109,7 @@ public interface Sync<DocumentT> {
    *         actual documents may not be in sync with the remote collection until the next sync
    *         pass.
    */
+  @CheckReturnValue
   Task<Void> syncMany(final BsonValue... ids);
 
   /**
@@ -88,6 +121,7 @@ public interface Sync<DocumentT> {
    *         synced. The document will be removed from the local collection, but it will not be
    *         necessarily deleted from the remote collection.
    */
+  @CheckReturnValue
   Task<Void> desyncOne(final BsonValue id);
 
   /**
@@ -99,6 +133,7 @@ public interface Sync<DocumentT> {
    *         synced. The documents will be removed from the local collection, but they are not
    *         necessarily deleted from the remote collection.
    */
+  @CheckReturnValue
   Task<Void> desyncMany(final BsonValue... ids);
 
   /**
@@ -106,6 +141,7 @@ public interface Sync<DocumentT> {
    *
    * @return the set of synchronized document ids in a namespace.
    */
+  @CheckReturnValue
   Task<Set<BsonValue>> getSyncedIds();
 
   /**
@@ -114,6 +150,7 @@ public interface Sync<DocumentT> {
    *
    * @return the set of paused document _ids in a namespace
    */
+  @CheckReturnValue
   Task<Set<BsonValue>> getPausedDocumentIds();
 
   /**
@@ -125,6 +162,7 @@ public interface Sync<DocumentT> {
    * @return true if successfully resumed, false if the document
    *         could not be found or there was an error resuming
    */
+  @CheckReturnValue
   Task<Boolean> resumeSyncForDocument(@NonNull final BsonValue documentId);
 
   /**
@@ -132,6 +170,7 @@ public interface Sync<DocumentT> {
    *
    * @return the number of documents in the collection
    */
+  @CheckReturnValue
   Task<Long> count();
 
   /**
@@ -141,6 +180,7 @@ public interface Sync<DocumentT> {
    * @param filter the query filter
    * @return the number of documents in the collection
    */
+  @CheckReturnValue
   Task<Long> count(final Bson filter);
 
   /**
@@ -151,6 +191,7 @@ public interface Sync<DocumentT> {
    * @param options the options describing the count
    * @return the number of documents in the collection
    */
+  @CheckReturnValue
   Task<Long> count(final Bson filter, final SyncCountOptions options);
 
   /**
@@ -219,6 +260,7 @@ public interface Sync<DocumentT> {
    * @param document the document to insert
    * @return the result of the insert one operation
    */
+  @CheckReturnValue
   Task<SyncInsertOneResult> insertOne(final DocumentT document);
 
   /**
@@ -228,6 +270,7 @@ public interface Sync<DocumentT> {
    * @param documents the documents to insert
    * @return the result of the insert many operation
    */
+  @CheckReturnValue
   Task<SyncInsertManyResult> insertMany(final List<DocumentT> documents);
 
   /**
@@ -238,6 +281,7 @@ public interface Sync<DocumentT> {
    * @param filter the query filter to apply the the delete operation
    * @return the result of the remove one operation
    */
+  @CheckReturnValue
   Task<SyncDeleteResult> deleteOne(final Bson filter);
 
   /**
@@ -247,6 +291,7 @@ public interface Sync<DocumentT> {
    * @param filter the query filter to apply the the delete operation
    * @return the result of the remove many operation
    */
+  @CheckReturnValue
   Task<SyncDeleteResult> deleteMany(final Bson filter);
 
   /**
@@ -259,6 +304,7 @@ public interface Sync<DocumentT> {
    *               apply must include only update operators.
    * @return the result of the update one operation
    */
+  @CheckReturnValue
   Task<SyncUpdateResult> updateOne(final Bson filter, final Bson update);
 
   /**
@@ -272,6 +318,7 @@ public interface Sync<DocumentT> {
    * @param updateOptions the options to apply to the update operation
    * @return the result of the update one operation
    */
+  @CheckReturnValue
   Task<SyncUpdateResult> updateOne(
       final Bson filter,
       final Bson update,
@@ -287,6 +334,7 @@ public interface Sync<DocumentT> {
    *               apply must include only update operators.
    * @return the result of the update many operation
    */
+  @CheckReturnValue
   Task<SyncUpdateResult> updateMany(final Bson filter, final Bson update);
 
   /**
@@ -300,6 +348,7 @@ public interface Sync<DocumentT> {
    * @param updateOptions the options to apply to the update operation
    * @return the result of the update many operation
    */
+  @CheckReturnValue
   Task<SyncUpdateResult> updateMany(
       final Bson filter,
       final Bson update,

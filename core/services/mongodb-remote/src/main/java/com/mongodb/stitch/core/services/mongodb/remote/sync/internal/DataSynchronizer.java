@@ -54,8 +54,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.Scheduled;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.SyncFrequencyType;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -81,7 +82,6 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonValue;
-import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -357,37 +357,178 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
   }
 
-  public <T> void configure(@Nonnull final MongoNamespace namespace,
-                            @Nullable final ConflictHandler<T> conflictHandler,
-                            @Nullable final ChangeEventListener<T> changeEventListener,
-                            @Nullable final ExceptionListener exceptionListener,
-                            @Nonnull final Codec<T> codec) {
+  // Method used for testing: returns if the DataSynchronizer has an nsConfig for namespace
+  public boolean hasNamespaceListener(@Nonnull final MongoNamespace namespace) {
+    this.waitUntilInitialized();
+    return instanceChangeStreamListener.hasNamespace(namespace);
+  }
+
+  // Method used for testing: returns if the nsConfig's stream is open for namespace
+  public boolean isNamespaceListenerOpen(@Nonnull final MongoNamespace namespace) {
+    this.waitUntilInitialized();
+    return instanceChangeStreamListener.isOpen(namespace);
+  }
+
+  public void configureSyncFrequency(@Nonnull final MongoNamespace namespace,
+                                     @Nullable final SyncFrequency syncFrequency) {
+    final SyncFrequency newFrequency = syncFrequency != null
+        ? syncFrequency : SyncFrequency.reactive();
+
+    // Set old frequency to onDemand preliminarily because that had no streams or timers
+    SyncFrequency oldFrequency = SyncFrequency.onDemand();
+
+    // Get the nsConfig and get its syncFrequency
+    final NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
+    if (nsConfig != null && nsConfig.getSyncFrequency() != null) {
+      oldFrequency = nsConfig.getSyncFrequency();
+    }
+
+    // Set the nsConfig to have a new syncFrequency
+    nsConfig.setSyncFrequency(newFrequency);
+
+    // Iterate over all possible values for oldFrequency
+    switch (oldFrequency.getType()) {
+      case REACTIVE:
+        switch (newFrequency.getType()) {
+          case REACTIVE:
+            // REACTIVE -> REACTIVE: Nothing should change, just return
+            checkAndInsertNamespaceListener(namespace);
+            return;
+          case SCHEDULED:
+            if (((Scheduled) newFrequency).isConnected()) {
+              // REACTIVE --> SCHEDULED AND isConnected is TRUE:
+              // Schedule a new timer AND maintain the existing stream
+              // TODO schedule a new timer
+              checkAndInsertNamespaceListener(namespace);
+              return;
+            } else {
+              // REACTIVE --> SCHEDULED AND isConnected is FALSE:
+              // Schedule a new timer AND close the existing stream
+              // TODO schedule a new timer
+              instanceChangeStreamListener.removeNamespace(namespace);
+              return;
+            }
+          case ON_DEMAND:
+            // REACTIVE --> ON_DEMAND:
+            // Close the existing change stream
+            instanceChangeStreamListener.removeNamespace(namespace);
+            return;
+          default:
+            return;
+        }
+      case SCHEDULED:
+        if (((Scheduled) oldFrequency).isConnected()) {
+          switch (newFrequency.getType()) {
+            case REACTIVE:
+              // SCHEDULED AND isConnected is TRUE --> REACTIVE:
+              // Cancel the scheduled time AND do a sync pass on the collection
+              // TODO cancel the timer and do sync pass on the namespace
+              checkAndInsertNamespaceListener(namespace);
+              return;
+            case SCHEDULED:
+              if (((Scheduled) newFrequency).isConnected()) {
+                // SCHEDULED AND isConnected is TRUE --> SCHEDULED and isConnected is TRUE:
+                // Cancel the scheduled time AND schedule a new timer
+                // TODO schedule a new timer and delete the old one
+                checkAndInsertNamespaceListener(namespace);
+                return;
+              } else {
+                // SCHEDULED AND isConnected is TRUE --> SCHEDULED and isConnected is FALSE:
+                // Cancel the scheduled time AND schedule a new timer AND close the existing stream
+                // TODO schedule a new timer and delete the old one
+                instanceChangeStreamListener.removeNamespace(namespace);
+                return;
+              }
+            case ON_DEMAND:
+              // If a user changes from SCHEDULED AND isConnected is TRUE to ON_DEMAND:
+              // Cancel the scheduled timer and close the existing stream
+              // TODO cancel the scheduled timer
+              instanceChangeStreamListener.removeNamespace(namespace);
+              return;
+            default:
+              return;
+          }
+        } else {
+          switch (newFrequency.getType()) {
+            case REACTIVE:
+              // SCHEDULED AND isConnected is FALSE --> REACTIVE:
+              // Cancel the scheduled time AND do a sync pass on the collection
+              // AND open a new change stream
+              // TODO cancel the timer and do sync pass on the namespace
+              checkAndInsertNamespaceListener(namespace);
+              return;
+            case SCHEDULED:
+              if (((Scheduled) newFrequency).isConnected()) {
+                // SCHEDULED AND isConnected is FALSE --> SCHEDULED and isConnected is TRUE:
+                // Cancel the scheduled time AND schedule a new timer AND open a new stream
+                // TODO schedule a new timer and delete the old one
+                checkAndInsertNamespaceListener(namespace);
+                return;
+              } else {
+                // SCHEDULED AND isConnected is FALSE --> SCHEDULED and isConnected is FALSE:
+                // Cancel the scheduled time AND schedule a new timer
+                // TODO schedule a new timer and delete the old one
+                instanceChangeStreamListener.removeNamespace(namespace);
+                return;
+              }
+            case ON_DEMAND:
+              // SCHEDULED AND isConnected is FALSE --> ON_DEMAND:
+              // Cancel the scheduled timer
+              // TODO cancel the scheduled timer
+              instanceChangeStreamListener.removeNamespace(namespace);
+              return;
+            default:
+              return;
+          }
+        }
+      case ON_DEMAND:
+        switch (newFrequency.getType()) {
+          case REACTIVE:
+            // ON_DEMAND --> REACTIVE:
+            // Open a new change stream listener
+            checkAndInsertNamespaceListener(namespace);
+            return;
+          case SCHEDULED:
+            if (((Scheduled) newFrequency).isConnected()) {
+              // ON_DEMAND --> SCHEDULED AND isConnected is TRUE:
+              // Schedule a new timer AND open a new stream
+              // TODO schedule a new timer
+              checkAndInsertNamespaceListener(namespace);
+              return;
+            } else {
+              // ON_DEMAND --> SCHEDULED AND isConnected is FALSE:
+              // Schedule a new sync pass timer
+              // TODO schedule a new timer
+              instanceChangeStreamListener.removeNamespace(namespace);
+              return;
+            }
+          case ON_DEMAND:
+            // ON_DEMAND --> ON_DEMAND: nothing to change, just return
+            instanceChangeStreamListener.removeNamespace(namespace);
+            return;
+          default:
+            return;
+        }
+      default:
+        return;
+    }
+  }
+
+  public void configure(@Nonnull final MongoNamespace namespace,
+                        @Nonnull final SyncConfiguration syncConfiguration) {
     this.waitUntilInitialized();
 
-    if (conflictHandler == null) {
-      logger.warn(
-          "Invalid configuration: conflictHandler should not be null. "
-              + "The DataSynchronizer will not begin syncing until a ConflictHandler has been "
-              + "provided.");
-      return;
-    }
-
-    this.exceptionListener = exceptionListener;
-
-    this.syncConfig.getNamespaceConfig(namespace).configure(
-        conflictHandler,
-        changeEventListener,
-        codec
-    );
+    this.syncConfig.getNamespaceConfig(namespace).configure(syncConfiguration);
 
     syncLock.lock();
-    if (!this.isConfigured) {
+    try {
+      this.exceptionListener = syncConfiguration.getExceptionListener();
       this.isConfigured = true;
-      syncLock.unlock();
-      this.triggerListeningToNamespace(namespace);
-    } else {
+      this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
+    } finally {
       syncLock.unlock();
     }
+
 
     if (!isRunning) {
       this.start();
@@ -1399,7 +1540,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         return deleteOneFromRemote(nsConfig, docConfig.getDocumentId());
       case DELETE_LOCAL_DOC_AND_DESYNC:
         return desyncDocumentsFromRemote(nsConfig, docConfig.getDocumentId())
-            .withPostCommit(() -> triggerListeningToNamespace(nsConfig.getNamespace()));
+            .withPostCommit(() -> checkAndDeleteNamespaceListener(nsConfig.getNamespace()));
       default:
         throw new IllegalStateException("unhandled synchronization action: " + action);
     }
@@ -1872,7 +2013,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       ongoingOperationsGroup.enter();
 
       if (syncConfig.addSynchronizedDocuments(namespace, documentIds)) {
-        triggerListeningToNamespace(namespace);
+        checkAndInsertNamespaceListener(namespace);
       }
     } finally {
       ongoingOperationsGroup.exit();
@@ -2129,7 +2270,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       } finally {
         lock.unlock();
       }
-      triggerListeningToNamespace(namespace);
+      checkAndInsertNamespaceListener(namespace);
       eventDispatcher.emitEvent(nsConfig, event);
     } finally {
       ongoingOperationsGroup.exit();
@@ -2174,7 +2315,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       } finally {
         lock.unlock();
       }
-      triggerListeningToNamespace(namespace);
+      checkAndInsertNamespaceListener(namespace);
       for (final ChangeEvent<BsonDocument> event : eventsToEmit) {
         eventDispatcher.emitEvent(nsConfig, event);
       }
@@ -2294,7 +2435,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         lock.unlock();
       }
       if (triggerNamespace) {
-        triggerListeningToNamespace(namespace);
+        checkAndInsertNamespaceListener(namespace);
       }
       eventDispatcher.emitEvent(nsConfig, event);
       return UpdateResult.acknowledged(1, 1L, updateOptions.isUpsert() ? documentId : null);
@@ -2426,7 +2567,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         lock.unlock();
       }
       if (result.getUpsertedId() != null) {
-        triggerListeningToNamespace(namespace);
+        checkAndInsertNamespaceListener(namespace);
       }
       for (final ChangeEvent<BsonDocument> event : eventsToEmit) {
         eventDispatcher.emitEvent(nsConfig, event);
@@ -2495,13 +2636,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         atVersion,
         HashUtils.hash(docForStorage),
         event);
-    eventDispatcher.emitEvent(nsConfig, event);
+
     final LocalSyncWriteModelContainer syncWriteModelContainer = newWriteModelContainer(nsConfig);
 
     syncWriteModelContainer.addDocIDs(documentId);
     syncWriteModelContainer.addLocalWrite(
         new ReplaceOneModel<>(getDocumentIdFilter(documentId), docForStorage,
             new ReplaceOptions().upsert(true)));
+    syncWriteModelContainer.addLocalChangeEvent(event);
     syncWriteModelContainer.addConfigWrite(
         new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
             namespace, config.getDocumentId()), config));
@@ -2547,7 +2689,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       lock.unlock();
     }
 
-    eventDispatcher.emitEvent(nsConfig, event);
     final LocalSyncWriteModelContainer container = newWriteModelContainer(nsConfig);
 
     container.addDocIDs(documentId);
@@ -2555,6 +2696,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         getDocumentIdFilter(documentId),
         docForStorage,
         new ReplaceOptions().upsert(true)));
+    container.addLocalChangeEvent(event);
     container.addConfigWrite(new ReplaceOneModel<>(
         CoreDocumentSynchronizationConfig.getDocFilter(namespace, config.getDocumentId()
         ), config));
@@ -2611,7 +2753,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           final LocalSyncWriteModelContainer localSyncWriteModelContainer =
               desyncDocumentsFromRemote(nsConfig, config.getDocumentId());
           localSyncWriteModelContainer.commitAndClear();
-          triggerListeningToNamespace(namespace);
+
+          // delete the namespace listener if necessary
+          checkAndDeleteNamespaceListener(namespace);
           undoCollection.deleteOne(getDocumentIdFilter(config.getDocumentId()));
           return result;
         }
@@ -2688,7 +2832,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           undoCollection.deleteOne(getDocumentIdFilter(documentId));
           eventsToEmit.add(event);
         }
-        triggerListeningToNamespace(namespace);
+        checkAndDeleteNamespaceListener(namespace);
       } finally {
         lock.unlock();
       }
@@ -2734,11 +2878,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       lock.unlock();
     }
 
-    eventDispatcher.emitEvent(nsConfig, event);
     final LocalSyncWriteModelContainer container = newWriteModelContainer(nsConfig);
 
     container.addDocIDs(documentId);
     container.addLocalWrite(new DeleteOneModel<>(getDocumentIdFilter(documentId)));
+    container.addLocalChangeEvent(event);
     container.addConfigWrite(
         new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
           namespace, config.getDocumentId()
@@ -2791,24 +2935,54 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return desyncDocumentsFromRemote(nsConfig, documentId);
   }
 
-  private void triggerListeningToNamespace(final MongoNamespace namespace) {
+  private void checkAndDeleteNamespaceListener(final MongoNamespace namespace) {
     syncLock.lock();
     try {
       final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
-      if (nsConfig.getSynchronizedDocuments().isEmpty()) {
+
+      // If there are no synced docs, or the SyncFrequency is ON_DEMAND, or the Sync Frequency is
+      // SCHEDULED and IS_CONNECTED is true --> remove the namespace from the changeStreamListener
+      final SyncFrequency syncFrequency = nsConfig.getSyncFrequency();
+      if (nsConfig.getSynchronizedDocuments().isEmpty()
+          || syncFrequency.getType() == SyncFrequencyType.ON_DEMAND
+          || (syncFrequency.getType() == SyncFrequencyType.SCHEDULED
+            && !((Scheduled) syncFrequency).isConnected())
+      ) {
         instanceChangeStreamListener.removeNamespace(namespace);
         return;
       }
-      if (!nsConfig.isConfigured()) {
-        return;
-      }
-      instanceChangeStreamListener.addNamespace(namespace);
-      instanceChangeStreamListener.stop(namespace);
-      instanceChangeStreamListener.start(namespace);
     } catch (final Exception ex) {
       logger.error(String.format(
           Locale.US,
-          "t='%d': triggerListeningToNamespace ns=%s exception: %s",
+          "t='%d': checkAndDeleteNamespaceListener ns=%s exception: %s",
+          logicalT,
+          namespace,
+          ex));
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
+  private void checkAndInsertNamespaceListener(final MongoNamespace namespace) {
+    syncLock.lock();
+    try {
+      final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
+
+      if (nsConfig.isConfigured() && !nsConfig.getSynchronizedDocuments().isEmpty()) {
+        final SyncFrequency syncFrequency = nsConfig.getSyncFrequency();
+        if (syncFrequency.getType() == SyncFrequencyType.REACTIVE
+            || (syncFrequency.getType() == SyncFrequencyType.SCHEDULED
+              && ((Scheduled) syncFrequency).isConnected())) {
+
+          instanceChangeStreamListener.addNamespace(namespace);
+          instanceChangeStreamListener.stop(namespace);
+          instanceChangeStreamListener.start(namespace);
+        }
+      }
+    } catch (final Exception ex) {
+      logger.error(String.format(
+          Locale.US,
+          "t='%d': checkAndInsertNamespaceLisetener ns=%s exception: %s",
           logicalT,
           namespace,
           ex));
