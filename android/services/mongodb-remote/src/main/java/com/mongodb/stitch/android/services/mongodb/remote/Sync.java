@@ -56,6 +56,26 @@ public interface Sync<DocumentT> {
    * @param changeEventListener the event listener to invoke when a change event happens for the
    *                         document.
    * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
+   *
+   * @return A Task that completes when Mobile Sync is configured, and the background sync thread
+   *         has started.
+   */
+  @Deprecated
+  @CheckReturnValue
+  Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
+                       @Nullable final ChangeEventListener<DocumentT> changeEventListener,
+                       @Nullable final ExceptionListener exceptionListener);
+
+  /**
+   * Set the conflict handler and and change event listener on this collection. This will start
+   * a background sync thread, and should be called before any CRUD operations are attempted.
+   * @deprecated configure(SyncConfiguration syncConfig)
+   *
+   * @param conflictHandler the conflict resolver to invoke when a conflict happens between local
+   *                         and remote events.
+   * @param changeEventListener the event listener to invoke when a change event happens for the
+   *                         document.
+   * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
    * @param syncFrequency the syncFrequency at which to perform synchronization passes
    *
    * @return A Task that completes when Mobile Sync is configured, and the background sync thread

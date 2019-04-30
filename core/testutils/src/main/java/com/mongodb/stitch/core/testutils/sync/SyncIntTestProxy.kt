@@ -934,15 +934,15 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         val remoteColl = syncTestRunner.remoteMethods()
 
         // insert a document locally
-        val docToInsert = Document("hello", "world")
-        val insertedId = coll.insertOne(docToInsert).insertedId
+        var docToInsert = Document("hello", "world")
+        var insertedId = coll.insertOne(docToInsert).insertedId
 
         var hasConflictHandlerBeenInvoked = false
         var hasChangeEventListenerBeenInvoked = false
 
         // configure Sync, each entry with flags checking
         // that the listeners/handlers have been called
-        val changeEventListenerSemaphore = Semaphore(0)
+        var changeEventListenerSemaphore = Semaphore(0)
         coll.configure(
             ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
                 hasConflictHandlerBeenInvoked = true
@@ -954,6 +954,43 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
                 changeEventListenerSemaphore.release()
             },
             ExceptionListener { _, _ -> }
+        )
+
+        waitForAllStreamsOpen()
+
+        // insert a document remotely
+        remoteColl.insertOne(Document("_id", insertedId).append("fly", "away"))
+
+        // sync. assert that the conflict handler and
+        // change event listener have been called
+        streamAndSync()
+
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        Assert.assertTrue(hasConflictHandlerBeenInvoked)
+        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
+
+        // Call configure again with a new frequency
+        docToInsert = Document("hello", "world")
+        insertedId = coll.insertOne(docToInsert).insertedId
+
+        hasConflictHandlerBeenInvoked = false
+        hasChangeEventListenerBeenInvoked = false
+
+        // configure Sync, each entry with flags checking
+        // that the listeners/handlers have been called
+        changeEventListenerSemaphore = Semaphore(0)
+        coll.configure(
+            ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: ChangeEvent<Document> ->
+                hasConflictHandlerBeenInvoked = true
+                assertEquals(remoteEvent.fullDocument!!["fly"], "away")
+                remoteEvent.fullDocument
+            },
+            ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+                changeEventListenerSemaphore.release()
+            },
+            ExceptionListener { _, _ -> },
+            SyncFrequency.scheduled(100, TimeUnit.MINUTES, true)
         )
 
         waitForAllStreamsOpen()
@@ -2087,7 +2124,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
                 hasChangeEventListenerBeenInvoked = true
                 Thread(Runnable {
                     if (coll.count(Document("_id", docId)) == 0L) {
-                        fail("Did not find document with id ${docId.toString()}")
+                        fail("Did not find document with id $docId")
                     }
                     if (waitFor.decrementAndGet() == 0) {
                         changeEventListenerSemaphore.release()
