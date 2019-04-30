@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/add_todo_item_action"
+        android:title="@string/add_item_action_label"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/search_items_action"
+        app:actionViewClass="android.support.v7.widget.SearchView"
+        app:showAsAction="ifRoom|collapseActionView"
+        android:title="@string/search_items_action_label" />
+    <item
+        android:id="@+id/clear_checked_action"
+        android:title="@string/clear_checked_action_label"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/clear_all_action"
+        android:title="@string/clear_all_action_label"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/login_action"
+        android:title="@string/login_action_label"
+        app:showAsAction="never" />
+</menu>
