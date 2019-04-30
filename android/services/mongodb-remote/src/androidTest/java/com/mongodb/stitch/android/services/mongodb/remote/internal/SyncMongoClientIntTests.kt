@@ -35,6 +35,8 @@ import com.mongodb.stitch.android.core.StitchAppClient
 import com.mongodb.stitch.android.services.mongodb.local.internal.AndroidEmbeddedMongoClientFactory
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.conversions.Bson
@@ -74,8 +76,21 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
             exceptionListener: ExceptionListener?
         ): Void? {
             return Tasks.await(
-                sync.configure(conflictResolver, changeEventListener, exceptionListener)
+                sync.configure(
+                    conflictResolver,
+                    changeEventListener,
+                    exceptionListener,
+                    SyncFrequency.reactive()
+                )
             )
+        }
+
+        override fun configure(syncConfig: SyncConfiguration): Void? {
+            return Tasks.await(sync.configure(syncConfig))
+        }
+
+        override fun updateSyncFrequency(syncFrequency: SyncFrequency): Void? {
+            return Tasks.await(sync.updateSyncFrequency(syncFrequency))
         }
 
         override fun syncOne(id: BsonValue): Void? {
@@ -347,6 +362,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     }
 
     @Test
+    override fun testConfigureDeprecated() {
+        testProxy.testConfigureDeprecated()
+    }
+
+    @Test
     override fun testSyncVersioningScheme() {
         testProxy.testSyncVersioningScheme()
     }
@@ -419,6 +439,30 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     fun testUpdateUpdateCoalescence() {
         testProxy.testUpdateUpdateCoalescence()
+    }
+
+    override fun testConfigureWithReactiveSyncFrequency() {
+        testProxy.testConfigureWithReactiveSyncFrequency()
+    }
+
+    @Test
+    override fun testConfigureWithOnDemandSyncFrequency() {
+        testProxy.testConfigureWithOnDemandSyncFrequency()
+    }
+
+    @Test
+    override fun testConfigureWithScheduledSyncFrequencyConnected() {
+        testProxy.testConfigureWithScheduledSyncFrequencyConnected()
+    }
+
+    @Test
+    override fun testConfigureWithScheduledSyncFrequencyNotConnected() {
+        testProxy.testConfigureWithScheduledSyncFrequencyNotConnected()
+    }
+
+    @Test
+    override fun testUpdateSyncFrequency() {
+        testProxy.testUpdateSyncFrequency()
     }
 
     /**

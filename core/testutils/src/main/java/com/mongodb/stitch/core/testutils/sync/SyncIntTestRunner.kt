@@ -132,6 +132,9 @@ interface SyncIntTestRunner {
     fun testConfigure()
 
     @Test
+    fun testConfigureDeprecated()
+
+    @Test
     fun testSyncVersioningScheme()
 
     @Test
@@ -172,4 +175,19 @@ interface SyncIntTestRunner {
 
     @Test
     fun testMultiUserSupport()
+
+    @Test
+    fun testConfigureWithReactiveSyncFrequency()
+
+    @Test
+    fun testConfigureWithOnDemandSyncFrequency()
+
+    @Test
+    fun testConfigureWithScheduledSyncFrequencyConnected()
+
+    @Test
+    fun testConfigureWithScheduledSyncFrequencyNotConnected()
+
+    @Test
+    fun testUpdateSyncFrequency()
 }

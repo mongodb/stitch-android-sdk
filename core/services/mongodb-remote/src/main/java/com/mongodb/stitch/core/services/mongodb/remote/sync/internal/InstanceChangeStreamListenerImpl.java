@@ -113,6 +113,15 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
     }
   }
 
+  public boolean hasNamespace(final MongoNamespace namespace) {
+    instanceLock.readLock().lock();
+    try {
+      return nsStreamers.containsKey(namespace);
+    } finally {
+      instanceLock.readLock().unlock();
+    }
+  }
+
   public boolean isOpen(final MongoNamespace namespace) {
     instanceLock.writeLock().lock();
     try {

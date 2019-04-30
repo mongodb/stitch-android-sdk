@@ -1,11 +1,6 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
 import com.google.android.gms.tasks.Tasks
-import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.assertIntsAreEqualOrThrow
-import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.doSyncPass
-import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.performLocalUpdate
-import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
-import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -34,15 +29,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     val sync = ctx.testColl.sync()
 
                     // If sync fails for any reason, halt the test
-                    Tasks.await(sync.configure(
-                        DefaultSyncConflictResolvers.remoteWins(),
-                        null,
-                        ExceptionListener { id, ex ->
-                            testHarness.logMessage("unexpected sync error with id " +
-                                "$id: ${ex.localizedMessage}")
-                            error(ex)
-                        }
-                    ))
+                    SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync() on all of the inserted document ids
                     Tasks.await(sync.syncMany(*(documentIdsForCurrentTest!!.toTypedArray())))
@@ -75,15 +62,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     )
 
                     // If sync fails for any reason, halt the test
-                    Tasks.await(sync.configure(
-                        DefaultSyncConflictResolvers.remoteWins(),
-                        null,
-                        ExceptionListener { id, ex ->
-                            testHarness.logMessage("unexpected sync error with id " +
-                                "$id: ${ex.localizedMessage}")
-                            error(ex)
-                        }
-                    ))
+                    SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync() on all of the inserted document ids
                     Tasks.await(sync.syncMany(*(ids.toTypedArray())))
@@ -175,16 +154,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     )
 
                     // If sync fails for any reason, halt the test
-                    Tasks.await(ctx.testColl.sync().configure(
-                        DefaultSyncConflictResolvers.remoteWins(),
-                        null,
-                        ExceptionListener { id, ex ->
-                            testHarness.logMessage(
-                                "unexpected sync error with id " +
-                                "$id: ${ex.localizedMessage}")
-                            error(ex)
-                        }
-                    ))
+                    SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync on the ids inserted remotely
                     Tasks.await(sync.syncMany(*(ids.toTypedArray())))
