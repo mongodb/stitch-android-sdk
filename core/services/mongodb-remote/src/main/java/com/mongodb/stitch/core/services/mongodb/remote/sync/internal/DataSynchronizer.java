@@ -2495,13 +2495,14 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         atVersion,
         HashUtils.hash(docForStorage),
         event);
-    eventDispatcher.emitEvent(nsConfig, event);
+
     final LocalSyncWriteModelContainer syncWriteModelContainer = newWriteModelContainer(nsConfig);
 
     syncWriteModelContainer.addDocIDs(documentId);
     syncWriteModelContainer.addLocalWrite(
         new ReplaceOneModel<>(getDocumentIdFilter(documentId), docForStorage,
             new ReplaceOptions().upsert(true)));
+    syncWriteModelContainer.addLocalChangeEvent(event);
     syncWriteModelContainer.addConfigWrite(
         new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
             namespace, config.getDocumentId()), config));
@@ -2547,7 +2548,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       lock.unlock();
     }
 
-    eventDispatcher.emitEvent(nsConfig, event);
     final LocalSyncWriteModelContainer container = newWriteModelContainer(nsConfig);
 
     container.addDocIDs(documentId);
@@ -2555,6 +2555,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         getDocumentIdFilter(documentId),
         docForStorage,
         new ReplaceOptions().upsert(true)));
+    container.addLocalChangeEvent(event);
     container.addConfigWrite(new ReplaceOneModel<>(
         CoreDocumentSynchronizationConfig.getDocFilter(namespace, config.getDocumentId()
         ), config));
@@ -2734,11 +2735,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       lock.unlock();
     }
 
-    eventDispatcher.emitEvent(nsConfig, event);
     final LocalSyncWriteModelContainer container = newWriteModelContainer(nsConfig);
 
     container.addDocIDs(documentId);
     container.addLocalWrite(new DeleteOneModel<>(getDocumentIdFilter(documentId)));
+    container.addLocalChangeEvent(event);
     container.addConfigWrite(
         new ReplaceOneModel<>(CoreDocumentSynchronizationConfig.getDocFilter(
           namespace, config.getDocumentId()
