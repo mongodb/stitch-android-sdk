@@ -6,25 +6,6 @@ import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 
-//<<<<<<< HEAD
-//||||||| merged common ancestors
-//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.assertIntsAreEqualOrThrow
-//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.doSyncPass
-//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.performLocalUpdate
-//import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
-//import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-//=======
-//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.assertIntsAreEqualOrThrow
-//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.doSyncPass
-//import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.performLocalUpdate
-//import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
-//import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-//import org.bson.BsonDouble
-//>>>>>>> fixes
-//import org.bson.BsonValue
-//import org.bson.Document
-//import org.bson.types.ObjectId
-
 class SyncR2LOnlyPerformanceTestDefinitions {
     companion object {
 
