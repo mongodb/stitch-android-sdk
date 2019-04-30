@@ -169,6 +169,18 @@ class SyncPerformanceTestUtils {
             return insertManyResult.insertedIds.map { it.value }
         }
 
+        internal fun insertToLocal(
+            ctx: SyncPerformanceTestContext,
+            numDocs: Int,
+            docSize: Int
+        ): List<BsonValue> {
+            val docs = SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
+            var insertManyResult = Tasks.await(ctx.testColl.sync().insertMany(docs))
+            assertIntsAreEqualOrThrow(insertManyResult.insertedIds.size, numDocs)
+
+            return insertManyResult.insertedIds.map { it.value }
+        }
+
         internal fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {
             val docList = ArrayList<Document>()
 
@@ -220,7 +232,7 @@ class SyncPerformanceTestUtils {
                 "RemoteUpdateResult.modifiedCount")
 
             val numDocsChangedRemotely = Tasks.await(ctx.testColl.count(
-                Document("newField", Document("\$exists", true))
+                Document("newField", "remote")
             ))
 
             SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
@@ -232,7 +244,8 @@ class SyncPerformanceTestUtils {
 
         fun performLocalUpdate(
             ctx: SyncPerformanceTestContext,
-            ids: List<BsonValue>
+            ids: List<BsonValue>,
+            additionalCount: Int = 0
         ) {
             val updateResult = Tasks.await(ctx.testColl.sync().updateMany(
                 Document("_id", Document("\$in", ids)),
@@ -250,13 +263,13 @@ class SyncPerformanceTestUtils {
                 "LocalUpdateResult.modifiedCount")
 
             val numDocsChangedLocally = Tasks.await(ctx.testColl.sync().count(
-                Document("newField", Document("\$exists", true))
+                Document("newField", "local")
             ))
 
             SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                ids.size,
+                ids.size + additionalCount,
                 numDocsChangedLocally.toInt(),
-                "Remote document updates"
+                "Local document updates"
             )
         }
 

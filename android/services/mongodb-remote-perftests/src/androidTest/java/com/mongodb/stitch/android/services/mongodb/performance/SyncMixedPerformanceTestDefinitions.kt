@@ -1,80 +1,125 @@
 package com.mongodb.stitch.android.services.mongodb.performance
 
 import com.google.android.gms.tasks.Tasks
+import com.mongodb.stitch.android.services.mongodb.performance.SyncPerformanceTestUtils.Companion.assertIntsAreEqualOrThrow
 import org.bson.BsonDouble
 import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 
-class SyncR2LOnlyPerformanceTestDefinitions {
+class SyncMixedPerformanceTestDefinitions {
     companion object {
 
         /*
-         * Before: Perform remote insert of numDoc documents
+         * Before: Perform remote insert of numDoc / 2 documents
+         *         Perform a local insert of numDoc / 2 documents
+         *         Ensure there are numConflict conflicts
          * Test: Configure sync to sync on the inserted docs and perform a sync pass
          * After: Ensure that the initial sync worked as expected
          */
         fun testInitialSync(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
-            val testName = "R2L_InitialSync"
+            SyncPerformanceTestUtils.getConflictPercentages().forEach { conflictPercentage ->
+                performInitialSync(testHarness, runId, conflictPercentage)
+            }
+        }
+
+        fun performInitialSync(
+            testHarness: SyncPerformanceIntTestsHarness,
+            runId: ObjectId,
+            conflictPercentage: Double
+        ) {
+            val testName = "Mixed_InitialSync"
 
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
-            var documentIdsForCurrentTest = mutableListOf<BsonValue>()
+            val documentIds = mutableSetOf<BsonValue>()
+            val documentsToLocallyInsert = mutableListOf<Document>()
 
-            // Initial sync for a purely R2L Scenario means inserting remote documents and then
-            // configuring syncMany() on the inserted document id's and performing a sync pass.
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
                 beforeEach = { ctx, numDocs, docSize ->
+                    documentIds.clear()
+                    documentsToLocallyInsert.clear()
+                    val numEach = numDocs / 2
+
                     // Generate the documents that are to be synced via R2L and remotely insert them
-                    documentIdsForCurrentTest.clear()
-                    documentIdsForCurrentTest.addAll(SyncPerformanceTestUtils.insertToRemote(
-                        ctx, numDocs, docSize
-                    ))
+                    val remoteDocs = SyncPerformanceTestUtils.generateDocuments(docSize, numEach)
+                    val remoteInsertResult = Tasks.await(ctx.testColl.insertMany(remoteDocs))
+                    SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                        remoteInsertResult.insertedIds.size,
+                        numEach)
+                    documentIds.addAll(remoteInsertResult.insertedIds.map { it.value })
+
+                    // Use numEach * pctConflict of the remote documents in a local insert
+                    val numConflicts = (numEach * conflictPercentage).toInt()
+                    val localDocs = remoteDocs.subList(0, numConflicts) +
+                        SyncPerformanceTestUtils.generateDocuments(docSize, numEach - numConflicts)
+                    documentsToLocallyInsert.addAll(localDocs)
                 },
-                testDefinition = { ctx, _, _ ->
+                testDefinition = { ctx, numDocs, _ ->
                     val sync = ctx.testColl.sync()
 
                     // If sync fails for any reason, halt the test
                     SyncPerformanceTestUtils.defaultConfigure(ctx)
 
+                    // Insert the desired documents locally
+                    val localInsertResult = Tasks.await(
+                        ctx.testColl.sync().insertMany(documentsToLocallyInsert))
+
+                    SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                        localInsertResult.insertedIds.size,
+                        numDocs / 2, "LocalInsert.insertedIds.size")
+                    documentIds.addAll(localInsertResult.insertedIds.map { it.value })
+
+                    //  Ensure that the documents properly conflicted
+                    assertIntsAreEqualOrThrow(
+                        documentIds.size,
+                        (numDocs * (1 - (conflictPercentage / 2))).toInt(),
+                        "Union of local and remote document ids")
+
                     // Sync() on all of the inserted document ids
-                    Tasks.await(sync.syncMany(*(documentIdsForCurrentTest!!.toTypedArray())))
+                    Tasks.await(sync.syncMany(*(documentIds!!.toTypedArray())))
 
                     // Perform syncPass() and halt the test if the pass fails
                     SyncPerformanceTestUtils.doSyncPass(ctx)
                 },
                 afterEach = { ctx, numDocs, _ ->
-                    // Verify that the test did indeed synchronize the provided documents locally
-                    SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
-                }
+                    // Verify that the test did indeed synchronize the provided documents correctly
+                    val numConflicts = (numDocs / 2 * conflictPercentage).toInt()
+                    SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs - numConflicts)
+                }, extraFields = mapOf("percentageConflict" to BsonDouble(conflictPercentage))
             )
         }
-
         /*
-         * Before: Perform remote insert of numDoc documents
-         *         Configure sync(), perform sync pass, disconnect networkMonitor
-         * Test: Reconnect the network monitor and perform sync pass
-         * After: Ensure that the sync pass worked as expected
-         */
+        * Before: Perform remote insert of numDoc / 2 documents
+        *         Perform a local insert of numDoc / 2 documents
+        *         Configure sync(), perform sync pass, disconnect networkMonitor
+        *         Ensure sync worked properly
+        * Test: Reconnect the network monitor and perform sync pass
+        * After: Ensure that the sync pass worked as expected
+        */
         fun testDisconnectReconnect(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
-            val testName = "R2L_DisconnectReconnect"
+            val testName = "Mixed_DisconnectReconnect"
 
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
                 beforeEach = { ctx, numDocs, docSize ->
                     val sync = ctx.testColl.sync()
 
-                    // Generate the documents that are to be synced via R2L and insert remotely
-                    val ids = SyncPerformanceTestUtils.insertToRemote(
-                        ctx, numDocs, docSize
+                    // Generate the documents that are to be synced and insert them
+                    val remoteIds = SyncPerformanceTestUtils.insertToRemote(
+                        ctx, numDocs / 2, docSize
+                    )
+                    val localIds = SyncPerformanceTestUtils.insertToLocal(
+                        ctx, numDocs / 2, docSize
                     )
 
                     // If sync fails for any reason, halt the test
                     SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync() on all of the inserted document ids
-                    Tasks.await(sync.syncMany(*(ids.toTypedArray())))
+                    Tasks.await(sync.syncMany(*(remoteIds.toTypedArray())))
+                    Tasks.await(sync.syncMany(*(localIds.toTypedArray())))
 
                     // Perform sync pass, it will throw an exception if it fails
                     SyncPerformanceTestUtils.doSyncPass(ctx)
@@ -131,8 +176,12 @@ class SyncR2LOnlyPerformanceTestDefinitions {
         }
 
         /*
-         * Before: Perform remote insert of numDoc documents, configure sync(), perform sync pass
-         *         Update numChangeEvent documents remotely, and numConflict documents locally
+         * Before: Perform remote insert of numDoc / 2 documents
+         *         Perform a local insert of numDoc / 2 documents
+         *         Configure sync(), perform sync pass
+         *         Update numChangeEvents / 2 documents remotely
+         *         Update numChangeEvents / 2 documents locally
+         *              Where numConflicts docs are updates on the same documents
          * Test: Perform sync pass
          * After: Ensure that the sync pass worked properly
          */
@@ -151,27 +200,27 @@ class SyncR2LOnlyPerformanceTestDefinitions {
             pctOfDocsWithChangeEvents: Double,
             pctOfDocsWithConflicts: Double
         ) {
-            val testName = "R2L_SyncPass"
-
-            // Local variable for the number of docs updated in the test
-            // This should change for each iteration of the test.
-            var numberOfChangedDocs: Int = -1
+            val testName = "Mixed_SyncPass"
 
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
                 beforeEach = { ctx, numDocs: Int, docSize: Int ->
                     val sync = ctx.testColl.sync()
 
-                    // Generate the documents that are to be synced via R2L and insert remotely
-                    var ids = SyncPerformanceTestUtils.insertToRemote(
-                        ctx, numDocs, docSize
+                    // Generate the documents that are to be synced and insert them
+                    val remoteIds = SyncPerformanceTestUtils.insertToRemote(
+                        ctx, numDocs / 2, docSize
+                    )
+                    val localIds = SyncPerformanceTestUtils.insertToLocal(
+                        ctx, numDocs / 2, docSize
                     )
 
                     // If sync fails for any reason, halt the test
                     SyncPerformanceTestUtils.defaultConfigure(ctx)
 
                     // Sync on the ids inserted remotely
-                    Tasks.await(sync.syncMany(*(ids.toTypedArray())))
+                    Tasks.await(sync.syncMany(*(remoteIds.toTypedArray())))
+                    Tasks.await(sync.syncMany(*(localIds.toTypedArray())))
 
                     // Perform sync pass, it will throw an exception if it fails
                     SyncPerformanceTestUtils.doSyncPass(ctx)
@@ -180,16 +229,19 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
 
                     // Shuffle the documents
-                    ids = ids.shuffled()
+                    val allIds = Tasks.await(sync.syncedIds).toList().shuffled()
 
                     // Remotely update the desired percentage of documents and check it works
-                    var numChange = (pctOfDocsWithChangeEvents * numDocs).toInt()
-                    SyncPerformanceTestUtils.performRemoteUpdate(ctx, ids.subList(0, numChange))
-                    numberOfChangedDocs = numChange
+                    val numRemoteChange = (pctOfDocsWithChangeEvents * numDocs / 2).toInt()
+                    SyncPerformanceTestUtils.performRemoteUpdate(ctx, allIds.take(numRemoteChange))
 
-                    // Locally update the desired percentage of documents and check it works
-                    numChange = (pctOfDocsWithChangeEvents * pctOfDocsWithConflicts * numDocs).toInt()
-                    SyncPerformanceTestUtils.performLocalUpdate(ctx, ids.subList(0, numChange))
+                    // Locally update the documents that will conflict with the remote update
+                    val numLocalConflict = (numRemoteChange * pctOfDocsWithConflicts).toInt()
+                    SyncPerformanceTestUtils.performLocalUpdate(ctx, allIds.take(numLocalConflict))
+
+                    // Then update the documents that will not have conflicts
+                    SyncPerformanceTestUtils.performLocalUpdate(ctx,
+                        allIds.takeLast(numRemoteChange - numLocalConflict), numLocalConflict)
                 },
                 testDefinition = { ctx, _, _ ->
                     // Do the sync pass that will sync the remote changes to the local collection
@@ -200,11 +252,13 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     // Verify that the test did indeed synchronize the updates locally
                     SyncPerformanceTestUtils.assertLocalAndRemoteDBCount(ctx, numDocs)
 
-                    // Verify the updates were applied locally
-                    val numRemoteUpdates = numberOfChangedDocs ?: -1
+                    val numRemoteUpdates = (numDocs / 2 * pctOfDocsWithChangeEvents).toInt()
+                    val numLocalUpdates = numRemoteUpdates -
+                        (numRemoteUpdates * pctOfDocsWithConflicts).toInt()
 
                     // Both the local and remote should have
                     //      numRemoteUpdates documents with {newField: "remote"}
+                    //      numLocalUpdates documents with {newField: "local"}
                     var res = Tasks.await(ctx.testColl.count(Document("newField", "remote")))
                     SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
                         res.toInt(), numRemoteUpdates, "Num Remote Updates After Test"
@@ -213,6 +267,16 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                     res = Tasks.await(ctx.testColl.sync().count(Document("newField", "remote")))
                     SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
                         res.toInt(), numRemoteUpdates, "Num Local Updates After Test"
+                    )
+
+                    res = Tasks.await(ctx.testColl.count(Document("newField", "local")))
+                    SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                        res.toInt(), numLocalUpdates, "Num Remote Updates After Test"
+                    )
+
+                    res = Tasks.await(ctx.testColl.sync().count(Document("newField", "local")))
+                    SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                        res.toInt(), numLocalUpdates, "Num Local Updates After Test"
                     )
                 }, extraFields = mapOf(
                     "percentageChangeEvent" to BsonDouble(pctOfDocsWithChangeEvents),
