@@ -36,12 +36,14 @@ class SyncMixedPerformanceTestDefinitions {
 
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
-            var documentIds: Set<BsonValue>? = null
+            val documentIds = mutableSetOf<BsonValue>()
+            val documentsToLocallyInsert = mutableListOf<Document>()
 
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
                 beforeEach = { ctx, numDocs, docSize ->
-                    val docIDs = mutableSetOf<BsonValue>()
+                    documentIds.clear()
+                    documentsToLocallyInsert.clear()
                     val numEach = numDocs / 2
 
                     // Generate the documents that are to be synced via R2L and remotely insert them
@@ -50,31 +52,34 @@ class SyncMixedPerformanceTestDefinitions {
                     SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
                         remoteInsertResult.insertedIds.size,
                         numEach)
-                    docIDs.addAll(remoteInsertResult.insertedIds.map { it.value })
+                    documentIds.addAll(remoteInsertResult.insertedIds.map { it.value })
 
                     // Use numEach * pctConflict of the remote documents in a local insert
                     val numConflicts = (numEach * conflictPercentage).toInt()
-                    var localDocs = remoteDocs.subList(0, numConflicts) +
+                    val localDocs = remoteDocs.subList(0, numConflicts) +
                         SyncPerformanceTestUtils.generateDocuments(docSize, numEach - numConflicts)
-                    val localInsertResult = Tasks.await(ctx.testColl.sync().insertMany(localDocs))
-                    SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                        localInsertResult.insertedIds.size,
-                        numEach)
-                    docIDs.addAll(localInsertResult.insertedIds.map { it.value })
-
-                    //  Ensure that the documents properly conflicted
-                    assertIntsAreEqualOrThrow(
-                        docIDs.size,
-                        numDocs - numConflicts,
-                        "Union of local and remote document ids")
-
-                    documentIds = docIDs.toSet()
+                    documentsToLocallyInsert.addAll(localDocs)
                 },
-                testDefinition = { ctx, _, _ ->
+                testDefinition = { ctx, numDocs, _ ->
                     val sync = ctx.testColl.sync()
 
                     // If sync fails for any reason, halt the test
                     SyncPerformanceTestUtils.defaultConfigure(ctx)
+
+                    // Insert the desired documents locally
+                    val localInsertResult = Tasks.await(
+                        ctx.testColl.sync().insertMany(documentsToLocallyInsert))
+
+                    SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
+                        localInsertResult.insertedIds.size,
+                        numDocs / 2, "LocalInsert.insertedIds.size")
+                    documentIds.addAll(localInsertResult.insertedIds.map { it.value })
+
+                    //  Ensure that the documents properly conflicted
+                    assertIntsAreEqualOrThrow(
+                        documentIds.size,
+                        (numDocs * (1 - (conflictPercentage / 2))).toInt(),
+                        "Union of local and remote document ids")
 
                     // Sync() on all of the inserted document ids
                     Tasks.await(sync.syncMany(*(documentIds!!.toTypedArray())))
