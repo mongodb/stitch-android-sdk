@@ -5,19 +5,20 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
-import com.mongodb.stitch.android.examples.chatsync.ChannelService
-import com.mongodb.stitch.android.examples.chatsync.model.Channel
-
-typealias SubscriptionId = String
+import com.mongodb.stitch.android.examples.chatsync.service.ChannelService
+import com.mongodb.stitch.android.examples.chatsync.service.ChannelServiceAction
+import com.mongodb.stitch.android.examples.chatsync.service.asChannelServiceAction
+import com.mongodb.stitch.android.examples.chatsync.service.send
 
 class ChannelLiveData(private val context: Context,
-                      private val id: String) : LiveData<Pair<Channel?, SubscriptionId?>>() {
+                      private val channelId: String) :
+    LiveData<ChannelServiceAction>() {
+
     /** Messenger for communicating with the service. */
     private lateinit var mService: Messenger
     /** Flag indicating whether we have called bind on the service.  */
@@ -26,33 +27,18 @@ class ChannelLiveData(private val context: Context,
     @SuppressWarnings("HandlerLeak")
     private inner class IncomingHandler : Handler() {
         override fun handleMessage(msg: Message) {
-            Log.d("ChannelService",
-                "CHANNEL_LIVE_DATA RECEIVED NEW MESSAGE: $msg WITH DATA: ${msg.data}")
-            when (msg.what) {
-                ChannelService.MSG_CHANNEL_SUBSCRIBE -> {
-                    value = msg.data.getParcelable<Channel>(ChannelService.BUNDLE_CHANNEL) to
-                            value?.second
-                }
-                ChannelService.MSG_CHANNEL_SUBSCRIPTION_SUBSCRIBE -> {
-                    value = value?.first to
-                        msg.data.getString(ChannelService.BUNDLE_CHANNEL_SUBSCRIPTION_ID)
-                }
-            }
+            Log.d("ChannelLiveData", "Received new message: ${msg.asChannelServiceAction()}")
+            value = msg.asChannelServiceAction()
         }
     }
 
     /** Defines callbacks for service binding, passed to bindService() */
     private val connection = object : ServiceConnection {
-
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance
             mService = Messenger(service)
-            val msg = Message()
-            msg.what = ChannelService.MSG_CHANNEL_SUBSCRIBE
-            msg.data = Bundle()
-            msg.data.putString(ChannelService.BUNDLE_CHANNEL_ID, id)
-            msg.replyTo = Messenger(IncomingHandler())
-            mService.send(msg)
+            mService.send(
+                ChannelServiceAction.SubscribeToChannel(channelId, Messenger(IncomingHandler())))
             mBound = true
         }
 
@@ -61,18 +47,8 @@ class ChannelLiveData(private val context: Context,
         }
     }
 
-    fun sendMessage(channelSubscriptionId: SubscriptionId, content: String) {
-        // We've bound to LocalService, cast the IBinder and get LocalService instance
-        val msg = Message()
-        msg.what = ChannelService.MSG_CHANNEL_MESSAGE_INSERT
-        msg.data = Bundle()
-        msg.data.putString(ChannelService.BUNDLE_CHANNEL_ID, id)
-        msg.data.putString(ChannelService.BUNDLE_CHANNEL_SUBSCRIPTION_ID, channelSubscriptionId)
-        msg.data.putString(ChannelService.BUNDLE_CHANNEL_MESSAGE_CONTENT, content)
-        msg.replyTo = Messenger(IncomingHandler())
-        mService.send(msg)
-        mBound = true
-    }
+    fun sendMessage(content: String) =
+        mService.send(ChannelServiceAction.SendMessage(channelId, content))
 
     override fun onActive() {
         if (!mBound) {
@@ -84,6 +60,7 @@ class ChannelLiveData(private val context: Context,
 
     override fun onInactive() {
         if (mBound) {
+            mService.send(ChannelServiceAction.UnsubscribeToChannel(channelId))
             context.unbindService(connection)
         }
     }

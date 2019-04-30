@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import org.bson.codecs.BooleanCodec
 import org.bson.codecs.BsonUndefinedCodec
+import org.bson.codecs.ByteArrayCodec
 import org.bson.codecs.DocumentCodecProvider
 import org.bson.codecs.IntegerCodec
 import org.bson.codecs.LongCodec
@@ -38,7 +39,8 @@ val defaultRegistry: CodecRegistry by lazy {
             LongCodec(),
             ObjectIdCodec(),
             IntegerCodec(),
-            BooleanCodec()
+            BooleanCodec(),
+            ByteArrayCodec()
         ),
         CodecRegistries.fromProviders(
             DocumentCodecProvider(),
@@ -50,6 +52,12 @@ val defaultRegistry: CodecRegistry by lazy {
                 User::class.java
             ).build()))
 }
+
+val defaultAvatars = arrayOf(
+    R.drawable.mind_map_icn,
+    R.drawable.mind_map_icn_2,
+    R.drawable.mind_map_icn_3
+)
 
 abstract class ScopeActivity : AppCompatActivity(), CoroutineScope {
     private lateinit var job: Job

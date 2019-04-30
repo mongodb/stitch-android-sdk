@@ -1,6 +1,5 @@
 package com.mongodb.stitch.android.examples.chatsync
 
-import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.os.Bundle
@@ -11,12 +10,11 @@ import android.support.v4.widget.DrawerLayout
 import android.support.design.widget.NavigationView
 import android.support.v7.widget.Toolbar
 import android.view.Menu
-import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelSubscriptionViewModel
+import com.mongodb.stitch.android.examples.chatsync.service.ChannelService
 import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
 
 class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelectedListener {
     private lateinit var channelViewModel: ChannelViewModel
-    private lateinit var channelSubscriptionViewModel: ChannelSubscriptionViewModel
 
     private fun setupToolbar() {
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -49,10 +47,7 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
 
         setupToolbar()
 
-        channelViewModel = ViewModelProviders.of(this)
-            .get(ChannelViewModel::class.java)
-        channelSubscriptionViewModel = ViewModelProviders.of(this)
-            .get(ChannelSubscriptionViewModel::class.java)
+        channelViewModel = ViewModelProviders.of(this).get(ChannelViewModel::class.java)
     }
 
     override fun onBackPressed() {

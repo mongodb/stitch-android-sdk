@@ -1,18 +1,14 @@
 package com.mongodb.stitch.android.examples.chatsync.model
 
 import android.os.Parcelable
-import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.examples.chatsync.defaultRegistry
 import com.mongodb.stitch.android.examples.chatsync.remoteClient
-import com.mongodb.stitch.android.examples.chatsync.user
-import com.mongodb.stitch.android.examples.chatsync.viewModel.SubscriptionId
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCursor
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
-import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult
 import kotlinx.android.parcel.Parcelize
 import kotlinx.coroutines.withContext
 import org.bson.BsonObjectId
@@ -39,8 +35,19 @@ data class ChannelMessage @BsonCreator constructor(
                 "messages",
                 ChannelMessage::class.java).withCodecRegistry(defaultRegistry)
 
-        fun getMessages(channelId: String): Task<RemoteMongoCursor<ChannelMessage>> {
-            return collection.sync().find(Document(mapOf("channelId" to channelId))).iterator()
+        suspend fun getLocalMessage(messageId: String): ChannelMessage? =
+            withContext(coroutineContext) {
+                Tasks.await(collection.sync().find(Document(mapOf("_id" to messageId))).first())
+            }
+
+        suspend fun getMessages(channelId: String): RemoteMongoCursor<ChannelMessage> =
+            withContext(coroutineContext) {
+                Tasks.await(collection.sync().find(
+                    Document(mapOf("channelId" to channelId))).iterator())
+            }
+
+        suspend fun getMessagesCount(channelId: String): Long = withContext(coroutineContext) {
+            Tasks.await(collection.sync().count(Document(mapOf("channelId" to channelId))))
         }
 
         suspend fun syncMessages(vararg messageIds: String): Void? = withContext(coroutineContext) {
@@ -74,15 +81,11 @@ data class ChannelMessage @BsonCreator constructor(
                     .toTypedArray()
             }
 
-        suspend fun sendMessage(
-            channelId: String, channelSubscriptionId: SubscriptionId, content: String
-        ): ChannelMessage =
+        suspend fun sendMessage(channelId: String, content: String): ChannelMessage =
             withContext(coroutineContext) {
                 val channelMessage = ChannelMessage(
                     ObjectId(), User.getCurrentUser().id, channelId, content)
                 Tasks.await(collection.sync().insertOne(channelMessage))
-                // increment the channel monitor local vector
-                ChannelSubscription.incrementChannelSubscriptionLocalVector(channelSubscriptionId)
                 channelMessage
             }
     }

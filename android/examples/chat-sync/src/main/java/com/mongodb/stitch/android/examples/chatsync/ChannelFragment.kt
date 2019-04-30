@@ -12,20 +12,18 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import com.mongodb.stitch.android.examples.chatsync.model.Channel
 import com.mongodb.stitch.android.examples.chatsync.model.ChannelMessage
-import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelMessageLiveData
-import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelSubscriptionViewModel
+import com.mongodb.stitch.android.examples.chatsync.service.ChannelServiceAction
 import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
-import com.mongodb.stitch.android.examples.chatsync.viewModel.SubscriptionId
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class ChannelFragment : Fragment() {
     private lateinit var channelViewModel: ChannelViewModel
-    private lateinit var channelSubscriptionViewModel: ChannelSubscriptionViewModel
 
-    private val adapter by lazy {
-        MessageAdapter(this.context!!, sortedSetOf())
-    }
+    private val adapter by lazy { MessageAdapter(this.activity!!) }
 
     override fun onCreateView(inflater: LayoutInflater,
                               container: ViewGroup?,
@@ -34,46 +32,37 @@ class ChannelFragment : Fragment() {
     }
 
     private fun sendMessage(v: View) {
-        Log.d("ChannelService", "sending message")
         val messageEditText = v.rootView.findViewById<EditText>(R.id.message_edit_text)
-        channelViewModel.channel.observe(this, Observer { data ->
-            Log.d("ChannelService", "sending message ii")
-            data?.run {
-                if (data.first != null && data.second != null) {
-                    channelViewModel.channel.sendMessage(
-                        data.second!!,
-                        messageEditText.text.toString())
-                }
+        channelViewModel.channel.observe(
+            this, object: Observer<ChannelServiceAction> {
+
+            override fun onChanged(t: ChannelServiceAction?) {
+                channelViewModel.channel.sendMessage(messageEditText.text.toString())
+                channelViewModel.channel.removeObserver(this)
             }
         })
     }
 
-    private fun channelMessageObserver() = Observer<ChannelMessage> { message ->
-        message?.run {
-            adapter.addMessages(message)
-        }
-    }
-
-    private fun channelSubscriptionObserver() = Observer<Array<String>> { vectorMessageIds ->
-        Log.d("ChannelService", "CHANNEL_SUBSCRIPTION_OBSERVER: $vectorMessageIds")
-        vectorMessageIds?.run {
-            vectorMessageIds.forEach { messageId ->
-                ChannelMessageLiveData(view!!.context, messageId)
-                    .observe(this@ChannelFragment, channelMessageObserver())
+    private fun channelObserver() = Observer<ChannelServiceAction> { data ->
+        Log.d("ChannelObserver", "LiveData changed: $data")
+        when (data) {
+            is ChannelServiceAction.SubscribeToChannelReply -> {
+                GlobalScope.launch(Main) {
+                    val (channel) = data
+                    GlobalScope.launch(IO) {
+                        adapter.setCursor(
+                            SparseRemoteMongoCursor(
+                                ChannelMessage.getMessages(channel.id),
+                                ChannelMessage.getMessagesCount(channel.id).toInt()))
+                    }.join()
+                    view?.findViewById<Button>(R.id.send_button)?.isEnabled = true
+                }
             }
-        }
-    }
-
-    private fun channelObserver() = Observer<Pair<Channel?, SubscriptionId?>> { data ->
-        Log.d("ChannelService", "CHANNEL_OBSERVER DATA SHIFT: $data")
-        data?.run {
-            view?.findViewById<Button>(R.id.send_button)?.isEnabled = true
-            val (channel, subscriptionId) = data
-            if (channel != null && subscriptionId != null) {
-                channelSubscriptionViewModel.addChannelSubscription(
-                    view!!.context, channel.id, subscriptionId
-                ).value?.get(channel.id)?.observe(
-                    this@ChannelFragment, channelSubscriptionObserver())
+            is ChannelServiceAction.SendMessageReply -> {
+                adapter.put(data.channelMessage)
+            }
+            is ChannelServiceAction.NewMessageReply -> {
+                adapter.put(data.channelMessage)
             }
         }
     }
@@ -82,17 +71,17 @@ class ChannelFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         val channelMessagesRecyclerView =
             view.findViewById<RecyclerView>(R.id.channel_messages_recycler_view)
-        channelMessagesRecyclerView.layoutManager = LinearLayoutManager(this.context)
+        val layoutManager = LinearLayoutManager(this.context)
+        layoutManager.stackFromEnd = true
+        channelMessagesRecyclerView.layoutManager = layoutManager
+
         channelMessagesRecyclerView.adapter = adapter
 
         val sendButton = view.findViewById<Button>(R.id.send_button)
         sendButton.setOnClickListener(::sendMessage)
         sendButton.isEnabled = false
 
-        channelViewModel = ViewModelProviders.of(activity!!)
-            .get(ChannelViewModel::class.java)
-        channelSubscriptionViewModel = ViewModelProviders.of(activity!!)
-            .get(ChannelSubscriptionViewModel::class.java)
+        channelViewModel = ViewModelProviders.of(activity!!).get(ChannelViewModel::class.java)
 
         channelViewModel.selectChannel(view.context, user.channelsSubscribedTo.first())
             .observe(this, channelObserver())

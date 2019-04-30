@@ -31,7 +31,7 @@ class LoginActivity : ScopeActivity() {
                     Random().nextInt(3),
                     null,
                     listOf("default"))
-                Tasks.await(User.collection.sync().insertOne(user))
+                User.setCurrentUser(user)
                 startActivity(Intent(this@LoginActivity, ChannelActivity::class.java))
             }
             launch(Main) {

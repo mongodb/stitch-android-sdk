@@ -12,7 +12,6 @@ import com.mongodb.stitch.android.examples.chatsync.remoteClient
 import com.mongodb.stitch.android.examples.chatsync.stitch
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import kotlinx.android.parcel.Parcelize
 import kotlinx.coroutines.withContext
@@ -33,18 +32,26 @@ data class Channel @BsonCreator constructor(
                 .withCodecRegistry(defaultRegistry)
         }
 
-        suspend fun subscribeToChannel(userId: String, channelId: String): ObjectId =
+        suspend fun subscribeToChannel(userId: String,
+                                       deviceId: String,
+                                       channelId: String): ObjectId =
             withContext(coroutineContext) {
-                Tasks.await(stitch.callFunction(
+                val id = Tasks.await(stitch.callFunction(
                     "subscribeToChannel",
-                    listOf(userId, channelId),
+                    listOf(userId, deviceId, channelId),
                     ObjectId::class.java))
+                ChannelSubscription.sync(id.toHexString())
+                id
             }
 
-        suspend fun getChannel(channelId: String): Channel? = withContext(coroutineContext) {
+        suspend fun getLocalChannel(channelId: String): Channel? = withContext(coroutineContext) {
             Tasks.await(collection.sync().find(
                 Document(mapOf("_id" to channelId))
             ).first())
+        }
+
+        suspend fun getRemoteChannel(channelId: String): Channel? = withContext(coroutineContext) {
+            Tasks.await(collection.findOne(Document(mapOf("_id" to channelId))))
         }
 
         suspend fun sync(channelId: String): Void? = withContext(coroutineContext) {

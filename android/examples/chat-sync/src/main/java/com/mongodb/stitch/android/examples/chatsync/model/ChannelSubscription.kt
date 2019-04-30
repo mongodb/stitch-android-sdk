@@ -20,6 +20,7 @@ import kotlin.coroutines.coroutineContext
 data class ChannelSubscription @BsonCreator constructor(
     @BsonProperty("channelId") val channelId: String,
     @BsonProperty("ownerId") val ownerId: String,
+    @BsonProperty("deviceId") val deviceId: String,
     @BsonProperty(KEY_LOCAL_TIMESTAMP) val localTimestamp: Long,
     @BsonProperty(KEY_REMOTE_TIMESTAMP) val remoteTimestamp: Long) {
 
@@ -42,22 +43,27 @@ data class ChannelSubscription @BsonCreator constructor(
                 ))
             }
 
-        suspend fun getChannelSubscription(channelSubscriptionId: String): ChannelSubscription? =
+        suspend fun getLocalChannelSubscriptionId(
+            userId: String,
+            deviceId: String,
+            channelId: String
+        ): ObjectId? =
             withContext(coroutineContext) {
-                Tasks.await(collection.sync().find(
-                    Document(
-                        mapOf("_id" to ObjectId(channelSubscriptionId)))
-                ).first())
+                Tasks.await(collection.withDocumentClass(Document::class.java).sync().find(
+                    Document(mapOf(
+                        "userId" to ObjectId(userId),
+                        "deviceId" to deviceId,
+                        "channelId" to channelId))
+                ).projection(Document(mapOf("_id" to true)))
+                .map { (it["_id"] as ObjectId) }
+                .first())
             }
 
-        suspend fun incrementChannelSubscriptionLocalVector(
-            channelSubscriptionId: String
-        ): SyncUpdateResult =
+        suspend fun getLocalChannelSubscription(channelSubscriptionId: String): ChannelSubscription? =
             withContext(coroutineContext) {
-                Tasks.await(collection.sync().updateOne(
-                    Document(mapOf("_id" to ObjectId(channelSubscriptionId))),
-                    Document(mapOf("\$inc" to mapOf(KEY_LOCAL_TIMESTAMP to 1)))
-                ))
+                Tasks.await(collection.sync().find(
+                    Document(mapOf("_id" to ObjectId(channelSubscriptionId)))
+                ).first())
             }
 
         suspend fun setChannelSubscriptionLocalVector(
