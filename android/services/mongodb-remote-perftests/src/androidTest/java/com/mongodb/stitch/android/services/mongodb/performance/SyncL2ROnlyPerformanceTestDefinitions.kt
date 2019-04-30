@@ -19,14 +19,16 @@ class SyncL2ROnlyPerformanceTestDefinitions {
 
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
-            var documentsForCurrentTest: List<Document>? = null
+            val documentsForCurrentTest = mutableListOf<Document>()
 
             testHarness.runPerformanceTestWithParams(
+
                     testName, runId,
                     beforeEach = { _, numDocs, docSize ->
                         // Generate the documents that are to be synced via L2R
-                        documentsForCurrentTest =
-                                SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
+                        documentsForCurrentTest.clear()
+                        documentsForCurrentTest.addAll(
+                                SyncPerformanceTestUtils.generateDocuments(docSize, numDocs))
                     },
                     testDefinition = { ctx, _, _ ->
                         // Initial sync for a purely L2R scenario means inserting local documents,
@@ -146,7 +148,7 @@ class SyncL2ROnlyPerformanceTestDefinitions {
 
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
-            var numberOfChangedDocs: Int? = null
+            var numberOfChangedDocs: Int = -1
 
             testHarness.runPerformanceTestWithParams(
                     testName, runId,

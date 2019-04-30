@@ -38,7 +38,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
 
             // Local variable for list of documents captured by the test definition closures below.
             // This should change for each iteration of the test.
-            var documentIdsForCurrentTest: List<BsonValue?>? = null
+            var documentIdsForCurrentTest = mutableListOf<BsonValue>()
 
             // Initial sync for a purely R2L Scenario means inserting remote documents and then
             // configuring syncMany() on the inserted document id's and performing a sync pass.
@@ -46,9 +46,10 @@ class SyncR2LOnlyPerformanceTestDefinitions {
                 testName, runId,
                 beforeEach = { ctx, numDocs, docSize ->
                     // Generate the documents that are to be synced via R2L and remotely insert them
-                    documentIdsForCurrentTest = SyncPerformanceTestUtils.insertToRemote(
+                    documentIdsForCurrentTest.clear()
+                    documentIdsForCurrentTest.addAll(SyncPerformanceTestUtils.insertToRemote(
                         ctx, numDocs, docSize
-                    )
+                    ))
                 },
                 testDefinition = { ctx, _, _ ->
                     val sync = ctx.testColl.sync()
@@ -77,10 +78,6 @@ class SyncR2LOnlyPerformanceTestDefinitions {
          */
         fun testDisconnectReconnect(testHarness: SyncPerformanceIntTestsHarness, runId: ObjectId) {
             val testName = "R2L_DisconnectReconnect"
-
-            // Local variable for list of documents captured by the test definition closures below.
-            // This should change for each iteration of the test.
-            var documentIdsForCurrentTest: List<BsonValue?>? = null
 
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
@@ -177,7 +174,7 @@ class SyncR2LOnlyPerformanceTestDefinitions {
 
             // Local variable for the number of docs updated in the test
             // This should change for each iteration of the test.
-            var numberOfChangedDocs: Int? = null
+            var numberOfChangedDocs: Int = -1
 
             testHarness.runPerformanceTestWithParams(
                 testName, runId,
