@@ -1,0 +1,48 @@
+{
+    "id": "5cc1db3346f64c9fb1562c4e",
+    "database": "chats",
+    "collection": "users",
+    "roles": [
+        {
+            "name": "owner",
+            "apply_when": {
+                "_id": "%%user.id"
+            },
+            "fields": {
+                "avatar": {},
+                "channelsSubscribedTo": {},
+                "defaultAvatarOrdinal": {},
+                "lastOnline": {},
+                "name": {}
+            },
+            "read": true,
+            "write": true,
+            "insert": true,
+            "delete": true,
+            "additional_fields": {}
+        },
+        {
+            "name": "non-owner",
+            "apply_when": {},
+            "fields": {
+                "avatar": {},
+                "channelsSubscribedTo": {},
+                "defaultAvatarOrdinal": {},
+                "lastOnline": {},
+                "name": {}
+            },
+            "read": true,
+            "write": false,
+            "insert": false,
+            "delete": false,
+            "additional_fields": {}
+        }
+    ],
+    "schema": {
+        "properties": {
+            "_id": {
+                "bsonType": "string"
+            }
+        }
+    }
+}

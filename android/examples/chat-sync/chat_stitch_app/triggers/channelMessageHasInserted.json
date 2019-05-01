@@ -1,0 +1,18 @@
+{
+    "id": "5cc63fcfa77954a5b6313404",
+    "name": "channelMessageHasInserted",
+    "type": "DATABASE",
+    "config": {
+        "operation_types": [
+            "INSERT"
+        ],
+        "database": "chats",
+        "collection": "messages",
+        "service_name": "mongodb-atlas",
+        "match": {},
+        "full_document": true,
+        "unordered": false
+    },
+    "function_name": "channelMessageHasInserted",
+    "disabled": false
+}

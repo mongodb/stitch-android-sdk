@@ -1,0 +1,53 @@
+{
+    "id": "5cc1db63543ad5cdd9f89edb",
+    "database": "chats",
+    "collection": "messages",
+    "roles": [
+        {
+            "name": "owner",
+            "apply_when": {
+                "ownerId": "%%user.id"
+            },
+            "fields": {
+                "channelId": {},
+                "content": {},
+                "remoteTimestamp": {},
+                "sentAt": {}
+            },
+            "read": true,
+            "write": true,
+            "insert": true,
+            "delete": true,
+            "additional_fields": {}
+        },
+        {
+            "name": "non-owner",
+            "apply_when": {},
+            "fields": {
+                "channelId": {},
+                "content": {},
+                "remoteTimestamp": {},
+                "sentAt": {}
+            },
+            "read": true,
+            "write": false,
+            "insert": false,
+            "delete": false,
+            "additional_fields": {}
+        }
+    ],
+    "schema": {
+        "required": [
+            "channelId",
+            "content"
+        ],
+        "properties": {
+            "_id": {
+                "bsonType": "objectId"
+            },
+            "ownerId": {
+                "bsonType": "string"
+            }
+        }
+    }
+}

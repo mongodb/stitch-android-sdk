@@ -1,0 +1,34 @@
+{
+    "id": "5cc60dfd7831f0a16b34d7d4",
+    "database": "chats",
+    "collection": "channel_subscriptions",
+    "roles": [
+        {
+            "name": "owner",
+            "apply_when": {
+                "ownerId": "%%user.id"
+            },
+            "fields": {
+                "_id": {},
+                "channelId": {},
+                "localTimestamp": {},
+                "remoteTimestamp": {}
+            },
+            "read": true,
+            "write": true,
+            "insert": true,
+            "delete": true,
+            "additional_fields": {}
+        }
+    ],
+    "schema": {
+        "properties": {
+            "_id": {
+                "bsonType": "objectId"
+            },
+            "ownerId": {
+                "bsonType": "string"
+            }
+        }
+    }
+}

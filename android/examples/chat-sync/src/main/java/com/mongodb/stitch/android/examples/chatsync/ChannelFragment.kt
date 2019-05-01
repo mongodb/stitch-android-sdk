@@ -13,7 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import com.mongodb.stitch.android.examples.chatsync.model.ChannelMessage
+import com.mongodb.stitch.android.examples.chatsync.repo.ChannelMessageRepo
 import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.android.examples.chatsync.service.ChannelServiceAction
 import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
@@ -36,43 +36,7 @@ class ChannelFragment : Fragment(), CoroutineScope {
         view!!.findViewById<RecyclerView>(R.id.channel_messages_recycler_view)
     }
 
-    private val adapterObserver = object : RecyclerView.AdapterDataObserver() {
-        override fun onChanged() {
-            super.onChanged()
-            Log.e("Observer", "Changed")
-        }
-
-        override fun onItemRangeChanged(positionStart: Int, itemCount: Int) {
-            super.onItemRangeChanged(positionStart, itemCount)
-            Log.e("Observer", "Range Changed")
-        }
-
-        override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
-            super.onItemRangeChanged(positionStart, itemCount, payload)
-            Log.e("Observer", "Range Changed with payload")
-        }
-
-        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-            super.onItemRangeInserted(positionStart, itemCount)
-            Log.e("Observer", "Range Inserted")
-        }
-
-        override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
-            super.onItemRangeMoved(fromPosition, toPosition, itemCount)
-            Log.e("Observer", "Range Moved")
-        }
-
-        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
-            super.onItemRangeRemoved(positionStart, itemCount)
-            Log.e("Observer", "Range Removed")
-        }
-    }
-
-    private val adapter by lazy {
-        MessageAdapter(this.activity!!).also {
-            it.registerAdapterDataObserver(adapterObserver)
-        }
-    }
+    private val adapter by lazy { MessageAdapter(this.activity!!) }
 
     private var isInitialized = false
 
@@ -85,7 +49,6 @@ class ChannelFragment : Fragment(), CoroutineScope {
     private fun scrollToBottom() {
         launch(Main) {
             Handler().postDelayed({
-                Log.e("Looper", "kicking back scroll!")
                 channelMessagesRecyclerView.smoothScrollToPosition(0)
             }, 100)
         }
@@ -96,11 +59,11 @@ class ChannelFragment : Fragment(), CoroutineScope {
         channelViewModel.channel.observe(
             this, object : Observer<ChannelServiceAction> {
 
-            var sent: Boolean = false
+            var hasSentMessage: Boolean = false
 
             override fun onChanged(action: ChannelServiceAction?) {
-                if (!sent) {
-                    sent = true
+                if (!hasSentMessage) {
+                    hasSentMessage = true
                     channelViewModel.channel.sendMessage(messageEditText.text.toString())
                     messageEditText.text.clear()
                 } else {
@@ -127,8 +90,8 @@ class ChannelFragment : Fragment(), CoroutineScope {
                         launch(IO) {
                             adapter.setCursor(
                                 SparseRemoteMongoCursor(
-                                    ChannelMessage.getMessages(channel.id),
-                                    ChannelMessage.getMessagesCount(channel.id).toInt()))
+                                    ChannelMessageRepo.getMessages(channel.id),
+                                    ChannelMessageRepo.getMessagesCount(channel.id).toInt()))
                             scrollToBottom()
                         }.join()
                         view?.findViewById<Button>(R.id.send_button)?.isEnabled = true
@@ -154,7 +117,6 @@ class ChannelFragment : Fragment(), CoroutineScope {
         super.onViewCreated(view, savedInstanceState)
 
         val layoutManager = LinearLayoutManager(this.context)
-
         layoutManager.recycleChildrenOnDetach = true
         layoutManager.stackFromEnd = true
         layoutManager.reverseLayout = true

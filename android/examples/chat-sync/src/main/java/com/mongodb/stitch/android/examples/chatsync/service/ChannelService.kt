@@ -44,6 +44,9 @@ import android.support.v4.graphics.drawable.IconCompat
 import com.mongodb.stitch.android.examples.chatsync.ChannelActivity
 import com.mongodb.stitch.android.examples.chatsync.R
 import com.mongodb.stitch.android.examples.chatsync.defaultAvatars
+import com.mongodb.stitch.android.examples.chatsync.repo.ChannelMembersRepo
+import com.mongodb.stitch.android.examples.chatsync.repo.ChannelMessageRepo
+import com.mongodb.stitch.android.examples.chatsync.repo.ChannelRepo
 import com.mongodb.stitch.android.examples.chatsync.repo.ReadOnlyLruCache
 import org.bson.types.ObjectId
 
@@ -144,12 +147,12 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
             val channelId = localEvent.fullDocument!!.channelId
 
             launch(IO) {
-                val messageIds = ChannelMessage.fetchMessageIdsFromVector(
+                val messageIds = ChannelMessageRepo.fetchMessageIdsFromVector(
                     channelId,
                     localTimestamp.value,
                     remoteTimestamp.value
                 )
-                ChannelMessage.syncMessages(*messageIds)
+                ChannelMessageRepo.syncMessages(*messageIds)
             }.start()
 
             return ChannelSubscription(
@@ -183,12 +186,12 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
                     Log.w("ChannelSubscriptionListener",
                         "Local timestamp differs from remote timestamp")
 
-                    val messageIds = ChannelMessage.fetchMessageIdsFromVector(
+                    val messageIds = ChannelMessageRepo.fetchMessageIdsFromVector(
                         subscription.channelId,
                         subscription.localTimestamp,
                         subscription.remoteTimestamp
                     )
-                    ChannelMessage.syncMessages(*messageIds)
+                    ChannelMessageRepo.syncMessages(*messageIds)
 
                     ChannelSubscriptionRepo.updateLocalVector(
                         subscriptionId, subscription.remoteTimestamp)
@@ -243,16 +246,16 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
 
                         mChannelClients[channelId] = replyTo
 
-                        val channel = checkNotNull(Channel.findLocalChannel(channelId) ?:
-                            Channel.findRemoteChannel(channelId))
+                        val channel = checkNotNull(ChannelRepo.findLocalById(channelId) ?:
+                            ChannelRepo.findRemoteChannel(channelId))
                         val currentUser = checkNotNull(UserRepo.findCurrentUser())
 
-                        Channel.sync(channelId)
-                        ChannelMembers.sync(channelId)
+                        ChannelRepo.sync(channelId)
+                        ChannelMembersRepo.sync(channelId)
 
                         ChannelSubscriptionRepo.getLocalChannelSubscriptionId(
                             currentUser.id, stitch.auth.user!!.deviceId, channelId
-                        ) ?: Channel.subscribeToChannel(
+                        ) ?: ChannelRepo.subscribeToChannel(
                             currentUser.id, stitch.auth.user!!.deviceId, channelId
                         )
 
@@ -265,7 +268,7 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
                     is ChannelServiceAction.SendMessage -> {
                         val (channelId, content) = action
 
-                        val message = ChannelMessage.sendMessage(channelId, content)
+                        val message = ChannelMessageRepo.sendMessage(channelId, content)
 
                         mChannelClients[channelId]?.send(
                             ChannelServiceAction.SendMessageReply(message)
@@ -357,10 +360,11 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
 
         createNotificationChannel()
         launch(IO) {
-            Channel.configure(ChannelListener())
+            ChannelRepo.configure(DefaultSyncConflictResolvers.remoteWins(), ChannelListener())
             ChannelSubscriptionListener().also { ChannelSubscriptionRepo.configure(it, it) }
-            ChannelMembers.configure(ChannelMembersListener())
-            ChannelMessage.configure(ChannelMessageListener())
+            ChannelMembersListener().also { ChannelMembersRepo.configure(it, it) }
+            ChannelMessageRepo
+                .configure(DefaultSyncConflictResolvers.remoteWins(), ChannelMessageListener())
             UserRepo.configure(DefaultSyncConflictResolvers.remoteWins(), UserListener())
             Log.d("ChannelService", "all configures called")
         }.start()

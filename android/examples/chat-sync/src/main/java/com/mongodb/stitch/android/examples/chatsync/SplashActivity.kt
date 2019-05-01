@@ -13,15 +13,14 @@ class SplashActivity: ScopeActivity() {
         launch(IO) {
             if (stitch.auth.isLoggedIn) {
                 UserRepo.findCurrentUser()?.run {
-                    this@SplashActivity.startActivity(
-                        Intent(this@SplashActivity, ChannelActivity::class.java))
-                } ?: this@SplashActivity.startActivity(
-                    Intent(this@SplashActivity, LoginActivity::class.java))
+                    this@SplashActivity
+                        .startActivity(Intent(this@SplashActivity, ChannelActivity::class.java))
+                } ?: this@SplashActivity
+                    .startActivity(Intent(this@SplashActivity, LoginActivity::class.java))
             } else {
-                this@SplashActivity.startActivity(
-                    Intent(this@SplashActivity, LoginActivity::class.java))
+                this@SplashActivity
+                    .startActivity(Intent(this@SplashActivity, LoginActivity::class.java))
             }
         }
-
     }
 }

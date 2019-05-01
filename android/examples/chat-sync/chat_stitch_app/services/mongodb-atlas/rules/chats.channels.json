@@ -1,0 +1,34 @@
+{
+    "id": "5cc1ab820b432a84838614dc",
+    "database": "chats",
+    "collection": "channels",
+    "roles": [
+        {
+            "name": "default",
+            "apply_when": {},
+            "fields": {
+                "topic": {}
+            },
+            "write": true,
+            "insert": true,
+            "delete": true,
+            "additional_fields": {}
+        }
+    ],
+    "schema": {
+        "properties": {
+            "_id": {
+                "bsonType": "string"
+            },
+            "last_modified": {
+                "bsonType": "long"
+            },
+            "name": {
+                "bsonType": "string"
+            },
+            "topic": {
+                "bsonType": "string"
+            }
+        }
+    }
+}

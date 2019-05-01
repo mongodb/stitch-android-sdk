@@ -25,8 +25,6 @@ import org.bson.codecs.configuration.CodecRegistry
 import org.bson.codecs.pojo.PojoCodecProvider
 import kotlin.coroutines.CoroutineContext
 
-
-
 abstract class ScopeActivity : AppCompatActivity(), CoroutineScope {
     private lateinit var job: Job
 
