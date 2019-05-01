@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<android.support.constraint.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ChannelActivity"
-    android:orientation="vertical">
+    tools:context=".ChannelActivity">
 
     <android.support.design.widget.AppBarLayout
+        android:id="@+id/app_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay">
+        app:layout_constraintBottom_toTopOf="@id/channel_fragment"
+        android:theme="@style/AppTheme.AppBarOverlay"
+        app:layout_constraintVertical_chainStyle="spread"
+        app:layout_constraintTop_toTopOf="parent">
 
         <android.support.v7.widget.Toolbar
             android:id="@+id/toolbar"
@@ -26,7 +29,10 @@
         android:id="@+id/channel_fragment"
         android:name="com.mongodb.stitch.android.examples.chatsync.ChannelFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/app_bar_layout"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constrainedHeight="true"/>
     <!--<include layout="@layout/content_main"/>-->
 
-</LinearLayout>
+</android.support.constraint.ConstraintLayout>

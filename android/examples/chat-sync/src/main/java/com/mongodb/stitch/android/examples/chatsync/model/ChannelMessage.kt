@@ -9,6 +9,7 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCursor
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
 import kotlinx.android.parcel.Parcelize
 import kotlinx.coroutines.withContext
 import org.bson.BsonObjectId
@@ -19,31 +20,41 @@ import org.bson.codecs.pojo.annotations.BsonProperty
 import org.bson.types.ObjectId
 import kotlin.coroutines.coroutineContext
 
+/**
+ * ChannelMessages are anchored to a [Channel] by channelId. When a new [ChannelMessage]
+ * document is inserted, a `channelMessageHasInserted` function will be triggered by the
+ * `channelMessageHasInserted` trigger. This function will update every [ChannelSubscription]
+ * associated with the [Channel] to have a synchronized remoteTimestamp. It will then update
+ * the [ChannelMessage] with a fresh `sentAt` parameter, and the associated `remoteTimestamp`.
+ *
+ * @param id the unique id of the message
+ * @param channelId the id of the channel this was sent to
+ * @param content the actual text of the message
+ * @param sentAt the time the message was sent to the server or the time the message hit the server
+ * @param remoteTimestamp the logical time of the message
+ */
 @Parcelize
 data class ChannelMessage @BsonCreator constructor(
     @BsonId val id: ObjectId,
     @BsonProperty("ownerId") val ownerId: String,
     @BsonProperty("channelId") val channelId: String,
     @BsonProperty("content") val content: String,
-    @BsonProperty("sentAt") val sentAt: Long? = null,
+    @BsonProperty("sentAt") val sentAt: Long,
     @BsonProperty("remoteTimestamp") val remoteTimestamp: Long? = null) :
     Comparable<ChannelMessage>, Parcelable {
 
     companion object {
         private val collection: RemoteMongoCollection<ChannelMessage> =
-            remoteClient.getDatabase("chats").getCollection(
-                "messages",
-                ChannelMessage::class.java).withCodecRegistry(defaultRegistry)
-
-        suspend fun getLocalMessage(messageId: String): ChannelMessage? =
-            withContext(coroutineContext) {
-                Tasks.await(collection.sync().find(Document(mapOf("_id" to messageId))).first())
-            }
+            remoteClient
+                .getDatabase("chats")
+                .getCollection("messages", ChannelMessage::class.java)
+                .withCodecRegistry(defaultRegistry)
 
         suspend fun getMessages(channelId: String): RemoteMongoCursor<ChannelMessage> =
             withContext(coroutineContext) {
                 Tasks.await(collection.sync().find(
-                    Document(mapOf("channelId" to channelId))).iterator())
+                    Document(mapOf("channelId" to channelId)))
+                    .sort(Document("sentAt", -1)).iterator())
             }
 
         suspend fun getMessagesCount(channelId: String): Long = withContext(coroutineContext) {
@@ -59,7 +70,12 @@ data class ChannelMessage @BsonCreator constructor(
             where T : ChangeEventListener<ChannelMessage> =
             withContext(coroutineContext) {
                 Tasks.await(collection.sync().configure(
-                    DefaultSyncConflictResolvers.remoteWins(), listener, exceptionListener))
+                    SyncConfiguration.Builder()
+                        .withConflictHandler(
+                            DefaultSyncConflictResolvers.remoteWins<ChannelMessage>())
+                        .withChangeEventListener(listener)
+                        .withExceptionListener(exceptionListener)
+                        .build()))
             }
 
         suspend fun fetchMessageIdsFromVector(channelId: String,
@@ -84,7 +100,7 @@ data class ChannelMessage @BsonCreator constructor(
         suspend fun sendMessage(channelId: String, content: String): ChannelMessage =
             withContext(coroutineContext) {
                 val channelMessage = ChannelMessage(
-                    ObjectId(), User.getCurrentUser().id, channelId, content)
+                    ObjectId(), User.getCurrentUser().id, channelId, content, System.currentTimeMillis())
                 Tasks.await(collection.sync().insertOne(channelMessage))
                 channelMessage
             }
@@ -99,11 +115,6 @@ data class ChannelMessage @BsonCreator constructor(
     }
 
     override fun compareTo(other: ChannelMessage): Int {
-        return when {
-            this.sentAt == null && other.sentAt == null -> 0
-            this.sentAt == null && other.sentAt != null -> -1
-            this.sentAt != null && other.sentAt == null -> 1
-            else -> other.sentAt!!.compareTo(this.sentAt!!) * -1
-        }
+        return this.sentAt.compareTo(other.sentAt) * -1
     }
 }

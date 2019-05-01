@@ -23,7 +23,12 @@ import kotlinx.coroutines.launch
 class ChannelFragment : Fragment() {
     private lateinit var channelViewModel: ChannelViewModel
 
+    private val channelMessagesRecyclerView by lazy {
+        view!!.findViewById<RecyclerView>(R.id.channel_messages_recycler_view)
+    }
+
     private val adapter by lazy { MessageAdapter(this.activity!!) }
+    private var isInitialized = false
 
     override fun onCreateView(inflater: LayoutInflater,
                               container: ViewGroup?,
@@ -34,11 +39,11 @@ class ChannelFragment : Fragment() {
     private fun sendMessage(v: View) {
         val messageEditText = v.rootView.findViewById<EditText>(R.id.message_edit_text)
         channelViewModel.channel.observe(
-            this, object: Observer<ChannelServiceAction> {
+            this, object : Observer<ChannelServiceAction> {
 
             override fun onChanged(t: ChannelServiceAction?) {
-                channelViewModel.channel.sendMessage(messageEditText.text.toString())
                 channelViewModel.channel.removeObserver(this)
+                channelViewModel.channel.sendMessage(messageEditText.text.toString())
             }
         })
     }
@@ -47,15 +52,20 @@ class ChannelFragment : Fragment() {
         Log.d("ChannelObserver", "LiveData changed: $data")
         when (data) {
             is ChannelServiceAction.SubscribeToChannelReply -> {
-                GlobalScope.launch(Main) {
-                    val (channel) = data
-                    GlobalScope.launch(IO) {
-                        adapter.setCursor(
-                            SparseRemoteMongoCursor(
-                                ChannelMessage.getMessages(channel.id),
-                                ChannelMessage.getMessagesCount(channel.id).toInt()))
-                    }.join()
-                    view?.findViewById<Button>(R.id.send_button)?.isEnabled = true
+                if (!isInitialized) {
+                    GlobalScope.launch(Main) {
+                        val (channel) = data
+                        GlobalScope.launch(IO) {
+
+                            adapter.setCursor(
+                                SparseRemoteMongoCursor(
+                                    ChannelMessage.getMessages(channel.id),
+                                    ChannelMessage.getMessagesCount(channel.id).toInt()))
+                            channelMessagesRecyclerView.smoothScrollToPosition(0)
+                        }.join()
+                        view?.findViewById<Button>(R.id.send_button)?.isEnabled = true
+                        isInitialized = true
+                    }
                 }
             }
             is ChannelServiceAction.SendMessageReply -> {
@@ -69,20 +79,25 @@ class ChannelFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val channelMessagesRecyclerView =
-            view.findViewById<RecyclerView>(R.id.channel_messages_recycler_view)
-        val layoutManager = LinearLayoutManager(this.context)
-        layoutManager.stackFromEnd = true
-        channelMessagesRecyclerView.layoutManager = layoutManager
 
+        val layoutManager = LinearLayoutManager(this.context)
+
+        layoutManager.stackFromEnd = true
+        layoutManager.reverseLayout = true
+        layoutManager.orientation = LinearLayoutManager.VERTICAL
+        channelMessagesRecyclerView.layoutManager = layoutManager
         channelMessagesRecyclerView.adapter = adapter
+        channelMessagesRecyclerView.addOnLayoutChangeListener { _, _, _, _, bottom, _, _, _, oldBottom ->
+            if (bottom < oldBottom) {
+                channelMessagesRecyclerView.smoothScrollToPosition(0)
+            }
+        }
 
         val sendButton = view.findViewById<Button>(R.id.send_button)
         sendButton.setOnClickListener(::sendMessage)
         sendButton.isEnabled = false
 
         channelViewModel = ViewModelProviders.of(activity!!).get(ChannelViewModel::class.java)
-
         channelViewModel.selectChannel(view.context, user.channelsSubscribedTo.first())
             .observe(this, channelObserver())
     }

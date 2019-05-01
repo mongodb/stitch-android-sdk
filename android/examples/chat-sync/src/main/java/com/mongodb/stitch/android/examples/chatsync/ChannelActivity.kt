@@ -12,13 +12,16 @@ import android.support.v7.widget.Toolbar
 import android.view.Menu
 import com.mongodb.stitch.android.examples.chatsync.service.ChannelService
 import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
+import com.mvc.imagepicker.ImagePicker
+import java.io.File
+
 
 class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelectedListener {
     private lateinit var channelViewModel: ChannelViewModel
 
     private fun setupToolbar() {
         val toolbar: Toolbar = findViewById(R.id.toolbar)
-        toolbar.title = ""
+        toolbar.title = "default"
         toolbar.setNavigationIcon(R.drawable.mind_map_icn_24)
 
         setSupportActionBar(toolbar)
@@ -50,6 +53,11 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
         channelViewModel = ViewModelProviders.of(this).get(ChannelViewModel::class.java)
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.main, menu)
+        return true
+    }
+
     override fun onBackPressed() {
         val drawerLayout: DrawerLayout = findViewById(R.id.drawer_layout)
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
@@ -59,12 +67,28 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        channelViewModel.channel.setAvatar(File(ImagePicker.getImagePathFromResult(
+                this@ChannelActivity, requestCode, resultCode, data)).readBytes())
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
-            R.id.action_settings -> true
+            R.id.action_logout -> {
+                stitch.auth.logout().addOnSuccessListener {
+                    startActivity(Intent(this@ChannelActivity, LoginActivity::class.java))
+                }
+                true
+            }
+            R.id.action_select_avatar -> {
+                ImagePicker.pickImage(this, "Select your image:")
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }

@@ -12,7 +12,8 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 
 abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> : RecyclerView.Adapter<VH>() {
-    private var cursor: SparseRemoteMongoCursor<T>? = null
+    protected var cursor: SparseRemoteMongoCursor<T>? = null
+        private set
 
     final override fun onBindViewHolder(viewHolder: VH, position: Int) {
         GlobalScope.launch(IO) {
@@ -38,7 +39,7 @@ abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> : RecyclerVie
         val index = cursor?.put(obj) ?: -1
         Log.w("MongoCursorAdapter", "Putting obj in cursor: $obj with index: $index")
         if (index == -1) {
-            this.notifyItemInserted(itemCount - 1)
+            this.notifyItemInserted(0)
         } else {
             this.notifyItemChanged(index)
         }
@@ -47,29 +48,29 @@ abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> : RecyclerVie
 
 class SparseRemoteMongoCursor<T>(private val cursor: RemoteMongoCursor<T>,
                                  var count: Int) {
-    private val sparseCache = LinkedHashMap<Int, T>()
+    private val sparseCache = sortedSetOf<T>()
     private var cursorPosition: Int = -1
 
     suspend fun moveToPosition(position: Int) = withContext(coroutineContext) {
         synchronized(this@SparseRemoteMongoCursor) {
             while (cursorPosition < position && Tasks.await(cursor.hasNext())) {
                 val next = Tasks.await(cursor.next())
-                sparseCache[next.hashCode()] = next
+                sparseCache.add(next)
                 cursorPosition++
             }
         }
     }
 
-    operator fun get(position: Int): T? = sparseCache[sparseCache.keys.elementAt(position)]
+    operator fun get(position: Int): T? = sparseCache.elementAt(position)
 
     fun put(obj: T): Int {
-        val idx = sparseCache.keys.indexOf(obj.hashCode())
+        val idx = sparseCache.indexOf(obj)
         if (idx != -1) {
-            sparseCache[obj.hashCode()] = obj
+            sparseCache.add(obj)
             return idx
         }
 
-        sparseCache[obj.hashCode()] = obj
+        sparseCache.add(obj)
         cursorPosition++
         count++
         return -1

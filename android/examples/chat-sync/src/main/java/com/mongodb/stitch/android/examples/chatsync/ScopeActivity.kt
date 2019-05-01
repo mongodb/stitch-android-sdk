@@ -14,7 +14,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import org.bson.codecs.BooleanCodec
-import org.bson.codecs.BsonUndefinedCodec
 import org.bson.codecs.ByteArrayCodec
 import org.bson.codecs.DocumentCodecProvider
 import org.bson.codecs.IntegerCodec
@@ -26,38 +25,7 @@ import org.bson.codecs.configuration.CodecRegistry
 import org.bson.codecs.pojo.PojoCodecProvider
 import kotlin.coroutines.CoroutineContext
 
-val stitch: StitchAppClient = Stitch.initializeAppClient("chat-eqvtc")!!
 
-val remoteClient: RemoteMongoClient by lazy {
-    stitch.getServiceClient(RemoteMongoClient.factory, "mongodb-atlas")
-}
-
-val defaultRegistry: CodecRegistry by lazy {
-    CodecRegistries.fromRegistries(
-        CodecRegistries.fromCodecs(
-            StringCodec(),
-            LongCodec(),
-            ObjectIdCodec(),
-            IntegerCodec(),
-            BooleanCodec(),
-            ByteArrayCodec()
-        ),
-        CodecRegistries.fromProviders(
-            DocumentCodecProvider(),
-            PojoCodecProvider.builder().register(
-                Channel::class.java,
-                ChannelMessage::class.java,
-                ChannelMembers::class.java,
-                ChannelSubscription::class.java,
-                User::class.java
-            ).build()))
-}
-
-val defaultAvatars = arrayOf(
-    R.drawable.mind_map_icn,
-    R.drawable.mind_map_icn_2,
-    R.drawable.mind_map_icn_3
-)
 
 abstract class ScopeActivity : AppCompatActivity(), CoroutineScope {
     private lateinit var job: Job

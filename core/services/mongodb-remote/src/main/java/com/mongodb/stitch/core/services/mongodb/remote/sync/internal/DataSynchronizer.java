@@ -653,10 +653,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       logicalT++;
 
       if (logger.isInfoEnabled()) {
-        logger.info(String.format(
-            Locale.US,
-            "t='%d': doSyncPass START",
-            logicalT));
+//        logger.info(String.format(
+//            Locale.US,
+//            "t='%d': doSyncPass START",
+//            logicalT));
       }
       if (networkMonitor == null || !networkMonitor.isConnected()) {
         if (logger.isInfoEnabled()) {
@@ -681,10 +681,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       syncLocalToRemote();
 
       if (logger.isInfoEnabled()) {
-        logger.info(String.format(
-            Locale.US,
-            "t='%d': doSyncPass END",
-            logicalT));
+//        logger.info(String.format(
+//            Locale.US,
+//            "t='%d': doSyncPass END",
+//            logicalT));
       }
     } catch (InterruptedException e) {
       if (logger.isInfoEnabled()) {
@@ -710,10 +710,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   private void syncRemoteToLocal() throws InterruptedException {
     if (logger.isInfoEnabled()) {
-      logger.info(String.format(
-          Locale.US,
-          "t='%d': syncRemoteToLocal START",
-          logicalT));
+//      logger.info(String.format(
+//          Locale.US,
+//          "t='%d': syncRemoteToLocal START",
+//          logicalT));
     }
 
     // 2. Run remote to local (R2L) sync routine
@@ -839,10 +839,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
 
     if (logger.isInfoEnabled()) {
-      logger.info(String.format(
-          Locale.US,
-          "t='%d': syncRemoteToLocal END",
-          logicalT));
+//      logger.info(String.format(
+//          Locale.US,
+//          "t='%d': syncRemoteToLocal END",
+//          logicalT));
     }
   }
 
@@ -1070,10 +1070,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    */
   private void syncLocalToRemote() {
     if (logger.isInfoEnabled()) {
-      logger.info(String.format(
-          Locale.US,
-          "t='%d': syncLocalToRemote START",
-          logicalT));
+//      logger.info(String.format(
+//          Locale.US,
+//          "t='%d': syncLocalToRemote START",
+//          logicalT));
     }
 
     // 1. Run local to remote (L2R) sync routine
@@ -1462,10 +1462,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     }
 
     if (logger.isInfoEnabled()) {
-      logger.info(String.format(
-          Locale.US,
-          "t='%d': syncLocalToRemote END",
-          logicalT));
+//      logger.info(String.format(
+//          Locale.US,
+//          "t='%d': syncLocalToRemote END",
+//          logicalT));
     }
 
     // 3. If there are still local writes pending for the document, it will go through the L2R

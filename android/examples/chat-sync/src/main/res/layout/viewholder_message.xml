@@ -4,14 +4,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layoutDirection="locale">
+    android:layoutDirection="locale"
+    android:layout_marginTop="10dp">
 
-    <ImageView
+    <com.makeramen.roundedimageview.RoundedImageView
         android:id="@+id/avatar"
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:src="@drawable/mind_map_icn"
         android:layout_margin="10dp"
+        app:riv_corner_radius="5dp"
+        app:riv_mutate_background="true"
+        app:riv_border_width="1dp"
+        app:riv_border_color="@color/colorLightGray"
+        android:background="@color/colorLighterGray"
+        android:scaleType="centerCrop"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
 
@@ -43,5 +50,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@id/username"
-        app:layout_constraintTop_toBottomOf="@id/username"/>
+        app:layout_constraintTop_toBottomOf="@id/username"
+        android:textDirection="locale"
+        android:textAlignment="gravity"/>
 </android.support.constraint.ConstraintLayout>

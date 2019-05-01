@@ -1,27 +1,14 @@
 <resources>
     <string name="app_name">ChatSync</string>
-    <string name="login_action_label">Login</string>
-    <string name="add_item_action_label">Add</string>
-    <string name="search_items_action_label">Search</string>
-    <string name="clear_checked_action_label">Clear Checked</string>
-    <string name="clear_all_action_label">Clear All</string>
-    <string name="edit_item_hint">Edit Item</string>
-    <string name="stitch_client_app_id">todo-arcsc</string>
-    <string name="stitch_user1_api_key">Q1RyzXfGJRB0X7Bm9YXyOUTBW2fKyhUHpnfvc42kWLMCdcYrft9hlmo3lUOBlZs6</string>
-    <string name="title_activity_main">MainActivity</string>
+
+    <string name="login">login</string>
+    <string name="logout">logout</string>
+
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Android Studio</string>
-    <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">Settings</string>
 
-    <string name="menu_home">Home</string>
-    <string name="menu_gallery">Gallery</string>
-    <string name="menu_slideshow">Slideshow</string>
-    <string name="menu_tools">Tools</string>
-    <string name="menu_share">Share</string>
-    <string name="menu_send">Send</string>
+    <string name="send">send</string>
 
     <string name="lorem_ipsum">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</string>
 </resources>

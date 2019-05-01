@@ -38,43 +38,26 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
     override val coroutineContext: CoroutineContext
         get() = job + Dispatchers.Main
 
-    /**
-     * Target we publish for clients to send messages to IncomingHandler.
-     */
     private val mMessengers: MutableList<Messenger> = mutableListOf()
 
     private val mChannelClients = mutableMapOf<ChannelId, Messenger>()
 
     private inner class ChannelListener : ChangeEventListener<Channel> {
         override fun onEvent(documentId: BsonValue, event: ChangeEvent<Channel>) {
-            Log.d("ChannelService", "CHANNEL_LISTENER RECEIVED EVENT: ${event.operationType}")
-            if (event.hasUncommittedWrites()) {
-                return
-            }
-
-            when (event.operationType) {
-                OperationType.REPLACE -> {
-
-//                    mChannelClients[(documentId as BsonString).value]?.send(
-//                        ChannelServiceAction.SubscribeToChannelReply(event.fullDocument!!))
-                }
-                else -> return
-            }
+            Log.d("ChannelListener", "onEvent: ${event.toBsonDocument()}")
         }
     }
 
     private inner class UserListener : ChangeEventListener<User> {
         override fun onEvent(documentId: BsonValue, event: ChangeEvent<User>) {
-            if (event.hasUncommittedWrites()) {
-                return
-            }
+            Log.w("UserListener",
+                "onEvent: ${event.toBsonDocument()} fullDocument: ${event.fullDocument}")
 
             when (event.operationType) {
-                OperationType.REPLACE -> {
+                OperationType.REPLACE, OperationType.UPDATE -> {
                     val user = checkNotNull(event.fullDocument)
                     user.channelsSubscribedTo.forEach {
-                        mChannelClients[it]?.send(
-                            ChannelServiceAction.UserUpdated(user))
+                        mChannelClients[it]?.send(ChannelServiceAction.UserUpdated(user))
                     }
                 }
                 else -> {}
@@ -165,12 +148,9 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
                     val localSubscription = ChannelSubscription
                         .getLocalChannelSubscription(subscriptionId)
 
-                    Log.d("ChannelSubscriptionListener",
-                        "Received subscriptions: local: $localSubscription remote: $remoteSubscription")
                     checkNotNull(remoteSubscription)
                     localSubscription ?: return@launch
-                    Log.i("ChannelSubscriptionListener",
-                        "Did not return")
+
                     if (localSubscription.localTimestamp == remoteSubscription.remoteTimestamp) {
                         return@launch
                     }
@@ -199,6 +179,7 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
         override fun resolveConflict(documentId: BsonValue,
                                      localEvent: ChangeEvent<ChannelMembers>,
                                      remoteEvent: ChangeEvent<ChannelMembers>): ChannelMembers? {
+            Log.w("ChannelMembersListener", "Conflict!")
             if (remoteEvent.operationType == OperationType.DELETE) {
                 return null
             }
@@ -212,6 +193,8 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
         }
 
         override fun onEvent(documentId: BsonValue, event: ChangeEvent<ChannelMembers>) {
+            Log.w("ChannelMembersListener",
+                "onEvent: ${event.toBsonDocument()} fullDocument: ${event.fullDocument}")
             if (event.hasUncommittedWrites()) {
                 return
             }
@@ -240,8 +223,8 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
 
                         mChannelClients[channelId] = replyTo
 
-                        val channel = checkNotNull(Channel.getLocalChannel(channelId) ?:
-                            Channel.getRemoteChannel(channelId))
+                        val channel = checkNotNull(Channel.findLocalChannel(channelId) ?:
+                            Channel.findRemoteChannel(channelId))
 
                         Channel.sync(channelId)
                         ChannelMembers.sync(channelId)
@@ -266,6 +249,9 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
                         mChannelClients[channelId]?.send(
                             ChannelServiceAction.SendMessageReply(message)
                         ) ?: throw Error("Not subscribed to channel")
+                    }
+                    is ChannelServiceAction.SetAvatar -> {
+                        User.setAvatar(action.avatar)
                     }
                     else -> super.handleMessage(msg)
                 }

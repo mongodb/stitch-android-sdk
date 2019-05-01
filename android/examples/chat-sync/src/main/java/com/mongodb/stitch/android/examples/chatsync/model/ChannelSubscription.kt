@@ -8,9 +8,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
 import kotlinx.coroutines.withContext
 import org.bson.BsonObjectId
-import org.bson.BsonString
 import org.bson.Document
 import org.bson.codecs.pojo.annotations.BsonCreator
 import org.bson.codecs.pojo.annotations.BsonProperty
@@ -35,14 +35,6 @@ data class ChannelSubscription @BsonCreator constructor(
                 .withCodecRegistry(defaultRegistry)
         }
 
-        suspend fun getRemoteChannelSubscription(channelSubscriptionId: String): ChannelSubscription? =
-            withContext(coroutineContext) {
-                Tasks.await(collection.findOne(
-                    Document(
-                        mapOf("_id" to ObjectId(channelSubscriptionId)))
-                ))
-            }
-
         suspend fun getLocalChannelSubscriptionId(
             userId: String,
             deviceId: String,
@@ -51,12 +43,12 @@ data class ChannelSubscription @BsonCreator constructor(
             withContext(coroutineContext) {
                 Tasks.await(collection.withDocumentClass(Document::class.java).sync().find(
                     Document(mapOf(
-                        "userId" to ObjectId(userId),
+                        "ownerId" to userId,
                         "deviceId" to deviceId,
                         "channelId" to channelId))
                 ).projection(Document(mapOf("_id" to true)))
-                .map { (it["_id"] as ObjectId) }
-                .first())
+                    .map { (it["_id"] as ObjectId) }
+                    .first())
             }
 
         suspend fun getLocalChannelSubscription(channelSubscriptionId: String): ChannelSubscription? =
@@ -86,7 +78,12 @@ data class ChannelSubscription @BsonCreator constructor(
         ): Void? where T : ConflictHandler<ChannelSubscription>,
                        T : ChangeEventListener<ChannelSubscription> =
             withContext(coroutineContext) {
-                Tasks.await(collection.sync().configure(listener, listener, exceptionListener))
+                Tasks.await(collection.sync().configure(
+                    SyncConfiguration.Builder()
+                        .withConflictHandler(listener)
+                        .withChangeEventListener(listener)
+                        .withExceptionListener(exceptionListener)
+                        .build()))
             }
     }
 }

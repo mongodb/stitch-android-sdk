@@ -7,15 +7,23 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
 import kotlinx.coroutines.withContext
 import org.bson.BsonString
 import org.bson.Document
 import org.bson.codecs.pojo.annotations.BsonCreator
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.codecs.pojo.annotations.BsonProperty
-import org.bson.types.ObjectId
 import kotlin.coroutines.coroutineContext
 
+/**
+ * ChannelMembers are anchored to a [Channel] by their id. They act as a live list of users
+ * that have subscribed to the channel. When a user subscribes to channel, Stitch will add
+ * them as a member to the associated [ChannelMembers] document.
+ *
+ * @param id the id of the channel
+ * @param members the [User] ids subscribed to this channel
+ */
 data class ChannelMembers @BsonCreator constructor(
     @BsonId val id: String,
     @BsonProperty("members") val members: List<String>) {
@@ -31,17 +39,16 @@ data class ChannelMembers @BsonCreator constructor(
         suspend fun <T> configure(listener: T, exceptionListener: ExceptionListener? = null): Void?
             where T : ConflictHandler<ChannelMembers>, T : ChangeEventListener<ChannelMembers> =
             withContext(coroutineContext) {
-                Tasks.await(collection.sync().configure(listener, listener, exceptionListener))
+                Tasks.await(collection.sync().configure(
+                    SyncConfiguration.Builder()
+                        .withConflictHandler(listener)
+                        .withChangeEventListener(listener)
+                        .withExceptionListener(exceptionListener)
+                        .build()))
             }
 
         suspend fun sync(channelId: String): Void? = withContext(coroutineContext) {
             Tasks.await(collection.sync().syncOne(BsonString(channelId)))
-        }
-
-        suspend fun getMemberIds(channelId: String): List<String> = withContext(coroutineContext) {
-            Tasks.await(collection.sync().find(Document(
-                mapOf("_id" to channelId)
-            )).first()).members
         }
     }
 }

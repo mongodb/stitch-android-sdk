@@ -47,6 +47,10 @@ class ChannelLiveData(private val context: Context,
         }
     }
 
+    fun setAvatar(avatar: ByteArray) {
+        mService.send(ChannelServiceAction.SetAvatar(avatar))
+    }
+
     fun sendMessage(content: String) =
         mService.send(ChannelServiceAction.SendMessage(channelId, content))
 
@@ -60,6 +64,7 @@ class ChannelLiveData(private val context: Context,
 
     override fun onInactive() {
         if (mBound) {
+            mBound = false
             mService.send(ChannelServiceAction.UnsubscribeToChannel(channelId))
             context.unbindService(connection)
         }

@@ -4,6 +4,12 @@ apply plugin: 'jacoco-android'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
+allprojects {
+    repositories {
+        maven { url "https://jitpack.io" }
+    }
+}
+
 buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:3.4.0'
@@ -48,5 +54,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
-
+    /* external dependencies */
+    implementation 'com.makeramen:roundedimageview:2.3.0'
+    implementation 'com.github.Mariovc:ImagePicker:1.2.2'
 }

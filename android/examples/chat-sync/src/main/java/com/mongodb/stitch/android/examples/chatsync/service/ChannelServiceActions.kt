@@ -19,6 +19,7 @@ private enum class Action {
     SEND_MESSAGE_REPLY,
     NEW_MESSAGE_REPLY,
 
+    SET_AVATAR,
     USER_UPDATED
 }
 
@@ -31,6 +32,7 @@ private const val BUNDLE_CHANNEL_MESSAGE_CONTENT = "__channel_message_content__"
 
 private const val BUNDLE_CHANNEL_SUBSCRIPTION_ID = "__channel_subscription_id__"
 
+private const val BUNDLE_AVATAR = "__avatar__"
 private const val BUNDLE_USER = "__user__"
 
 fun Messenger.send(channelServiceAction: ChannelServiceAction) {
@@ -66,6 +68,9 @@ fun Message.asChannelServiceAction(): ChannelServiceAction {
                 this.data.getString(BUNDLE_CHANNEL_MESSAGE_ID)!!,
                 this.data.getParcelable(BUNDLE_CHANNEL_MESSAGE)!!
             )
+        }
+        Action.SET_AVATAR.ordinal -> {
+            ChannelServiceAction.SetAvatar(this.data.getByteArray(BUNDLE_AVATAR)!!)
         }
         Action.USER_UPDATED.ordinal -> {
             ChannelServiceAction.UserUpdated(this.data.getParcelable(BUNDLE_USER)!!)
@@ -120,6 +125,12 @@ sealed class ChannelServiceAction constructor(private val action: Action) {
         override val asMessage = getMessage {
             it.data.putString(BUNDLE_CHANNEL_MESSAGE_ID, messageId)
             it.data.putParcelable(BUNDLE_CHANNEL_MESSAGE, channelMessage)
+        }
+    }
+
+    data class SetAvatar(val avatar: ByteArray) : ChannelServiceAction(Action.SET_AVATAR) {
+        override val asMessage = getMessage {
+            it.data.putByteArray(BUNDLE_AVATAR, avatar)
         }
     }
 

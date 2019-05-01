@@ -9,6 +9,7 @@ import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
 import kotlinx.android.parcel.Parcelize
 import kotlinx.coroutines.withContext
 import org.bson.BsonString
@@ -24,7 +25,7 @@ data class User @BsonCreator constructor(
     @BsonProperty("name") val name: String,
     @BsonProperty("lastOnline") val lastOnline: Long,
     @BsonProperty("defaultAvatarOrdinal") val defaultAvatarOrdinal: Int,
-    @BsonProperty("avatar") val avatar: Array<Byte>?,
+    @BsonProperty("avatar") val avatar: ByteArray?,
     @BsonProperty("channelsSubscribedTo") val channelsSubscribedTo: List<String>
 ) : Parcelable {
     companion object {
@@ -39,7 +40,11 @@ data class User @BsonCreator constructor(
             where T : ChangeEventListener<User> =
             withContext(coroutineContext) {
                 Tasks.await(collection.sync().configure(
-                    DefaultSyncConflictResolvers.remoteWins(), listener, exceptionListener))
+                    SyncConfiguration.Builder()
+                        .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<User>())
+                        .withChangeEventListener(listener)
+                        .withExceptionListener(exceptionListener)
+                        .build()))
             }
 
         suspend fun getCurrentUser(): User = withContext(coroutineContext) {
@@ -50,12 +55,23 @@ data class User @BsonCreator constructor(
             Tasks.await(collection.sync().find(Document(mapOf("_id" to userId))).first())
         }
 
-        suspend fun sync(vararg userIds: String) = withContext(coroutineContext) {
+        suspend fun sync(vararg userIds: String): Void? = withContext(coroutineContext) {
             Tasks.await(collection.sync().syncMany(*userIds.map { BsonString(it) }.toTypedArray()))
         }
 
         suspend fun setCurrentUser(user: User) = withContext(coroutineContext) {
             Tasks.await(collection.sync().insertOne(user))
+        }
+
+        suspend fun setAvatar(avatar: ByteArray) = withContext(coroutineContext) {
+            Tasks.await(collection.sync().updateOne(
+                Document(mapOf("_id" to getCurrentUser().id)),
+                Document(
+                    mapOf("\$set" to
+                        mapOf("avatar" to avatar)
+                    )
+                )
+            ))
         }
     }
 }

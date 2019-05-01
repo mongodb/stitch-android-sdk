@@ -28,7 +28,7 @@ class LoginActivity : ScopeActivity() {
                 user = User(stitchUser.id,
                     usernameEditText.text.toString(),
                     System.currentTimeMillis(),
-                    Random().nextInt(3),
+                    Random().nextInt(7),
                     null,
                     listOf("default"))
                 User.setCurrentUser(user)
