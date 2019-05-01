@@ -46,19 +46,6 @@ public final class UpdateDescription {
   /**
    * Creates an update description with the specified updated fields and removed field names.
    * @param updatedFields Nested key-value pair representation of updated fields.
-   * @param removedFields Set of removed field names.
-   */
-  public UpdateDescription(
-      final BsonDocument updatedFields,
-      final Set<String> removedFields
-  ) {
-    this.updatedFields = updatedFields == null ? new BsonDocument() : updatedFields;
-    this.removedFields = removedFields == null ? new HashSet<>() : removedFields;
-  }
-
-  /**
-   * Creates an update description with the specified updated fields and removed field names.
-   * @param updatedFields Nested key-value pair representation of updated fields.
    * @param removedFields Collection of removed field names.
    */
   public UpdateDescription(

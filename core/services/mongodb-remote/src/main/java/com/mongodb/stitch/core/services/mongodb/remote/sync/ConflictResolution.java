@@ -65,7 +65,7 @@ public abstract class ConflictResolution {
    * {@link FromRemote} resolves a conflict by accepting the current state of the document on the
    * remote MongoDB server. This may incur a remote call to the server.
    */
-  public static final class FromRemote extends ConflictResolution {
+  static final class FromRemote extends ConflictResolution {
     static final FromRemote instance = new FromRemote();
 
     private FromRemote() {
@@ -82,7 +82,7 @@ public abstract class ConflictResolution {
    * {@link FromLocal} resolves a conflict by accepting the current state of the document on the
    * device. This local version will eventually be propagated to the remote server.
    */
-  public static final class FromLocal extends ConflictResolution {
+  static final class FromLocal extends ConflictResolution {
     static final FromLocal instance = new FromLocal();
 
     private FromLocal() {
@@ -126,7 +126,7 @@ public abstract class ConflictResolution {
   }
 
   /**
-   * Returns the enum type of this {@link ConflictResolution}.
+   * Returns the enum type of this {@link ConflictResolution}. For internal use only.
    *
    * @return the type of this {@link ConflictResolution}
    */

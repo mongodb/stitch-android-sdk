@@ -6,6 +6,7 @@ import org.bson.BsonDocument
 import org.bson.BsonElement
 import org.bson.BsonInt32
 import org.bson.BsonString
+import org.bson.Document
 import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -298,7 +299,7 @@ class UpdateDescriptionUnitTests {
         assertEquals(updatedFields, updateDoc["\$set"])
         assertEquals(removedFields, updateDoc["\$unset"]?.asDocument()?.entries?.map { it.key }?.toSet())
     }
-
+    
     private fun testDiff(
         collection: MongoCollection<BsonDocument>,
         beforeDocument: BsonDocument,
