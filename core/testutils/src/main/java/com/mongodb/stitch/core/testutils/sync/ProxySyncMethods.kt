@@ -26,6 +26,13 @@ interface ProxySyncMethods {
         exceptionListener: ExceptionListener?
     ): Void?
 
+    fun configure(
+        conflictResolver: ConflictHandler<Document?>,
+        changeEventListener: ChangeEventListener<Document>?,
+        exceptionListener: ExceptionListener?,
+        syncFrequency: SyncFrequency?
+    ): Void?
+
     fun configure(syncConfig: SyncConfiguration): Void?
 
     fun updateSyncFrequency(syncFrequency: SyncFrequency): Void?

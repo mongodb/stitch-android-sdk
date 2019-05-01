@@ -79,8 +79,23 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
                 sync.configure(
                     conflictResolver,
                     changeEventListener,
+                    exceptionListener
+                )
+            )
+        }
+
+        override fun configure(
+            conflictResolver: ConflictHandler<Document?>,
+            changeEventListener: ChangeEventListener<Document>?,
+            exceptionListener: ExceptionListener?,
+            syncFrequency: SyncFrequency?
+        ): Void? {
+            return Tasks.await(
+                sync.configure(
+                    conflictResolver,
+                    changeEventListener,
                     exceptionListener,
-                    SyncFrequency.reactive()
+                    syncFrequency
                 )
             )
         }
@@ -463,6 +478,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     override fun testUpdateSyncFrequency() {
         testProxy.testUpdateSyncFrequency()
+    }
+
+    @Test
+    override fun testFindOnReceivingChangeEvent() {
+        testProxy.testFindOnReceivingChangeEvent()
     }
 
     /**
