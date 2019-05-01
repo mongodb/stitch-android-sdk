@@ -1,5 +1,6 @@
 package com.mongodb.stitch.android.examples.chatsync
 
+import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.os.Bundle
@@ -10,8 +11,10 @@ import android.support.v4.widget.DrawerLayout
 import android.support.design.widget.NavigationView
 import android.support.v7.widget.Toolbar
 import android.view.Menu
+import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.android.examples.chatsync.service.ChannelService
+import com.mongodb.stitch.android.examples.chatsync.service.ChannelServiceAction
 import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
 import com.mvc.imagepicker.ImagePicker
 import kotlinx.coroutines.Dispatchers.IO
@@ -56,8 +59,13 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
 
         setContentView(R.layout.activity_main)
 
-        setupToolbar()
+        channelViewModel = ViewModelProviders.of(this).get(ChannelViewModel::class.java)
 
+        setupToolbar()
+    }
+
+    override fun onResume() {
+        super.onResume()
         channelViewModel = ViewModelProviders.of(this).get(ChannelViewModel::class.java)
     }
 
@@ -78,8 +86,23 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        channelViewModel.channel.setAvatar(File(ImagePicker.getImagePathFromResult(
-                this@ChannelActivity, requestCode, resultCode, data)).readBytes())
+        if (!::channelViewModel.isInitialized) {
+            channelViewModel = ViewModelProviders.of(this).get(ChannelViewModel::class.java)
+        }
+
+
+        channelViewModel.selectChannel(this, "default").observe(
+            this, object : Observer<ChannelServiceAction> {
+
+            override fun onChanged(action: ChannelServiceAction?) {
+                if (action != null) {
+                    channelViewModel.channel.setAvatar(File(ImagePicker.getImagePathFromResult(
+                        this@ChannelActivity, requestCode, resultCode, data)).readBytes())
+                    channelViewModel.channel.removeObserver(this)
+                }
+            }
+
+        })
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -88,8 +111,11 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_logout -> {
-                stitch.auth.logout().addOnSuccessListener {
-                    startActivity(Intent(this@ChannelActivity, LoginActivity::class.java))
+                launch(IO) {
+                    Tasks.await(stitch.auth.logout())
+                    launch(Main) {
+                        startActivity(Intent(this@ChannelActivity, LoginActivity::class.java))
+                    }
                 }
                 true
             }

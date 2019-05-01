@@ -10,6 +10,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -70,6 +71,19 @@ abstract class SyncRepo<DocumentT, IdType>(private val cacheSize: Int) {
         )?.let {
             Log.w("SyncRepo", "Adding $id to liveCache!")
             putIntoCache(id, it)
+        }
+    }
+
+
+    fun refreshCacheForId(id: IdType) {
+        if (cache[id.hashCode()] == null) {
+            GlobalScope.launch(IO) {
+                Tasks.await(
+                    collection.sync().find(Document(mapOf("_id" to id))).first()
+                )?.let {
+                    putIntoCache(id, it)
+                }
+            }
         }
     }
 

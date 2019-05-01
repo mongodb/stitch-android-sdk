@@ -1,7 +1,6 @@
 package com.mongodb.stitch.android.examples.chatsync
 
 import android.arch.lifecycle.Observer
-import android.arch.lifecycle.ViewModelProviders
 import android.support.v4.app.FragmentActivity
 import android.support.v7.widget.RecyclerView
 import android.text.format.DateFormat
@@ -15,8 +14,6 @@ import android.widget.TextView
 import com.mongodb.stitch.android.examples.chatsync.model.ChannelMessage
 import com.mongodb.stitch.android.examples.chatsync.model.User
 import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
-import com.mongodb.stitch.android.examples.chatsync.service.ChannelServiceAction
-import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
 import kotlinx.android.synthetic.main.viewholder_message.view.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -55,26 +52,6 @@ class FullMessageViewHolder(private val activity: FragmentActivity, itemView: Vi
     private val avatar by lazy { itemView.findViewById<ImageView>(R.id.avatar) }
     private lateinit var currentMessage: ChannelMessage
 
-    private val observer: Observer<ChannelServiceAction?> by lazy {
-        Observer { action: ChannelServiceAction? ->
-            when (action) {
-                is ChannelServiceAction.UserUpdated -> {
-                    if (action.user.id == currentMessage.ownerId) {
-                        setUser(action.user)
-                    }
-                }
-            }
-        }
-    }
-
-    init {
-        val channelViewModel = ViewModelProviders
-            .of(activity)
-            .get(ChannelViewModel::class.java)
-
-        channelViewModel.channel.observe(activity, observer)
-    }
-
     private fun setUser(user: User) {
         if (user.avatar != null) {
             avatar.setImageBitmap(user.bitmapAvatar())
@@ -92,13 +69,12 @@ class FullMessageViewHolder(private val activity: FragmentActivity, itemView: Vi
         itemView.time.text = DateFormat.getTimeFormat(activity).format(Date(message.sentAt))
         itemView.time.visibility = VISIBLE
 
-        launch(IO) {
-            UserRepo.findLocalById(message.ownerId)?.let {
-                launch(Main) {
-                    setUser(it)
-                }
+        UserRepo.refreshCacheForId(message.ownerId)
+        UserRepo.liveCache.observe(activity, Observer { cache ->
+            cache?.let {
+                it[message.ownerId.hashCode()]?.let(::setUser)
             }
-        }.join()
+        })
 
         super.setMessage(message)
     }

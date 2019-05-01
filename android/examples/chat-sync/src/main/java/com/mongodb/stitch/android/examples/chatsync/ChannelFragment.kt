@@ -3,6 +3,7 @@ package com.mongodb.stitch.android.examples.chatsync
 import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 import android.os.Bundle
+import android.os.Handler
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -35,13 +36,59 @@ class ChannelFragment : Fragment(), CoroutineScope {
         view!!.findViewById<RecyclerView>(R.id.channel_messages_recycler_view)
     }
 
-    private val adapter by lazy { MessageAdapter(this.activity!!) }
+    private val adapterObserver = object : RecyclerView.AdapterDataObserver() {
+        override fun onChanged() {
+            super.onChanged()
+            Log.e("Observer", "Changed")
+        }
+
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int) {
+            super.onItemRangeChanged(positionStart, itemCount)
+            Log.e("Observer", "Range Changed")
+        }
+
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
+            super.onItemRangeChanged(positionStart, itemCount, payload)
+            Log.e("Observer", "Range Changed with payload")
+        }
+
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            super.onItemRangeInserted(positionStart, itemCount)
+            Log.e("Observer", "Range Inserted")
+        }
+
+        override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
+            super.onItemRangeMoved(fromPosition, toPosition, itemCount)
+            Log.e("Observer", "Range Moved")
+        }
+
+        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
+            super.onItemRangeRemoved(positionStart, itemCount)
+            Log.e("Observer", "Range Removed")
+        }
+    }
+
+    private val adapter by lazy {
+        MessageAdapter(this.activity!!).also {
+            it.registerAdapterDataObserver(adapterObserver)
+        }
+    }
+
     private var isInitialized = false
 
     override fun onCreateView(inflater: LayoutInflater,
                               container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.content_main, container, false)
+    }
+
+    private fun scrollToBottom() {
+        launch(Main) {
+            Handler().postDelayed({
+                Log.e("Looper", "kicking back scroll!")
+                channelMessagesRecyclerView.smoothScrollToPosition(0)
+            }, 100)
+        }
     }
 
     private fun sendMessage(v: View) {
@@ -60,7 +107,8 @@ class ChannelFragment : Fragment(), CoroutineScope {
                     when (action) {
                         is ChannelServiceAction.SendMessageReply -> {
                             adapter.put(action.channelMessage)
-                            channelMessagesRecyclerView.smoothScrollToPosition(0)
+                            scrollToBottom()
+
                             channelViewModel.channel.removeObserver(this)
                         }
                     }
@@ -69,7 +117,7 @@ class ChannelFragment : Fragment(), CoroutineScope {
         })
     }
 
-    private fun channelObserver() = Observer<ChannelServiceAction> { data ->
+    private val channelObserver = Observer<ChannelServiceAction> { data ->
         Log.d("ChannelObserver", "LiveData changed: $data")
         when (data) {
             is ChannelServiceAction.SubscribeToChannelReply -> {
@@ -81,7 +129,7 @@ class ChannelFragment : Fragment(), CoroutineScope {
                                 SparseRemoteMongoCursor(
                                     ChannelMessage.getMessages(channel.id),
                                     ChannelMessage.getMessagesCount(channel.id).toInt()))
-                            channelMessagesRecyclerView.smoothScrollToPosition(0)
+                            scrollToBottom()
                         }.join()
                         view?.findViewById<Button>(R.id.send_button)?.isEnabled = true
                         isInitialized = true
@@ -96,7 +144,7 @@ class ChannelFragment : Fragment(), CoroutineScope {
 
                 adapter.put(data.channelMessage)
                 if (shouldScrollToBottom) {
-                    channelMessagesRecyclerView.smoothScrollToPosition(0)
+                    scrollToBottom()
                 }
             }
         }
@@ -107,14 +155,17 @@ class ChannelFragment : Fragment(), CoroutineScope {
 
         val layoutManager = LinearLayoutManager(this.context)
 
+        layoutManager.recycleChildrenOnDetach = true
         layoutManager.stackFromEnd = true
         layoutManager.reverseLayout = true
         layoutManager.orientation = LinearLayoutManager.VERTICAL
         channelMessagesRecyclerView.layoutManager = layoutManager
         channelMessagesRecyclerView.adapter = adapter
-        channelMessagesRecyclerView.addOnLayoutChangeListener { _, _, _, _, bottom, _, _, _, oldBottom ->
+        channelMessagesRecyclerView.addOnLayoutChangeListener {
+            _, _, _, _, bottom, _, _, _, oldBottom ->
+
             if (bottom < oldBottom) {
-                channelMessagesRecyclerView.smoothScrollToPosition(0)
+                scrollToBottom()
             }
         }
 
@@ -122,19 +173,29 @@ class ChannelFragment : Fragment(), CoroutineScope {
         sendButton.setOnClickListener(::sendMessage)
         sendButton.isEnabled = false
 
-        channelViewModel = ViewModelProviders.of(activity!!).get(ChannelViewModel::class.java)
-
         launch(IO) {
             UserRepo.findCurrentUser()?.let {
                 channelViewModel.selectChannel(view.context, it.channelsSubscribedTo.first())
-                    .observe(this@ChannelFragment, channelObserver())
+                    .observe(this@ChannelFragment, channelObserver)
             }
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        channelViewModel.channel.removeObserver(channelObserver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        channelViewModel.channel.observe(this@ChannelFragment, channelObserver)
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         job = Job()
+        channelViewModel = ViewModelProviders.of(this).get(ChannelViewModel::class.java)
     }
 
     override fun onDestroy() {

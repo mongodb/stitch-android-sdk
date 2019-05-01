@@ -2,13 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/action_logout"
-        android:orderInCategory="100"
-        android:title="@string/logout"
-        app:showAsAction="never"/>
-    <item
         android:id="@+id/action_select_avatar"
         android:orderInCategory="100"
         android:title="select avatar"
+        app:showAsAction="never"/>
+    <item
+        android:id="@+id/action_logout"
+        android:orderInCategory="100"
+        android:title="@string/logout"
         app:showAsAction="never"/>
 </menu>

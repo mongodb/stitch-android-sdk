@@ -28,6 +28,8 @@ object UserRepo : SyncRepo<User, String>(cacheSize = 30) {
         stitch.auth.user?.let {
             readFromCache(it.id)
                 ?: Tasks.await(collection.sync().find(Document("_id", it.id)).first())
+        }.also { user ->
+            user?.let { putIntoCache(it.id, it) }
         }
     }
 

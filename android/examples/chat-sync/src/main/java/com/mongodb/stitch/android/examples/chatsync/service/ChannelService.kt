@@ -44,6 +44,7 @@ import android.support.v4.graphics.drawable.IconCompat
 import com.mongodb.stitch.android.examples.chatsync.ChannelActivity
 import com.mongodb.stitch.android.examples.chatsync.R
 import com.mongodb.stitch.android.examples.chatsync.defaultAvatars
+import com.mongodb.stitch.android.examples.chatsync.repo.ReadOnlyLruCache
 import org.bson.types.ObjectId
 
 
@@ -55,7 +56,7 @@ private typealias ChannelId = String
  */
 class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
     companion object {
-        val NOTIFICATION_CHANNEL_ID = ObjectId().toHexString()
+        private val NOTIFICATION_CHANNEL_ID: String = ObjectId().toHexString()
     }
 
     private lateinit var job: Job
@@ -288,45 +289,48 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
 
 
     private fun notifyMessageReceived(message: ChannelMessage) {
-        UserRepo.liveCache.observe(this, Observer {
-            it?.get(message.ownerId.hashCode())?.let { user ->
-                // Create an explicit intent for an Activity in your app
-                val intent = Intent(this@ChannelService, ChannelActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                }
+        UserRepo.liveCache.observe(this, object : Observer<ReadOnlyLruCache<Int, User>> {
+            override fun onChanged(cache: ReadOnlyLruCache<Int, User>?) {
+                cache?.get(message.ownerId.hashCode())?.let { user ->
+                    // Create an explicit intent for an Activity in your app
+                    val intent = Intent(this@ChannelService, ChannelActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
 
-                val pendingIntent: PendingIntent = PendingIntent.getActivity(
-                    this@ChannelService, 0, intent, 0)
+                    val pendingIntent: PendingIntent = PendingIntent.getActivity(
+                        this@ChannelService, 0, intent, 0)
 
 
-                val person = Person.Builder()
-                    .setName(user.name)
-                    .setIcon(
-                    user.avatar?.let { avatar ->
-                        IconCompat.createWithData(avatar, 0, avatar.size)
-                    } ?: IconCompat.createWithResource(
-                        this, defaultAvatars[user.defaultAvatarOrdinal])
-                ).build()
+                    val person = Person.Builder()
+                        .setName(user.name)
+                        .setIcon(
+                            user.avatar?.let { avatar ->
+                                IconCompat.createWithData(avatar, 0, avatar.size)
+                            } ?: IconCompat.createWithResource(
+                                this@ChannelService, defaultAvatars[user.defaultAvatarOrdinal])
+                        ).build()
 
-                val style = NotificationCompat.MessagingStyle(person)
+                    val style = NotificationCompat.MessagingStyle(person)
 
-                style.addMessage(NotificationCompat.MessagingStyle.Message(
-                    message.content, message.sentAt, person
-                ))
+                    style.addMessage(NotificationCompat.MessagingStyle.Message(
+                        message.content, message.sentAt, person
+                    ))
 
-                val builder = NotificationCompat.Builder(this@ChannelService, NOTIFICATION_CHANNEL_ID)
-                    .setSmallIcon(R.drawable.mind_map_icn)
-                    .setColorized(true)
-                    .setContentTitle("New message")
-                    .setContentText(message.content)
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                    .setContentIntent(pendingIntent)
-                    .setAutoCancel(true)
-                    .setStyle(style)
+                    val builder = NotificationCompat.Builder(this@ChannelService, NOTIFICATION_CHANNEL_ID)
+                        .setSmallIcon(R.drawable.mind_map_icn)
+                        .setColorized(true)
+                        .setContentTitle("New message")
+                        .setContentText(message.content)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setContentIntent(pendingIntent)
+                        .setAutoCancel(true)
+                        .setStyle(style)
 
-                with(NotificationManagerCompat.from(this@ChannelService)) {
-                    // notificationId is a unique int for each notification that you must define
-                    notify(message.id.hashCode(), builder.build())
+                    with(NotificationManagerCompat.from(this@ChannelService)) {
+                        notify(message.id.hashCode(), builder.build())
+                    }
+
+                    UserRepo.liveCache.removeObserver(this)
                 }
             }
         })

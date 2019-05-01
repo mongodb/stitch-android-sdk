@@ -15,7 +15,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/divider"
-        app:layout_constraintHeight_percent=".95"/>
+        app:layout_constraintHeight_percent=".90"/>
     <View
         android:id="@+id/divider"
         android:layout_width="match_parent"

@@ -24,9 +24,11 @@ abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> :
         private set
 
     final override fun onBindViewHolder(viewHolder: VH, position: Int) {
-        launch(IO) {
-            val cursor = checkNotNull(cursor)
-            onBindViewHolder(viewHolder, position, cursor)
+        synchronized(viewHolder) {
+            launch(IO) {
+                val cursor = checkNotNull(cursor)
+                onBindViewHolder(viewHolder, position, cursor)
+            }
         }
     }
 
