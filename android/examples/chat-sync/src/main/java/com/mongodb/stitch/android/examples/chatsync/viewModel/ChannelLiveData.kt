@@ -10,6 +10,7 @@ import android.os.IBinder
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
+import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.android.examples.chatsync.service.ChannelService
 import com.mongodb.stitch.android.examples.chatsync.service.ChannelServiceAction
 import com.mongodb.stitch.android.examples.chatsync.service.asChannelServiceAction
@@ -28,7 +29,12 @@ class ChannelLiveData(private val context: Context,
     private inner class IncomingHandler : Handler() {
         override fun handleMessage(msg: Message) {
             Log.d("ChannelLiveData", "Received new message: ${msg.asChannelServiceAction()}")
-            value = msg.asChannelServiceAction()
+            val action = msg.asChannelServiceAction()
+            when (action) {
+                is ChannelServiceAction.UserUpdated ->
+                    UserRepo.putIntoCache(action.user.id, action.user)
+            }
+            value = action
         }
     }
 

@@ -4,19 +4,27 @@ import android.support.v7.widget.RecyclerView
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCursor
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 
-abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> : RecyclerView.Adapter<VH>() {
+abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> :
+    RecyclerView.Adapter<VH>(), CoroutineScope {
+    private lateinit var job: Job
+
+    override val coroutineContext: CoroutineContext
+        get() = job + Main
+
     protected var cursor: SparseRemoteMongoCursor<T>? = null
         private set
 
     final override fun onBindViewHolder(viewHolder: VH, position: Int) {
-        GlobalScope.launch(IO) {
+        launch(IO) {
             val cursor = checkNotNull(cursor)
             onBindViewHolder(viewHolder, position, cursor)
         }
@@ -26,23 +34,33 @@ abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> : RecyclerVie
                                           position: Int,
                                           cursor: SparseRemoteMongoCursor<T>)
 
+
     fun setCursor(cursor: SparseRemoteMongoCursor<T>) {
         this.cursor = cursor
-        GlobalScope.launch(Main) {
-            notifyDataSetChanged()
-        }
+        launch(Main) { notifyDataSetChanged() }
     }
 
     final override fun getItemCount(): Int = this.cursor?.count ?: 0
 
     fun put(obj: T) {
         val index = cursor?.put(obj) ?: -1
-        Log.w("MongoCursorAdapter", "Putting obj in cursor: $obj with index: $index")
         if (index == -1) {
+            Log.e(this::class.java.simpleName, "New item inserted: $obj")
             this.notifyItemInserted(0)
         } else {
+            Log.e(this::class.java.simpleName, "Item changed: $obj with index: $index")
             this.notifyItemChanged(index)
         }
+    }
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        job = Job()
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        job.cancel()
     }
 }
 
@@ -66,6 +84,7 @@ class SparseRemoteMongoCursor<T>(private val cursor: RemoteMongoCursor<T>,
     fun put(obj: T): Int {
         val idx = sparseCache.indexOf(obj)
         if (idx != -1) {
+            sparseCache.remove(obj)
             sparseCache.add(obj)
             return idx
         }

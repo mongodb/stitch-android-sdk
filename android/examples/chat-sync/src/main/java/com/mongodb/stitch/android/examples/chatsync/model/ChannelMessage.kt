@@ -4,6 +4,7 @@ import android.os.Parcelable
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.examples.chatsync.defaultRegistry
 import com.mongodb.stitch.android.examples.chatsync.remoteClient
+import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCollection
 import com.mongodb.stitch.android.services.mongodb.remote.RemoteMongoCursor
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
@@ -100,7 +101,11 @@ data class ChannelMessage @BsonCreator constructor(
         suspend fun sendMessage(channelId: String, content: String): ChannelMessage =
             withContext(coroutineContext) {
                 val channelMessage = ChannelMessage(
-                    ObjectId(), User.getCurrentUser().id, channelId, content, System.currentTimeMillis())
+                    ObjectId(),
+                    UserRepo.findCurrentUser()!!.id,
+                    channelId,
+                    content,
+                    System.currentTimeMillis())
                 Tasks.await(collection.sync().insertOne(channelMessage))
                 channelMessage
             }
@@ -115,6 +120,9 @@ data class ChannelMessage @BsonCreator constructor(
     }
 
     override fun compareTo(other: ChannelMessage): Int {
+        if (this == other) {
+            return 0
+        }
         return this.sentAt.compareTo(other.sentAt) * -1
     }
 }

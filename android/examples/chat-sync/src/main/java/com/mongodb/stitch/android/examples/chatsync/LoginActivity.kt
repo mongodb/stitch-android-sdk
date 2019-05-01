@@ -7,6 +7,7 @@ import android.widget.Button
 import android.widget.EditText
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.examples.chatsync.model.User
+import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -25,13 +26,12 @@ class LoginActivity : ScopeActivity() {
         launch(IO) {
             if (usernameEditText.text.length > 3 && usernameEditText.text.isNotEmpty()) {
                 val stitchUser = Tasks.await(stitch.auth.loginWithCredential(AnonymousCredential()))
-                user = User(stitchUser.id,
+                UserRepo.insertCurrentUser(User(stitchUser.id,
                     usernameEditText.text.toString(),
                     System.currentTimeMillis(),
                     Random().nextInt(7),
                     null,
-                    listOf("default"))
-                User.setCurrentUser(user)
+                    listOf("default")))
                 startActivity(Intent(this@LoginActivity, ChannelActivity::class.java))
             }
             launch(Main) {

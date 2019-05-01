@@ -30,8 +30,6 @@ private const val BUNDLE_CHANNEL_MESSAGE = "__channel_message__"
 private const val BUNDLE_CHANNEL_MESSAGE_ID = "__channel_message_id__"
 private const val BUNDLE_CHANNEL_MESSAGE_CONTENT = "__channel_message_content__"
 
-private const val BUNDLE_CHANNEL_SUBSCRIPTION_ID = "__channel_subscription_id__"
-
 private const val BUNDLE_AVATAR = "__avatar__"
 private const val BUNDLE_USER = "__user__"
 
@@ -45,11 +43,8 @@ fun Message.asChannelServiceAction(): ChannelServiceAction {
             ChannelServiceAction.SubscribeToChannel(
                 this.data.getString(BUNDLE_CHANNEL_ID)!!, this.replyTo)
         }
-        Action.SUBSCRIBE_TO_CHANNEL_REPLY.ordinal -> {
-            ChannelServiceAction.SubscribeToChannelReply(
-                this.data.getParcelable(BUNDLE_CHANNEL)!!,
-                this.data.getString(BUNDLE_CHANNEL_SUBSCRIPTION_ID)!!)
-        }
+        Action.SUBSCRIBE_TO_CHANNEL_REPLY.ordinal ->
+            ChannelServiceAction.SubscribeToChannelReply(this.data.getParcelable(BUNDLE_CHANNEL)!!)
         Action.UNSUBSCRIBE_TO_CHANNEL.ordinal -> {
             ChannelServiceAction.UnsubscribeToChannel(
                 this.data.getString(BUNDLE_CHANNEL_ID)!!)
@@ -90,11 +85,10 @@ sealed class ChannelServiceAction constructor(private val action: Action) {
         }
     }
 
-    data class SubscribeToChannelReply(val channel: Channel, val channelSubscriptionId: String) :
+    data class SubscribeToChannelReply(val channel: Channel) :
         ChannelServiceAction(Action.SUBSCRIBE_TO_CHANNEL_REPLY) {
         override val asMessage = getMessage {
             it.data.putParcelable(BUNDLE_CHANNEL, channel)
-            it.data.putString(BUNDLE_CHANNEL_SUBSCRIPTION_ID, channelSubscriptionId)
         }
     }
 

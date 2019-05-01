@@ -13,14 +13,22 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import com.mongodb.stitch.android.examples.chatsync.model.ChannelMessage
+import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.android.examples.chatsync.service.ChannelServiceAction
 import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 
-class ChannelFragment : Fragment() {
+class ChannelFragment : Fragment(), CoroutineScope {
+    private lateinit var job: Job
+
+    override val coroutineContext: CoroutineContext
+        get() = job + Main
+
     private lateinit var channelViewModel: ChannelViewModel
 
     private val channelMessagesRecyclerView by lazy {
@@ -41,9 +49,22 @@ class ChannelFragment : Fragment() {
         channelViewModel.channel.observe(
             this, object : Observer<ChannelServiceAction> {
 
-            override fun onChanged(t: ChannelServiceAction?) {
-                channelViewModel.channel.removeObserver(this)
-                channelViewModel.channel.sendMessage(messageEditText.text.toString())
+            var sent: Boolean = false
+
+            override fun onChanged(action: ChannelServiceAction?) {
+                if (!sent) {
+                    sent = true
+                    channelViewModel.channel.sendMessage(messageEditText.text.toString())
+                    messageEditText.text.clear()
+                } else {
+                    when (action) {
+                        is ChannelServiceAction.SendMessageReply -> {
+                            adapter.put(action.channelMessage)
+                            channelMessagesRecyclerView.smoothScrollToPosition(0)
+                            channelViewModel.channel.removeObserver(this)
+                        }
+                    }
+                }
             }
         })
     }
@@ -53,10 +74,9 @@ class ChannelFragment : Fragment() {
         when (data) {
             is ChannelServiceAction.SubscribeToChannelReply -> {
                 if (!isInitialized) {
-                    GlobalScope.launch(Main) {
+                    launch(Main) {
                         val (channel) = data
-                        GlobalScope.launch(IO) {
-
+                        launch(IO) {
                             adapter.setCursor(
                                 SparseRemoteMongoCursor(
                                     ChannelMessage.getMessages(channel.id),
@@ -68,11 +88,16 @@ class ChannelFragment : Fragment() {
                     }
                 }
             }
-            is ChannelServiceAction.SendMessageReply -> {
-                adapter.put(data.channelMessage)
-            }
             is ChannelServiceAction.NewMessageReply -> {
+                var shouldScrollToBottom = false
+                if (!channelMessagesRecyclerView.canScrollVertically(1)) {
+                    shouldScrollToBottom = true
+                }
+
                 adapter.put(data.channelMessage)
+                if (shouldScrollToBottom) {
+                    channelMessagesRecyclerView.smoothScrollToPosition(0)
+                }
             }
         }
     }
@@ -98,7 +123,22 @@ class ChannelFragment : Fragment() {
         sendButton.isEnabled = false
 
         channelViewModel = ViewModelProviders.of(activity!!).get(ChannelViewModel::class.java)
-        channelViewModel.selectChannel(view.context, user.channelsSubscribedTo.first())
-            .observe(this, channelObserver())
+
+        launch(IO) {
+            UserRepo.findCurrentUser()?.let {
+                channelViewModel.selectChannel(view.context, it.channelsSubscribedTo.first())
+                    .observe(this@ChannelFragment, channelObserver())
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        job = Job()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
     }
 }

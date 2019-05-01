@@ -1,6 +1,5 @@
 package com.mongodb.stitch.android.examples.chatsync.service
 
-import android.app.Service
 import android.arch.lifecycle.LifecycleObserver
 import android.content.Intent
 import android.os.Handler
@@ -13,12 +12,14 @@ import com.mongodb.stitch.android.examples.chatsync.model.ChannelMembers
 import com.mongodb.stitch.android.examples.chatsync.model.ChannelMessage
 import com.mongodb.stitch.android.examples.chatsync.model.ChannelSubscription
 import com.mongodb.stitch.android.examples.chatsync.model.User
+import com.mongodb.stitch.android.examples.chatsync.repo.ChannelSubscriptionRepo
+import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.android.examples.chatsync.stitch
-import com.mongodb.stitch.android.examples.chatsync.user
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
@@ -29,10 +30,34 @@ import org.bson.BsonInt64
 import org.bson.BsonObjectId
 import org.bson.BsonValue
 import kotlin.coroutines.CoroutineContext
+import android.app.NotificationManager
+import android.app.NotificationChannel
+import android.app.PendingIntent
+import android.arch.lifecycle.LifecycleService
+import android.arch.lifecycle.Observer
+import android.content.Context
+import android.os.Build
+import android.support.v4.app.NotificationCompat
+import android.support.v4.app.NotificationManagerCompat
+import android.support.v4.app.Person
+import android.support.v4.graphics.drawable.IconCompat
+import com.mongodb.stitch.android.examples.chatsync.ChannelActivity
+import com.mongodb.stitch.android.examples.chatsync.R
+import com.mongodb.stitch.android.examples.chatsync.defaultAvatars
+import org.bson.types.ObjectId
 
+
+/* Type alias for readability */
 private typealias ChannelId = String
 
-class ChannelService : Service(), CoroutineScope, LifecycleObserver {
+/**
+ * Background process that handles the synchronization processes for our domain.
+ */
+class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
+    companion object {
+        val NOTIFICATION_CHANNEL_ID = ObjectId().toHexString()
+    }
+
     private lateinit var job: Job
 
     override val coroutineContext: CoroutineContext
@@ -56,6 +81,7 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
             when (event.operationType) {
                 OperationType.REPLACE, OperationType.UPDATE -> {
                     val user = checkNotNull(event.fullDocument)
+                    UserRepo.putIntoCache(user.id, user)
                     user.channelsSubscribedTo.forEach {
                         mChannelClients[it]?.send(ChannelServiceAction.UserUpdated(user))
                     }
@@ -78,7 +104,8 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
                     val message = checkNotNull(event.fullDocument)
                     val messageId = message.id.toHexString()
                     mChannelClients[message.channelId]?.send(
-                        ChannelServiceAction.NewMessageReply(messageId, message))
+                        ChannelServiceAction.NewMessageReply(messageId, message)) ?:
+                        notifyMessageReceived(message)
                 }
                 else -> {}
             }
@@ -125,8 +152,9 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
             }.start()
 
             return ChannelSubscription(
+                documentId.asObjectId().value,
                 channelId,
-                user.id,
+                stitch.auth.user!!.id,
                 stitch.auth.user!!.deviceId,
                 remoteTimestamp.value,
                 remoteTimestamp.value)
@@ -142,32 +170,27 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
 
             synchronized(this) {
                 launch(IO) {
-                    val subscriptionId =
-                        (documentId as BsonObjectId).asObjectId().value.toHexString()
-                    val remoteSubscription = event.fullDocument
-                    val localSubscription = ChannelSubscription
-                        .getLocalChannelSubscription(subscriptionId)
+                    val subscriptionId = (documentId as BsonObjectId).value
+                    val subscription = event.fullDocument
 
-                    checkNotNull(remoteSubscription)
-                    localSubscription ?: return@launch
+                    checkNotNull(subscription)
 
-                    if (localSubscription.localTimestamp == remoteSubscription.remoteTimestamp) {
+                    if (subscription.localTimestamp == subscription.remoteTimestamp) {
                         return@launch
                     }
 
-                    Log.d("ChannelSubscriptionListener",
-                        "Local subscription differs from remote subscription: " +
-                            "local: $localSubscription remote: $remoteSubscription")
+                    Log.w("ChannelSubscriptionListener",
+                        "Local timestamp differs from remote timestamp")
 
                     val messageIds = ChannelMessage.fetchMessageIdsFromVector(
-                        localSubscription.channelId,
-                        localSubscription.localTimestamp,
-                        remoteSubscription.remoteTimestamp
+                        subscription.channelId,
+                        subscription.localTimestamp,
+                        subscription.remoteTimestamp
                     )
                     ChannelMessage.syncMessages(*messageIds)
 
-                    ChannelSubscription.setChannelSubscriptionLocalVector(
-                        subscriptionId, remoteSubscription.remoteTimestamp)
+                    ChannelSubscriptionRepo.updateLocalVector(
+                        subscriptionId, subscription.remoteTimestamp)
                 }
             }
         }
@@ -199,12 +222,8 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
                 return
             }
 
-            when (event.operationType) {
-                OperationType.REPLACE -> {
-                    val members = checkNotNull(event.fullDocument).members
-                    launch(IO) { User.sync(*members.toTypedArray()) }
-                }
-                else -> {}
+            event.fullDocument?.let {
+                launch(IO) { UserRepo.sync(*it.members.toTypedArray()) }
             }
         }
     }
@@ -225,18 +244,19 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
 
                         val channel = checkNotNull(Channel.findLocalChannel(channelId) ?:
                             Channel.findRemoteChannel(channelId))
+                        val currentUser = checkNotNull(UserRepo.findCurrentUser())
 
                         Channel.sync(channelId)
                         ChannelMembers.sync(channelId)
 
-                        val subscriptionId = ChannelSubscription.getLocalChannelSubscriptionId(
-                            User.getCurrentUser().id, stitch.auth.user!!.deviceId, channelId
-                        )?.toHexString() ?: Channel.subscribeToChannel(
-                            User.getCurrentUser().id, stitch.auth.user!!.deviceId, channelId
-                        ).toHexString()
+                        ChannelSubscriptionRepo.getLocalChannelSubscriptionId(
+                            currentUser.id, stitch.auth.user!!.deviceId, channelId
+                        ) ?: Channel.subscribeToChannel(
+                            currentUser.id, stitch.auth.user!!.deviceId, channelId
+                        )
 
                         msg.replyTo.send(
-                            ChannelServiceAction.SubscribeToChannelReply(channel, subscriptionId))
+                            ChannelServiceAction.SubscribeToChannelReply(channel))
                     }
                     is ChannelServiceAction.UnsubscribeToChannel -> {
                         mChannelClients.remove(action.channelId)
@@ -251,7 +271,7 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
                         ) ?: throw Error("Not subscribed to channel")
                     }
                     is ChannelServiceAction.SetAvatar -> {
-                        User.setAvatar(action.avatar)
+                        UserRepo.updateAvatar(action.avatar)
                     }
                     else -> super.handleMessage(msg)
                 }
@@ -260,21 +280,84 @@ class ChannelService : Service(), CoroutineScope, LifecycleObserver {
     }
 
     override fun onBind(intent: Intent): IBinder {
+        super.onBind(intent)
         val messenger = Messenger(IncomingHandler())
         mMessengers.add(messenger)
         return messenger.binder
+    }
+
+
+    private fun notifyMessageReceived(message: ChannelMessage) {
+        UserRepo.liveCache.observe(this, Observer {
+            it?.get(message.ownerId.hashCode())?.let { user ->
+                // Create an explicit intent for an Activity in your app
+                val intent = Intent(this@ChannelService, ChannelActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+
+                val pendingIntent: PendingIntent = PendingIntent.getActivity(
+                    this@ChannelService, 0, intent, 0)
+
+
+                val person = Person.Builder()
+                    .setName(user.name)
+                    .setIcon(
+                    user.avatar?.let { avatar ->
+                        IconCompat.createWithData(avatar, 0, avatar.size)
+                    } ?: IconCompat.createWithResource(
+                        this, defaultAvatars[user.defaultAvatarOrdinal])
+                ).build()
+
+                val style = NotificationCompat.MessagingStyle(person)
+
+                style.addMessage(NotificationCompat.MessagingStyle.Message(
+                    message.content, message.sentAt, person
+                ))
+
+                val builder = NotificationCompat.Builder(this@ChannelService, NOTIFICATION_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.mind_map_icn)
+                    .setColorized(true)
+                    .setContentTitle("New message")
+                    .setContentText(message.content)
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .setStyle(style)
+
+                with(NotificationManagerCompat.from(this@ChannelService)) {
+                    // notificationId is a unique int for each notification that you must define
+                    notify(message.id.hashCode(), builder.build())
+                }
+            }
+        })
+    }
+
+    private fun createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, "chat sync", importance).apply {
+                description = "notification channel for chat sync"
+            }
+            // Register the channel with the system
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
         job = Job()
 
+        createNotificationChannel()
         launch(IO) {
             Channel.configure(ChannelListener())
-            ChannelSubscription.configure(ChannelSubscriptionListener())
+            ChannelSubscriptionListener().also { ChannelSubscriptionRepo.configure(it, it) }
             ChannelMembers.configure(ChannelMembersListener())
             ChannelMessage.configure(ChannelMessageListener())
-            User.configure(UserListener())
+            UserRepo.configure(DefaultSyncConflictResolvers.remoteWins(), UserListener())
             Log.d("ChannelService", "all configures called")
         }.start()
     }

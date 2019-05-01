@@ -9,6 +9,7 @@ import org.bson.codecs.pojo.annotations.BsonProperty
 import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.android.examples.chatsync.defaultRegistry
 import com.mongodb.stitch.android.examples.chatsync.remoteClient
+import com.mongodb.stitch.android.examples.chatsync.repo.ChannelSubscriptionRepo
 import com.mongodb.stitch.android.examples.chatsync.stitch
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
@@ -59,7 +60,7 @@ data class Channel @BsonCreator constructor(
                     ObjectId::class.java))
                 // sync the new subscription id so that we can
                 // keep tabs on the channel
-                ChannelSubscription.sync(subscriptionId.toHexString())
+                ChannelSubscriptionRepo.sync(subscriptionId)
                 subscriptionId
             }
 

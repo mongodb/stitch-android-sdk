@@ -10,9 +10,13 @@ import android.support.v4.widget.DrawerLayout
 import android.support.design.widget.NavigationView
 import android.support.v7.widget.Toolbar
 import android.view.Menu
+import com.mongodb.stitch.android.examples.chatsync.repo.UserRepo
 import com.mongodb.stitch.android.examples.chatsync.service.ChannelService
 import com.mongodb.stitch.android.examples.chatsync.viewModel.ChannelViewModel
 import com.mvc.imagepicker.ImagePicker
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.launch
 import java.io.File
 
 
@@ -38,8 +42,12 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
         navView.setNavigationItemSelectedListener(this)
         navView.menu.clear()
 
-        user.channelsSubscribedTo.forEach { channelId ->
-            navView.menu.add(0, channelId.hashCode(), Menu.NONE, channelId)
+        launch(IO) {
+            UserRepo.findCurrentUser()?.channelsSubscribedTo?.forEach { channelId ->
+                launch(Main) {
+                    navView.menu.add(0, channelId.hashCode(), Menu.NONE, channelId)
+                }
+            }
         }
     }
 
@@ -94,15 +102,7 @@ class ChannelActivity : ScopeActivity(), NavigationView.OnNavigationItemSelected
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.nav_channels) {
-            // TODO: Open channel adder
-        } else {
-            user.channelsSubscribedTo.find {
-                it.hashCode() == item.itemId
-            }.let {
-                // TODO: Instantiate ChannelFragment
-            }
-        }
+        // TODO: Instantiate ChannelFragment when new channels are added
         val drawerLayout: DrawerLayout = findViewById(R.id.drawer_layout)
         drawerLayout.closeDrawer(GravityCompat.START)
         return true

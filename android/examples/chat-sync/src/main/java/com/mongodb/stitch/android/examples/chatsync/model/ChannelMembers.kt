@@ -36,6 +36,21 @@ data class ChannelMembers @BsonCreator constructor(
                 .withCodecRegistry(defaultRegistry)
         }
 
+        /**
+         * Sync a channel.
+         *
+         * @param channelId the id of the channel to synchronize members on
+         */
+        suspend fun sync(channelId: String): Void? = withContext(coroutineContext) {
+            Tasks.await(collection.sync().syncOne(BsonString(channelId)))
+        }
+
+        /**
+         * Configure the collection.
+         *
+         * @param listener the listener that will receive ChangeEvents
+         * @param exceptionListener the listener that will receive exceptions
+         */
         suspend fun <T> configure(listener: T, exceptionListener: ExceptionListener? = null): Void?
             where T : ConflictHandler<ChannelMembers>, T : ChangeEventListener<ChannelMembers> =
             withContext(coroutineContext) {
@@ -46,9 +61,5 @@ data class ChannelMembers @BsonCreator constructor(
                         .withExceptionListener(exceptionListener)
                         .build()))
             }
-
-        suspend fun sync(channelId: String): Void? = withContext(coroutineContext) {
-            Tasks.await(collection.sync().syncOne(BsonString(channelId)))
-        }
     }
 }
