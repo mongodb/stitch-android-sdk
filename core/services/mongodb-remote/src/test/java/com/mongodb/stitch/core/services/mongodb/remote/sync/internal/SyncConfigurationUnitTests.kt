@@ -53,7 +53,7 @@ class SyncConfigurationUnitTests {
     fun testSyncConfigurationBuilderRequired() {
         try {
             val builder = SyncConfiguration.Builder()
-            val _ = builder.build()
+            builder.build()
         } catch (ex: SyncConfigurationException) {
             return
         }
