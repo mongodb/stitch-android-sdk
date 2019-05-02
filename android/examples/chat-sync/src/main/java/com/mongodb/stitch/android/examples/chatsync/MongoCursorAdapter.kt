@@ -1,5 +1,7 @@
 package com.mongodb.stitch.android.examples.chatsync
 
+import android.support.annotation.MainThread
+import android.support.annotation.WorkerThread
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
@@ -9,51 +11,22 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
 
-abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> :
+abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T : Comparable<T>> :
     RecyclerView.Adapter<VH>(), CoroutineScope {
+
     private lateinit var job: Job
 
     override val coroutineContext: CoroutineContext
         get() = job + Main
 
-    protected var cursor: SparseRemoteMongoCursor<T>? = null
-        private set
-
-    final override fun onBindViewHolder(viewHolder: VH, position: Int) {
-        synchronized(viewHolder) {
-            launch(IO) {
-                val cursor = checkNotNull(cursor)
-                onBindViewHolder(viewHolder, position, cursor)
-            }
-        }
-    }
-
-    abstract suspend fun onBindViewHolder(viewHolder: VH,
-                                          position: Int,
-                                          cursor: SparseRemoteMongoCursor<T>)
-
-
-    fun setCursor(cursor: SparseRemoteMongoCursor<T>) {
-        this.cursor = cursor
-        launch(Main) { notifyDataSetChanged() }
-    }
-
-    final override fun getItemCount(): Int = this.cursor?.count ?: 0
-
-    fun put(obj: T) {
-        val index = cursor?.put(obj) ?: -1
-        if (index == -1) {
-            Log.e(this::class.java.simpleName, "New item inserted: $obj")
-            this.notifyItemInserted(0)
-        } else {
-            Log.e(this::class.java.simpleName, "Item changed: $obj with index: $index")
-            this.notifyItemChanged(index)
-        }
-    }
+    private val cache = sortedSetOf<T>()
+    private var cursorPosition: Int = -1
+    private lateinit var cursor: RemoteMongoCursor<T>
+    private var itemCount: Int = 0
 
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
@@ -64,36 +37,56 @@ abstract class MongoCursorAdapter<VH : RecyclerView.ViewHolder, T> :
         super.onDetachedFromRecyclerView(recyclerView)
         job.cancel()
     }
-}
 
-class SparseRemoteMongoCursor<T>(private val cursor: RemoteMongoCursor<T>,
-                                 var count: Int) {
-    private val sparseCache = sortedSetOf<T>()
-    private var cursorPosition: Int = -1
+    final override fun onBindViewHolder(viewHolder: VH, position: Int) = synchronized(viewHolder) {
+        runBlocking {
+            launch(IO) {
+                onBindSynchronizedViewHolder(viewHolder, position)
+            }.join()
+        }
+    }
 
-    suspend fun moveToPosition(position: Int) = withContext(coroutineContext) {
-        synchronized(this@SparseRemoteMongoCursor) {
+    abstract suspend fun onBindSynchronizedViewHolder(viewHolder: VH, position: Int)
+
+    final override fun getItemCount(): Int = this.itemCount
+
+    fun setCursor(cursor: RemoteMongoCursor<T>, itemCount: Int) {
+        this.cursor = cursor
+        this.itemCount = itemCount
+        launch(Main) { notifyDataSetChanged() }
+    }
+
+    @WorkerThread
+    suspend fun getItem(position: Int): T? = withContext(coroutineContext) {
+        moveToPosition(position)
+        cache.elementAt(position)
+    }
+
+    @WorkerThread
+    private suspend fun moveToPosition(position: Int) = withContext(coroutineContext) {
+        synchronized(this) {
             while (cursorPosition < position && Tasks.await(cursor.hasNext())) {
                 val next = Tasks.await(cursor.next())
-                sparseCache.add(next)
+                cache.add(next)
                 cursorPosition++
             }
         }
     }
 
-    operator fun get(position: Int): T? = sparseCache.elementAt(position)
-
-    fun put(obj: T): Int {
-        val idx = sparseCache.indexOf(obj)
-        if (idx != -1) {
-            sparseCache.remove(obj)
-            sparseCache.add(obj)
-            return idx
+    @MainThread
+    fun upsert(obj: T) {
+        val index = cache.indexOf(obj)
+        if (index != -1) {
+            Log.d(this::class.java.simpleName, "Item updated: $obj with index: $index")
+            cache.remove(obj)
+            cache.add(obj)
+            this.notifyItemChanged(index)
+        } else {
+            Log.d(this::class.java.simpleName, "New item upserted: $obj")
+            cache.add(obj)
+            cursorPosition++
+            itemCount++
+            this.notifyItemInserted(0)
         }
-
-        sparseCache.add(obj)
-        cursorPosition++
-        count++
-        return -1
     }
 }

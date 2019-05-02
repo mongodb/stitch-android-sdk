@@ -71,8 +71,8 @@ class FullMessageViewHolder(private val activity: FragmentActivity, itemView: Vi
 
         UserRepo.refreshCacheForId(message.ownerId)
         UserRepo.liveCache.observe(activity, Observer { cache ->
-            cache?.let {
-                it[message.ownerId.hashCode()]?.let(::setUser)
+            cache?.let { users ->
+                users[message.ownerId.hashCode()]?.let(::setUser)
             }
         })
 
@@ -97,29 +97,23 @@ class MessageAdapter(private val activity: FragmentActivity) :
             it.itemView.visibility = INVISIBLE
         }
 
-    override suspend fun onBindViewHolder(viewHolder: MessageViewHolder,
-                                          position: Int,
-                                          cursor: SparseRemoteMongoCursor<ChannelMessage>) {
+    override suspend fun onBindSynchronizedViewHolder(viewHolder: MessageViewHolder,
+                                                      position: Int) {
         viewHolder.itemView.visibility = INVISIBLE
-        cursor.moveToPosition(position)
-        cursor[position]?.let {
+        getItem(position)?.let {
             launch(Main) { viewHolder.setMessage(it) }.join()
         }
     }
 
     override fun getItemViewType(position: Int): Int =
         runBlocking {
-            cursor?.let { cursor ->
-                launch(IO) {
-                    cursor.moveToPosition(position + 1)
-                }.join()
-
-                if (cursor.count > position + 1
-                    && (cursor[position + 1]?.ownerId == cursor[position]?.ownerId)) {
+            withContext(IO) {
+                if (itemCount > position + 1
+                    && (getItem(position + 1)?.ownerId == getItem(position)?.ownerId)) {
                     MessageType.CONTINUATION.ordinal
                 } else {
                     MessageType.FULL.ordinal
                 }
-            } ?: 0
+            }
         }
 }

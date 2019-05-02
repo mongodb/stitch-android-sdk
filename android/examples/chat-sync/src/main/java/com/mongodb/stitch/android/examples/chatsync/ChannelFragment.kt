@@ -69,7 +69,7 @@ class ChannelFragment : Fragment(), CoroutineScope {
                 } else {
                     when (action) {
                         is ChannelServiceAction.SendMessageReply -> {
-                            adapter.put(action.channelMessage)
+                            adapter.upsert(action.channelMessage)
                             scrollToBottom()
 
                             channelViewModel.channel.removeObserver(this)
@@ -89,9 +89,8 @@ class ChannelFragment : Fragment(), CoroutineScope {
                         val (channel) = data
                         launch(IO) {
                             adapter.setCursor(
-                                SparseRemoteMongoCursor(
                                     ChannelMessageRepo.getMessages(channel.id),
-                                    ChannelMessageRepo.getMessagesCount(channel.id).toInt()))
+                                    ChannelMessageRepo.getMessagesCount(channel.id).toInt())
                             scrollToBottom()
                         }.join()
                         view?.findViewById<Button>(R.id.send_button)?.isEnabled = true
@@ -105,7 +104,7 @@ class ChannelFragment : Fragment(), CoroutineScope {
                     shouldScrollToBottom = true
                 }
 
-                adapter.put(data.channelMessage)
+                adapter.upsert(data.channelMessage)
                 if (shouldScrollToBottom) {
                     scrollToBottom()
                 }

@@ -82,6 +82,10 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
         }
     }
 
+    /**
+     * [ChangeEventListener] for [User] domain. This will pass through user
+     * updates to messengers subscribed to this service.
+     */
     private inner class UserListener : ChangeEventListener<User> {
         override fun onEvent(documentId: BsonValue, event: ChangeEvent<User>) {
             Log.w("UserListener",
@@ -90,7 +94,12 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
             when (event.operationType) {
                 OperationType.REPLACE, OperationType.UPDATE -> {
                     val user = checkNotNull(event.fullDocument)
+                    // put the updated user into the live cache so that
+                    // the observers of the cache will receive the user
                     UserRepo.putIntoCache(user.id, user)
+                    // pass along the user to any subscribers of this service
+                    // TODO: there should be a different set of listeners for
+                    // TODO: users since users are orthogonal to channels
                     user.channelsSubscribedTo.forEach {
                         mChannelClients[it]?.send(ChannelServiceAction.UserUpdated(user))
                     }
@@ -100,10 +109,14 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
         }
     }
 
+    /**
+     * [ChangeEventListener] for the [ChannelMessage] domain.
+     */
     private inner class ChannelMessageListener : ChangeEventListener<ChannelMessage> {
         override fun onEvent(documentId: BsonValue, event: ChangeEvent<ChannelMessage>) {
             Log.w("ChannelMessageListener",
                 "onEvent: ${event.toBsonDocument()} fullDocument: ${event.fullDocument}")
+            // if the event was only committed locally, ignore
             if (event.hasUncommittedWrites()) {
                 return
             }
@@ -124,13 +137,13 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
     private inner class ChannelSubscriptionListener :
         ConflictHandler<ChannelSubscription>, ChangeEventListener<ChannelSubscription> {
 
-        override fun resolveConflict(documentId: BsonValue,
-                                     localEvent: ChangeEvent<ChannelSubscription>,
-                                     remoteEvent: ChangeEvent<ChannelSubscription>): ChannelSubscription? {
-            Log.w(
-                "ChannelSubscriptionListener",
-                "Received conflict: ${localEvent.toBsonDocument()} " +
-                    "and ${remoteEvent.toBsonDocument()}")
+        override fun resolveConflict(
+            documentId: BsonValue,
+            localEvent: ChangeEvent<ChannelSubscription>,
+            remoteEvent: ChangeEvent<ChannelSubscription>
+        ): ChannelSubscription? {
+            Log.w("ChannelSubscriptionListener", "Received conflict: " +
+                "${localEvent.toBsonDocument()} and ${remoteEvent.toBsonDocument()}")
 
             if (remoteEvent.operationType == OperationType.DELETE) {
                 return null
@@ -178,28 +191,30 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
             }
 
             synchronized(this) {
-                launch(IO) {
-                    val subscriptionId = (documentId as BsonObjectId).value
-                    val subscription = event.fullDocument
+                runBlocking {
+                    launch(IO) {
+                        val subscriptionId = (documentId as BsonObjectId).value
+                        val subscription = event.fullDocument
 
-                    checkNotNull(subscription)
+                        checkNotNull(subscription)
 
-                    if (subscription.localTimestamp == subscription.remoteTimestamp) {
-                        return@launch
-                    }
+                        if (subscription.localTimestamp == subscription.remoteTimestamp) {
+                            return@launch
+                        }
 
-                    Log.w("ChannelSubscriptionListener",
-                        "Local timestamp differs from remote timestamp")
+                        Log.w("ChannelSubscriptionListener",
+                            "Local timestamp differs from remote timestamp")
 
-                    val messageIds = ChannelMessageRepo.fetchMessageIdsFromVector(
-                        subscription.channelId,
-                        subscription.localTimestamp,
-                        subscription.remoteTimestamp
-                    )
-                    ChannelMessageRepo.syncMessages(*messageIds)
+                        val messageIds = ChannelMessageRepo.fetchMessageIdsFromVector(
+                            subscription.channelId,
+                            subscription.localTimestamp,
+                            subscription.remoteTimestamp
+                        )
+                        ChannelMessageRepo.syncMessages(*messageIds)
 
-                    ChannelSubscriptionRepo.updateLocalVector(
-                        subscriptionId, subscription.remoteTimestamp)
+                        ChannelSubscriptionRepo.updateLocalVector(
+                            subscriptionId, subscription.remoteTimestamp)
+                    }.join()
                 }
             }
         }
@@ -321,6 +336,7 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
 
 
     private fun notifyMessageReceived(message: ChannelMessage) {
+        UserRepo.refreshCacheForId(message.ownerId)
         UserRepo.liveCache.observe(this, object : Observer<ReadOnlyLruCache<Int, User>> {
             override fun onChanged(cache: ReadOnlyLruCache<Int, User>?) {
                 cache?.get(message.ownerId.hashCode())?.let { user ->

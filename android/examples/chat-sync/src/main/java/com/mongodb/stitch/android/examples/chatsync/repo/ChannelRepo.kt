@@ -15,6 +15,7 @@ import kotlin.coroutines.coroutineContext
 
 object ChannelRepo : SyncRepo<Channel, String>(100) {
     override val collection: RemoteMongoCollection<Channel> by lazy {
+
         remoteClient
             .getDatabase("chats")
             .getCollection("channels", Channel::class.java)
