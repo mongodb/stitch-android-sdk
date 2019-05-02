@@ -16,31 +16,6 @@ import java.lang.IllegalArgumentException
 
 class UpdateDescriptionUnitTests {
     @Test
-    fun testUpdateDescriptionApplyToDocument() {
-        val originalDoc = BsonDocument()
-            .append("a", BsonInt32(1))
-            .append("b", BsonInt32(2))
-            .append("c", BsonInt32(3))
-
-        val updateDescription = UpdateDescription(
-            BsonDocument()
-                .append("a", BsonInt32(11))
-                .append("d", BsonInt32(44)),
-            HashSet(hashSetOf("c"))
-        )
-
-        val newDoc = updateDescription.applyToBsonDocument(originalDoc)
-
-        assertEquals(
-            BsonDocument()
-                .append("a", BsonInt32(11))
-                .append("b", BsonInt32(2))
-                .append("d", BsonInt32(44)),
-            newDoc
-        )
-    }
-
-    @Test
     fun testUpdateDescriptionMerge() {
         val ud1 = UpdateDescription(BsonDocument("hi", BsonString("there")), setOf("meow", "bark"))
         val ud2 = UpdateDescription(BsonDocument("bye", BsonString("there")), setOf("prr", "woof"))

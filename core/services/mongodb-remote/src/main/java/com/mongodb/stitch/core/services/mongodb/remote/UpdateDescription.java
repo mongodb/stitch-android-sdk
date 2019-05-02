@@ -144,26 +144,6 @@ public final class UpdateDescription {
   }
 
   /**
-   * Synthetically applies this update description to the provided BSON document.
-   *
-   * @param originalDoc the document to which to apply the update
-   * @return a clone of the original document, with this update description applied
-   */
-  public BsonDocument applyToBsonDocument(final BsonDocument originalDoc) {
-    final BsonDocument updatedDoc = originalDoc.clone();
-
-    for (final Map.Entry<String, BsonValue> entry : this.getUpdatedFields().entrySet()) {
-      updatedDoc.append(entry.getKey(), entry.getValue());
-    }
-
-    for (final String removedField : this.getRemovedFields()) {
-      updatedDoc.remove(removedField);
-    }
-
-    return updatedDoc;
-  }
-
-  /**
    * Unilaterally merge an update description into this update description.
    * @param otherDescription the update description to merge into this
    * @return this merged update description

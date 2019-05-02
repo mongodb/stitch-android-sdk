@@ -450,8 +450,10 @@ public class CoreDocumentSynchronizationConfig {
       case REPLACE:
         switch (newestChangeEvent.getOperationType()) {
           case UPDATE:
-            if (newestChangeEvent.getUpdateDescription() == null) {
-              throw new IllegalStateException("UPDATE event should have update description");
+            if (newestChangeEvent.getFullDocument() == null) {
+              throw new IllegalStateException(
+                  "a locally synthesized UPDATE event should have update description"
+              );
             }
 
             if (lastUncommittedChangeEvent.getFullDocument() == null) {
@@ -461,8 +463,7 @@ public class CoreDocumentSynchronizationConfig {
             return new ChangeEvent<>(
                 newestChangeEvent.getId(),
                 OperationType.REPLACE,
-                newestChangeEvent.getUpdateDescription()
-                    .applyToBsonDocument(lastUncommittedChangeEvent.getFullDocument()),
+                newestChangeEvent.getFullDocument(),
                 newestChangeEvent.getNamespace(),
                 newestChangeEvent.getDocumentKey(),
                 null,
