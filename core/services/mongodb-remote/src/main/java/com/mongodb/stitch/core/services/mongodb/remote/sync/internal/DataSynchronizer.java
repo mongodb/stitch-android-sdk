@@ -629,9 +629,13 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             continue;
           }
 
-          // if this event is an update but there there is a stale document that we've fetched,
-          // we need to synthesize and apply a local replace event so that the update is applied to
-          // the latest version of the document
+          // If this event is an update but there there is a stale document for which we've
+          // fetched the latest version. We need to synthesize and apply a local replace event so
+          // that the update is applied to the latest version of the document.
+          // The reasoning for this is that UPDATE events are relative to the previous version of
+          // the document. If we apply the UPDATE to a stale version of the document, the document
+          // will be in a corrupt state because it may be missing changes that occured when the
+          // device was offline.
           final BsonValue documentId = docConfig.getDocumentId();
           if (eventEntry.getValue().getOperationType() == OperationType.UPDATE
               && latestDocumentMap.containsKey(documentId)) {
@@ -826,13 +830,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           @Nullable final DocumentVersionInfo.Version lastSeenVersion =
               lastSeenHasNoVersion ? null : lastSeenVersionInfo.getVersion();
 
-          final long remoteHash;
-          if (remoteChangeEvent.getStitchDocumentHash() != null) {
-            remoteHash = remoteChangeEvent.getStitchDocumentHash();
-          } else {
-            // a hash for a delete event will be treated as 0 for the purposes of the comparisons
-            remoteHash = 0L;
-          }
+          final long remoteHash = remoteChangeEvent.getStitchDocumentHash() != null
+              ? remoteChangeEvent.getStitchDocumentHash()
+              : 0L;
 
           final long lastSeenHash;
           if (lastSeenHasNoVersion && docConfig.getLastUncommittedChangeEvent() != null) {
@@ -1375,12 +1375,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
     }
 
-    final BsonDocument remoteFullDocument;
-    if (remoteChangeEvent != null) {
-      remoteFullDocument = remoteChangeEvent.getFullDocument();
-    } else {
-      remoteFullDocument = null;
-    }
+    final BsonDocument remoteFullDocument = remoteChangeEvent != null
+        ? remoteChangeEvent.getFullDocument()
+        : null;
 
     final BsonDocument remoteVersion;
     final long remoteHash;
@@ -2601,7 +2598,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
               docForStorage,
               true);
         } else {
-          // NOTE FOR REVIEWERS:
           // We can't compute an update description here since we don't know what the remote full
           // document looks like. This means that if rules prevent us from writing to the entire
           // document, we would need to fetch the document to compute the update description, which
@@ -2609,6 +2605,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           // change the server-side logic for replaces to add a "merge" argument, that would
           // translate the replace sent by this client to an update that only modifies the fields
           // it has the permission to see.
+          // See STITCH-XXXX (still need to file this)
           event = ChangeEvents.changeEventForLocalReplace(
               namespace,
               documentId,
@@ -2699,6 +2696,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
    *                  lives.
    * @param documentId the _id of the document.
    * @param updateDescription the update description to apply locally.
+   * @param atVersion the Stitch sync version that should be written locally for this update.
+   * @param withHash the FNV-1a hash of the sanitized document.
    */
   @CheckReturnValue
   private LocalSyncWriteModelContainer updateOneFromRemote(

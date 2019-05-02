@@ -52,7 +52,6 @@ class DataSynchronizerCRUDUnitTests {
                 ctx.testDocumentHash,
                 UpdateDescription(BsonDocument(), HashSet()),
                 TestVersionState.NEXT
-
             )
             // set a different update doc than the remote
             ctx.updateDocument = BsonDocument("\$inc", BsonDocument("count", BsonInt32(2)))
