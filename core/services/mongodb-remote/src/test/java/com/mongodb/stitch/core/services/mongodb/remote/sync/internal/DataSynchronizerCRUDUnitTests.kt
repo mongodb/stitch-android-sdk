@@ -335,10 +335,14 @@ class DataSynchronizerCRUDUnitTests {
         // insert, sync the doc, update, and verify that the change event was emitted
         ctx.insertTestDocument()
         ctx.waitForEvents()
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1,
+            ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+
         ctx.doSyncPass()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1,
             ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+
         ctx.updateTestDocument()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1,
@@ -353,8 +357,11 @@ class DataSynchronizerCRUDUnitTests {
         // mock a successful update, sync the update. verify that the update
         // was of the correct doc, and that no conflicts or errors occured
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+
         ctx.doSyncPass()
         ctx.waitForEvents()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
@@ -414,7 +421,7 @@ class DataSynchronizerCRUDUnitTests {
 
         // do a sync pass, addressing the conflict
         ctx.doSyncPass()
-        ctx.waitForEvents(1)
+        ctx.waitForEvents()
         // verify that a change event has been emitted, a conflict has been handled,
         // and no errors were emitted
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1)
@@ -551,11 +558,17 @@ class DataSynchronizerCRUDUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
 
+        // in case there's a stale document fetch, the
+        ctx.mockFindResult(ctx.testDocument)
+
         // update the inserted doc, and prepare our exceptionToThrow
         ctx.updateTestDocument()
         ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedEvent)
+
+        assertNotNull(ctx.findTestDocumentFromLocalCollection())
+
         val expectedException = StitchServiceException("bad", StitchServiceErrorCode.UNKNOWN)
         ctx.mockUpdateException(expectedException)
 

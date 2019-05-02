@@ -232,7 +232,6 @@ class SyncUnitTestHarness : Closeable {
                     if (expectedDocumentId != null) {
                         Assert.assertEquals(expectedDocumentId, actualDocumentId)
                     }
-
                     emitErrorSemaphore?.release()
                 }
             }
@@ -539,7 +538,7 @@ class SyncUnitTestHarness : Closeable {
 
         override fun queueConsumableRemoteInsertEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvents.compactChangeEventForLocalInsert(testDocument, true)),
+                mapOf(testDocument to ChangeEvents.compactChangeEventForLocalInsert(testDocument, false)),
                 mapOf())
         }
 
@@ -691,7 +690,7 @@ class SyncUnitTestHarness : Closeable {
         override fun queueConsumableRemoteDeleteEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
                 mapOf(testDocument to ChangeEvents.compactChangeEventForLocalDelete(
-                    testDocumentId, true)),
+                    testDocumentId, false)),
                 mapOf())
         }
 
@@ -811,10 +810,14 @@ class SyncUnitTestHarness : Closeable {
 
         override fun mockUpdateResult(remoteUpdateResult: RemoteUpdateResult) {
             `when`(collectionMock.updateOne(any(), any())).thenReturn(remoteUpdateResult)
+            `when`(collectionMock.updateMany(any(), any())).thenReturn(remoteUpdateResult)
         }
 
         override fun mockUpdateException(exception: Exception) {
             `when`(collectionMock.updateOne(any(), any())).thenAnswer {
+                throw exception
+            }
+            `when`(collectionMock.updateMany(any(), any())).thenAnswer {
                 throw exception
             }
         }

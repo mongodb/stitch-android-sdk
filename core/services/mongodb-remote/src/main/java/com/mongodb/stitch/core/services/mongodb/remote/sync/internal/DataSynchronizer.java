@@ -61,6 +61,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictResolution;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.Scheduled;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.SyncFrequencyType;
+import com.sun.corba.se.impl.orbutil.concurrent.Sync;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -347,6 +348,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       if (instancesColl.find().first() == null) {
         throw new IllegalStateException("expected to find instance configuration");
       }
+
       this.syncConfig = new InstanceSynchronizationConfig(configDb);
       this.instanceChangeStreamListener = new InstanceChangeStreamListenerImpl(
           syncConfig,
@@ -373,30 +375,36 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return instanceChangeStreamListener.isOpen(namespace);
   }
 
-  public void configureSyncFrequency(@Nonnull final MongoNamespace namespace,
-                                     @Nullable final SyncFrequency syncFrequency) {
+  // Configures the sync frequency, looking at the sync config to determine the previous frequency.
+  void configureSyncFrequency(@Nonnull final MongoNamespace namespace,
+                              @Nullable final SyncFrequency syncFrequency) {
+    final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
+    final SyncFrequency prevFrequency = nsConfig.getSyncFrequency() != null
+        ? nsConfig.getSyncFrequency()
+        : SyncFrequency.onDemand(); // serves as default prev freq since it has no streams or timers
+
+    configureSyncFrequency(namespace, syncFrequency, prevFrequency);
+  }
+
+  // Configures the sync frequency, using the provided argument as the previous frequency.
+  void configureSyncFrequency(@Nonnull final MongoNamespace namespace,
+                              @Nullable final SyncFrequency syncFrequency,
+                              @Nonnull final SyncFrequency prevFrequency) {
     final SyncFrequency newFrequency = syncFrequency != null
         ? syncFrequency : SyncFrequency.reactive();
 
-    // Set old frequency to onDemand preliminarily because that had no streams or timers
-    SyncFrequency oldFrequency = SyncFrequency.onDemand();
-
-    // Get the nsConfig and get its syncFrequency
+    // Get the nsConfig
     final NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
-    if (nsConfig != null && nsConfig.getSyncFrequency() != null) {
-      oldFrequency = nsConfig.getSyncFrequency();
-    }
 
     // Set the nsConfig to have a new syncFrequency
     nsConfig.setSyncFrequency(newFrequency);
 
     // Iterate over all possible values for oldFrequency
-    switch (oldFrequency.getType()) {
+    switch (prevFrequency.getType()) {
       case REACTIVE:
         switch (newFrequency.getType()) {
           case REACTIVE:
             // REACTIVE -> REACTIVE: Nothing should change, just return
-            checkAndInsertNamespaceListener(namespace);
             return;
           case SCHEDULED:
             if (((Scheduled) newFrequency).isConnected()) {
@@ -421,7 +429,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             return;
         }
       case SCHEDULED:
-        if (((Scheduled) oldFrequency).isConnected()) {
+        if (((Scheduled) prevFrequency).isConnected()) {
           switch (newFrequency.getType()) {
             case REACTIVE:
               // SCHEDULED AND isConnected is TRUE --> REACTIVE:
@@ -508,7 +516,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
             }
           case ON_DEMAND:
             // ON_DEMAND --> ON_DEMAND: nothing to change, just return
-            instanceChangeStreamListener.removeNamespace(namespace);
             return;
           default:
             return;
@@ -522,17 +529,21 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         @Nonnull final SyncConfiguration syncConfiguration) {
     this.waitUntilInitialized();
 
-    this.syncConfig.getNamespaceConfig(namespace).configure(syncConfiguration);
+    final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
+    final SyncFrequency prevFrequency = nsConfig.getSyncFrequency() != null
+        ? nsConfig.getSyncFrequency()
+        : SyncFrequency.onDemand(); // serves as default prev freq since it has no streams or timers
+
+    nsConfig.configure(syncConfiguration);
 
     syncLock.lock();
     try {
       this.exceptionListener = syncConfiguration.getExceptionListener();
       this.isConfigured = true;
-      this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
+      this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency(), prevFrequency);
     } finally {
       syncLock.unlock();
     }
-
 
     if (!isRunning) {
       this.start();
@@ -845,7 +856,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                 docConfig,
                 ChangeEvents.compactChangeEventForLocalDelete(
                     docId,
-                    hasUncommittedWrites
+                    false // when synthesizing remote events, writes shouldn't be pending
                 )));
           }
 
@@ -1659,7 +1670,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
         action = SyncAction.CONFLICT;
         remoteChangeEvent = ChangeEvents.compactChangeEventForLocalDelete(
             docConfig.getDocumentId(),
-            docConfig.hasUncommittedWrites());
+            false); // when synthesizing remote events, writes shouldn't be pending
       } else {
         action = SyncAction.DELETE_LOCAL_DOC_AND_DESYNC;
       }
@@ -1698,7 +1709,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           remoteChangeEvent = ChangeEvents.compactChangeEventForLocalReplace(
               docConfig.getDocumentId(),
               newestRemoteDocument,
-              docConfig.hasUncommittedWrites());
+              false); // when synthesizing remote events, writes shouldn't be pending
         }
       }
     }
@@ -2004,7 +2015,10 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     // a. When the document is looked up, if it cannot be found the synthesized change event is a
     // DELETE, otherwise it's a REPLACE.
     if (document == null) {
-      return ChangeEvents.compactChangeEventForLocalDelete(documentId, false);
+      return ChangeEvents.compactChangeEventForLocalDelete(
+          documentId,
+          false // when synthesizing remote events, writes shouldn't be pending
+      );
     }
     return ChangeEvents.compactChangeEventForLocalReplace(documentId, document, false);
   }
@@ -2746,7 +2760,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
           // change the server-side logic for replaces to add a "merge" argument, that would
           // translate the replace sent by this client to an update that only modifies the fields
           // it has the permission to see.
-          // See STITCH-XXXX (still need to file this)
+          // See STITCH-2888
           event = ChangeEvents.changeEventForLocalReplace(
               namespace,
               documentId,

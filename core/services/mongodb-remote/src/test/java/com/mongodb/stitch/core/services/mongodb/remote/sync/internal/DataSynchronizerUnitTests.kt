@@ -442,10 +442,7 @@ class DataSynchronizerUnitTests {
             TestVersionState.NEW
         )
 
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        ctx.mockFindResult(pseudoUpdatedDocument)
 
         ctx.doSyncPass()
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -674,10 +671,7 @@ class DataSynchronizerUnitTests {
             TestVersionState.NEW
         )
 
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        ctx.mockFindResult(pseudoUpdatedDocument)
 
         ctx.doSyncPass()
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -793,10 +787,8 @@ class DataSynchronizerUnitTests {
         // but the remote collection itself no longer has the document,
         // so the conflict is using the latest remote document
         // which doesn't exist to resolve the conflict
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        ctx.mockFindResult(pseudoUpdatedDocument)
+
         // sync, creating a conflict. because remote has an empty version,
         // there will be a conflict on the next L2R pass that we will resolve
         // with remote. however, this will be resolved as a REPLACE since
@@ -1102,8 +1094,14 @@ class DataSynchronizerUnitTests {
         ctx.mockFindResult(null)
 
         ctx.queueConsumableRemoteInsertEvent()
+
+        // mock the update result because once the insert comes in without a version, the client
+        // will try to write back a version, and if it's not able to do so, then the incoming
+        // event will never be emitted.
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+
         ctx.doSyncPass()
-        ctx.waitForEvents()
+        ctx.waitForEvents(1)
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
