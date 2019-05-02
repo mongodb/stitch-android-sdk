@@ -59,6 +59,7 @@ private typealias ChannelId = String
  */
 class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
     companion object {
+        /** Unique channel id for notifications */
         private val NOTIFICATION_CHANNEL_ID: String = ObjectId().toHexString()
     }
 
@@ -71,8 +72,12 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
 
     private val mChannelClients = mutableMapOf<ChannelId, Messenger>()
 
+    /**
+     * [ChangeEventListener] for [Channel] domain.
+     */
     private inner class ChannelListener : ChangeEventListener<Channel> {
         override fun onEvent(documentId: BsonValue, event: ChangeEvent<Channel>) {
+            // TODO: Handle channel updates
             Log.d("ChannelListener", "onEvent: ${event.toBsonDocument()}")
         }
     }
@@ -232,6 +237,58 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
         }
     }
 
+    private suspend fun handleSendMessageMessage(action: ChannelServiceAction.SendMessage) {
+        // de-structure the action
+        val (channelId, content) = action
+
+        // send the message to the repo
+        val message = ChannelMessageRepo.sendMessage(channelId, content)
+
+        // send a send message reply to the respondent so that they can
+        // update their local copy of the message
+        mChannelClients[channelId]?.send(ChannelServiceAction.SendMessageReply(message))
+            ?: throw Error("Not subscribed to channel")
+    }
+
+    private fun handleUnsubscribeToChannelMessage(
+        action: ChannelServiceAction.UnsubscribeToChannel
+    ) {
+        mChannelClients.remove(action.channelId)
+    }
+
+    private suspend fun handleSubscribeToChannelMessage(
+        action: ChannelServiceAction.SubscribeToChannel
+    ) {
+        // de-structure the action
+        val (channelId, replyTo) = action
+
+        // add the respondent to our listener map
+        mChannelClients[channelId] = replyTo
+
+        // find the channel. if it does not exist locally, fetch it remotely
+        val channel = checkNotNull(
+            ChannelRepo.findLocalById(channelId) ?:
+            ChannelRepo.findRemoteChannel(channelId))
+
+        // find the current user
+        val currentUser = checkNotNull(UserRepo.findCurrentUser())
+
+        // synchronize the channel and channel members
+        ChannelRepo.sync(channelId)
+        ChannelMembersRepo.sync(channelId)
+
+        // check if we already have a channelSubscription; if not,
+        // subscribe to the channel via the stitch server
+        ChannelSubscriptionRepo.getLocalChannelSubscriptionId(
+            currentUser.id, stitch.auth.user!!.deviceId, channelId
+        ) ?: ChannelRepo.subscribeToChannel(
+            currentUser.id, stitch.auth.user!!.deviceId, channelId
+        )
+
+        // send a subscription reply to the respondent
+        action.replyTo.send(ChannelServiceAction.SubscribeToChannelReply(channel))
+    }
+
     /**
      * Handler of incoming channelMessages from clients.
      */
@@ -241,42 +298,14 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
             runBlocking(IO) {
                 Log.d("ChannelService", "Received new message: ${msg.asChannelServiceAction()}")
                 when (val action = msg.asChannelServiceAction()) {
-                    is ChannelServiceAction.SubscribeToChannel -> {
-                        val (channelId, replyTo) = action
-
-                        mChannelClients[channelId] = replyTo
-
-                        val channel = checkNotNull(ChannelRepo.findLocalById(channelId) ?:
-                            ChannelRepo.findRemoteChannel(channelId))
-                        val currentUser = checkNotNull(UserRepo.findCurrentUser())
-
-                        ChannelRepo.sync(channelId)
-                        ChannelMembersRepo.sync(channelId)
-
-                        ChannelSubscriptionRepo.getLocalChannelSubscriptionId(
-                            currentUser.id, stitch.auth.user!!.deviceId, channelId
-                        ) ?: ChannelRepo.subscribeToChannel(
-                            currentUser.id, stitch.auth.user!!.deviceId, channelId
-                        )
-
-                        msg.replyTo.send(
-                            ChannelServiceAction.SubscribeToChannelReply(channel))
-                    }
-                    is ChannelServiceAction.UnsubscribeToChannel -> {
-                        mChannelClients.remove(action.channelId)
-                    }
-                    is ChannelServiceAction.SendMessage -> {
-                        val (channelId, content) = action
-
-                        val message = ChannelMessageRepo.sendMessage(channelId, content)
-
-                        mChannelClients[channelId]?.send(
-                            ChannelServiceAction.SendMessageReply(message)
-                        ) ?: throw Error("Not subscribed to channel")
-                    }
-                    is ChannelServiceAction.SetAvatar -> {
+                    is ChannelServiceAction.SubscribeToChannel ->
+                        handleSubscribeToChannelMessage(action)
+                    is ChannelServiceAction.UnsubscribeToChannel ->
+                        handleUnsubscribeToChannelMessage(action)
+                    is ChannelServiceAction.SendMessage ->
+                        handleSendMessageMessage(action)
+                    is ChannelServiceAction.SetAvatar ->
                         UserRepo.updateAvatar(action.avatar)
-                    }
                     else -> super.handleMessage(msg)
                 }
             }
@@ -319,7 +348,8 @@ class ChannelService : LifecycleService(), CoroutineScope, LifecycleObserver {
                         message.content, message.sentAt, person
                     ))
 
-                    val builder = NotificationCompat.Builder(this@ChannelService, NOTIFICATION_CHANNEL_ID)
+                    val builder = NotificationCompat.Builder(
+                        this@ChannelService, NOTIFICATION_CHANNEL_ID)
                         .setSmallIcon(R.drawable.mind_map_icn)
                         .setColorized(true)
                         .setContentTitle("New message")
