@@ -56,6 +56,11 @@ interface InstanceChangeStreamListener {
   boolean isOpen(final MongoNamespace namespace);
 
   /**
+   * Returns whether or not there is a stream
+   */
+  boolean hasNamespace(final MongoNamespace namespace);
+
+  /**
    * Returns whether or not all streams are open.
    */
   boolean areAllStreamsOpen();

@@ -16,6 +16,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictResolution
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonElement
@@ -907,6 +909,46 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // configure Sync, each entry with flags checking
         // that the listeners/handlers have been called
         val changeEventListenerSemaphore = Semaphore(0)
+        val syncConfig = SyncConfiguration.Builder()
+            .withConflictHandler(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
+                hasConflictHandlerBeenInvoked = true
+                assertEquals(remoteEvent.fullDocument!!["fly"], "away")
+                ConflictResolution.fromRemote()
+            }).withChangeEventListener(ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+                changeEventListenerSemaphore.release()
+            }).withExceptionListener(ExceptionListener { _, _ -> }).build()
+        coll.configure(syncConfig)
+
+        waitForAllStreamsOpen()
+
+        // insert a document remotely
+        remoteColl.insertOne(Document("_id", insertedId).append("fly", "away"))
+
+        // sync. assert that the conflict handler and
+        // change event listener have been called
+        streamAndSync()
+
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        Assert.assertTrue(hasConflictHandlerBeenInvoked)
+        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
+    }
+
+    @Test
+    fun testConfigureDeprecated() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+
+        // insert a document locally
+        var docToInsert = Document("hello", "world")
+        var insertedId = coll.insertOne(docToInsert).insertedId
+
+        var hasConflictHandlerBeenInvoked = false
+        var hasChangeEventListenerBeenInvoked = false
+
+        // configure Sync, each entry with flags checking
+        // that the listeners/handlers have been called
+        var changeEventListenerSemaphore = Semaphore(0)
         coll.configure(
             ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
                 hasConflictHandlerBeenInvoked = true
@@ -919,7 +961,44 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
                 hasChangeEventListenerBeenInvoked = true
                 changeEventListenerSemaphore.release()
             },
-                ExceptionListener { _, _ -> }
+            ExceptionListener { _, _ -> }
+        )
+
+        waitForAllStreamsOpen()
+
+        // insert a document remotely
+        remoteColl.insertOne(Document("_id", insertedId).append("fly", "away"))
+
+        // sync. assert that the conflict handler and
+        // change event listener have been called
+        streamAndSync()
+
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        Assert.assertTrue(hasConflictHandlerBeenInvoked)
+        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
+
+        // Call configure again with a new frequency
+        docToInsert = Document("hello", "world")
+        insertedId = coll.insertOne(docToInsert).insertedId
+
+        hasConflictHandlerBeenInvoked = false
+        hasChangeEventListenerBeenInvoked = false
+
+        // configure Sync, each entry with flags checking
+        // that the listeners/handlers have been called
+        changeEventListenerSemaphore = Semaphore(0)
+        coll.configure(
+            ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, remoteEvent: CompactChangeEvent<Document> ->
+                hasConflictHandlerBeenInvoked = true
+                assertEquals(remoteEvent.fullDocument!!["fly"], "away")
+                ConflictResolution.fromRemote()
+            },
+            ChangeEventListener { _: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+                changeEventListenerSemaphore.release()
+            },
+            ExceptionListener { _, _ -> },
+            SyncFrequency.scheduled(100, TimeUnit.MINUTES, true)
         )
 
         waitForAllStreamsOpen()
@@ -1842,6 +1921,236 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         assertEquals(expectedDoc, withoutId(coll.find(filter).first()!!))
         assertEquals(
             coll.find(filter).first(), withoutSyncVersion(remoteColl.find(filter).first()!!))
+    }
+
+    @Test
+    fun testConfigureWithReactiveSyncFrequency() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder().withSyncFrequency(SyncFrequency.reactive())
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+    }
+
+    @Test
+    fun testConfigureWithOnDemandSyncFrequency() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder().withSyncFrequency(SyncFrequency.onDemand())
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // There should still not be an entry because this is onDemand sync frequency
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+    }
+
+    @Test
+    fun testConfigureWithScheduledSyncFrequencyConnected() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder()
+            .withSyncFrequency(SyncFrequency.scheduled(1, TimeUnit.MINUTES, true))
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+    }
+
+    @Test
+    fun testConfigureWithScheduledSyncFrequencyNotConnected() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder()
+            .withSyncFrequency(SyncFrequency.scheduled(1, TimeUnit.MINUTES, false))
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+    }
+
+    @Test
+    fun testUpdateSyncFrequency() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val ns = syncTestRunner.namespace
+
+        // insert document
+        val doc = Document("hello", "world")
+        remoteColl.insertOne(doc)
+        var res = remoteColl.find(doc).first()!!
+        val docId = BsonObjectId(res.getObjectId("_id"))
+
+        // Should not have entry for namespace
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Configure
+        val syncConfig = SyncConfiguration.Builder().withSyncFrequency(SyncFrequency.reactive())
+            .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<BsonDocument>()).build()
+        coll.configure(syncConfig)
+        waitForAllStreamsOpen()
+
+        // Should still not have an entry for the namespace because there are no synced ids
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+
+        // Sync the Id
+        coll.syncOne(docId)
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+
+        // Change to OnDemand frequency
+        coll.updateSyncFrequency(SyncFrequency.onDemand())
+        waitForAllStreamsOpen()
+
+        // Stream should close
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertFalse(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+
+        // Change to Scheduled with connected TRUE
+        coll.updateSyncFrequency(SyncFrequency.scheduled(1, TimeUnit.MINUTES, true))
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertTrue(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertTrue(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+
+        // Change to Scheduled with connected FALSE
+        coll.updateSyncFrequency(SyncFrequency.scheduled(2, TimeUnit.MINUTES, false))
+        waitForAllStreamsOpen()
+
+        // Now there should be an entry for the namespace and its listener should be open
+        assertFalse(syncTestRunner.dataSynchronizer.hasNamespaceListener(ns))
+        assertFalse(syncTestRunner.dataSynchronizer.isNamespaceListenerOpen(ns))
+    }
+
+    @Test
+    fun testFindOnReceivingChangeEvent() {
+        val coll = syncTestRunner.syncMethods()
+        val remoteColl = syncTestRunner.remoteMethods()
+        val numDocs = 20
+        val waitFor = AtomicInteger(numDocs)
+        var hasChangeEventListenerBeenInvoked = false
+
+        var ids = arrayListOf<BsonValue>()
+        repeat(numDocs) {
+            ids.add(remoteColl.insertOne(Document("hello", "world")).insertedId)
+        }
+        assertEquals(ids.size, numDocs)
+
+        val changeEventListenerSemaphore = Semaphore(0)
+        coll.configure(DefaultSyncConflictResolvers.remoteWins(),
+            ChangeEventListener { docId: BsonValue, _: ChangeEvent<Document> ->
+                hasChangeEventListenerBeenInvoked = true
+                Thread(Runnable {
+                    if (coll.count(Document("_id", docId)) == 0L) {
+                        fail("Did not find document with id $docId")
+                    }
+                    if (waitFor.decrementAndGet() == 0) {
+                        changeEventListenerSemaphore.release()
+                    }
+                }).start()
+            },
+            ExceptionListener { _, _ -> }
+        )
+
+        waitForAllStreamsOpen()
+
+        // sync. assert that the conflict handler and
+        // change event listener have been called
+        coll.syncMany(*ids.toTypedArray())
+        streamAndSync()
+
+        assertTrue(changeEventListenerSemaphore.tryAcquire(20, TimeUnit.SECONDS))
+        Assert.assertTrue(hasChangeEventListenerBeenInvoked)
     }
 
     private fun watchForEvents(namespace: MongoNamespace, n: Int = 1): Semaphore {

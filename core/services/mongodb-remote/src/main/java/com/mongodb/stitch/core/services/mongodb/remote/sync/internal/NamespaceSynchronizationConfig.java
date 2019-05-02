@@ -23,7 +23,6 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.DeleteManyModel;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 
 import java.util.ArrayList;
@@ -62,6 +61,7 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
 
   private NamespaceListenerConfig namespaceListenerConfig;
   private ConflictHandler conflictHandler;
+  private SyncFrequency syncFrequency;
   private Codec documentCodec;
 
   NamespaceSynchronizationConfig(
@@ -130,14 +130,17 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
     this.nsLock = new ReentrantReadWriteLock();
   }
 
-  <T> void configure(final ConflictHandler<T> conflictHandler,
-                     final ChangeEventListener<T> changeEventListener,
-                     final Codec<T> codec) {
+  void configure(final SyncConfiguration syncConfiguration) {
     nsLock.writeLock().lock();
     try {
-      this.conflictHandler = conflictHandler;
-      this.namespaceListenerConfig = new NamespaceListenerConfig(changeEventListener, codec);
-      this.documentCodec = codec;
+      this.conflictHandler = syncConfiguration.getConflictHandler();
+      this.syncFrequency = syncConfiguration.getSyncFrequency();
+      this.documentCodec = syncConfiguration.getCodec();
+      this.namespaceListenerConfig = new NamespaceListenerConfig(
+          syncConfiguration.getChangeEventListener(),
+          syncConfiguration.getCodec()
+      );
+
     } finally {
       nsLock.writeLock().unlock();
     }
@@ -328,6 +331,24 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
       return conflictHandler;
     } finally {
       nsLock.readLock().unlock();
+    }
+  }
+
+  public SyncFrequency getSyncFrequency() {
+    nsLock.readLock().lock();
+    try {
+      return syncFrequency;
+    } finally {
+      nsLock.readLock().unlock();
+    }
+  }
+
+  void setSyncFrequency(final SyncFrequency syncFrequency) {
+    nsLock.writeLock().lock();
+    try {
+      this.syncFrequency = syncFrequency;
+    } finally {
+      nsLock.writeLock().unlock();
     }
   }
 

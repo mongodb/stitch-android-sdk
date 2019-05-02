@@ -2,6 +2,10 @@ package com.mongodb.stitch.android.services.mongodb.performance
 
 import android.support.test.InstrumentationRegistry
 import com.google.android.gms.tasks.Tasks
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
+import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
+import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonValue
 import org.bson.Document
 import kotlin.random.Random
@@ -165,6 +169,18 @@ class SyncPerformanceTestUtils {
             return insertManyResult.insertedIds.map { it.value }
         }
 
+        internal fun insertToLocal(
+            ctx: SyncPerformanceTestContext,
+            numDocs: Int,
+            docSize: Int
+        ): List<BsonValue> {
+            val docs = SyncPerformanceTestUtils.generateDocuments(docSize, numDocs)
+            var insertManyResult = Tasks.await(ctx.testColl.sync().insertMany(docs))
+            assertIntsAreEqualOrThrow(insertManyResult.insertedIds.size, numDocs)
+
+            return insertManyResult.insertedIds.map { it.value }
+        }
+
         internal fun generateDocuments(docSizeInBytes: Int, numDocs: Int): List<Document> {
             val docList = ArrayList<Document>()
 
@@ -216,7 +232,7 @@ class SyncPerformanceTestUtils {
                 "RemoteUpdateResult.modifiedCount")
 
             val numDocsChangedRemotely = Tasks.await(ctx.testColl.count(
-                Document("newField", Document("\$exists", true))
+                Document("newField", "remote")
             ))
 
             SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
@@ -228,7 +244,8 @@ class SyncPerformanceTestUtils {
 
         fun performLocalUpdate(
             ctx: SyncPerformanceTestContext,
-            ids: List<BsonValue>
+            ids: List<BsonValue>,
+            additionalCount: Int = 0
         ) {
             val updateResult = Tasks.await(ctx.testColl.sync().updateMany(
                 Document("_id", Document("\$in", ids)),
@@ -246,14 +263,27 @@ class SyncPerformanceTestUtils {
                 "LocalUpdateResult.modifiedCount")
 
             val numDocsChangedLocally = Tasks.await(ctx.testColl.sync().count(
-                Document("newField", Document("\$exists", true))
+                Document("newField", "local")
             ))
 
             SyncPerformanceTestUtils.assertIntsAreEqualOrThrow(
-                ids.size,
+                ids.size + additionalCount,
                 numDocsChangedLocally.toInt(),
-                "Remote document updates"
+                "Local document updates"
             )
+        }
+
+        fun defaultConfigure(ctx: SyncPerformanceTestContext) {
+            val config = SyncConfiguration.Builder()
+                .withConflictHandler(DefaultSyncConflictResolvers.remoteWins<Document>())
+                .withExceptionListener(ExceptionListener { id, ex ->
+                    testHarness.logMessage(
+                        "unexpected sync error with id " +
+                            "$id: ${ex.localizedMessage}")
+                    error(ex)
+                }).withSyncFrequency(SyncFrequency.reactive()).build()
+
+            Tasks.await(ctx.testColl.sync().configure(config))
         }
     }
 }
