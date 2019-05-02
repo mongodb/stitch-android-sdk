@@ -61,7 +61,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictResolution;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.Scheduled;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.SyncFrequencyType;
-import com.sun.corba.se.impl.orbutil.concurrent.Sync;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
