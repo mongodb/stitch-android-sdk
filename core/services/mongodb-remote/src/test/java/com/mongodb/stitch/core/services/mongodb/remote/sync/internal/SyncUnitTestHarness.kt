@@ -900,7 +900,7 @@ class SyncUnitTestHarness : Closeable {
     }
 
     private val unclosedDataSynchronizers: HashSet<DataSynchronizer?> = HashSet()
-    
+
     internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
         unclosedDataSynchronizers.forEach {
             it?.close()
