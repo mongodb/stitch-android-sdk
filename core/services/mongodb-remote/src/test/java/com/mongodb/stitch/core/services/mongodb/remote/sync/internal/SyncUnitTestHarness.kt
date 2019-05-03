@@ -892,12 +892,19 @@ class SyncUnitTestHarness : Closeable {
         }
 
         latestCtx?.dataSynchronizer?.close()
+
+        unclosedDataSynchronizers.forEach {
+            it?.close()
+        }
+        unclosedDataSynchronizers.clear()
     }
 
     private val unclosedDataSynchronizers: HashSet<DataSynchronizer?> = HashSet()
-
+    
     internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
-        unclosedDataSynchronizers.forEach { it?.close() }
+        unclosedDataSynchronizers.forEach {
+            it?.close()
+        }
         unclosedDataSynchronizers.clear()
 
         latestCtx?.dataSynchronizer?.close()
