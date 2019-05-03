@@ -21,28 +21,21 @@ import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.MongoNamespace;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
-import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 
 /**
- * Represents a change event communicated via a MongoDB change stream.
+ * Represents a change event communicated via a MongoDB change stream. This type of stream
+ * always includes a fullDocument for update events, and also includes the change event ID and
+ * namespace of the event as returned by MongoDB.
  *
  * @param <DocumentT> The underlying type of document for which this change event was produced.
  */
-public final class ChangeEvent<DocumentT> {
+public final class ChangeEvent<DocumentT> extends BaseChangeEvent<DocumentT> {
   private final BsonDocument id; // Metadata related to the operation (the resumeToken).
-  private final OperationType operationType;
-  private final DocumentT fullDocument;
   private final MongoNamespace ns;
-  private final BsonDocument documentKey;
-  private final UpdateDescription updateDescription;
-  private final boolean hasUncommittedWrites;
 
   /**
    * Constructs a change event.
@@ -64,14 +57,12 @@ public final class ChangeEvent<DocumentT> {
       final UpdateDescription updateDescription,
       final boolean hasUncommittedWrites
   ) {
+    super(
+        operationType, fullDocument, documentKey, updateDescription, hasUncommittedWrites
+    );
+
     this.id = id;
-    this.operationType = operationType;
-    this.fullDocument = fullDocument;
     this.ns = ns;
-    this.documentKey = documentKey;
-    this.updateDescription = updateDescription == null
-        ? new UpdateDescription(null, null) : updateDescription;
-    this.hasUncommittedWrites = hasUncommittedWrites;
   }
 
   /**
@@ -84,58 +75,12 @@ public final class ChangeEvent<DocumentT> {
   }
 
   /**
-   * Returns the operation type of the change that triggered the change event.
-   *
-   * @return the operation type of this change event.
-   */
-  public OperationType getOperationType() {
-    return operationType;
-  }
-
-  /**
-   * The full document at some point after the change has been applied.
-   *
-   * @return the full document.
-   */
-  public DocumentT getFullDocument() {
-    return fullDocument;
-  }
-
-  /**
    * The namespace the change relates to.
    *
    * @return the namespace.
    */
   public MongoNamespace getNamespace() {
     return ns;
-  }
-
-  /**
-   * The unique identifier for the document that was actually changed.
-   *
-   * @return the document key.
-   */
-  public BsonDocument getDocumentKey() {
-    return documentKey;
-  }
-
-  /**
-   * In the case of an update, the description of which fields have been added, removed or updated.
-   *
-   * @return the update description.
-   */
-  public UpdateDescription getUpdateDescription() {
-    return updateDescription;
-  }
-
-  /**
-   * Indicates a local change event that has not yet been synchronized with a remote data store.
-   * Used only for the sync use case.
-   *
-   * @return whether or not this change event represents uncommitted writes.
-   */
-  public boolean hasUncommittedWrites() {
-    return hasUncommittedWrites;
   }
 
   /**
@@ -157,39 +102,30 @@ public final class ChangeEvent<DocumentT> {
    * Serializes this change event into a {@link BsonDocument}.
    * @return the serialized document.
    */
+  @Override
   public BsonDocument toBsonDocument() {
     final BsonDocument asDoc = new BsonDocument();
     asDoc.put(Fields.ID_FIELD, id);
-    asDoc.put(Fields.OPERATION_TYPE_FIELD,
-        new BsonString(operationType.toRemote()));
-    final BsonDocument nsDoc = new BsonDocument();
-    nsDoc.put(Fields.NS_DB_FIELD,
-        new BsonString(ns.getDatabaseName()));
-    nsDoc.put(Fields.NS_COLL_FIELD,
-        new BsonString(getNamespace().getCollectionName()));
-    asDoc.put(Fields.NS_FIELD, nsDoc);
-    asDoc.put(Fields.DOCUMENT_KEY_FIELD, documentKey);
-    if (fullDocument != null && (fullDocument instanceof BsonValue)
-        && ((BsonValue)fullDocument).isDocument()) {
-      asDoc.put(Fields.FULL_DOCUMENT_FIELD, (BsonValue)fullDocument);
-    }
-    if (updateDescription != null) {
-      final BsonDocument updateDescDoc = new BsonDocument();
-      updateDescDoc.put(
-          Fields.UPDATE_DESCRIPTION_UPDATED_FIELDS_FIELD,
-          updateDescription.getUpdatedFields());
 
-      final BsonArray removedFields = new BsonArray();
-      for (final String field : updateDescription.getRemovedFields()) {
-        removedFields.add(new BsonString(field));
-      }
-      updateDescDoc.put(
-          Fields.UPDATE_DESCRIPTION_REMOVED_FIELDS_FIELD,
-          removedFields);
-      asDoc.put(Fields.UPDATE_DESCRIPTION_FIELD, updateDescDoc);
+    asDoc.put(Fields.OPERATION_TYPE_FIELD, new BsonString(getOperationType().toRemote()));
+
+    final BsonDocument nsDoc = new BsonDocument();
+    nsDoc.put(Fields.NS_DB_FIELD, new BsonString(ns.getDatabaseName()));
+    nsDoc.put(Fields.NS_COLL_FIELD, new BsonString(getNamespace().getCollectionName()));
+    asDoc.put(Fields.NS_FIELD, nsDoc);
+
+    asDoc.put(Fields.DOCUMENT_KEY_FIELD, getDocumentKey());
+
+    if (getFullDocument() != null && (getFullDocument() instanceof BsonValue)
+        && ((BsonValue) getFullDocument()).isDocument()) {
+      asDoc.put(Fields.FULL_DOCUMENT_FIELD, (BsonValue) getFullDocument());
     }
-    asDoc.put(Fields.WRITE_PENDING_FIELD,
-        new BsonBoolean(hasUncommittedWrites));
+
+    if (getUpdateDescription() != null) {
+      asDoc.put(Fields.UPDATE_DESCRIPTION_FIELD, getUpdateDescription().toBsonDocument());
+    }
+
+    asDoc.put(Fields.WRITE_PENDING_FIELD, new BsonBoolean(hasUncommittedWrites()));
     return asDoc;
   }
 
@@ -205,22 +141,12 @@ public final class ChangeEvent<DocumentT> {
     keyPresent(Fields.DOCUMENT_KEY_FIELD, document);
 
     final BsonDocument nsDoc = document.getDocument(Fields.NS_FIELD);
+
     final UpdateDescription updateDescription;
     if (document.containsKey(Fields.UPDATE_DESCRIPTION_FIELD)) {
-      final BsonDocument updateDescDoc =
-          document.getDocument(Fields.UPDATE_DESCRIPTION_FIELD);
-      keyPresent(Fields.UPDATE_DESCRIPTION_UPDATED_FIELDS_FIELD, updateDescDoc);
-      keyPresent(Fields.UPDATE_DESCRIPTION_REMOVED_FIELDS_FIELD, updateDescDoc);
-
-      final BsonArray removedFieldsArr =
-          updateDescDoc.getArray(Fields.UPDATE_DESCRIPTION_REMOVED_FIELDS_FIELD);
-      final Collection<String> removedFields = new ArrayList<>(removedFieldsArr.size());
-      for (final BsonValue field : removedFieldsArr) {
-        removedFields.add(field.asString().getValue());
-      }
-      updateDescription = new UpdateDescription(updateDescDoc.getDocument(
-          Fields.UPDATE_DESCRIPTION_UPDATED_FIELDS_FIELD),
-          removedFields);
+      updateDescription = UpdateDescription.fromBsonDocument(
+          document.getDocument(Fields.UPDATE_DESCRIPTION_FIELD)
+      );
     } else {
       updateDescription = null;
     }
@@ -239,20 +165,16 @@ public final class ChangeEvent<DocumentT> {
 
     return new ChangeEvent<>(
         document.getDocument(Fields.ID_FIELD),
-        OperationType.fromRemote(
-            document.getString(Fields.OPERATION_TYPE_FIELD).getValue()),
+        OperationType.fromRemote(document.getString(Fields.OPERATION_TYPE_FIELD).getValue()),
         fullDocument,
         new MongoNamespace(
             nsDoc.getString(Fields.NS_DB_FIELD).getValue(),
             nsDoc.getString(Fields.NS_COLL_FIELD).getValue()),
         document.getDocument(Fields.DOCUMENT_KEY_FIELD),
         updateDescription,
-        document.getBoolean(
-            Fields.WRITE_PENDING_FIELD,
-            BsonBoolean.FALSE).getValue());
+        document.getBoolean(Fields.WRITE_PENDING_FIELD, BsonBoolean.FALSE).getValue());
   }
 
-  // remove me
   private static final class Fields {
     static final String ID_FIELD = "_id";
     static final String OPERATION_TYPE_FIELD = "operationType";
@@ -264,9 +186,7 @@ public final class ChangeEvent<DocumentT> {
     static final String NS_COLL_FIELD = "coll";
 
     static final String UPDATE_DESCRIPTION_FIELD = "updateDescription";
-    static final String UPDATE_DESCRIPTION_UPDATED_FIELDS_FIELD = "updatedFields";
-    static final String UPDATE_DESCRIPTION_REMOVED_FIELDS_FIELD = "removedFields";
-
     static final String WRITE_PENDING_FIELD = "writePending";
   }
 }
+

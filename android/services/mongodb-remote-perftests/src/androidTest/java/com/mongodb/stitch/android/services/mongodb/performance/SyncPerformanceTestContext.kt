@@ -16,7 +16,7 @@ import java.util.Date
 import org.bson.Document
 import org.bson.types.ObjectId
 
-open abstract class SyncPerformanceTestContext(
+abstract class SyncPerformanceTestContext(
     private val harness: SyncPerformanceIntTestsHarness,
     private val testName: String
 ) {

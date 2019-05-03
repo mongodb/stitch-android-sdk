@@ -17,6 +17,7 @@ import org.bson.BsonDateTime
 import org.bson.BsonDouble
 import org.bson.BsonInt32
 import org.bson.BsonString
+import org.bson.BsonValue
 import org.bson.Document
 import org.bson.types.ObjectId
 
@@ -154,7 +155,8 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
         runId: ObjectId,
         testDefinition: TestDefinition,
         beforeEach: BeforeBlock = { _, _, _ -> },
-        afterEach: AfterBlock = { _, _, _ -> }
+        afterEach: AfterBlock = { _, _, _ -> },
+        extraFields: Map<String, BsonValue> = mapOf()
     ) {
         val testParams = TestParams(runId, testName)
         setupOutputClient()
@@ -164,6 +166,10 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
             val doc = testParams.asBson.append("_id", resultId)
                 .append("stitchHostName", BsonString(getStitchBaseURL()))
                 .append("status", BsonString("In Progress"))
+            for ((key, value) in extraFields) {
+                doc.append(key, value)
+            }
+
             Tasks.await(outputColl.insertOne(doc))
             testHarness.logMessage(String.format("Starting Test: %s", doc.toJson()))
         }
@@ -174,6 +180,7 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
                 val runResult = RunResult(numDoc, docSize)
 
                 for (iter in 1..SyncPerformanceTestUtils.getNumIters()) {
+                    logMessage("Testing (docSize: $docSize, numDocs: $numDoc, iter: $iter)")
                     var ctx = createPerformanceTestingContext(testName)
                     try {
                         ctx.setup()
@@ -189,8 +196,10 @@ class SyncPerformanceIntTestsHarness : BaseStitchAndroidIntTest() {
 
                         afterEach(ctx, numDoc, docSize)
                     } catch (e: Exception) {
-                        runResult.failures.add(FailureResult(iter, e.localizedMessage,
+                        val failureMessage = e.localizedMessage ?: e.toString()
+                        runResult.failures.add(FailureResult(iter, failureMessage,
                             e.stackTrace.map { BsonString(it.toString()) }))
+                        logMessage("Failure: $failureMessage")
                     } finally {
                         ctx.teardown()
                     }

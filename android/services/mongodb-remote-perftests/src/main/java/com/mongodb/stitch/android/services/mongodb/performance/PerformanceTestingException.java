@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.core.internal.net;
+package com.mongodb.stitch.android.services.mongodb.performance;
 
-import java.io.IOException;
-
-public interface Transport {
-  // This is how Stitch Server calculates the maximum request size
-  // This number is equal to 17,825,792 or ~ 17Mb
-  int MAX_REQUEST_SIZE = 17 * (1 << 20);
-
-  Response roundTrip(Request request) throws Exception;
-
-  EventStream stream(Request request) throws IOException;
-
-  void close();
+/**
+ * Exception pertaining to any errors related to the
+ * Performance Testing module.
+ */
+class PerformanceTestingException extends Exception {
+  PerformanceTestingException(final String msg) {
+    super(msg);
+  }
 }

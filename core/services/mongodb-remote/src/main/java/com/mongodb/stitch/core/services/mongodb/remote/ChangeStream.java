@@ -27,19 +27,20 @@ import org.bson.BsonValue;
 /**
  * User-level abstraction for a stream returning {@link ChangeEvent}s from the server.
  *
- * @param <EventT> The type returned to users of this API when the next event is requested.
- * @param <DocumentT> The type of the full document on the underlying change event.
+ * @param <EventT> The type returned to users of this API when the next event is requested. May be
+ *                 the same as ChangeEventT, or may be an async wrapper around ChangeEventT.
  */
-public abstract class ChangeStream<EventT, DocumentT> implements Closeable {
-  private final Stream<ChangeEvent<DocumentT>> stream;
+public abstract class ChangeStream<EventT>
+    implements Closeable {
+  private final Stream<? extends BaseChangeEvent> internalStream;
 
   private ExceptionListener exceptionListener = null;
 
-  protected ChangeStream(final Stream<ChangeEvent<DocumentT>> stream) {
+  protected ChangeStream(final Stream<? extends BaseChangeEvent> stream) {
     if (stream == null) {
       throw new IllegalArgumentException("null stream passed to change stream");
     }
-    this.stream = stream;
+    this.internalStream = stream;
   }
 
   /**
@@ -65,7 +66,7 @@ public abstract class ChangeStream<EventT, DocumentT> implements Closeable {
    * @return True if the underlying change stream is open.
    */
   public boolean isOpen() {
-    return stream.isOpen();
+    return internalStream.isOpen();
   }
 
   /**
@@ -74,18 +75,18 @@ public abstract class ChangeStream<EventT, DocumentT> implements Closeable {
    */
   @Override
   public void close() throws IOException {
-    stream.close();
+    internalStream.close();
   }
 
-  protected Stream<ChangeEvent<DocumentT>> getStream() {
-    return this.stream;
+  protected Stream<? extends BaseChangeEvent> getInternalStream() {
+    return this.internalStream;
   }
 
   protected ExceptionListener getExceptionListener() {
     return this.exceptionListener;
   }
 
-  protected void dispatchError(final StitchEvent<ChangeEvent<DocumentT>> event) {
+  protected void dispatchError(final StitchEvent<? extends BaseChangeEvent> event) {
     if (exceptionListener != null) {
       BsonValue documentId = null;
       if (event.getData() != null) {

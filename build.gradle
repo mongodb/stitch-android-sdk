@@ -158,6 +158,7 @@ subprojects {
 
             test {
                 outputs.upToDateWhen { false }
+                reports.junitXml.destination = file(project.rootDir.absolutePath + "/test_results")
                 systemProperty "test.stitch.baseURL", properties.getProperty("test.stitch.baseURL", "http://localhost:9090")
             }
 

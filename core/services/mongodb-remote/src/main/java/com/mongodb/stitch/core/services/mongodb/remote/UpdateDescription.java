@@ -16,13 +16,15 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote;
 
+import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.DOCUMENT_VERSION_FIELD;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,6 +33,7 @@ import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonElement;
+import org.bson.BsonString;
 import org.bson.BsonValue;
 
 /**
@@ -38,7 +41,7 @@ import org.bson.BsonValue;
  */
 public final class UpdateDescription {
   private final BsonDocument updatedFields;
-  private final Collection<String> removedFields;
+  private final Set<String> removedFields;
 
   /**
    * Creates an update descirption with the specified updated fields and removed field names.
@@ -47,10 +50,10 @@ public final class UpdateDescription {
    */
   public UpdateDescription(
       final BsonDocument updatedFields,
-      final Collection<String> removedFields
+      final Set<String> removedFields
   ) {
     this.updatedFields = updatedFields == null ? new BsonDocument() : updatedFields;
-    this.removedFields = removedFields == null ? Collections.<String>emptyList() : removedFields;
+    this.removedFields = removedFields == null ? new HashSet<>() : removedFields;
   }
 
   /**
@@ -97,6 +100,75 @@ public final class UpdateDescription {
   }
 
   /**
+   * Converts this update description to its document representation as it would appear in a
+   * MongoDB Change Event.
+   *
+   * @return the update description document as it would appear in a change event
+   */
+  public BsonDocument toBsonDocument() {
+    final BsonDocument updateDescDoc = new BsonDocument();
+    updateDescDoc.put(
+        Fields.UPDATED_FIELDS_FIELD,
+        this.getUpdatedFields());
+
+    final BsonArray removedFields = new BsonArray();
+    for (final String field : this.getRemovedFields()) {
+      removedFields.add(new BsonString(field));
+    }
+    updateDescDoc.put(
+        Fields.REMOVED_FIELDS_FIELD,
+        removedFields);
+
+    return updateDescDoc;
+  }
+
+  /**
+   * Converts an update description BSON document from a MongoDB Change Event into an
+   * UpdateDescription object.
+   *
+   * @param document the
+   * @return the converted UpdateDescription
+   */
+  public static UpdateDescription fromBsonDocument(final BsonDocument document) {
+    keyPresent(Fields.UPDATED_FIELDS_FIELD, document);
+    keyPresent(Fields.REMOVED_FIELDS_FIELD, document);
+
+    final BsonArray removedFieldsArr =
+        document.getArray(Fields.REMOVED_FIELDS_FIELD);
+    final Set<String> removedFields = new HashSet<>(removedFieldsArr.size());
+    for (final BsonValue field : removedFieldsArr) {
+      removedFields.add(field.asString().getValue());
+    }
+
+    return new UpdateDescription(document.getDocument(Fields.UPDATED_FIELDS_FIELD), removedFields);
+  }
+
+  /**
+   * Unilaterally merge an update description into this update description.
+   * @param otherDescription the update description to merge into this
+   * @return this merged update description
+   */
+  public UpdateDescription merge(@Nullable final UpdateDescription otherDescription) {
+    if (otherDescription != null) {
+      for (final Map.Entry<String, BsonValue> entry : this.updatedFields.entrySet()) {
+        if (otherDescription.removedFields.contains(entry.getKey())) {
+          this.updatedFields.remove(entry.getKey());
+        }
+      }
+      for (final String removedField : this.removedFields) {
+        if (otherDescription.updatedFields.containsKey(removedField)) {
+          this.removedFields.remove(removedField);
+        }
+      }
+
+      this.removedFields.addAll(otherDescription.removedFields);
+      this.updatedFields.putAll(otherDescription.updatedFields);
+    }
+
+    return this;
+  }
+
+  /**
    * Find the diff between two documents.
    *
    * <p>NOTE: This does not do a full diff on {@link BsonArray}. If there is
@@ -117,7 +189,7 @@ public final class UpdateDescription {
       final @Nonnull BsonDocument afterDocument,
       final @Nullable String onKey,
       final BsonDocument updatedFields,
-      final List<String> removedFields) {
+      final Set<String> removedFields) {
     // for each key in this document...
     for (final Map.Entry<String, BsonValue> entry : beforeDocument.entrySet()) {
       final String key = entry.getKey();
@@ -187,7 +259,7 @@ public final class UpdateDescription {
       @Nullable final BsonDocument beforeDocument,
       @Nullable final BsonDocument afterDocument) {
     if (beforeDocument == null || afterDocument == null) {
-      return new UpdateDescription(new BsonDocument(), new ArrayList<>());
+      return new UpdateDescription(new BsonDocument(), new HashSet<>());
     }
 
     return UpdateDescription.diff(
@@ -195,7 +267,7 @@ public final class UpdateDescription {
         afterDocument,
         null,
         new BsonDocument(),
-        new ArrayList<>()
+        new HashSet<>()
     );
   }
 
@@ -213,5 +285,10 @@ public final class UpdateDescription {
   @Override
   public int hashCode() {
     return removedFields.hashCode() + 31 * updatedFields.hashCode();
+  }
+
+  private static final class Fields {
+    static final String UPDATED_FIELDS_FIELD = "updatedFields";
+    static final String REMOVED_FIELDS_FIELD = "removedFields";
   }
 }
