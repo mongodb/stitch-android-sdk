@@ -3,7 +3,7 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" /><uses-permission android:name="android.permission.INTERNET" />
 
-    <application android:usesCleartextTraffic="true">
+    <application>
         <!-- StitchInitProvider is a ContentProvider that will associate the application's Context
           with Stitch. It also will look for resource values such as stitch_client_app_id to register
            a default app client.
