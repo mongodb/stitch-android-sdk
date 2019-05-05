@@ -98,11 +98,13 @@ class CoreDocumentSynchronizationConfigUnitTests {
         val expectedTestVersion = BsonDocument("dummy", BsonString("version"))
         val expectedEvent = ChangeEvents.changeEventForLocalDelete(namespace, id, false)
         val expectedHash = 12345L
-        config.setSomePendingWritesAndSave(
+        config.setSomePendingWrites(
             1,
             expectedTestVersion,
             expectedHash,
             expectedEvent)
+        coll.replaceOne(CoreDocumentSynchronizationConfig.getDocFilter(namespace, id), config)
+
         config.isPaused = true
         config.isStale = true
 

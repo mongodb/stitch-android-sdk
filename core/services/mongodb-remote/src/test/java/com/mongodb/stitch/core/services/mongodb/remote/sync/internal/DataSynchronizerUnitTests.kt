@@ -1134,4 +1134,110 @@ class DataSynchronizerUnitTests {
 
         assertNotNull(ctx.dataSynchronizer.find(ctx.namespace, filter).firstOrNull())
     }
+
+    @Test
+    fun testRecoveryIsAttemptedOnNetworkReconnect() {
+        val ctx = harness.freshTestContext()
+
+        // disable all non-deliberate syncing
+        ctx.reconfigure()
+        ctx.dataSynchronizer.stop()
+        ctx.dataSynchronizer.disableSyncThread()
+
+        // insert a local document and sync on it
+        ctx.dataSynchronizer.insertOne(ctx.namespace, ctx.testDocument)
+
+        // ensure change is committed
+        ctx.waitForEvents(1)
+
+        ctx.dataSynchronizer.doSyncPass()
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+
+        val modifiedDocument = ctx.testDocument.clone().append("goodbye",
+                BsonString("universe"))
+
+        // stage an update without reactivating the sync thread
+        val changeEvent = ChangeEvents
+                .changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId,
+                        UpdateDescription(BsonDocument("goodbye",
+                                BsonString("universe")), HashSet<String>()),
+                        modifiedDocument, false)
+        `when`(ctx.dataSynchronizer.getEventsForNamespace(any())).thenReturn(
+                mapOf(ctx.testDocument to changeEvent),
+                mapOf())
+        ctx.dataSynchronizer.doSyncPass()
+        // make sure event was applied
+        assertEquals(modifiedDocument, ctx.findTestDocumentFromLocalCollection())
+
+        // simulate a failed update by adding to the undo collection
+        ctx.verifyUndoCollectionEmpty()
+        ctx.dataSynchronizer.getUndoCollection(ctx.namespace).insertOne(ctx.testDocument)
+
+        // simulate a reconnect by triggering network change event without
+        // changing the status of the network monitor
+        ctx.dataSynchronizer.onNetworkStateChanged()
+        // verify that if we did another sync pass now and the event had successfully cleared,
+        // the update would be reverted
+        ctx.dataSynchronizer.doSyncPass()
+        // document restored in original state
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+        // confirm we're still syncing on that ID
+        assertTrue(ctx.dataSynchronizer.getSynchronizedDocumentIds(ctx.namespace).contains(ctx.testDocumentId))
+        // confirm that we've cleared the undo collection after applying it
+        ctx.verifyUndoCollectionEmpty()
+    }
+
+    @Test
+    fun testRecoveryIsNotAttemptedWithoutNetworkReconnect() {
+        val ctx = harness.freshTestContext()
+
+        // disable all non-deliberate syncing
+        ctx.reconfigure()
+        ctx.dataSynchronizer.stop()
+        ctx.dataSynchronizer.disableSyncThread()
+
+        // insert a local document and sync on it
+        ctx.dataSynchronizer.insertOne(ctx.namespace, ctx.testDocument)
+
+        // ensure change is committed
+        ctx.waitForEvents(1)
+
+        ctx.dataSynchronizer.doSyncPass()
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+
+        val modifiedDocument = ctx.testDocument.clone().append("goodbye",
+                BsonString("universe"))
+
+        // stage an update without reactivating the sync thread
+        val changeEvent = ChangeEvents
+                .changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId,
+                        UpdateDescription(BsonDocument("goodbye",
+                                BsonString("universe")), HashSet<String>()),
+                        modifiedDocument, false)
+        `when`(ctx.dataSynchronizer.getEventsForNamespace(any())).thenReturn(
+                mapOf(ctx.testDocument to changeEvent),
+                mapOf())
+        ctx.dataSynchronizer.doSyncPass()
+        // make sure event was applied
+        assertEquals(modifiedDocument, ctx.findTestDocumentFromLocalCollection())
+
+        // simulate a failed update by adding to the undo collection
+        ctx.verifyUndoCollectionEmpty()
+        ctx.dataSynchronizer.getUndoCollection(ctx.namespace).insertOne(ctx.testDocument)
+
+        // verify that if we did another sync pass now and the event had successfully cleared,
+        // the update would be reverted
+        ctx.dataSynchronizer.doSyncPass()
+        // document NOT restored in original state
+        assertEquals(modifiedDocument, ctx.findTestDocumentFromLocalCollection())
+        // confirm we're still syncing on that ID
+        assertTrue(ctx.dataSynchronizer.getSynchronizedDocumentIds(ctx.namespace).contains(ctx.testDocumentId))
+        // clear the test undo
+        ctx.dataSynchronizer.getUndoCollection(ctx.namespace).deleteOne(ctx.testDocumentFilter)
+        // confirm that we've cleared the undo collection
+        ctx.verifyUndoCollectionEmpty()
+    }
+
 }
