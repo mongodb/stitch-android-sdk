@@ -18,7 +18,6 @@ import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.HashUtils
 import com.mongodb.stitch.core.testutils.CustomType
 
 import org.bson.BsonDocument
