@@ -1055,7 +1055,6 @@ class DataSynchronizerUnitTests {
 
         ctx.queueConsumableRemoteInsertEvent()
         ctx.doSyncPass()
-        ctx.waitForEvents()
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
@@ -1085,7 +1084,6 @@ class DataSynchronizerUnitTests {
 
         ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
-        ctx.waitForEvents()
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
