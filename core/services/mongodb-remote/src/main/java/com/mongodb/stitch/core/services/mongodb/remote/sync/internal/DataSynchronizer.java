@@ -314,8 +314,8 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (!this.networkMonitor.isConnected()) {
       this.stop();
     } else {
-      this.start();
       this.shouldAttemptRecovery = true;
+      this.start();
     }
   }
 
