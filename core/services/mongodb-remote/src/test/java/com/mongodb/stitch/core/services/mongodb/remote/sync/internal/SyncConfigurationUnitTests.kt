@@ -9,7 +9,6 @@ import org.bson.BsonValue
 import org.bson.codecs.BsonDocumentCodec
 import org.junit.Assert
 import org.junit.Test
-import java.util.concurrent.TimeUnit
 
 class SyncConfigurationUnitTests {
     @Test
