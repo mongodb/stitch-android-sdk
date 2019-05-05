@@ -1239,5 +1239,4 @@ class DataSynchronizerUnitTests {
         // confirm that we've cleared the undo collection
         ctx.verifyUndoCollectionEmpty()
     }
-
 }
