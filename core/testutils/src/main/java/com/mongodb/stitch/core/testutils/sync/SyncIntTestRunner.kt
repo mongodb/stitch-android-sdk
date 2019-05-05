@@ -177,20 +177,5 @@ interface SyncIntTestRunner {
     fun testMultiUserSupport()
 
     @Test
-    fun testConfigureWithReactiveSyncFrequency()
-
-    @Test
-    fun testConfigureWithOnDemandSyncFrequency()
-
-    @Test
-    fun testConfigureWithScheduledSyncFrequencyConnected()
-
-    @Test
-    fun testConfigureWithScheduledSyncFrequencyNotConnected()
-
-    @Test
-    fun testUpdateSyncFrequency()
-
-    @Test
     fun testFindOnReceivingChangeEvent()
 }

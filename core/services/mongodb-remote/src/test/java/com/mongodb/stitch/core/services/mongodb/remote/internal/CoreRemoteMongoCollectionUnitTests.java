@@ -37,7 +37,6 @@ import com.mongodb.stitch.core.internal.common.CollectionDecoder;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
@@ -1057,7 +1056,6 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("database", "dbName1");
     expectedArgs.put("collection", "collName1");
     expectedArgs.put("ids", new HashSet<>(Arrays.asList(expectedIDs)));
-    expectedArgs.put("useCompactEvents", false);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
     assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
         decoderArgumentCaptor.getValue());
@@ -1099,102 +1097,12 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("collection", "collName1");
     expectedArgs.put("ids", Arrays.stream(expectedIDs).map(BsonObjectId::new)
         .collect(Collectors.toSet()));
-    expectedArgs.put("useCompactEvents", false);
 
     for (final Map.Entry<String, Object> entry : expectedArgs.entrySet()) {
       final Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
       assertEquals(entry.getValue(), capturedValue);
     }
     assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
-        decoderArgumentCaptor.getValue());
-  }
-
-  @Test
-  @SuppressWarnings("unchecked")
-  public void testWatchCompactBsonValueIDs() throws IOException, InterruptedException {
-    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
-    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client =
-        CoreRemoteClientFactory.getClient(
-            service,
-            getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
-    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
-
-    final Stream<CompactChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
-
-    doReturn(mockStream).when(service).streamFunction(any(), any(), any(Decoder.class));
-
-    final BsonValue[] expectedIDs = new BsonValue[] {new BsonString("foobar"),
-        new BsonObjectId(),
-        new BsonDocument()};
-    coll.watchCompact(expectedIDs);
-
-    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
-    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
-    final ArgumentCaptor<Decoder<CompactChangeEvent>> decoderArgumentCaptor =
-        ArgumentCaptor.forClass(Decoder.class);
-    verify(service)
-        .streamFunction(
-            funcNameArg.capture(),
-            funcArgsArg.capture(),
-            decoderArgumentCaptor.capture());
-
-    assertEquals("watch", funcNameArg.getValue());
-    assertEquals(1, funcArgsArg.getValue().size());
-    final Document expectedArgs = new Document();
-    expectedArgs.put("database", "dbName1");
-    expectedArgs.put("collection", "collName1");
-    expectedArgs.put("ids", new HashSet<>(Arrays.asList(expectedIDs)));
-    expectedArgs.put("useCompactEvents", true);
-    assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
-    assertEquals(ResultDecoders.compactChangeEventDecoder(new DocumentCodec()),
-        decoderArgumentCaptor.getValue());
-  }
-
-  @Test
-  @SuppressWarnings("unchecked")
-  public void testWatchCompactObjectIdIDs() throws IOException, InterruptedException {
-    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
-    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
-    final CoreRemoteMongoClient client =
-        CoreRemoteClientFactory.getClient(
-            service,
-            getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
-    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
-
-    final Stream<CompactChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
-
-    doReturn(mockStream).when(service).streamFunction(any(), any(), any(Decoder.class));
-
-    final ObjectId[] expectedIDs = new ObjectId[] {new ObjectId(), new ObjectId(), new ObjectId()};
-    coll.watchCompact(expectedIDs);
-
-    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
-    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
-    final ArgumentCaptor<Decoder<CompactChangeEvent>> decoderArgumentCaptor =
-        ArgumentCaptor.forClass(Decoder.class);
-    verify(service)
-        .streamFunction(
-            funcNameArg.capture(),
-            funcArgsArg.capture(),
-            decoderArgumentCaptor.capture());
-
-    assertEquals("watch", funcNameArg.getValue());
-    assertEquals(1, funcArgsArg.getValue().size());
-    final Document expectedArgs = new Document();
-    expectedArgs.put("database", "dbName1");
-    expectedArgs.put("collection", "collName1");
-    expectedArgs.put("ids", Arrays.stream(expectedIDs).map(BsonObjectId::new)
-        .collect(Collectors.toSet()));
-    expectedArgs.put("useCompactEvents", true);
-
-    for (final Map.Entry<String, Object> entry : expectedArgs.entrySet()) {
-      final Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
-      assertEquals(entry.getValue(), capturedValue);
-    }
-    assertEquals(ResultDecoders.compactChangeEventDecoder(new DocumentCodec()),
         decoderArgumentCaptor.getValue());
   }
 }

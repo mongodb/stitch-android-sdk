@@ -19,7 +19,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import static com.mongodb.stitch.core.internal.common.Assertions.keyPresent;
 
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
@@ -131,12 +130,6 @@ public class ResultDecoders {
     return new ChangeEventDecoder<>(codec);
   }
 
-  @SuppressWarnings("unused")
-  static <DocumentT> Decoder<CompactChangeEvent<DocumentT>>
-      compactChangeEventDecoder(final Codec<DocumentT> codec) {
-    return new CompactChangeEventDecoder<>(codec);
-  }
-
   private abstract static class BaseChangeEventDecoder<DocumentT> {
     protected final Codec<DocumentT> codec;
 
@@ -192,41 +185,6 @@ public class ResultDecoders {
           rawChangeEvent.getNamespace(),
           rawChangeEvent.getDocumentKey(),
           rawChangeEvent.getUpdateDescription(),
-          rawChangeEvent.hasUncommittedWrites());
-    }
-  }
-
-  private static final class CompactChangeEventDecoder<DocumentT> extends
-      BaseChangeEventDecoder<DocumentT>
-      implements
-      Decoder<CompactChangeEvent<DocumentT>> {
-
-    CompactChangeEventDecoder(final Codec<DocumentT> codec) {
-      super(codec);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public CompactChangeEvent<DocumentT> decode(
-        final BsonReader reader,
-        final DecoderContext decoderContext
-    ) {
-      final BsonDocument document = (new BsonDocumentCodec()).decode(reader, decoderContext);
-      final CompactChangeEvent<BsonDocument> rawChangeEvent =
-          CompactChangeEvent.fromBsonDocument(document);
-
-      if (codec == null || codec.getClass().equals(BsonDocumentCodec.class)) {
-        return (CompactChangeEvent<DocumentT>)rawChangeEvent;
-      }
-      return new CompactChangeEvent<>(
-          rawChangeEvent.getOperationType(),
-          rawChangeEvent.getFullDocument() == null ? null : codec.decode(
-              rawChangeEvent.getFullDocument().asBsonReader(),
-              DecoderContext.builder().build()),
-          rawChangeEvent.getDocumentKey(),
-          rawChangeEvent.getUpdateDescription(),
-          rawChangeEvent.getStitchDocumentVersion(),
-          rawChangeEvent.getStitchDocumentHash(),
           rawChangeEvent.hasUncommittedWrites());
     }
   }

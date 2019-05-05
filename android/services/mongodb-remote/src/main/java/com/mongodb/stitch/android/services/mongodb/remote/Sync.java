@@ -30,7 +30,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
 
 import java.util.List;
 import java.util.Set;
@@ -69,28 +68,6 @@ public interface Sync<DocumentT> {
   /**
    * Set the conflict handler and and change event listener on this collection. This will start
    * a background sync thread, and should be called before any CRUD operations are attempted.
-   * @deprecated configure(SyncConfiguration syncConfig)
-   *
-   * @param conflictHandler the conflict resolver to invoke when a conflict happens between local
-   *                         and remote events.
-   * @param changeEventListener the event listener to invoke when a change event happens for the
-   *                         document.
-   * @param exceptionListener the error listener to invoke when an irrecoverable error occurs
-   * @param syncFrequency the syncFrequency at which to perform synchronization passes
-   *
-   * @return A Task that completes when Mobile Sync is configured, and the background sync thread
-   *         has started.
-   */
-  @Deprecated
-  @CheckReturnValue
-  Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
-                       @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                       @Nullable final ExceptionListener exceptionListener,
-                       @Nullable final SyncFrequency syncFrequency);
-
-  /**
-   * Set the conflict handler and and change event listener on this collection. This will start
-   * a background sync thread, and should be called before any CRUD operations are attempted.
    *
    * @param syncConfiguration the SyncConfiguration that contains all the desired options
    *
@@ -99,16 +76,6 @@ public interface Sync<DocumentT> {
    */
   @CheckReturnValue
   Task<Void> configure(@NonNull final SyncConfiguration syncConfiguration);
-
-  /**
-   * Sets the SyncFrequency on this collection.
-   *
-   * @param syncFrequency the SyncFrequency that contains all the desired options
-   *
-   * @return A Task that completes when the SyncFrequency has been updated
-   */
-  @CheckReturnValue
-  Task<Void> updateSyncFrequency(@NonNull final SyncFrequency syncFrequency);
 
   /**
    * Requests that the given document _id be synchronized.

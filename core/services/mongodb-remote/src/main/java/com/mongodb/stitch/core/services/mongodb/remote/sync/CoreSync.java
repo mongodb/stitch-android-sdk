@@ -18,7 +18,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
 
 import java.util.List;
 import java.util.Set;
@@ -39,12 +38,6 @@ public interface CoreSync<DocumentT> {
    * @param syncConfig the SyncConfiguration that contains relevant options
    */
   void configure(@Nonnull final SyncConfiguration syncConfig);
-
-  /**
-   * Set the SyncFrequency on this collection.
-   * @param syncFrequency the SyncFrequency that contains relevant options
-   */
-  void updateSyncFrequency(@Nonnull final SyncFrequency syncFrequency);
 
   /**
    * Requests that the given document _id be synchronized.

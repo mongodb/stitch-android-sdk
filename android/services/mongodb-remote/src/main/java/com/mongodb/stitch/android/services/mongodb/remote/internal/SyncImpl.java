@@ -35,7 +35,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency;
 
 import java.util.List;
 import java.util.Set;
@@ -73,47 +72,11 @@ public class SyncImpl<DocumentT> implements Sync<DocumentT> {
   }
 
   @Override
-  public Task<Void> configure(@NonNull final ConflictHandler<DocumentT> conflictHandler,
-                              @Nullable final ChangeEventListener<DocumentT> changeEventListener,
-                              @Nullable final ExceptionListener exceptionListener,
-                              @Nullable final SyncFrequency syncFrequency) {
-    return this.dispatcher.dispatchTask(new Callable<Void>() {
-      @Override
-      public Void call() throws Exception {
-        final SyncConfiguration syncConfiguration = new SyncConfiguration.Builder()
-            .withConflictHandler(conflictHandler)
-            .withChangeEventListener(changeEventListener)
-            .withExceptionListener(exceptionListener)
-            .withSyncFrequency(syncFrequency).build();
-        SyncImpl.this.proxy.configure(syncConfiguration);
-        return null;
-      }
-    });
-  }
-
-  @Override
   public Task<Void> configure(@NonNull final SyncConfiguration syncConfiguration) {
     return this.dispatcher.dispatchTask(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         SyncImpl.this.proxy.configure(syncConfiguration);
-        return null;
-      }
-    });
-  }
-
-  /**
-   * Sets the SyncFrequency on this collection.
-   *
-   * @param syncFrequency the SyncFrequency that contains all the desired options
-   *
-   * @return A Task that completes when the SyncFrequency has been updated
-   */
-  public Task<Void> updateSyncFrequency(@NonNull final SyncFrequency syncFrequency) {
-    return this.dispatcher.dispatchTask(new Callable<Void>() {
-      @Override
-      public Void call() throws Exception {
-        SyncImpl.this.proxy.updateSyncFrequency(syncFrequency);
         return null;
       }
     });

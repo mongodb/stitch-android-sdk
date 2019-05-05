@@ -61,7 +61,6 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
 
   private NamespaceListenerConfig namespaceListenerConfig;
   private ConflictHandler conflictHandler;
-  private SyncFrequency syncFrequency;
   private Codec documentCodec;
 
   NamespaceSynchronizationConfig(
@@ -134,7 +133,6 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
     nsLock.writeLock().lock();
     try {
       this.conflictHandler = syncConfiguration.getConflictHandler();
-      this.syncFrequency = syncConfiguration.getSyncFrequency();
       this.documentCodec = syncConfiguration.getCodec();
       this.namespaceListenerConfig = new NamespaceListenerConfig(
           syncConfiguration.getChangeEventListener(),
@@ -331,24 +329,6 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
       return conflictHandler;
     } finally {
       nsLock.readLock().unlock();
-    }
-  }
-
-  public SyncFrequency getSyncFrequency() {
-    nsLock.readLock().lock();
-    try {
-      return syncFrequency;
-    } finally {
-      nsLock.readLock().unlock();
-    }
-  }
-
-  void setSyncFrequency(final SyncFrequency syncFrequency) {
-    nsLock.writeLock().lock();
-    try {
-      this.syncFrequency = syncFrequency;
-    } finally {
-      nsLock.writeLock().unlock();
     }
   }
 

@@ -19,7 +19,6 @@ package com.mongodb.stitch.server.services.mongodb.remote;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
-import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
@@ -471,33 +470,5 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws IOException if the operation fails.
    */
   ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
-      throws InterruptedException, IOException;
-
-  /**
-   * Watches specified IDs in a collection. This convenience overload supports the use case
-   * of non-{@link BsonValue} instances of {@link ObjectId}. Requests a stream where the full
-   * document of update events, and several other unnecessary fields are omitted from the change
-   * event objects returned by the server. This can save on network usage when watching large
-   * documents.
-   *
-   * @param ids unique object identifiers of the IDs to watch.
-   * @return the stream of change events.
-   * @throws InterruptedException if the operation is interrupted.
-   * @throws IOException if the operation fails.
-   */
-  ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
-      throws InterruptedException, IOException;
-
-  /**
-   * Watches specified IDs in a collection. Requests a stream where the full document of update
-   * events, and several other unnecessary fields are omitted from the change event objects
-   * returned by the server. This can save on network usage when watching large documents.
-   *
-   * @param ids the ids to watch.
-   * @return the stream of change events.
-   * @throws InterruptedException if the operation is interrupted.
-   * @throws IOException if the operation fails.
-   */
-  ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
       throws InterruptedException, IOException;
 }

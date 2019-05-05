@@ -19,7 +19,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.internal;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
@@ -33,7 +32,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import java.io.IOException;
 import java.util.List;
 
-import org.bson.BsonObjectId;
 import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -463,32 +461,6 @@ public interface CoreRemoteMongoCollection<DocumentT> {
    * @return the stream of change events.
    */
   Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
-      throws InterruptedException, IOException;
-
-  /**
-   * Watches specified IDs in a collection. Requests a stream where the full document of update
-   * events, and several other unnecessary fields are omitted from the change event objects
-   * returned by the server. This can save on network usage when watching large documents
-   *
-   * This convenience overload supports the use case
-   * of non-{@link BsonValue} instances of {@link ObjectId} by wrapping them in
-   * {@link BsonObjectId} instances for the user.
-   *
-   * @param ids unique object identifiers of the IDs to watch.
-   * @return the stream of change events.
-   */
-  Stream<CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
-      throws InterruptedException, IOException;
-
-  /**
-   * Watches specified IDs in a collection. Requests a stream where the full document of update
-   * events, and several other unnecessary fields are omitted from the change event objects
-   * returned by the server. This can save on network usage when watching large documents
-   *
-   * @param ids the ids to watch.
-   * @return the stream of change events.
-   */
-  Stream<CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
       throws InterruptedException, IOException;
 
   /**

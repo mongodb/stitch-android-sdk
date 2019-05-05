@@ -34,18 +34,15 @@ import org.bson.codecs.Decoder;
 public class WatchOperation<DocumentT> {
   private final MongoNamespace namespace;
   private final Set<BsonValue> ids;
-  private final boolean useCompactEvents;
   private final Codec<DocumentT> fullDocumentCodec;
 
   WatchOperation(
       final MongoNamespace namespace,
       final Set<BsonValue> ids,
-      final boolean useCompactEvents,
       final Codec<DocumentT> fullDocumentCodec
   ) {
     this.namespace = namespace;
     this.ids = ids;
-    this.useCompactEvents = useCompactEvents;
     this.fullDocumentCodec = fullDocumentCodec;
   }
 
@@ -55,12 +52,10 @@ public class WatchOperation<DocumentT> {
     final Document args = new Document();
     args.put("database", namespace.getDatabaseName());
     args.put("collection", namespace.getCollectionName());
-    args.put("useCompactEvents", useCompactEvents);
     args.put("ids", ids);
 
-    final Decoder<ChangeEventT> decoder = useCompactEvents
-        ? (Decoder<ChangeEventT>) ResultDecoders.compactChangeEventDecoder(fullDocumentCodec)
-        : (Decoder<ChangeEventT>) ResultDecoders.changeEventDecoder(fullDocumentCodec);
+    final Decoder<ChangeEventT> decoder =
+        (Decoder<ChangeEventT>) ResultDecoders.changeEventDecoder(fullDocumentCodec);
 
     return service.streamFunction(
         "watch",

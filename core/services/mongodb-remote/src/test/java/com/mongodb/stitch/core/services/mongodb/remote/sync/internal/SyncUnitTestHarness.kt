@@ -410,7 +410,7 @@ class SyncUnitTestHarness : Closeable {
         /**
          * Reconfigure the internal dataSynchronizer with
          * the current conflictHandler, changeEventListener,
-         * errorListener, and syncFrequency.
+         * errorListener.
          */
         override fun reconfigure() {
             val syncConfig = SyncConfiguration.Builder()
@@ -418,7 +418,6 @@ class SyncUnitTestHarness : Closeable {
                 .withConflictHandler(conflictHandler)
                 .withExceptionListener(errorListener)
                 .withCodec(bsonDocumentCodec)
-                .withSyncFrequency(SyncFrequency.reactive())
                 .build()
             this.dataSynchronizer.configure(namespace, syncConfig)
         }

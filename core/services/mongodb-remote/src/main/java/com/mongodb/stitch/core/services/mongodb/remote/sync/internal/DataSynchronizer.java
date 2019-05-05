@@ -55,8 +55,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClient;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.Scheduled;
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency.SyncFrequencyType;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -371,151 +369,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     return instanceChangeStreamListener.isOpen(namespace);
   }
 
-  public void configureSyncFrequency(@Nonnull final MongoNamespace namespace,
-                                     @Nullable final SyncFrequency syncFrequency) {
-    final SyncFrequency newFrequency = syncFrequency != null
-        ? syncFrequency : SyncFrequency.reactive();
-
-    // Set old frequency to onDemand preliminarily because that had no streams or timers
-    SyncFrequency oldFrequency = SyncFrequency.onDemand();
-
-    // Get the nsConfig and get its syncFrequency
-    final NamespaceSynchronizationConfig nsConfig = syncConfig.getNamespaceConfig(namespace);
-    if (nsConfig != null && nsConfig.getSyncFrequency() != null) {
-      oldFrequency = nsConfig.getSyncFrequency();
-    }
-
-    // Set the nsConfig to have a new syncFrequency
-    nsConfig.setSyncFrequency(newFrequency);
-
-    // Iterate over all possible values for oldFrequency
-    switch (oldFrequency.getType()) {
-      case REACTIVE:
-        switch (newFrequency.getType()) {
-          case REACTIVE:
-            // REACTIVE -> REACTIVE: Nothing should change, just return
-            checkAndInsertNamespaceListener(namespace);
-            return;
-          case SCHEDULED:
-            if (((Scheduled) newFrequency).isConnected()) {
-              // REACTIVE --> SCHEDULED AND isConnected is TRUE:
-              // Schedule a new timer AND maintain the existing stream
-              // TODO schedule a new timer
-              checkAndInsertNamespaceListener(namespace);
-              return;
-            } else {
-              // REACTIVE --> SCHEDULED AND isConnected is FALSE:
-              // Schedule a new timer AND close the existing stream
-              // TODO schedule a new timer
-              instanceChangeStreamListener.removeNamespace(namespace);
-              return;
-            }
-          case ON_DEMAND:
-            // REACTIVE --> ON_DEMAND:
-            // Close the existing change stream
-            instanceChangeStreamListener.removeNamespace(namespace);
-            return;
-          default:
-            return;
-        }
-      case SCHEDULED:
-        if (((Scheduled) oldFrequency).isConnected()) {
-          switch (newFrequency.getType()) {
-            case REACTIVE:
-              // SCHEDULED AND isConnected is TRUE --> REACTIVE:
-              // Cancel the scheduled time AND do a sync pass on the collection
-              // TODO cancel the timer and do sync pass on the namespace
-              checkAndInsertNamespaceListener(namespace);
-              return;
-            case SCHEDULED:
-              if (((Scheduled) newFrequency).isConnected()) {
-                // SCHEDULED AND isConnected is TRUE --> SCHEDULED and isConnected is TRUE:
-                // Cancel the scheduled time AND schedule a new timer
-                // TODO schedule a new timer and delete the old one
-                checkAndInsertNamespaceListener(namespace);
-                return;
-              } else {
-                // SCHEDULED AND isConnected is TRUE --> SCHEDULED and isConnected is FALSE:
-                // Cancel the scheduled time AND schedule a new timer AND close the existing stream
-                // TODO schedule a new timer and delete the old one
-                instanceChangeStreamListener.removeNamespace(namespace);
-                return;
-              }
-            case ON_DEMAND:
-              // If a user changes from SCHEDULED AND isConnected is TRUE to ON_DEMAND:
-              // Cancel the scheduled timer and close the existing stream
-              // TODO cancel the scheduled timer
-              instanceChangeStreamListener.removeNamespace(namespace);
-              return;
-            default:
-              return;
-          }
-        } else {
-          switch (newFrequency.getType()) {
-            case REACTIVE:
-              // SCHEDULED AND isConnected is FALSE --> REACTIVE:
-              // Cancel the scheduled time AND do a sync pass on the collection
-              // AND open a new change stream
-              // TODO cancel the timer and do sync pass on the namespace
-              checkAndInsertNamespaceListener(namespace);
-              return;
-            case SCHEDULED:
-              if (((Scheduled) newFrequency).isConnected()) {
-                // SCHEDULED AND isConnected is FALSE --> SCHEDULED and isConnected is TRUE:
-                // Cancel the scheduled time AND schedule a new timer AND open a new stream
-                // TODO schedule a new timer and delete the old one
-                checkAndInsertNamespaceListener(namespace);
-                return;
-              } else {
-                // SCHEDULED AND isConnected is FALSE --> SCHEDULED and isConnected is FALSE:
-                // Cancel the scheduled time AND schedule a new timer
-                // TODO schedule a new timer and delete the old one
-                instanceChangeStreamListener.removeNamespace(namespace);
-                return;
-              }
-            case ON_DEMAND:
-              // SCHEDULED AND isConnected is FALSE --> ON_DEMAND:
-              // Cancel the scheduled timer
-              // TODO cancel the scheduled timer
-              instanceChangeStreamListener.removeNamespace(namespace);
-              return;
-            default:
-              return;
-          }
-        }
-      case ON_DEMAND:
-        switch (newFrequency.getType()) {
-          case REACTIVE:
-            // ON_DEMAND --> REACTIVE:
-            // Open a new change stream listener
-            checkAndInsertNamespaceListener(namespace);
-            return;
-          case SCHEDULED:
-            if (((Scheduled) newFrequency).isConnected()) {
-              // ON_DEMAND --> SCHEDULED AND isConnected is TRUE:
-              // Schedule a new timer AND open a new stream
-              // TODO schedule a new timer
-              checkAndInsertNamespaceListener(namespace);
-              return;
-            } else {
-              // ON_DEMAND --> SCHEDULED AND isConnected is FALSE:
-              // Schedule a new sync pass timer
-              // TODO schedule a new timer
-              instanceChangeStreamListener.removeNamespace(namespace);
-              return;
-            }
-          case ON_DEMAND:
-            // ON_DEMAND --> ON_DEMAND: nothing to change, just return
-            instanceChangeStreamListener.removeNamespace(namespace);
-            return;
-          default:
-            return;
-        }
-      default:
-        return;
-    }
-  }
-
   public void configure(@Nonnull final MongoNamespace namespace,
                         @Nonnull final SyncConfiguration syncConfiguration) {
     this.waitUntilInitialized();
@@ -526,7 +379,6 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     try {
       this.exceptionListener = syncConfiguration.getExceptionListener();
       this.isConfigured = true;
-      this.configureSyncFrequency(namespace, syncConfiguration.getSyncFrequency());
     } finally {
       syncLock.unlock();
     }
@@ -2955,14 +2807,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     try {
       final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
 
-      // If there are no synced docs, or the SyncFrequency is ON_DEMAND, or the Sync Frequency is
-      // SCHEDULED and IS_CONNECTED is true --> remove the namespace from the changeStreamListener
-      final SyncFrequency syncFrequency = nsConfig.getSyncFrequency();
-      if (nsConfig.getSynchronizedDocuments().isEmpty()
-          || syncFrequency.getType() == SyncFrequencyType.ON_DEMAND
-          || (syncFrequency.getType() == SyncFrequencyType.SCHEDULED
-            && !((Scheduled) syncFrequency).isConnected())
-      ) {
+      if (nsConfig.getSynchronizedDocuments().isEmpty()) {
         instanceChangeStreamListener.removeNamespace(namespace);
         return;
       }
@@ -2984,15 +2829,9 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       final NamespaceSynchronizationConfig nsConfig = this.syncConfig.getNamespaceConfig(namespace);
 
       if (nsConfig.isConfigured() && !nsConfig.getSynchronizedDocuments().isEmpty()) {
-        final SyncFrequency syncFrequency = nsConfig.getSyncFrequency();
-        if (syncFrequency.getType() == SyncFrequencyType.REACTIVE
-            || (syncFrequency.getType() == SyncFrequencyType.SCHEDULED
-              && ((Scheduled) syncFrequency).isConnected())) {
-
-          instanceChangeStreamListener.addNamespace(namespace);
-          instanceChangeStreamListener.stop(namespace);
-          instanceChangeStreamListener.start(namespace);
-        }
+        instanceChangeStreamListener.addNamespace(namespace);
+        instanceChangeStreamListener.stop(namespace);
+        instanceChangeStreamListener.start(namespace);
       }
     } catch (final Exception ex) {
       logger.error(String.format(

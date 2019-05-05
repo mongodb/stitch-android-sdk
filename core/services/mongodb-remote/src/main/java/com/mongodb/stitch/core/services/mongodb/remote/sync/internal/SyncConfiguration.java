@@ -30,7 +30,6 @@ public final class SyncConfiguration {
   private final ConflictHandler<?> conflictHandler;
   private final ChangeEventListener<?> changeEventListener;
   private final ExceptionListener exceptionListener;
-  private final SyncFrequency syncFrequency;
   private final Codec<?> codec;
 
 
@@ -38,12 +37,10 @@ public final class SyncConfiguration {
       final ConflictHandler<?> conflictHandler,
       final ChangeEventListener<?> changeEventListener,
       final ExceptionListener exceptionListener,
-      final SyncFrequency syncFrequency,
       final Codec<?> codec) {
     this.conflictHandler = conflictHandler;
     this.changeEventListener = changeEventListener;
     this.exceptionListener = exceptionListener;
-    this.syncFrequency = syncFrequency;
     this.codec = codec;
   }
 
@@ -75,15 +72,6 @@ public final class SyncConfiguration {
   }
 
   /**
-   * Gets the SyncFrequency for the SyncConfiguration
-   *
-   * @return the SyncFrequency for the SyncConfiguration.
-   */
-  public SyncFrequency getSyncFrequency() {
-    return syncFrequency;
-  }
-
-  /**
    * Gets the Codec for the SyncConfiguration
    *
    * @return the Codec for the SyncConfiguration.
@@ -108,7 +96,6 @@ public final class SyncConfiguration {
     private ConflictHandler<?> conflictHandler;
     private ChangeEventListener<?> changeEventListener;
     private ExceptionListener exceptionListener;
-    private SyncFrequency syncFrequency;
     private Codec<?> codec;
 
     /**
@@ -123,7 +110,6 @@ public final class SyncConfiguration {
       this.conflictHandler = syncConfiguration.conflictHandler;
       this.changeEventListener = syncConfiguration.changeEventListener;
       this.exceptionListener = syncConfiguration.exceptionListener;
-      this.syncFrequency = syncConfiguration.syncFrequency;
       this.codec = syncConfiguration.codec;
     }
 
@@ -161,17 +147,6 @@ public final class SyncConfiguration {
     }
 
     /**
-     * Sets the syncFrequency for the SyncConfiguration.
-     *
-     * @param syncFrequency the SyncFrequency of the SyncConfiguration.
-     * @return the builder.
-     */
-    public Builder withSyncFrequency(final SyncFrequency syncFrequency) {
-      this.syncFrequency = syncFrequency;
-      return this;
-    }
-
-    /**
      * Sets the codec for the SyncConfiguration.
      *
      * @param codec the Codec of the SyncConfiguration.
@@ -193,16 +168,10 @@ public final class SyncConfiguration {
         throw new SyncConfigurationException("SyncConfiguration cannot have null conflict handler");
       }
 
-      // Defaults to REACTIVE
-      if (syncFrequency == null) {
-        syncFrequency = SyncFrequency.reactive();
-      }
-
       return new SyncConfiguration(
           conflictHandler,
           changeEventListener,
           exceptionListener,
-          syncFrequency,
           codec
       );
     }

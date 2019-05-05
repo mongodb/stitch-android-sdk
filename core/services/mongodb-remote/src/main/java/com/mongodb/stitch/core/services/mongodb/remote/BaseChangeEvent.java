@@ -102,7 +102,7 @@ public abstract class BaseChangeEvent<DocumentT> {
 
   /**
    * Converts the change event to a BSON representation, as it would look on a MongoDB change
-   * stream, or a Stitch compact watch stream.
+   * stream.
    *
    * @return The BSON document representation of the change event.
    */

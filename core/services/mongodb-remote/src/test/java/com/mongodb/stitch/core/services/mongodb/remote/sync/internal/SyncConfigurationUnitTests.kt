@@ -15,7 +15,6 @@ class SyncConfigurationUnitTests {
     @Test
     fun testSyncConfigurationBuilder() {
         val conflictHandler = DefaultSyncConflictResolvers.remoteWins<BsonDocument>()
-        val syncFrequency = SyncFrequency.scheduled(100, TimeUnit.MINUTES, true)
         val exceptionListener = ExceptionListener {
             _, error -> System.out.println(error.localizedMessage)
         }
@@ -24,14 +23,12 @@ class SyncConfigurationUnitTests {
 
         val builder = SyncConfiguration.Builder()
         builder.withConflictHandler(conflictHandler)
-        builder.withSyncFrequency(syncFrequency)
         builder.withExceptionListener(exceptionListener)
         builder.withChangeEventListener(changeEventListener)
         builder.withCodec(codec)
         var config = builder.build()
 
         Assert.assertEquals(config.conflictHandler, conflictHandler)
-        Assert.assertEquals(config.syncFrequency.type, SyncFrequency.SyncFrequencyType.SCHEDULED)
         Assert.assertEquals(config.exceptionListener, exceptionListener)
         Assert.assertEquals(config.changeEventListener, changeEventListener)
         Assert.assertEquals(config.codec, codec)
@@ -46,7 +43,6 @@ class SyncConfigurationUnitTests {
         var config = builder.build()
 
         Assert.assertEquals(config.conflictHandler, conflictHandler)
-        Assert.assertEquals(config.syncFrequency.type, SyncFrequency.SyncFrequencyType.REACTIVE)
     }
 
     @Test

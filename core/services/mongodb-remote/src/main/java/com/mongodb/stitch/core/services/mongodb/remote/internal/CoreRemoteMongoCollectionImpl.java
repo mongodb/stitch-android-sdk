@@ -23,7 +23,6 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions;
@@ -712,50 +711,6 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
       throws InterruptedException, IOException {
     return operations.watch(
         new HashSet<>(Arrays.asList(ids)),
-        false,
-        documentClass
-    ).execute(service);
-  }
-
-  /**
-   * Watches specified IDs in a collection. Requests a stream where the full document of update
-   * events, and several other unnecessary fields are omitted from the change event objects
-   * returned by the server. This can save on network usage when watching large documents
-   *
-   * This convenience overload supports the use case
-   * of non-{@link BsonValue} instances of {@link ObjectId} by wrapping them in
-   * {@link BsonObjectId} instances for the user.
-   *
-   * @param ids unique object identifiers of the IDs to watch.
-   * @return the stream of change events.
-   */
-  @Override
-  public Stream<CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
-      throws InterruptedException, IOException {
-    final BsonValue[] transformedIds = new BsonValue[ids.length];
-
-    for (int i = 0; i < ids.length; i++) {
-      transformedIds[i] = new BsonObjectId(ids[i]);
-    }
-
-    return watchCompact(transformedIds);
-  }
-
-  /**
-   * Watches specified IDs in a collection. Requests a stream where the full document of update
-   * events, and several other unnecessary fields are omitted from the change event objects
-   * returned by the server. This can save on network usage when watching large documents
-   *
-   * @param ids the ids to watch.
-   * @return the stream of change events.
-   */
-  @Override
-  @SuppressWarnings("unchecked")
-  public Stream<CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
-      throws InterruptedException, IOException {
-    return operations.watch(
-        new HashSet<>(Arrays.asList(ids)),
-        true,
         documentClass
     ).execute(service);
   }

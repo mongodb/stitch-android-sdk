@@ -63,14 +63,6 @@ public class CoreSyncImpl<DocumentT> implements CoreSync<DocumentT> {
         .withCodec(this.service.getCodecRegistry().get(documentClass)).build());
   }
 
-  /**
-   * Set the SyncFrequency on this collection.
-   * @param syncFrequency the SyncFrequency that contains relevant options
-   */
-  public void updateSyncFrequency(@Nonnull final SyncFrequency syncFrequency) {
-    this.dataSynchronizer.configureSyncFrequency(namespace, syncFrequency);
-  }
-
   @Override
   public void syncOne(final BsonValue id) {
     this.dataSynchronizer.syncDocumentsFromRemote(this.namespace, id);

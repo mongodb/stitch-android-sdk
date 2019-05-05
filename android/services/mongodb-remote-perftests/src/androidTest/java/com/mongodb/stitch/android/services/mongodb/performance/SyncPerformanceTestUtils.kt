@@ -5,7 +5,6 @@ import com.google.android.gms.tasks.Tasks
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.DefaultSyncConflictResolvers
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncConfiguration
-import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncFrequency
 import org.bson.BsonValue
 import org.bson.Document
 import kotlin.random.Random
@@ -281,7 +280,7 @@ class SyncPerformanceTestUtils {
                         "unexpected sync error with id " +
                             "$id: ${ex.localizedMessage}")
                     error(ex)
-                }).withSyncFrequency(SyncFrequency.reactive()).build()
+                }).build()
 
             Tasks.await(ctx.testColl.sync().configure(config))
         }
