@@ -153,47 +153,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         Assert.assertEquals(expectedDocument, withoutSyncVersion(remoteMethods.find(doc1Filter).first()!!))
         assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
     }
-
-    @Test
-    fun testRecoveryIsAttemptedOnApplicationRestart() {
-        val remoteMethods = syncTestRunner.remoteMethods()
-        val syncOperations = syncTestRunner.syncMethods()
-
-        val coll = syncTestRunner.syncMethods()
-        val remoteColl = syncTestRunner.remoteMethods()
-
-        val docToInsert = Document("hello", "world")
-        remoteColl.insertOne(docToInsert)
-
-        val doc1 = Document("hello", "world")
-        val doc2 = Document("hello", "friend")
-        doc2["proj"] = "field"
-        remoteMethods.insertMany(listOf(doc1, doc2))
-
-        // get the document
-        val doc = remoteMethods.find(doc1).first()!!
-        val doc1Id = BsonObjectId(doc.getObjectId("_id"))
-        val doc1Filter = Document("_id", doc1Id)
-
-        // start watching it and always set the value to hello world in a conflict
-        syncOperations.configure(DefaultSyncConflictResolvers.remoteWins(), null, null)
-
-        // sync on the remote document
-        syncOperations.syncOne(doc1Id)
-        streamAndSync() // remote insert propagates to local
-        streamAndSync() // remote version replace propagates to local
-
-
-        syncOperations.updateOne(doc1Filter, Document("\$set", Document("hello", "world")))
-        // 1. updating a document remotely should not be reflected until coming back online.
-        goOffline()
-    }
-
-    @Test
-    fun testRecoveryIsAttemptedOnNetworkReconnect() {
-
-    }
-
+    
     @Test
     fun testUpdateConflicts() {
         val coll = syncTestRunner.syncMethods()

@@ -1339,7 +1339,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                         } catch (final StitchServiceException ex) {
                           action = SyncAction.DROP_EVENT_AND_PAUSE;
                           message = SyncMessage.EXCEPTION_UPDATE;
-                            syncException = ex;
+                          syncException = ex;
                           suppressLocalEvent = true;
                         }
                         if (action == null && result.getMatchedCount() == 0) {
