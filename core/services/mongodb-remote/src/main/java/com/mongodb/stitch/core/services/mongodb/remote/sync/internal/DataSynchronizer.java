@@ -446,10 +446,12 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   public void stop() {
     syncLock.lock();
     try {
+      if (instanceChangeStreamListener != null) {
+        instanceChangeStreamListener.stop();
+      }
       if (syncThread == null) {
         return;
       }
-      instanceChangeStreamListener.stop();
       syncThread.interrupt();
       try {
         syncThread.join();
