@@ -2944,7 +2944,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       lock.unlock();
     }
 
-    LocalSyncWriteModelContainer container = desyncDocumentsFromRemote(nsConfig, documentId);
+    final LocalSyncWriteModelContainer container = desyncDocumentsFromRemote(nsConfig, documentId);
     container.addLocalChangeEvent(
         ChangeEvents.changeEventForLocalDelete(namespace, documentId, false));
     return container;

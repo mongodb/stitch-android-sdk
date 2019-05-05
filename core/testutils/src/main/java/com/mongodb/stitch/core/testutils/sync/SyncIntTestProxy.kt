@@ -153,7 +153,7 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         Assert.assertEquals(expectedDocument, withoutSyncVersion(remoteMethods.find(doc1Filter).first()!!))
         assertNoVersionFieldsInLocalColl(syncTestRunner.syncMethods())
     }
-    
+
     @Test
     fun testUpdateConflicts() {
         val coll = syncTestRunner.syncMethods()
