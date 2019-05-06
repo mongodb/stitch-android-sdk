@@ -17,6 +17,7 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 
 import org.bson.BsonValue;
 
@@ -34,12 +35,12 @@ public final class DefaultSyncConflictResolvers {
   public static <T> ConflictHandler<T> remoteWins() {
     return new ConflictHandler<T>() {
       @Override
-      public T resolveConflict(
+      public ConflictResolution resolveConflict(
           final BsonValue documentId,
           final ChangeEvent<T> localEvent,
-          final ChangeEvent<T> remoteEvent
+          final CompactChangeEvent<T> remoteEvent
       ) {
-        return remoteEvent.getFullDocument();
+        return ConflictResolution.fromRemote();
       }
     };
   }
@@ -53,12 +54,12 @@ public final class DefaultSyncConflictResolvers {
   public static <T> ConflictHandler<T> localWins() {
     return new ConflictHandler<T>() {
       @Override
-      public T resolveConflict(
+      public ConflictResolution resolveConflict(
           final BsonValue documentId,
           final ChangeEvent<T> localEvent,
-          final ChangeEvent<T> remoteEvent
+          final CompactChangeEvent<T> remoteEvent
       ) {
-        return localEvent.getFullDocument();
+        return ConflictResolution.fromLocal();
       }
     };
   }

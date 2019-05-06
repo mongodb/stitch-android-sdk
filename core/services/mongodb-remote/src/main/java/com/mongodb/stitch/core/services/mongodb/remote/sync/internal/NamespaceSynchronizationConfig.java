@@ -384,6 +384,17 @@ public class NamespaceSynchronizationConfig implements Iterable<CoreDocumentSync
     }
   }
 
+  public boolean isStale() {
+    nsLock.readLock().lock();
+    try {
+      final BsonDocument filter = getNsFilter(getNamespace());
+      filter.append(ConfigCodec.Fields.IS_STALE, BsonBoolean.TRUE);
+      return docsColl.countDocuments(filter) == 1;
+    } finally {
+      nsLock.readLock().unlock();
+    }
+  }
+
   @Override
   @Nonnull
   public Iterator<CoreDocumentSynchronizationConfig> iterator() {

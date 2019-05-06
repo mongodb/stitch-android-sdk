@@ -25,7 +25,7 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders;
 
 import java.io.Closeable;
@@ -58,11 +58,11 @@ public class NamespaceChangeStreamListener implements Closeable {
   private final NetworkMonitor networkMonitor;
   private final AuthMonitor authMonitor;
   private final Logger logger;
-  private final Map<BsonValue, ChangeEvent<BsonDocument>> events;
+  private final Map<BsonValue, CompactChangeEvent<BsonDocument>> events;
   private Thread runnerThread;
   private ReadWriteLock nsLock;
-  private final Set<Callback<ChangeEvent<BsonDocument>, Object>> watchers;
-  private Stream<ChangeEvent<BsonDocument>> currentStream;
+  private final Set<Callback<CompactChangeEvent<BsonDocument>, Object>> watchers;
+  private Stream<CompactChangeEvent<BsonDocument>> currentStream;
 
   NamespaceChangeStreamListener(
       final MongoNamespace namespace,
@@ -139,16 +139,16 @@ public class NamespaceChangeStreamListener implements Closeable {
     }
   }
 
-  void addWatcher(final Callback<ChangeEvent<BsonDocument>, Object> callback) {
+  void addWatcher(final Callback<CompactChangeEvent<BsonDocument>, Object> callback) {
     watchers.add(callback);
   }
 
-  void removeWatcher(final Callback<ChangeEvent<BsonDocument>, Object> callback) {
+  void removeWatcher(final Callback<CompactChangeEvent<BsonDocument>, Object> callback) {
     watchers.remove(callback);
   }
 
   private void clearWatchers() {
-    for (final Callback<ChangeEvent<BsonDocument>, Object> watcher : watchers) {
+    for (final Callback<CompactChangeEvent<BsonDocument>, Object> watcher : watchers) {
       watcher.onComplete(
           OperationResult.failedResultOf(null));
     }
@@ -216,12 +216,13 @@ public class NamespaceChangeStreamListener implements Closeable {
       args.put("database", namespace.getDatabaseName());
       args.put("collection", namespace.getCollectionName());
       args.put("ids", idsToWatch);
+      args.put("useCompactEvents", true);
 
       currentStream =
         service.streamFunction(
             "watch",
             Collections.singletonList(args),
-            ResultDecoders.changeEventDecoder(BSON_DOCUMENT_CODEC));
+            ResultDecoders.compactChangeEventDecoder(BSON_DOCUMENT_CODEC));
 
       if (currentStream != null && currentStream.isOpen()) {
         this.nsConfig.setStale(true);
@@ -241,7 +242,7 @@ public class NamespaceChangeStreamListener implements Closeable {
   void storeNextEvent() {
     try {
       if (currentStream != null && currentStream.isOpen()) {
-        final StitchEvent<ChangeEvent<BsonDocument>> event = currentStream.nextEvent();
+        final StitchEvent<CompactChangeEvent<BsonDocument>> event = currentStream.nextEvent();
         if (event == null) {
           return;
         }
@@ -255,8 +256,11 @@ public class NamespaceChangeStreamListener implements Closeable {
         }
 
         logger.debug(String.format(Locale.US,
-            "NamespaceChangeStreamListener::stream ns=%s event found: op=%s id=%s",
-            nsConfig.getNamespace(), event.getData().getOperationType(), event.getData().getId()));
+            "NamespaceChangeStreamListener::stream ns=%s event found: op=%s documentKey=%s",
+            nsConfig.getNamespace(),
+            event.getData().getOperationType(),
+            event.getData().getDocumentKey().toJson()
+        ));
         nsLock.writeLock().lockInterruptibly();
         try {
           events.put(BsonUtils.getDocumentId(event.getData().getDocumentKey()), event.getData());
@@ -264,7 +268,7 @@ public class NamespaceChangeStreamListener implements Closeable {
           nsLock.writeLock().unlock();
         }
 
-        for (final Callback<ChangeEvent<BsonDocument>, Object> watcher : watchers) {
+        for (final Callback<CompactChangeEvent<BsonDocument>, Object> watcher : watchers) {
           watcher.onComplete(OperationResult.successfulResultOf(event.getData()));
         }
       }
@@ -299,9 +303,9 @@ public class NamespaceChangeStreamListener implements Closeable {
    * @return the latest change events.
    */
   @SuppressWarnings("unchecked")
-  public Map<BsonValue, ChangeEvent<BsonDocument>> getEvents() {
+  public Map<BsonValue, CompactChangeEvent<BsonDocument>> getEvents() {
     nsLock.readLock().lock();
-    final Map<BsonValue, ChangeEvent<BsonDocument>> events;
+    final Map<BsonValue, CompactChangeEvent<BsonDocument>> events;
     try {
       events = new HashMap<>(this.events);
     } finally {
@@ -324,10 +328,10 @@ public class NamespaceChangeStreamListener implements Closeable {
    *
    * @return the latest unprocessed change event for the given document ID, or null if none exists.
    */
-  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+  public @Nullable CompactChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
       final BsonValue documentId
   ) {
-    final ChangeEvent<BsonDocument> event;
+    final CompactChangeEvent<BsonDocument> event;
     nsLock.readLock().lock();
     try {
       event = this.events.get(documentId);

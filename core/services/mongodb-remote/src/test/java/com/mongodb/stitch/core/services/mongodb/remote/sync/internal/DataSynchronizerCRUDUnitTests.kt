@@ -30,7 +30,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import java.lang.Exception
-import java.util.Collections
 
 class DataSynchronizerCRUDUnitTests {
     companion object {
@@ -47,13 +46,22 @@ class DataSynchronizerCRUDUnitTests {
             // prepare a remote update and a local update.
             // do a sync pass, accepting the local doc. this will create
             // a pending replace to be sync'd on the next pass
-            ctx.queueConsumableRemoteUpdateEvent()
+            ctx.queueConsumableRemoteUpdateEvent(
+                ctx.testDocumentId,
+                ctx.testDocumentVersion,
+                ctx.testDocumentHash,
+                UpdateDescription(BsonDocument(), HashSet()),
+                TestVersionState.NEXT
+            )
             // set a different update doc than the remote
             ctx.updateDocument = BsonDocument("\$inc", BsonDocument("count", BsonInt32(2)))
             ctx.updateTestDocument()
             // set it back
             ctx.updateDocument = BsonDocument("\$inc", BsonDocument("count", BsonInt32(1)))
             ctx.shouldConflictBeResolvedByRemote = shouldConflictBeResolvedByRemote
+            if (shouldConflictBeResolvedByRemote) {
+                ctx.mockFindOneResult(ctx.testDocument)
+            }
 
             ctx.doSyncPass()
 
@@ -143,7 +151,7 @@ class DataSynchronizerCRUDUnitTests {
         ctx.verifyConflictHandlerCalledForActiveDoc(
             times = 1,
             expectedLocalConflictEvent = ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
-            expectedRemoteConflictEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
+            expectedRemoteConflictEvent = ChangeEvents.compactChangeEventForLocalDelete(ctx.testDocumentId, false))
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
         assertNull(ctx.findTestDocumentFromLocalCollection())
 
@@ -164,7 +172,7 @@ class DataSynchronizerCRUDUnitTests {
         ctx.verifyConflictHandlerCalledForActiveDoc(
             times = 1,
             expectedLocalConflictEvent = ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true),
-            expectedRemoteConflictEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false))
+            expectedRemoteConflictEvent = ChangeEvents.compactChangeEventForLocalDelete(ctx.testDocumentId, false))
         ctx.verifyErrorListenerCalledForActiveDoc(times = 0)
         assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
 
@@ -240,10 +248,9 @@ class DataSynchronizerCRUDUnitTests {
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(
             1,
-            ChangeEvents.changeEventForLocalUpdate(
+            ChangeEvents.changeEventForLocalReplace(
                 ctx.namespace,
                 ctx.testDocumentId,
-                UpdateDescription(BsonDocument("count", BsonInt32(3)), Collections.emptySet()),
                 expectedDocument,
                 false
             )
@@ -328,10 +335,14 @@ class DataSynchronizerCRUDUnitTests {
         // insert, sync the doc, update, and verify that the change event was emitted
         ctx.insertTestDocument()
         ctx.waitForEvents()
+        ctx.verifyChangeEventListenerCalledForActiveDoc(1,
+            ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true))
+
         ctx.doSyncPass()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1,
             ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, false))
+
         ctx.updateTestDocument()
         ctx.waitForEvents()
         ctx.verifyChangeEventListenerCalledForActiveDoc(1,
@@ -346,8 +357,11 @@ class DataSynchronizerCRUDUnitTests {
         // mock a successful update, sync the update. verify that the update
         // was of the correct doc, and that no conflicts or errors occured
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+
         ctx.doSyncPass()
         ctx.waitForEvents()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, ChangeEvents.changeEventForLocalUpdate(
             ctx.namespace,
             ctx.testDocumentId,
@@ -407,7 +421,7 @@ class DataSynchronizerCRUDUnitTests {
 
         // do a sync pass, addressing the conflict
         ctx.doSyncPass()
-        ctx.waitForEvents(1)
+        ctx.waitForEvents()
         // verify that a change event has been emitted, a conflict has been handled,
         // and no errors were emitted
         ctx.verifyChangeEventListenerCalledForActiveDoc(times = 1)
@@ -427,7 +441,7 @@ class DataSynchronizerCRUDUnitTests {
             UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
             docAfterUpdate,
             true)
-        var expectedRemoteEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
+        var expectedRemoteEvent = ChangeEvents.compactChangeEventForLocalDelete(ctx.testDocumentId, false)
 
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
         ctx.insertTestDocument()
@@ -472,7 +486,7 @@ class DataSynchronizerCRUDUnitTests {
             UpdateDescription(BsonDocument("count", BsonInt32(2)), setOf()),
             docAfterUpdate,
             true)
-        expectedRemoteEvent = ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, false)
+        expectedRemoteEvent = ChangeEvents.compactChangeEventForLocalDelete(ctx.testDocumentId, false)
 
         ctx.mockUpdateResult(RemoteUpdateResult(0, 0, null))
 
@@ -544,11 +558,17 @@ class DataSynchronizerCRUDUnitTests {
         ctx.doSyncPass()
         ctx.waitForEvents()
 
+        // in case there's a stale document fetch, the
+        ctx.mockFindResult(ctx.testDocument)
+
         // update the inserted doc, and prepare our exceptionToThrow
         ctx.updateTestDocument()
         ctx.waitForEvents()
 
         ctx.verifyChangeEventListenerCalledForActiveDoc(1, expectedEvent)
+
+        assertNotNull(ctx.findTestDocumentFromLocalCollection())
+
         val expectedException = StitchServiceException("bad", StitchServiceErrorCode.UNKNOWN)
         ctx.mockUpdateException(expectedException)
 
@@ -646,6 +666,7 @@ class DataSynchronizerCRUDUnitTests {
         // create conflict here
         // 1: Remote wins
         `when`(ctx.collectionMock.deleteOne(any())).thenReturn(RemoteDeleteResult(0))
+        ctx.mockFindOneResult(ctx.testDocument)
         ctx.queueConsumableRemoteUpdateEvent()
 
         ctx.doSyncPass()
@@ -655,10 +676,15 @@ class DataSynchronizerCRUDUnitTests {
             ctx.namespace,
             ctx.testDocumentId,
             ctx.testDocument,
-            false
+            true // the remote won here, so this is not a pending write
         ))
         ctx.verifyConflictHandlerCalledForActiveDoc(1, expectedLocalEvent,
-            ChangeEvents.changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId, null, ctx.testDocument, false))
+            ChangeEvents.compactChangeEventForLocalUpdate(
+                ctx.testDocumentId,
+                UpdateDescription(BsonDocument(), HashSet()),
+                ctx.testDocumentVersion,
+                HashUtils.hash(DataSynchronizer.sanitizeDocument(ctx.testDocument)),
+                false))
         ctx.verifyErrorListenerCalledForActiveDoc(0)
 
         assertEquals(
@@ -697,8 +723,12 @@ class DataSynchronizerCRUDUnitTests {
         ))
         ctx.verifyConflictHandlerCalledForActiveDoc(1,
             ChangeEvents.changeEventForLocalDelete(ctx.namespace, ctx.testDocumentId, true),
-            ChangeEvents.changeEventForLocalUpdate(
-                ctx.namespace, ctx.testDocumentId, null, ctx.testDocument, false
+            ChangeEvents.compactChangeEventForLocalUpdate(
+                ctx.testDocumentId,
+                UpdateDescription(BsonDocument(), HashSet()),
+                ctx.testDocumentVersion,
+                HashUtils.hash(DataSynchronizer.sanitizeDocument(ctx.testDocument)),
+                false
             ))
         ctx.verifyErrorListenerCalledForActiveDoc(0)
 
@@ -1087,12 +1117,15 @@ class DataSynchronizerCRUDUnitTests {
 
         ctx.doSyncPass()
 
+        val expectedNewDoc = BsonDocument(
+            "name",
+            BsonString("philip")
+        ).append("count", BsonInt32(3)).append("_id", result.upsertedId)
+
         ctx.queueConsumableRemoteUpdateEvent(
             id = result.upsertedId!!,
-            document = BsonDocument(
-                "name",
-                BsonString("philip")
-            ).append("count", BsonInt32(3)).append("_id", result.upsertedId))
+            expectedNewHash = HashUtils.hash(expectedNewDoc),
+            remoteUpdate = UpdateDescription.diff(ctx.testDocument, expectedNewDoc))
         ctx.doSyncPass()
         assertEquals(
             BsonDocument("name", BsonString("philip")).append("count", BsonInt32(3)).append("_id", result.upsertedId),

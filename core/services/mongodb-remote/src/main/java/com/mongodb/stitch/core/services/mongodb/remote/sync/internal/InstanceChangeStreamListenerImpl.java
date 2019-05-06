@@ -21,7 +21,7 @@ import com.mongodb.stitch.core.internal.common.AuthMonitor;
 import com.mongodb.stitch.core.internal.common.Callback;
 import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -150,7 +150,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
 
   @Override
   public void addWatcher(final MongoNamespace namespace,
-                         final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                         final Callback<CompactChangeEvent<BsonDocument>, Object> watcher) {
     if (nsStreamers.containsKey(namespace)) {
       nsStreamers.get(namespace).addWatcher(watcher);
     }
@@ -158,7 +158,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
 
   @Override
   public void removeWatcher(final MongoNamespace namespace,
-                            final Callback<ChangeEvent<BsonDocument>, Object> watcher) {
+                            final Callback<CompactChangeEvent<BsonDocument>, Object> watcher) {
     if (nsStreamers.containsKey(namespace)) {
       nsStreamers.get(namespace).removeWatcher(watcher);
     }
@@ -215,7 +215,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
    * @param namespace the namespace to get events for.
    * @return the latest change events for a given namespace.
    */
-  public Map<BsonValue, ChangeEvent<BsonDocument>> getEventsForNamespace(
+  public Map<BsonValue, CompactChangeEvent<BsonDocument>> getEventsForNamespace(
       final MongoNamespace namespace
   ) {
     this.instanceLock.readLock().lock();
@@ -255,7 +255,7 @@ final class InstanceChangeStreamListenerImpl implements InstanceChangeStreamList
    * @return the latest unprocessed change event for the given document ID and namespace, or null
    *         if none exists.
    */
-  public @Nullable ChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
+  public @Nullable CompactChangeEvent<BsonDocument> getUnprocessedEventForDocumentId(
           final MongoNamespace namespace,
           final BsonValue documentId
   ) {

@@ -83,7 +83,9 @@ class NamespaceChangeStreamListenerUnitTests {
 
         // assert that, with an expected ChangeEvent, the event is stored
         // and the stream remains open
-        val expectedChangeEvent = ChangeEvents.changeEventForLocalInsert(ctx.namespace, ctx.testDocument, true)
+        val expectedChangeEvent = ChangeEvents.compactChangeEventForLocalInsert(
+            ctx.testDocument, true
+        )
         ctx.nextStreamEvent = Event.Builder().withEventName("message").withData(
             expectedChangeEvent.toBsonDocument().toJson()
         ).build()

@@ -44,16 +44,16 @@ public final class UpdateDescription {
   private final Set<String> removedFields;
 
   /**
-   * Creates an update descirption with the specified updated fields and removed field names.
+   * Creates an update description with the specified updated fields and removed field names.
    * @param updatedFields Nested key-value pair representation of updated fields.
    * @param removedFields Collection of removed field names.
    */
   public UpdateDescription(
       final BsonDocument updatedFields,
-      final Set<String> removedFields
+      final Collection<String> removedFields
   ) {
     this.updatedFields = updatedFields == null ? new BsonDocument() : updatedFields;
-    this.removedFields = removedFields == null ? new HashSet<>() : removedFields;
+    this.removedFields = removedFields == null ? new HashSet<>() : new HashSet<>(removedFields);
   }
 
   /**
@@ -269,6 +269,15 @@ public final class UpdateDescription {
         new BsonDocument(),
         new HashSet<>()
     );
+  }
+
+  /**
+   * Determines whether this update description is empty.
+   *
+   * @return true if the update description is empty, false otherwise
+   */
+  public boolean isEmpty() {
+    return this.updatedFields.size() == 0 && this.removedFields.size() == 0;
   }
 
   @Override

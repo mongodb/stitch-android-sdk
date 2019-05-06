@@ -425,6 +425,16 @@ public class CoreDocumentSynchronizationConfig {
       case REPLACE:
         switch (newestChangeEvent.getOperationType()) {
           case UPDATE:
+            if (newestChangeEvent.getFullDocument() == null) {
+              throw new IllegalStateException(
+                  "a locally synthesized UPDATE event should have update description"
+              );
+            }
+
+            if (lastUncommittedChangeEvent.getFullDocument() == null) {
+              throw new IllegalStateException("REPLACE event should have full document");
+            }
+
             return new ChangeEvent<>(
                 newestChangeEvent.getId(),
                 OperationType.REPLACE,

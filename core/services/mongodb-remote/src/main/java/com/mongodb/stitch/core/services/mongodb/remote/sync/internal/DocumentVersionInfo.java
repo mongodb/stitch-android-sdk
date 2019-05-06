@@ -102,6 +102,22 @@ public final class DocumentVersionInfo {
 
       return asDoc;
     }
+
+    @Override
+    public boolean equals(final Object otherVersionObj) {
+      if (!(otherVersionObj instanceof Version)) {
+        return false;
+      }
+
+      final Version otherVersion = (Version) otherVersionObj;
+
+      return this.toBsonDocument().equals(otherVersion.toBsonDocument());
+    }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
   }
 
   private DocumentVersionInfo(
@@ -118,6 +134,20 @@ public final class DocumentVersionInfo {
 
     if (documentId != null) {
       this.filter = getVersionedFilter(documentId, version);
+    } else {
+      this.filter = null;
+    }
+  }
+
+  public DocumentVersionInfo(
+      @Nullable final Version version,
+      @Nullable final BsonValue documentId
+  ) {
+    this.version = version;
+    this.versionDoc = (version != null) ? version.toBsonDocument() : null;
+
+    if (documentId != null) {
+      this.filter = getVersionedFilter(documentId, this.versionDoc);
     } else {
       this.filter = null;
     }

@@ -192,7 +192,9 @@ class CoreDocumentSynchronizationConfigUnitTests {
         config.setSomePendingWritesAndSave(0, replaceEvent)
 
         val ud2 = UpdateDescription(BsonDocument("qux", BsonString("quux")), hashSetOf("corge"))
-        val fullDoc = BsonDocument("qux", BsonString("quux"))
+        val fullDoc = BsonDocument()
+            .append("grault", BsonString("garply"))
+            .append("qux", BsonString("quux"))
         val updateEvent2 = ChangeEvents.changeEventForLocalUpdate(
             namespace,
             id,

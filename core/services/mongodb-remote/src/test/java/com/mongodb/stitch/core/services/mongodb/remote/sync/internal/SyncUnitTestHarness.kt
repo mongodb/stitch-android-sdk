@@ -15,11 +15,14 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.internal.net.Stream
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl
+import com.mongodb.stitch.core.services.mongodb.remote.BaseChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent
 import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
+import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoClientImpl
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollectionImpl
@@ -27,6 +30,7 @@ import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoD
 import com.mongodb.stitch.core.services.mongodb.remote.internal.ResultDecoders
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictResolution
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
@@ -60,6 +64,7 @@ import java.util.Collections
 import java.util.Random
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
@@ -79,12 +84,15 @@ class SyncUnitTestHarness : Closeable {
             override fun resolveConflict(
                 documentId: BsonValue?,
                 localEvent: ChangeEvent<BsonDocument>?,
-                remoteEvent: ChangeEvent<BsonDocument>?
-            ): BsonDocument? {
+                remoteEvent: CompactChangeEvent<BsonDocument>?
+            ): ConflictResolution {
                 if (exceptionToThrow != null) {
                     throw exceptionToThrow!!
                 }
-                return if (shouldConflictBeResolvedByRemote) remoteEvent?.fullDocument else localEvent?.fullDocument
+                return when (shouldConflictBeResolvedByRemote) {
+                    true -> ConflictResolution.fromRemote()
+                    false -> ConflictResolution.fromLocal()
+                }
             }
         }
 
@@ -183,6 +191,20 @@ class SyncUnitTestHarness : Closeable {
          * @Param actualEvent actual event generated
          */
         fun compareEvents(expectedEvent: ChangeEvent<BsonDocument>, actualEvent: ChangeEvent<BsonDocument>) {
+            compareBaseEvents(expectedEvent, actualEvent)
+
+            Assert.assertEquals(expectedEvent.id, actualEvent.id)
+            Assert.assertEquals(expectedEvent.namespace, actualEvent.namespace)
+        }
+
+        fun compareEvents(expectedEvent: CompactChangeEvent<BsonDocument>, actualEvent: CompactChangeEvent<BsonDocument>) {
+            compareBaseEvents(expectedEvent, actualEvent)
+
+            Assert.assertEquals(expectedEvent.stitchDocumentVersion, actualEvent.stitchDocumentVersion)
+            Assert.assertEquals(expectedEvent.stitchDocumentHash, actualEvent.stitchDocumentHash)
+        }
+
+        private fun compareBaseEvents(expectedEvent: BaseChangeEvent<BsonDocument>, actualEvent: BaseChangeEvent<BsonDocument>) {
             // assert that our actualEvent is correct
             Assert.assertEquals(expectedEvent.operationType, actualEvent.operationType)
             Assert.assertEquals(expectedEvent.documentKey, actualEvent.documentKey)
@@ -194,8 +216,7 @@ class SyncUnitTestHarness : Closeable {
             } else {
                 Assert.assertEquals(expectedEvent.fullDocument, withoutSyncVersion(actualEvent.fullDocument))
             }
-            Assert.assertEquals(expectedEvent.id, actualEvent.id)
-            Assert.assertEquals(expectedEvent.namespace, actualEvent.namespace)
+
             Assert.assertEquals(expectedEvent.updateDescription!!.removedFields, actualEvent.updateDescription!!.removedFields)
             Assert.assertEquals(expectedEvent.updateDescription!!.updatedFields, actualEvent.updateDescription!!.updatedFields)
 
@@ -211,7 +232,6 @@ class SyncUnitTestHarness : Closeable {
                     if (expectedDocumentId != null) {
                         Assert.assertEquals(expectedDocumentId, actualDocumentId)
                     }
-
                     emitErrorSemaphore?.release()
                 }
             }
@@ -272,7 +292,7 @@ class SyncUnitTestHarness : Closeable {
             Mockito.mock(CoreRemoteMongoCollectionImpl::class.java) as CoreRemoteMongoCollectionImpl<BsonDocument>
 
         override var nextStreamEvent: Event = Event.Builder().withEventName("MOCK").build()
-        private val streamMock = Stream(TestEventStream(this), ResultDecoders.changeEventDecoder(BsonDocumentCodec()))
+        private val streamMock = Stream(TestEventStream(this), ResultDecoders.compactChangeEventDecoder(BsonDocumentCodec()))
         override val testDocument = newDoc("count", BsonInt32(1))
         override val testDocumentId: BsonObjectId by lazy { testDocument["_id"] as BsonObjectId }
         override val testDocumentFilter by lazy { BsonDocument("_id", testDocumentId) }
@@ -299,6 +319,14 @@ class SyncUnitTestHarness : Closeable {
                 this.conflictHandler.exceptionToThrow = value
                 field = value
             }
+
+        override val testDocumentVersion: BsonDocument?
+            get() =
+                this.testDocument.getDocument("__stitch_sync_version", null)
+                    ?: getVersionForTestDocument()
+
+        override val testDocumentHash: Long
+            get() = HashUtils.hash(DataSynchronizer.sanitizeDocument(this.testDocument))
 
         var changeEventListener = newChangeEventListener()
             private set
@@ -390,7 +418,7 @@ class SyncUnitTestHarness : Closeable {
             Mockito.`when`(service.streamFunction(
                 ArgumentMatchers.anyString(),
                 ArgumentMatchers.anyList<Any>(),
-                ArgumentMatchers.eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
+                ArgumentMatchers.eq(ResultDecoders.compactChangeEventDecoder(BsonDocumentCodec())))
             ).thenReturn(streamMock)
 
             val databaseSpy = Mockito.mock(CoreRemoteMongoDatabaseImpl::class.java)
@@ -437,8 +465,14 @@ class SyncUnitTestHarness : Closeable {
 
         override fun waitForDataSynchronizerStreams() {
             waitLock.lock()
+            var counter = 0
             while (!dataSynchronizer.areAllStreamsOpen()) {
+                counter += 1
                 Thread.sleep(500)
+
+                if (counter > 10000 /*ms*/ / 500 /*ms/tick*/) {
+                    throw TimeoutException("DataSynchronizer streams never opened after 10 seconds")
+                }
             }
             waitLock.unlock()
             assertTrue(dataSynchronizer.areAllStreamsOpen())
@@ -504,7 +538,7 @@ class SyncUnitTestHarness : Closeable {
 
         override fun queueConsumableRemoteInsertEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvents.changeEventForLocalInsert(namespace, testDocument, true)),
+                mapOf(testDocument to ChangeEvents.compactChangeEventForLocalInsert(testDocument, false)),
                 mapOf())
         }
 
@@ -530,52 +564,144 @@ class SyncUnitTestHarness : Closeable {
 
         override fun queueConsumableRemoteUpdateEvent(
             id: BsonValue,
-            document: BsonDocument,
+            previousVersion: BsonDocument?,
+            expectedNewHash: Long,
+            remoteUpdate: UpdateDescription,
             versionState: TestVersionState
         ) {
-            val fakeUpdateDoc = document.clone()
-            val cachedVersion = fakeUpdateDoc["__stitch_sync_version"] ?: getVersionForTestDocument()
+            val newVersion: BsonDocument?
 
-            if (cachedVersion != null) {
-                val documentVersionInfo = DocumentVersionInfo.fromVersionDoc(cachedVersion.asDocument())
-                when (versionState) {
+            if (previousVersion != null) {
+                val documentVersionInfo = DocumentVersionInfo.fromVersionDoc(previousVersion.asDocument())
+                newVersion = when (versionState) {
                     TestVersionState.NONE ->
-                        fakeUpdateDoc.remove("__stitch_sync_version")
+                        null
                     TestVersionState.PREVIOUS -> {
                         if (documentVersionInfo.version.versionCounter <= 0) {
                             throw IllegalStateException("Version cannot be less than zero")
                         }
-                        fakeUpdateDoc["__stitch_sync_version"] =
-                            documentVersionInfo.versionDoc?.append("v", BsonInt64(documentVersionInfo.version.versionCounter - 1))
+                        documentVersionInfo
+                            .versionDoc?.append(
+                            "v",
+                            BsonInt64(documentVersionInfo.version.versionCounter - 1)
+                        )
                     }
                     TestVersionState.SAME ->
-                        fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.versionDoc
+                        documentVersionInfo.versionDoc
                     TestVersionState.NEXT ->
-                        fakeUpdateDoc["__stitch_sync_version"] = documentVersionInfo.getNextVersion()
+                        documentVersionInfo.nextVersion
                     TestVersionState.NEW ->
-                        fakeUpdateDoc["__stitch_sync_version"] = DocumentVersionInfo.getFreshVersionDocument()
+                        DocumentVersionInfo.getFreshVersionDocument()
+                }
+            } else {
+                if (versionState == TestVersionState.NEW) {
+                    newVersion = DocumentVersionInfo.getFreshVersionDocument()
+                } else {
+                    newVersion = null
                 }
             }
+
+            if (newVersion == null) {
+                remoteUpdate.removedFields.add("__stitch_sync_version")
+            } else {
+                remoteUpdate.updatedFields.append("__stitch_sync_version", newVersion)
+            }
+
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(document to ChangeEvents.changeEventForLocalUpdate(
-                    namespace, id, null, fakeUpdateDoc, false)),
+                mapOf(id to ChangeEvents.compactChangeEventForLocalUpdate(
+                    id,
+                    remoteUpdate,
+                    newVersion,
+                    expectedNewHash,
+                    false
+                )),
+                mapOf())
+        }
+
+        override fun queueConsumableRemoteUpdateEvent(
+            fromExpectedDoc: BsonDocument,
+            versionState: TestVersionState
+        ) {
+            queueConsumableRemoteUpdateEvent(
+                id = fromExpectedDoc.get("_id")!!,
+                previousVersion = testDocumentVersion,
+                expectedNewHash = HashUtils.hash(DataSynchronizer.sanitizeDocument(fromExpectedDoc)),
+                remoteUpdate = UpdateDescription.diff(testDocument, fromExpectedDoc),
+                versionState = versionState
+            )
+        }
+
+        override fun queueConsumableRemoteReplaceEvent(
+            fromExpectedDoc: BsonDocument,
+            versionState: TestVersionState
+        ) {
+            val previousVersion =
+                fromExpectedDoc.getDocument("__stitch_sync_version", null)
+            val newVersion: BsonDocument?
+            val newDoc = fromExpectedDoc.clone()
+
+            if (previousVersion != null) {
+                val documentVersionInfo = DocumentVersionInfo.fromVersionDoc(previousVersion.asDocument())
+                newVersion = when (versionState) {
+                    TestVersionState.NONE ->
+                        null
+                    TestVersionState.PREVIOUS -> {
+                        if (documentVersionInfo.version.versionCounter <= 0) {
+                            throw IllegalStateException("Version cannot be less than zero")
+                        }
+                        documentVersionInfo
+                            .versionDoc?.append(
+                            "v",
+                            BsonInt64(documentVersionInfo.version.versionCounter - 1)
+                        )
+                    }
+                    TestVersionState.SAME ->
+                        documentVersionInfo.versionDoc
+                    TestVersionState.NEXT ->
+                        documentVersionInfo.nextVersion
+                    TestVersionState.NEW ->
+                        DocumentVersionInfo.getFreshVersionDocument()
+                }
+            } else {
+                if (versionState == TestVersionState.NEW) {
+                    newVersion = DocumentVersionInfo.getFreshVersionDocument()
+                } else {
+                    newVersion = null
+                }
+            }
+
+            if (newVersion == null) {
+                newDoc.remove("__stitch_sync_version")
+            } else {
+                newDoc.append("__stitch_sync_version", newVersion)
+            }
+
+            val id = fromExpectedDoc["_id"]
+
+            `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
+                mapOf(id to ChangeEvents.compactChangeEventForLocalReplace(
+                    id,
+                    newDoc,
+                    false
+                )),
                 mapOf())
         }
 
         override fun queueConsumableRemoteDeleteEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvents.changeEventForLocalDelete(namespace, testDocumentId, true)),
+                mapOf(testDocument to ChangeEvents.compactChangeEventForLocalDelete(
+                    testDocumentId, false)),
                 mapOf())
         }
 
         override fun queueConsumableRemoteUnknownEvent() {
             `when`(dataSynchronizer.getEventsForNamespace(any())).thenReturn(
-                mapOf(testDocument to ChangeEvent(
-                        BsonDocument("_id", testDocumentId),
+                mapOf(testDocument to CompactChangeEvent(
                         OperationType.UNKNOWN,
                         testDocument,
-                        namespace,
                         BsonDocument("_id", testDocumentId),
+                        null,
+                        null,
                         null,
                         true)), mapOf())
         }
@@ -598,6 +724,10 @@ class SyncUnitTestHarness : Closeable {
         override fun findTestDocumentConfig(): CoreDocumentSynchronizationConfig? {
             return dataSynchronizer.syncConfig.getNamespaceConfig(namespace).docsColl.find(
                     BsonDocument("document_id", testDocumentId)).firstOrNull()
+        }
+
+        override fun setNamespaceStale(isStale: Boolean) {
+            return dataSynchronizer.syncConfig.getNamespaceConfig(namespace).setStale(isStale)
         }
 
         override fun verifyChangeEventListenerCalledForActiveDoc(
@@ -636,28 +766,30 @@ class SyncUnitTestHarness : Closeable {
         override fun verifyConflictHandlerCalledForActiveDoc(
             times: Int,
             expectedLocalConflictEvent: ChangeEvent<BsonDocument>?,
-            expectedRemoteConflictEvent: ChangeEvent<BsonDocument>?
+            expectedRemoteConflictEvent: CompactChangeEvent<BsonDocument>?
         ) {
             val localChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
-            val remoteChangeEventArgumentCaptor = ArgumentCaptor.forClass(ChangeEvent::class.java)
+            val remoteChangeEventArgumentCaptor = ArgumentCaptor.forClass(CompactChangeEvent::class.java)
 
             Mockito.verify(conflictHandler, times(times)).resolveConflict(
                 eq(testDocumentId),
                 localChangeEventArgumentCaptor.capture() as ChangeEvent<BsonDocument>?,
-                remoteChangeEventArgumentCaptor.capture() as ChangeEvent<BsonDocument>?)
+                remoteChangeEventArgumentCaptor.capture() as CompactChangeEvent<BsonDocument>?)
 
             if (expectedLocalConflictEvent != null) {
                 compareEvents(expectedLocalConflictEvent, localChangeEventArgumentCaptor.value as ChangeEvent<BsonDocument>)
             }
 
             if (expectedRemoteConflictEvent != null) {
-                compareEvents(expectedRemoteConflictEvent, remoteChangeEventArgumentCaptor.value as ChangeEvent<BsonDocument>)
+                compareEvents(expectedRemoteConflictEvent, remoteChangeEventArgumentCaptor.value as CompactChangeEvent<BsonDocument>)
             }
         }
 
         override fun verifyWatchFunctionCalled(times: Int, expectedArgs: Document) {
             Mockito.verify(service, times(times)).streamFunction(
-                eq("watch"), eq(Collections.singletonList(expectedArgs)), eq(ResultDecoders.changeEventDecoder(BsonDocumentCodec())))
+                eq("watch"),
+                eq(Collections.singletonList(expectedArgs.append("useCompactEvents", true))),
+                eq(ResultDecoders.compactChangeEventDecoder(BsonDocumentCodec())))
         }
 
         override fun verifyStartCalled(times: Int) {
@@ -678,10 +810,14 @@ class SyncUnitTestHarness : Closeable {
 
         override fun mockUpdateResult(remoteUpdateResult: RemoteUpdateResult) {
             `when`(collectionMock.updateOne(any(), any())).thenReturn(remoteUpdateResult)
+            `when`(collectionMock.updateMany(any(), any())).thenReturn(remoteUpdateResult)
         }
 
         override fun mockUpdateException(exception: Exception) {
             `when`(collectionMock.updateOne(any(), any())).thenAnswer {
+                throw exception
+            }
+            `when`(collectionMock.updateMany(any(), any())).thenAnswer {
                 throw exception
             }
         }
@@ -694,6 +830,30 @@ class SyncUnitTestHarness : Closeable {
             `when`(collectionMock.deleteOne(any())).thenAnswer {
                 throw exception
             }
+        }
+
+        override fun mockFindOneResult(doc: BsonDocument?) {
+            `when`(collectionMock.findOne(any())).thenReturn(doc)
+        }
+
+        override fun mockFindResult(vararg docs: BsonDocument?) {
+            val remoteFindIterable = Mockito.mock(CoreRemoteFindIterable::class.java) as CoreRemoteFindIterable<BsonDocument>
+            Mockito.`when`(collectionMock.find(ArgumentMatchers.any())).thenReturn(remoteFindIterable)
+
+            val iterableSet = HashSet<BsonDocument>()
+            for (doc in docs) {
+                if (doc != null) {
+                    iterableSet.add(doc)
+                }
+            }
+
+            Mockito.`when`(remoteFindIterable.into<HashSet<BsonDocument>>(ArgumentMatchers.any())).thenReturn(iterableSet)
+            Mockito.`when`(remoteFindIterable.first()).thenReturn(docs[0])
+            this.mockFindOneResult(docs[0])
+        }
+
+        override fun clearFindOneMock() {
+            `when`(collectionMock.findOne(any())).thenReturn(null)
         }
 
         override fun close() {
@@ -732,12 +892,19 @@ class SyncUnitTestHarness : Closeable {
         }
 
         latestCtx?.dataSynchronizer?.close()
+
+        unclosedDataSynchronizers.forEach {
+            it?.close()
+        }
+        unclosedDataSynchronizers.clear()
     }
 
     private val unclosedDataSynchronizers: HashSet<DataSynchronizer?> = HashSet()
 
     internal fun freshTestContext(shouldPreconfigure: Boolean = true): DataSynchronizerTestContext {
-        unclosedDataSynchronizers.forEach { it?.close() }
+        unclosedDataSynchronizers.forEach {
+            it?.close()
+        }
         unclosedDataSynchronizers.clear()
 
         latestCtx?.dataSynchronizer?.close()

@@ -2,8 +2,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterable
-import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteFindIterableImpl
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
 import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 
@@ -24,7 +22,6 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.`when`
-import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import java.lang.Exception
@@ -253,9 +250,12 @@ class DataSynchronizerUnitTests {
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NONE)
+            pseudoUpdatedDocument,
+            TestVersionState.NONE
+        )
+
+        // mock the find one result so the remote conflict resolver knows which document to pick up
+        ctx.mockFindOneResult(pseudoUpdatedDocument)
 
         ctx.doSyncPass()
 
@@ -276,9 +276,9 @@ class DataSynchronizerUnitTests {
 
         val pseudoUpdatedDocument = ctx.testDocument.clone()
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NONE)
+            pseudoUpdatedDocument,
+            TestVersionState.NONE
+        )
 
         ctx.doSyncPass()
 
@@ -298,11 +298,16 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
             pseudoUpdatedDocument,
-            TestVersionState.NONE)
+            TestVersionState.NONE
+        )
 
         ctx.shouldConflictBeResolvedByRemote = true
+
+        // populate the remote collection with the updated document so the conflict resolver
+        // fetches the correct remote document
+        ctx.mockFindResult(pseudoUpdatedDocument)
+
         ctx.doSyncPass()
 
         ctx.verifyConflictHandlerCalledForActiveDoc(1)
@@ -326,9 +331,13 @@ class DataSynchronizerUnitTests {
                 )
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEW)
+            pseudoUpdatedDocument,
+            TestVersionState.NEW
+        )
+
+        // populate the remote collection with the updated document so the conflict resolver
+        // fetches the correct remote document
+        ctx.mockFindResult(pseudoUpdatedDocument)
 
         ctx.doSyncPass()
 
@@ -348,10 +357,11 @@ class DataSynchronizerUnitTests {
         ctx.updateTestDocument()
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone()
+
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.SAME)
+            pseudoUpdatedDocument,
+            TestVersionState.SAME
+        )
 
         ctx.doSyncPass()
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -372,9 +382,13 @@ class DataSynchronizerUnitTests {
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.SAME)
+            pseudoUpdatedDocument,
+            TestVersionState.SAME
+        )
+
+        // populate the remote collection with the updated document so the conflict resolver
+        // fetches the correct remote document
+        ctx.mockFindResult(pseudoUpdatedDocument)
 
         ctx.shouldConflictBeResolvedByRemote = true
 
@@ -395,14 +409,13 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone()
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEW)
+            pseudoUpdatedDocument,
+            TestVersionState.NEW
+        )
 
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        // populate the remote collection with the updated document so the conflict resolver
+        // fetches the correct remote document
+        ctx.mockFindResult(pseudoUpdatedDocument)
 
         ctx.shouldConflictBeResolvedByRemote = true
         ctx.doSyncPass()
@@ -422,14 +435,11 @@ class DataSynchronizerUnitTests {
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEW)
+            pseudoUpdatedDocument,
+            TestVersionState.NEW
+        )
 
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        ctx.mockFindResult(pseudoUpdatedDocument)
 
         ctx.doSyncPass()
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -443,17 +453,17 @@ class DataSynchronizerUnitTests {
 
         ctx.insertTestDocument()
         ctx.doSyncPass()
+
         val pseudoUpdatedDocument = ctx.testDocument.clone()
 
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEW)
+            pseudoUpdatedDocument,
+            TestVersionState.NEW
+        )
 
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(null)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        // have the remote collection delete the test document so that when the remoteFind is
+        // executed, the local document is deleted and de-synced locally
+        ctx.mockFindResult(null)
 
         ctx.doSyncPass()
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -462,17 +472,48 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testRemoteUpdateLocalAndRemoteEmptyVersion() {
+    fun testRemoteStaleFetchLocalAndRemoteEmptyVersion() {
+        val ctx = harness.freshTestContext()
+
+        ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
+
+        // populate the remote collection with the test document, and simulate a fresh stream
+        // that triggers a stale fetch
+        ctx.mockFindResult(ctx.testDocument)
+        ctx.setNamespaceStale(true)
+
+        ctx.doSyncPass()
+
+        ctx.verifyConflictHandlerCalledForActiveDoc(0)
+
+        val lastKnownVersion = ctx.findTestDocumentConfig()?.lastKnownRemoteVersion
+
+        assertEquals(ctx.testDocument, ctx.findTestDocumentFromLocalCollection())
+        assertNotNull(lastKnownVersion)
+        assertEquals(0, DocumentVersionInfo.fromVersionDoc(lastKnownVersion)
+                .version.versionCounter)
+        verify(ctx.collectionMock).updateOne(eq(ctx.testDocumentFilter),
+            eq(BsonDocument("\$set", BsonDocument(DataSynchronizer.DOCUMENT_VERSION_FIELD,
+                lastKnownVersion))))
+    }
+
+    @Test
+    fun testRemoteReplaceLocalAndRemoteEmptyVersion() {
         val ctx = harness.freshTestContext()
 
         ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
         val pseudoUpdatedDocument = ctx.testDocument.clone()
-                .append("hello", BsonString("dolly"))
-        ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NONE)
+            .append("hello", BsonString("dolly"))
+        ctx.queueConsumableRemoteReplaceEvent(
+            pseudoUpdatedDocument,
+            TestVersionState.NONE
+        )
+
+        // populate the remote collection with the test document so the stale fetch gets a base
+        // document upon which to apply the update
+        ctx.mockFindResult(ctx.testDocument)
+        ctx.setNamespaceStale(true)
 
         ctx.doSyncPass()
 
@@ -483,10 +524,10 @@ class DataSynchronizerUnitTests {
         assertEquals(pseudoUpdatedDocument, ctx.findTestDocumentFromLocalCollection())
         assertNotNull(lastKnownVersion)
         assertEquals(0, DocumentVersionInfo.fromVersionDoc(lastKnownVersion)
-                .version.versionCounter)
+            .version.versionCounter)
         verify(ctx.collectionMock).updateOne(eq(ctx.testDocumentFilter),
-                eq(pseudoUpdatedDocument.append(DataSynchronizer.DOCUMENT_VERSION_FIELD,
-                        lastKnownVersion)))
+            eq(BsonDocument("\$set", BsonDocument(DataSynchronizer.DOCUMENT_VERSION_FIELD,
+                lastKnownVersion))))
     }
 
     @Test
@@ -502,13 +543,16 @@ class DataSynchronizerUnitTests {
                 )
 
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.SAME)
-
+            pseudoUpdatedDocument,
+            TestVersionState.SAME
+        )
         ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
-        ctx.shouldConflictBeResolvedByRemote = true
+        // populate the remote collection with the test document so the stale fetch gets a base
+        // document upon which to apply the update
+        ctx.mockFindResult(ctx.testDocument)
+        ctx.setNamespaceStale(true)
+
         ctx.doSyncPass()
 
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -529,13 +573,17 @@ class DataSynchronizerUnitTests {
                         remoteVersion
                 )
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.SAME)
+            pseudoUpdatedDocument,
+            TestVersionState.SAME
+        )
 
         ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
-        ctx.shouldConflictBeResolvedByRemote = true
+        // populate the remote collection with the test document so the stale fetch gets a base
+        // document upon which to apply the update
+        ctx.mockFindResult(ctx.testDocument)
+        ctx.setNamespaceStale(true)
+
         ctx.doSyncPass()
 
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -554,9 +602,9 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone()
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NONE)
+            pseudoUpdatedDocument,
+            TestVersionState.NONE
+        )
 
         ctx.shouldConflictBeResolvedByRemote = true
         ctx.doSyncPass()
@@ -576,9 +624,9 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NONE)
+            pseudoUpdatedDocument,
+            TestVersionState.NONE
+        )
 
         ctx.shouldConflictBeResolvedByRemote = true
         ctx.doSyncPass()
@@ -597,9 +645,9 @@ class DataSynchronizerUnitTests {
         val pseudoUpdatedDocument = ctx.testDocument.clone()
 
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.SAME)
+            pseudoUpdatedDocument,
+            TestVersionState.SAME
+        )
 
         ctx.doSyncPass()
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -616,14 +664,11 @@ class DataSynchronizerUnitTests {
         val pseudoUpdatedDocument = ctx.testDocument.clone()
 
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEW)
+            pseudoUpdatedDocument,
+            TestVersionState.NEW
+        )
 
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        ctx.mockFindResult(pseudoUpdatedDocument)
 
         ctx.doSyncPass()
         ctx.verifyConflictHandlerCalledForActiveDoc(0)
@@ -641,21 +686,21 @@ class DataSynchronizerUnitTests {
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEXT)
+            pseudoUpdatedDocument,
+            TestVersionState.NEXT
+        )
 
         ctx.doSyncPass()
 
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        // populate the remote collection with the test document so the stale fetch gets a base
+        // document upon which to apply the update
+        ctx.mockFindResult(ctx.testDocument)
+        ctx.setNamespaceStale(true)
 
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEW)
+            pseudoUpdatedDocument,
+            TestVersionState.NEW
+        )
 
         ctx.doSyncPass()
 
@@ -672,16 +717,21 @@ class DataSynchronizerUnitTests {
         val pseudoUpdatedDocument = ctx.testDocument.clone()
                 .append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.NEXT)
+            pseudoUpdatedDocument,
+            TestVersionState.NEXT
+        )
 
         ctx.doSyncPass()
 
         ctx.queueConsumableRemoteUpdateEvent(
-                ctx.testDocumentId,
-                pseudoUpdatedDocument,
-                TestVersionState.SAME)
+            pseudoUpdatedDocument,
+            TestVersionState.NEXT
+        )
+
+        // populate the remote collection with the test document so the stale fetch gets a base
+        // document upon which to apply the update
+        ctx.mockFindResult(ctx.testDocument)
+        ctx.setNamespaceStale(true)
 
         ctx.doSyncPass()
 
@@ -698,9 +748,9 @@ class DataSynchronizerUnitTests {
 
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
             pseudoUpdatedDocument,
-            TestVersionState.NEXT)
+            TestVersionState.NEXT
+        )
 
         ctx.doSyncPass()
 
@@ -724,9 +774,9 @@ class DataSynchronizerUnitTests {
         ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
         val pseudoUpdatedDocument = ctx.testDocument.clone().append("hello", BsonString("dolly"))
         ctx.queueConsumableRemoteUpdateEvent(
-            ctx.testDocumentId,
             pseudoUpdatedDocument,
-            TestVersionState.NEW)
+            TestVersionState.NEW
+        )
 
         ctx.shouldConflictBeResolvedByRemote = true
 
@@ -734,10 +784,8 @@ class DataSynchronizerUnitTests {
         // but the remote collection itself no longer has the document,
         // so the conflict is using the latest remote document
         // which doesn't exist to resolve the conflict
-        val findMock = mock(CoreRemoteFindIterableImpl::class.java)
-        `when`(findMock.first()).thenReturn(pseudoUpdatedDocument)
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any())).thenReturn(findMock as CoreRemoteFindIterable<BsonDocument>)
+        ctx.mockFindResult(pseudoUpdatedDocument)
+
         // sync, creating a conflict. because remote has an empty version,
         // there will be a conflict on the next L2R pass that we will resolve
         // with remote. however, this will be resolved as a REPLACE since
@@ -1010,19 +1058,15 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
+        // simulate a fresh stream that does a stale fetch
+        ctx.mockFindResult(null)
+        ctx.setNamespaceStale(true)
+
         ctx.waitForDataSynchronizerStreams()
 
         ctx.doSyncPass()
 
-        val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
-        @Suppress("UNCHECKED_CAST")
-        `when`(mockEmptyFindResult
-                .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
-                .thenReturn(HashSet())
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any()))
-                .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
-
+        // ensure that the stale fetch happens only once per stream
         verify(ctx.collectionMock, times(1)).find(any())
 
         ctx.doSyncPass()
@@ -1044,17 +1088,17 @@ class DataSynchronizerUnitTests {
 
         ctx.doSyncPass()
 
-        val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
-        @Suppress("UNCHECKED_CAST")
-        `when`(mockEmptyFindResult
-                .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
-                .thenReturn(HashSet())
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any()))
-                .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
+        ctx.mockFindResult(null)
 
         ctx.queueConsumableRemoteInsertEvent()
+
+        // mock the update result because once the insert comes in without a version, the client
+        // will try to write back a version, and if it's not able to do so, then the incoming
+        // event will never be emitted.
+        ctx.mockUpdateResult(RemoteUpdateResult(1, 1, null))
+
         ctx.doSyncPass()
+        ctx.waitForEvents(1)
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
@@ -1062,7 +1106,7 @@ class DataSynchronizerUnitTests {
     }
 
     @Test
-    fun testMissingDocumentThatAppearsLaterAsUpdateEvent() {
+    fun testMissingDocumentThatAppearsLaterOnReconnect() {
         val ctx = harness.freshTestContext()
 
         ctx.reconfigure()
@@ -1071,19 +1115,26 @@ class DataSynchronizerUnitTests {
 
         ctx.dataSynchronizer.syncDocumentsFromRemote(ctx.namespace, ctx.testDocumentId)
 
+        // this should not hang to wait for the missing document
+        ctx.waitForDataSynchronizerStreams()
         ctx.doSyncPass()
 
-        val mockEmptyFindResult = mock(CoreRemoteFindIterableImpl::class.java)
-        @Suppress("UNCHECKED_CAST")
-        `when`(mockEmptyFindResult
-                .into(any(MutableCollection::class.java as Class<MutableCollection<Any>>)))
-                .thenReturn(HashSet())
-        @Suppress("UNCHECKED_CAST")
-        `when`(ctx.collectionMock.find(any()))
-                .thenReturn(mockEmptyFindResult as CoreRemoteFindIterable<BsonDocument>)
+        // the initial stale fetch should have occurred
+        verify(ctx.collectionMock, times(1)).find(any())
 
-        ctx.queueConsumableRemoteUpdateEvent()
         ctx.doSyncPass()
+
+        // the remote collection should not have been polled to
+        // see if the missing document is now present
+        verify(ctx.collectionMock, times(1)).find(any())
+
+        // simulate a disconnect/reconnect where the document appears after reconnect
+        ctx.mockFindResult(ctx.testDocument)
+        ctx.setNamespaceStale(true)
+
+        ctx.doSyncPass()
+
+        verify(ctx.collectionMock, times(2)).find(any())
 
         val localDoc = ctx.dataSynchronizer
                 .find(ctx.namespace, BsonDocument().append("_id", ctx.testDocumentId)).firstOrNull()
@@ -1157,10 +1208,15 @@ class DataSynchronizerUnitTests {
 
         // stage an update without reactivating the sync thread
         val changeEvent = ChangeEvents
-                .changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId,
-                        UpdateDescription(BsonDocument("goodbye",
+                .compactChangeEventForLocalUpdate(
+                    ctx.testDocumentId,
+                    UpdateDescription(BsonDocument("goodbye",
                                 BsonString("universe")), HashSet<String>()),
-                        modifiedDocument, false)
+                    null,
+                        HashUtils.hash(modifiedDocument),
+                    false
+                )
+
         `when`(ctx.dataSynchronizer.getEventsForNamespace(any())).thenReturn(
                 mapOf(ctx.testDocument to changeEvent),
                 mapOf())
@@ -1209,11 +1265,16 @@ class DataSynchronizerUnitTests {
                 BsonString("universe"))
 
         // stage an update without reactivating the sync thread
+        // stage an update without reactivating the sync thread
         val changeEvent = ChangeEvents
-                .changeEventForLocalUpdate(ctx.namespace, ctx.testDocumentId,
-                        UpdateDescription(BsonDocument("goodbye",
-                                BsonString("universe")), HashSet<String>()),
-                        modifiedDocument, false)
+            .compactChangeEventForLocalUpdate(
+                ctx.testDocumentId,
+                UpdateDescription(BsonDocument("goodbye",
+                    BsonString("universe")), HashSet<String>()),
+                null,
+                HashUtils.hash(modifiedDocument),
+                false
+            )
         `when`(ctx.dataSynchronizer.getEventsForNamespace(any())).thenReturn(
                 mapOf(ctx.testDocument to changeEvent),
                 mapOf())

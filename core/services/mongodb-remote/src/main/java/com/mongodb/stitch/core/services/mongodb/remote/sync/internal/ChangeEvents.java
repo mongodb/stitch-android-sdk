@@ -17,10 +17,12 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeDocument;
+import static com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer.sanitizeUpdateDescription;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType;
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription;
 
@@ -54,6 +56,27 @@ public final class ChangeEvents {
   }
 
   /**
+   * Generates a compact change event for a local insert of the given document.
+   *
+   * @param document the document that was inserted.
+   * @return a change event for a local insert of the given document in the given namespace.
+   */
+  static CompactChangeEvent<BsonDocument> compactChangeEventForLocalInsert(
+      final BsonDocument document,
+      final boolean writePending
+  ) {
+    final BsonValue docId = BsonUtils.getDocumentId(document);
+    return new CompactChangeEvent<>(
+        OperationType.INSERT,
+        document,
+        new BsonDocument("_id", docId),
+        null,
+        versionForDocument(document),
+        hashForDocument(document),
+        writePending);
+  }
+
+  /**
    * Generates a change event for a local update of a document in the given namespace referring
    * to the given document _id.
    *
@@ -77,6 +100,36 @@ public final class ChangeEvents {
         namespace,
         new BsonDocument("_id", documentId),
         update,
+        writePending);
+  }
+
+  /**
+   * Generates a change event for a local update of a document in the given namespace referring
+   * to the given document _id.
+   *
+   * @param documentId the _id of the document that was updated.
+   * @param updateDescription the update specifier.
+   * @param documentVersion the version document for the document version after this update.
+   * @param documentHash the hash of this document (sanitized) after the update
+   * @return a change event for a local update of a document in the given namespace referring
+   *         to the given document _id.
+   */
+  static CompactChangeEvent<BsonDocument> compactChangeEventForLocalUpdate(
+      final BsonValue documentId,
+      final UpdateDescription updateDescription,
+      final BsonDocument documentVersion,
+      final Long documentHash,
+      final boolean writePending
+  ) {
+    return new CompactChangeEvent<>(
+        OperationType.UPDATE,
+        null,
+        new BsonDocument("_id", documentId),
+        updateDescription,
+        (documentVersion == null)
+            ? null
+            : DocumentVersionInfo.Version.fromBsonDocument(documentVersion),
+        documentHash,
         writePending);
   }
 
@@ -107,11 +160,35 @@ public final class ChangeEvents {
   }
 
   /**
+   * Generates a change event for a local replacement of a document in the given namespace referring
+   * to the given document _id.
+   *
+   * @param documentId the _id of the document that was updated.
+   * @param document the replacement document.
+   * @return a change event for a local replacement of a document in the given namespace referring
+   *         to the given document _id.
+   */
+  static CompactChangeEvent<BsonDocument> compactChangeEventForLocalReplace(
+      final BsonValue documentId,
+      final BsonDocument document,
+      final boolean writePending
+  ) {
+    return new CompactChangeEvent<>(
+        OperationType.REPLACE,
+        document,
+        new BsonDocument("_id", documentId),
+        null,
+        versionForDocument(document),
+        hashForDocument(document),
+        writePending);
+  }
+
+  /**
    * Generates a change event for a local deletion of a document in the given namespace referring
    * to the given document _id.
    *
-   * @param namespace the namespace where the document was inserted.
-   * @param documentId the _id of the document that was updated.
+   * @param namespace the namespace where the document was deleted.
+   * @param documentId the _id of the document that was deleted.
    * @return a change event for a local deletion of a document in the given namespace referring
    *         to the given document _id.
    */
@@ -126,6 +203,28 @@ public final class ChangeEvents {
         null,
         namespace,
         new BsonDocument("_id", documentId),
+        null,
+        writePending);
+  }
+
+  /**
+   * Generates a change event for a local deletion of a document in the given namespace referring
+   * to the given document _id.
+   *
+   * @param documentId the _id of the document that was deleted.
+   * @return a change event for a local deletion of a document in the given namespace referring
+   *         to the given document _id.
+   */
+  static CompactChangeEvent<BsonDocument> compactChangeEventForLocalDelete(
+      final BsonValue documentId,
+      final boolean writePending
+  ) {
+    return new CompactChangeEvent<>(
+        OperationType.DELETE,
+        null,
+        new BsonDocument("_id", documentId),
+        null,
+        null,
         null,
         writePending);
   }
@@ -148,7 +247,43 @@ public final class ChangeEvents {
             DecoderContext.builder().build()),
         event.getNamespace(),
         event.getDocumentKey(),
-        event.getUpdateDescription(),
+        sanitizeUpdateDescription(event.getUpdateDescription()),
         event.hasUncommittedWrites());
+  }
+
+  /**
+   * Transforms a {@link ChangeEvent} into one that can be used by a user defined conflict resolver.
+   * @param event the event to transform.
+   * @param codec the codec to use to transform any documents specific to the collection.
+   * @return the transformed {@link ChangeEvent}
+   */
+  static CompactChangeEvent transformCompactChangeEventForUser(
+      final CompactChangeEvent<BsonDocument> event,
+      final Codec codec
+  ) {
+    return new CompactChangeEvent<>(
+        event.getOperationType(),
+        event.getFullDocument() == null ? null : codec.decode(
+            sanitizeDocument(event.getFullDocument()).asBsonReader(),
+            DecoderContext.builder().build()),
+        event.getDocumentKey(),
+        sanitizeUpdateDescription(event.getUpdateDescription()),
+        event.getStitchDocumentVersion(),
+        event.getStitchDocumentHash(),
+        event.hasUncommittedWrites());
+  }
+
+  private static DocumentVersionInfo.Version versionForDocument(final BsonDocument doc) {
+    if (!doc.containsKey(DataSynchronizer.DOCUMENT_VERSION_FIELD)) {
+      return null;
+    }
+
+    return DocumentVersionInfo.Version.fromBsonDocument(
+        doc.getDocument(DataSynchronizer.DOCUMENT_VERSION_FIELD)
+    );
+  }
+
+  private static Long hashForDocument(final BsonDocument doc) {
+    return HashUtils.hash(DataSynchronizer.sanitizeDocument(doc));
   }
 }
