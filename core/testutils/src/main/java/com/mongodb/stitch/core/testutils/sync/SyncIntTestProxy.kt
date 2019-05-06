@@ -787,14 +787,14 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         // reconfigure sync and the same way. do a sync pass.
         powerCycleDevice()
         coll.configure(DefaultSyncConflictResolvers.localWins(), null, null)
-        val sem = watchForEvents(syncTestRunner.namespace)
+        //val sem = watchForEvents(syncTestRunner.namespace)
         streamAndSync()
 
         // update the document remotely. assert the update is reflected remotely.
         // reload our configuration again. reconfigure Sync again.
         val expectedDocument = Document(doc)
         var result = remoteColl.updateOne(doc1Filter, withNewSyncVersionSet(Document("\$inc", Document("foo", 2))))
-        assertTrue(sem.tryAcquire(10, TimeUnit.SECONDS))
+        //assertTrue(sem.tryAcquire(10, TimeUnit.SECONDS))
         assertEquals(1, result.matchedCount)
         expectedDocument["foo"] = 3
         assertEquals(expectedDocument, withoutSyncVersion(remoteColl.find(doc1Filter).first()!!))
@@ -1189,7 +1189,6 @@ class SyncIntTestProxy(private val syncTestRunner: SyncIntTestRunner) {
         Assert.assertNotNull(coll.find(doc1Filter).firstOrNull())
 
         assertEquals(1, remoteColl.deleteOne(doc1Filter).deletedCount)
-        powerCycleDevice()
         coll.configure(ConflictHandler { _: BsonValue, _: ChangeEvent<Document>, _: ChangeEvent<Document> ->
             throw IllegalStateException("failure")
         }, null, null)
