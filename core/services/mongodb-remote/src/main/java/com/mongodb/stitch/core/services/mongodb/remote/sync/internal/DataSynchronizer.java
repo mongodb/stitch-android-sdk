@@ -122,6 +122,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
   private boolean listenersEnabled = true;
   private boolean isConfigured = false;
   private boolean isRunning = false;
+  private boolean shouldAttemptRecovery = false;
   private Thread syncThread;
   private long logicalT = 0; // The current logical time or sync iteration.
 
@@ -317,6 +318,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     if (!this.networkMonitor.isConnected()) {
       this.stop();
     } else {
+      this.shouldAttemptRecovery = true;
       this.start();
     }
   }
@@ -668,6 +670,16 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
       }
       logicalT++;
 
+      if (this.shouldAttemptRecovery) {
+        shouldAttemptRecovery = false;
+        if (logger.isInfoEnabled()) {
+          logger.info(String.format(
+              Locale.US,
+              "t='%d': doSyncPass INITIATING RECOVERY",
+              logicalT));
+        }
+        recover();
+      }
       if (logger.isInfoEnabled()) {
         logger.info(String.format(
             Locale.US,
@@ -845,6 +857,7 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
                     latestDocumentMap.get(docId),
                     false
                 )));
+            docConfig.setStale(false);
             continue;
           }
 
@@ -3149,9 +3162,11 @@ public class DataSynchronizer implements NetworkMonitor.StateListener {
     } finally {
       lock.unlock();
     }
-    eventDispatcher.emitEvent(nsConfig,
+
+    final LocalSyncWriteModelContainer container = desyncDocumentsFromRemote(nsConfig, documentId);
+    container.addLocalChangeEvent(
         ChangeEvents.changeEventForLocalDelete(namespace, documentId, false));
-    return desyncDocumentsFromRemote(nsConfig, documentId);
+    return container;
   }
 
   private void checkAndDeleteNamespaceListener(final MongoNamespace namespace) {

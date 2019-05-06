@@ -447,6 +447,11 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     }
 
     @Test
+    override fun testFindOnReceivingChangeEvent() {
+        testProxy.testFindOnReceivingChangeEvent()
+    }
+
+    @Test
     override fun testMultiUserSupport() {
         testProxy.testMultiUserSupport()
     }
@@ -478,11 +483,6 @@ class SyncMongoClientIntTests : BaseStitchAndroidIntTest(), SyncIntTestRunner {
     @Test
     override fun testUpdateSyncFrequency() {
         testProxy.testUpdateSyncFrequency()
-    }
-
-    @Test
-    override fun testFindOnReceivingChangeEvent() {
-        testProxy.testFindOnReceivingChangeEvent()
     }
 
     /**

@@ -218,31 +218,6 @@ public class CoreDocumentSynchronizationConfig {
    * @param atVersion   the version for which the write occurred.
    * @param changeEvent the description of the write/change.
    */
-  public void setSomePendingWritesAndSave(
-      final long atTime,
-      final BsonDocument atVersion,
-      final long atHash,
-      final ChangeEvent<BsonDocument> changeEvent
-  ) {
-    docLock.writeLock().lock();
-    try {
-      this.setSomePendingWrites(atTime, atVersion, atHash, changeEvent);
-      docsColl.replaceOne(
-          getDocFilter(namespace, documentId),
-          this);
-    } finally {
-      docLock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * Sets that there are some pending writes that occurred at a time for an associated
-   * locally emitted change event. This variant updates the last version set.
-   *
-   * @param atTime      the time at which the write occurred.
-   * @param atVersion   the version for which the write occurred.
-   * @param changeEvent the description of the write/change.
-   */
   void setSomePendingWrites(
       final long atTime,
       final BsonDocument atVersion,
