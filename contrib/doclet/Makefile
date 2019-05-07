@@ -3,8 +3,11 @@ CLASSES = \
 
 .SUFFIXES: .java .class
 .java.class:
-	javac -d bin $*.java
+	"${JAVA_HOME}/bin/javac" -d bin $*.java
 
-default: classes
+default: directories classes
+
+directories:
+	mkdir -p bin
 
 classes: $(CLASSES:.java=.class)
