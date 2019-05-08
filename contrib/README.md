@@ -22,6 +22,25 @@ Once the Pull Request created by `bump_version.bash` is successfully merged into
 ./publish_sdk.bash
 ```
 
+#### Generating the documentation
+
+A custom doclet is used for the javadoc output. This doclet is written for Java 11 and its version of javadoc.
+The source is located in contrib/doclet and will be built as part of the generate_docs.sh script.
+Please set your JAVA_HOME to your Java 11 installation before building.
+
+On macOS, you can install Java 11 with brew if it is not already installed:
+
+```bash
+brew cask install java11
+```
+
+Then set the JAVA_HOME environment variable:
+
+```bash
+# Minor version (i.e. .0.2) may differ on your machine. Please adjust accordingly.
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/openjdk-11.0.2.jdk/Contents/Home
+```
+
 #### Configuring Bintray Upload
 For the `./gradlew bintrayUpload` command to work properly, you must locally specify your Bintray credentials. You can do this by adding the following lines to your `local.properties` file:
 
