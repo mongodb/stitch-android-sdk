@@ -18,9 +18,14 @@ package com.mongodb.stitch.core.services.mongodb.remote;
 
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.BaseChangeEventListener;
+import com.sun.org.apache.xpath.internal.operations.Bool;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bson.BsonValue;
 
@@ -30,17 +35,19 @@ import org.bson.BsonValue;
  * @param <EventT> The type returned to users of this API when the next event is requested. May be
  *                 the same as ChangeEventT, or may be an async wrapper around ChangeEventT.
  */
-public abstract class ChangeStream<EventT>
-    implements Closeable {
-  private final Stream<? extends BaseChangeEvent> internalStream;
+public abstract class ChangeStream<EventT> implements Closeable {
 
+  private final Stream<? extends BaseChangeEvent> internalStream;
   private ExceptionListener exceptionListener = null;
+  ConcurrentHashMap<BaseChangeEventListener, Boolean> listeners;
+  Thread workerThread;
 
   protected ChangeStream(final Stream<? extends BaseChangeEvent> stream) {
     if (stream == null) {
       throw new IllegalArgumentException("null stream passed to change stream");
     }
     this.internalStream = stream;
+    listeners.clear();
   }
 
   /**
@@ -60,6 +67,34 @@ public abstract class ChangeStream<EventT>
    * @throws IOException If the underlying stream throws an {@link IOException}
    */
   public abstract EventT nextEvent() throws IOException;
+
+  /**
+   * Adds a ChangeEventListener to the ChangeStream.
+   *
+   * @param listener the ChangeEventListener
+   * @return The current ChangeStream
+   */
+  public void addChangeEventListener(BaseChangeEventListener listener) {
+    listeners.putIfAbsent(listener, true);
+
+    if workerThread == null {
+      workerThread = new Thread()
+    }
+  }
+
+  /**
+   * Remove a ChangeEventListener from the ChangeStream.
+   *
+   * @param listener the ChangeEventListener
+   * @return The current ChangeStream
+   */
+  public void removeChangeEventListener(BaseChangeEventListener listener) {
+    listeners.remove(listener);
+  }
+
+  public Enumeration<BaseChangeEventListener> getChangeEventListeners() {
+    return listeners.keys();
+  }
 
   /**
    * Indicates whether or not the change stream is currently open.
@@ -96,3 +131,4 @@ public abstract class ChangeStream<EventT>
     }
   }
 }
+

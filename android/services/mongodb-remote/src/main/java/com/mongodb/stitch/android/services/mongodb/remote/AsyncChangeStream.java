@@ -16,15 +16,25 @@
 
 package com.mongodb.stitch.android.services.mongodb.remote;
 
+import android.os.Looper;
+import android.os.NetworkOnMainThreadException;
+import android.support.annotation.WorkerThread;
+
 import com.google.android.gms.tasks.Task;
 
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.BaseChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.BaseChangeStream;
+import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.BaseChangeEventListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener;
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CompactChangeEventListener;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
 /**
@@ -35,9 +45,14 @@ import java.util.concurrent.Callable;
  *                    asynchronously.
  * @param <ChangeEventT> The type of MongoDB change event that this stream internally returns.
  */
-public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>> extends
-    ChangeStream<Task<ChangeEventT>> {
+public class AsyncChangeStream<DocumentT,
+    ChangeEventT extends BaseChangeEvent<DocumentT>,
+    ChangeEventListenerT extends BaseChangeEventListener<DocumentT, ChangeEventT>>
+    extends BaseChangeStream<DocumentT, Task<ChangeEventT>, ChangeEventT, ChangeEventListenerT> {
+
   private final TaskDispatcher dispatcher;
+  private ArrayList<ChangeEventListener> listeners;
+  private ArrayList<CompactChangeEventListener> compactListeners;
 
   /**
    * Initializes a passthrough change stream with the provided underlying event stream.
@@ -49,6 +64,7 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
                            final TaskDispatcher dispatcher) {
     super(stream);
     this.dispatcher = dispatcher;
+    this.listeners = new ArrayList<ChangeEventListener>();
   }
 
   /**
@@ -57,11 +73,17 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    * @throws IOException if the underlying stream throws an {@link IOException}
    */
   @Override
+  @WorkerThread
   @SuppressWarnings("unchecked")
   public Task<ChangeEventT> nextEvent() throws IOException {
     return dispatcher.dispatchTask(new Callable<ChangeEventT>() {
       @Override
       public ChangeEventT call() throws Exception {
+        // Do not allow this method to be called on the main thread
+        if (Looper.getMainLooper().getThread() == Thread.currentThread()) {
+          throw new NetworkOnMainThreadException();
+        }
+
         final StitchEvent<ChangeEventT> nextEvent =
             (StitchEvent<ChangeEventT>) getInternalStream().nextEvent();
 
@@ -80,4 +102,6 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
       }
     });
   }
+
+
 }

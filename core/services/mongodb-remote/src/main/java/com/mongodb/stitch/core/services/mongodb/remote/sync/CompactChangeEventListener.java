@@ -16,21 +16,21 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote.sync;
 
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
+import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import org.bson.BsonValue;
 
 /**
- * ChangeEventListener receives change event notifications.
+ * CompactChangeEventListener receives change event notifications.
  * @param <DocumentT> the type of class represented by the document in the change event.
  */
-public interface ChangeEventListener<DocumentT>
-    extends BaseChangeEventListener<DocumentT, ChangeEvent<DocumentT>> {
+public interface CompactChangeEventListener<DocumentT>
+    extends BaseChangeEventListener<DocumentT, CompactChangeEvent<DocumentT>> {
 
   /**
-   * Called when a change event happens for the given document id.
+   * Called when a compact change event happens for the given document id.
    *
    * @param documentId the _id of the document related to the event.
-   * @param event the change event.
+   * @param event the compact change event.
    */
-  void onEvent(final BsonValue documentId, final ChangeEvent event);
+  void onEvent(final BsonValue documentId, final CompactChangeEvent event);
 }
