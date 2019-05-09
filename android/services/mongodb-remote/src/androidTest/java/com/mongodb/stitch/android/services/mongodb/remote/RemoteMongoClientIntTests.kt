@@ -18,6 +18,8 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOneAndModifyOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions
+import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
+import com.mongodb.stitch.core.services.mongodb.remote.sync.CompactChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.HashUtils
 import com.mongodb.stitch.core.testutils.CustomType
 import org.bson.BsonDocument
@@ -1084,6 +1086,98 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    fun testWatchListenerLambda() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val objectId1 = ObjectId()
+        val objectId2 = ObjectId()
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = objectId2
+        rawDoc2["happy"] = "day"
+
+        Tasks.await(coll.insertMany(listOf(rawDoc1, rawDoc2)))
+        assertEquals(2, Tasks.await(coll.count()))
+
+        val streamTask = coll.watch(objectId1, objectId2)
+        val stream = Tasks.await(streamTask)
+
+        var changeEventListenerSemaphore = Semaphore(0)
+        val waitFor = AtomicInteger(4)
+        stream.addChangeEventListener { _, event ->
+            assertNotNull(event.fullDocument)
+            if (waitFor.decrementAndGet() == 0) {
+                changeEventListenerSemaphore.release()
+            }
+        }
+        stream.addChangeEventListener { documentId, event ->
+            assertNotNull(event.fullDocument)
+            if (waitFor.decrementAndGet() == 0) {
+                changeEventListenerSemaphore.release()
+            }
+        }
+
+        try {
+            Tasks.await(coll.updateMany(BsonDocument(),
+                Document().append("\$set", Document().append("new", "field"))))
+        } finally {
+            stream.close()
+        }
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun testWatchCompactListenerLambda() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val objectId1 = ObjectId()
+        val objectId2 = ObjectId()
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = objectId2
+        rawDoc2["happy"] = "day"
+
+        Tasks.await(coll.insertMany(listOf(rawDoc1, rawDoc2)))
+        assertEquals(2, Tasks.await(coll.count()))
+
+        val streamTask = coll.watchCompact(objectId1, objectId2)
+        val stream = Tasks.await(streamTask)
+
+        var changeEventListenerSemaphore = Semaphore(0)
+        val waitFor = AtomicInteger(4)
+        stream.addChangeEventListener { _, event ->
+            assertNull(event.fullDocument)
+            if (waitFor.decrementAndGet() == 0) {
+                changeEventListenerSemaphore.release()
+            }
+        }
+        stream.addChangeEventListener { _, event ->
+            assertNull(event.fullDocument)
+            if (waitFor.decrementAndGet() == 0) {
+                changeEventListenerSemaphore.release()
+            }
+        }
+
+        try {
+            Tasks.await(coll.updateMany(BsonDocument(),
+                Document().append("\$set", Document().append("new", "field"))))
+        } finally {
+            stream.close()
+        }
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+    }
+
+    @Test
     fun testWatchListener() {
         val coll = getTestColl()
         assertEquals(0, Tasks.await(coll.count()))
@@ -1099,30 +1193,184 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         rawDoc2["_id"] = objectId2
         rawDoc2["happy"] = "day"
 
-        Tasks.await(coll.insertOne(rawDoc1))
-        assertEquals(1, Tasks.await(coll.count()))
+        Tasks.await(coll.insertMany(listOf(rawDoc1, rawDoc2)))
+        assertEquals(2, Tasks.await(coll.count()))
 
         val streamTask = coll.watch(objectId1, objectId2)
         val stream = Tasks.await(streamTask)
 
-        var changeEventListenerSemaphore = Semaphore(0)
-        val waitFor = AtomicInteger(3)
-        stream.addChangeEventListener { documentId, event ->
-            System.out.println("TKERR: HEHO")
-            if (waitFor.decrementAndGet() == 0) {
-                changeEventListenerSemaphore.release()
+        var changeEventListenerSemaphore1 = Semaphore(0)
+        val waitFor1 = AtomicInteger(4)
+        val listener1 = ChangeEventListener<Document> { _, event ->
+            assertNotNull(event.fullDocument)
+            if (waitFor1.decrementAndGet() == 0) {
+                changeEventListenerSemaphore1.release()
             }
         }
 
+        var changeEventListenerSemaphore2 = Semaphore(0)
+        val waitFor2 = AtomicInteger(2)
+        val listener2 = ChangeEventListener<Document> { _, event ->
+            assertNotNull(event.fullDocument)
+            if (waitFor2.decrementAndGet() == 0) {
+                changeEventListenerSemaphore2.release()
+            }
+        }
+
+        stream.addChangeEventListener(listener1)
+        stream.addChangeEventListener(listener2)
+        stream.addChangeEventListener(listener1)
+
         try {
-            Tasks.await(coll.insertOne(rawDoc2))
-            assertEquals(2, Tasks.await(coll.count()))
-            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
-                Document().append("new", "field"))))
+            Tasks.await(coll.updateMany(BsonDocument(),
+                Document().append("\$set", Document().append("new", "field"))))
+            assertTrue(changeEventListenerSemaphore2.tryAcquire(10, TimeUnit.SECONDS))
+            assertEquals(waitFor1.get(), 2)
+            assertEquals(waitFor2.get(), 0)
+            stream.removeChangeEventListener(listener2)
+
+            Tasks.await(coll.updateMany(BsonDocument(),
+                Document().append("\$set", Document().append("new", "field2"))))
         } finally {
             stream.close()
         }
-        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        assertTrue(changeEventListenerSemaphore1.tryAcquire(10, TimeUnit.SECONDS))
+        assertEquals(waitFor1.get(), 0)
+        assertEquals(waitFor2.get(), 0)
+    }
+
+    @Test
+    fun testWatchCompactListener() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val objectId1 = ObjectId()
+        val objectId2 = ObjectId()
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = objectId2
+        rawDoc2["happy"] = "day"
+
+        Tasks.await(coll.insertMany(listOf(rawDoc1, rawDoc2)))
+        assertEquals(2, Tasks.await(coll.count()))
+
+        val streamTask = coll.watchCompact(objectId1, objectId2)
+        val stream = Tasks.await(streamTask)
+
+        var changeEventListenerSemaphore1 = Semaphore(0)
+        val waitFor1 = AtomicInteger(4)
+        val listener1 = CompactChangeEventListener<Document> { _, event ->
+            assertNull(event.fullDocument)
+            if (waitFor1.decrementAndGet() == 0) {
+                changeEventListenerSemaphore1.release()
+            }
+        }
+
+        var changeEventListenerSemaphore2 = Semaphore(0)
+        val waitFor2 = AtomicInteger(2)
+        val listener2 = CompactChangeEventListener<Document> { _, event ->
+            assertNull(event.fullDocument)
+            if (waitFor2.decrementAndGet() == 0) {
+                changeEventListenerSemaphore2.release()
+            }
+        }
+
+        stream.addChangeEventListener(listener1)
+        stream.addChangeEventListener(listener2)
+        stream.addChangeEventListener(listener1)
+
+        try {
+            Tasks.await(coll.updateMany(BsonDocument(),
+                Document().append("\$set", Document().append("new", "field"))))
+            assertTrue(changeEventListenerSemaphore2.tryAcquire(10, TimeUnit.SECONDS))
+            assertEquals(waitFor1.get(), 2)
+            assertEquals(waitFor2.get(), 0)
+            stream.removeChangeEventListener(listener2)
+
+            Tasks.await(coll.updateMany(BsonDocument(),
+                Document().append("\$set", Document().append("new", "field2"))))
+        } finally {
+            stream.close()
+        }
+        assertTrue(changeEventListenerSemaphore1.tryAcquire(10, TimeUnit.SECONDS))
+        assertEquals(waitFor1.get(), 0)
+        assertEquals(waitFor2.get(), 0)
+    }
+
+    @Test
+    fun testWatchStreamClose() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val objectId1 = ObjectId()
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        Tasks.await(coll.insertOne(rawDoc1))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val streamTask = coll.watch(objectId1)
+        val stream = Tasks.await(streamTask)
+
+        var changeEventListenerSemaphore1 = Semaphore(0)
+        var changeEventListenerSemaphore2 = Semaphore(0)
+        val waitFor1 = AtomicInteger(2)
+        val listener1 = ChangeEventListener<Document> { _, event ->
+            assertNotNull(event.fullDocument)
+            if (waitFor1.decrementAndGet() == 1) {
+                changeEventListenerSemaphore1.release()
+            }
+            if (waitFor1.decrementAndGet() == 0) {
+                changeEventListenerSemaphore2.release()
+            }
+        }
+        stream.addChangeEventListener(listener1)
+
+        try {
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field"))))
+            assertTrue(changeEventListenerSemaphore1.tryAcquire(10, TimeUnit.SECONDS))
+        } finally {
+            stream.close()
+        }
+        Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+            Document().append("new", "field2"))))
+        assertFalse(changeEventListenerSemaphore1.tryAcquire(4, TimeUnit.SECONDS))
+        assertEquals(waitFor1.get(), 0)
+    }
+
+    @Test
+    fun testNextEventFailsWithWatch() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val objectId1 = ObjectId()
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        Tasks.await(coll.insertOne(rawDoc1))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val streamTask = coll.watch(objectId1)
+        val stream = Tasks.await(streamTask)
+
+        val listener1 = ChangeEventListener<Document> { _, _ ->
+            fail()
+        }
+        stream.addChangeEventListener(listener1)
+
+        try {
+            Tasks.await(stream.nextEvent())
+        } catch (_: Exception) {
+            return
+        }
+        fail()
     }
 
     private fun withoutIds(documents: Collection<Document>): Collection<Document> {

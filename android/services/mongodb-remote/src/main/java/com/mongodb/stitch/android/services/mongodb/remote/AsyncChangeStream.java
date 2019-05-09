@@ -16,19 +16,15 @@
 
 package com.mongodb.stitch.android.services.mongodb.remote;
 
-import android.util.Log;
-
 import com.google.android.gms.tasks.Task;
 
 import com.mongodb.stitch.android.core.internal.common.TaskDispatcher;
-import com.mongodb.stitch.core.internal.net.StitchEvent;
-import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.BaseChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
+import com.mongodb.stitch.core.services.mongodb.remote.ExceptionListener;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.BaseChangeEventListener;
 
 import java.io.IOException;
-import java.util.Enumeration;
 import java.util.concurrent.Callable;
 
 /**
@@ -39,10 +35,9 @@ import java.util.concurrent.Callable;
  *                    asynchronously.
  * @param <ChangeEventT> The type of MongoDB change event that this stream internally returns.
  */
-public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>> extends
-    ChangeStream<Task<ChangeEventT>> {
+public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>> {
   private final TaskDispatcher dispatcher;
-  private Thread thread;
+  private final ChangeStream<ChangeEventT> stream;
 
   /**
    * Initializes a passthrough change stream with the provided underlying event stream.
@@ -50,55 +45,64 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    * @param stream The event stream.
    * @param dispatcher The event dispatcher.
    */
-  public AsyncChangeStream(final Stream<ChangeEventT> stream,
+  public AsyncChangeStream(final ChangeStream<ChangeEventT> stream,
                            final TaskDispatcher dispatcher) {
-    super(stream);
+    this.stream = stream;
     this.dispatcher = dispatcher;
   }
 
-  @Override
-  public void addChangeEventListener(BaseChangeEventListener listener) {
-    super.addChangeEventListener(listener);
-    Runnable runnable = () -> {
-      do {
-        Log.d("TKERR", "IN THE LOOP");
-        try {
-          final StitchEvent<ChangeEventT> nextEvent = (StitchEvent<ChangeEventT>) getInternalStream().nextEvent();
-          if (nextEvent == null) {
-            continue;
-          }
+  /**
+   * Adds a ChangeEventListener to the ChangeStream that will run on every event on the stream.
+   * Multiple ChangeEventListeners can be added to any given stream and they will be removed
+   * when the stream is closed or when the listener is removed.
+   *
+   * @param listener the ChangeEventListener
+   */
+  public void addChangeEventListener(BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
+    stream.addChangeEventListener(listener);
+  }
 
-          if (nextEvent.getError() != null) {
-            dispatchError(nextEvent);
-            continue;
-          }
+  /**
+   * Remove a ChangeEventListener from the ChangeStream.
+   *
+   * @param listener the ChangeEventListener
+   */
+  public void removeChangeEventListener(BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
+    stream.removeChangeEventListener(listener);
+  }
 
-          final ChangeEventT changeEvent = nextEvent.getData();
-          if (changeEvent == null) {
-            continue;
-          }
+  /**
+   * Closes the underlying stream and removes all ChangeEventListeners.
+   * @throws IOException If the underlying stream throws an {@link IOException} when it is closed.
+   */
+  public void close() throws IOException {
+    stream.close();
+  }
 
-          Enumeration<BaseChangeEventListener> listeners = getChangeEventListeners();
-          boolean hasListeners = false;
-          while (listeners.hasMoreElements()) {
-            listeners.nextElement().onEvent(changeEvent.getDocumentKey(), changeEvent);
-            hasListeners = true;
-          }
+  /**
+   * Optionally adds a listener that is notified when an attempt to retrieve the next event
+   * fails.
+   *
+   * @param exceptionListener The exception listener.
+   */
+  public void setExceptionListener(ExceptionListener exceptionListener) {
+    stream.setExceptionListener(exceptionListener);
+  }
 
-          if (!hasListeners) {
-            Thread.currentThread().interrupt();
-          }
-        } catch (Exception e){
-          Log.d("TKERR", "ERROR: " + e.getLocalizedMessage() );
-        }
+  /**
+   * Indicates whether or not the change stream is currently open.
+   * @return True if the underlying change stream is open.
+   */
+  public boolean isOpen() {
+    return stream.isOpen();
+  }
 
-      } while(!Thread.currentThread().isInterrupted());
-      thread = null;
-    };
-    if (thread == null) {
-      thread = new Thread(runnable);
-      thread.start();
-    }
+  /**
+   * Indicates whether or not any ChangeStreamListeners are currently running
+   * @return True if the ChangeStreamListeners are running
+   */
+  public boolean listenersRunning() {
+    return stream.listenersRunning();
   }
 
   /**
@@ -106,29 +110,16 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    * @return task providing the next event
    * @throws IOException if the underlying stream throws an {@link IOException}
    */
-  @Override
   @SuppressWarnings("unchecked")
   public Task<ChangeEventT> nextEvent() throws IOException {
+    if (stream.listenersRunning()) {
+      throw new IllegalStateException("Cannot use nextEvent() while listeners are running");
+    }
+
     return dispatcher.dispatchTask(new Callable<ChangeEventT>() {
       @Override
       public ChangeEventT call() throws Exception {
-        final StitchEvent<ChangeEventT> nextEvent =
-            (StitchEvent<ChangeEventT>) getInternalStream().nextEvent();
-
-        if (nextEvent == null) {
-          return null;
-        }
-
-        if (nextEvent.getError() != null) {
-          dispatchError(nextEvent);
-          return null;
-        }
-
-        if (nextEvent.getData() == null) {
-          return null;
-        }
-
-        return nextEvent.getData();
+        return stream.nextEvent();
       }
     });
   }

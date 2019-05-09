@@ -19,11 +19,10 @@ package com.mongodb.stitch.core.services.mongodb.remote;
 import com.mongodb.stitch.core.internal.net.StitchEvent;
 import com.mongodb.stitch.core.internal.net.Stream;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.BaseChangeEventListener;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.lang.ref.WeakReference;
 import java.util.Enumeration;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,17 +31,16 @@ import org.bson.BsonValue;
 /**
  * User-level abstraction for a stream returning {@link ChangeEvent}s from the server.
  *
- * @param <EventT> The type returned to users of this API when the next event is requested. May be
- *                 the same as ChangeEventT, or may be an async wrapper around ChangeEventT.
+ * @param <EventT> The type of underlying event for this ChangeStream.
  */
-public abstract class ChangeStream<EventT> implements Closeable {
+public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
 
-  private final Stream<? extends BaseChangeEvent> internalStream;
+  private final Stream<EventT> internalStream;
   private ExceptionListener exceptionListener = null;
   private final ConcurrentHashMap<BaseChangeEventListener, Boolean> listeners;
-  Thread workerThread;
+  Thread runnerThread;
 
-  protected ChangeStream(final Stream<? extends BaseChangeEvent> stream) {
+  public ChangeStream(final Stream<EventT> stream) {
     if (stream == null) {
       throw new IllegalArgumentException("null stream passed to change stream");
     }
@@ -66,30 +64,43 @@ public abstract class ChangeStream<EventT> implements Closeable {
    * @return The next event.
    * @throws IOException If the underlying stream throws an {@link IOException}
    */
-  public abstract EventT nextEvent() throws IOException;
+  public EventT nextEvent() throws IOException {
+    final StitchEvent<EventT> nextEvent = getInternalStream().nextEvent();
+
+    if (nextEvent == null) {
+      return null;
+    }
+
+    if (nextEvent.getError() != null) {
+      dispatchError(nextEvent);
+      return null;
+    }
+
+    return nextEvent.getData();
+  }
 
   /**
-   * Adds a ChangeEventListener to the ChangeStream.
+   * Adds a ChangeEventListener to the ChangeStream that will run on every event on the stream.
+   * Multiple ChangeEventListeners can be added to any given stream and they will be removed
+   * when the stream is closed or when the listener is removed.
    *
    * @param listener the ChangeEventListener
-   * @return The current ChangeStream
    */
   public void addChangeEventListener(BaseChangeEventListener listener) {
     listeners.putIfAbsent(listener, true);
+    if (!listenersRunning()) {
+      runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
+      runnerThread.start();
+    }
   }
 
   /**
    * Remove a ChangeEventListener from the ChangeStream.
    *
    * @param listener the ChangeEventListener
-   * @return The current ChangeStream
    */
   public void removeChangeEventListener(BaseChangeEventListener listener) {
     listeners.remove(listener);
-  }
-
-  public Enumeration<BaseChangeEventListener> getChangeEventListeners() {
-    return listeners.keys();
   }
 
   /**
@@ -101,15 +112,43 @@ public abstract class ChangeStream<EventT> implements Closeable {
   }
 
   /**
-   * Closes the underlying stream.
+   * Indicates whether or not any ChangeStreamListeners are currently running
+   * @return True if the ChangeStreamListeners are running
+   */
+  public boolean listenersRunning() {
+    if (runnerThread == null) {
+      return false;
+    }
+    return runnerThread.isAlive();
+  }
+
+  /**
+   * Closes the underlying stream and removes all ChangeEventListeners.
    * @throws IOException If the underlying stream throws an {@link IOException} when it is closed.
    */
   @Override
   public void close() throws IOException {
     internalStream.close();
+    runnerThread = null;
   }
 
-  protected Stream<? extends BaseChangeEvent> getInternalStream() {
+  protected void removeAllChangeEventListeners() {
+    listeners.clear();
+  }
+
+  protected Enumeration<BaseChangeEventListener> getChangeEventListeners() {
+    return listeners.keys();
+  }
+
+  protected void startListeners() {
+      if (runnerThread != null) {
+        return;
+      }
+      runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
+      runnerThread.start();
+  }
+
+  protected Stream<EventT> getInternalStream() {
     return this.internalStream;
   }
 
@@ -117,7 +156,7 @@ public abstract class ChangeStream<EventT> implements Closeable {
     return this.exceptionListener;
   }
 
-  protected void dispatchError(final StitchEvent<? extends BaseChangeEvent> event) {
+  protected void dispatchError(final StitchEvent<EventT> event) {
     if (exceptionListener != null) {
       BsonValue documentId = null;
       if (event.getData() != null) {
