@@ -40,6 +40,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
 class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
@@ -1078,6 +1081,48 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         } finally {
             stream.close()
         }
+    }
+
+    @Test
+    fun testWatchListener() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val objectId1 = ObjectId()
+        val objectId2 = ObjectId()
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = objectId1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = objectId2
+        rawDoc2["happy"] = "day"
+
+        Tasks.await(coll.insertOne(rawDoc1))
+        assertEquals(1, Tasks.await(coll.count()))
+
+        val streamTask = coll.watch(objectId1, objectId2)
+        val stream = Tasks.await(streamTask)
+
+        var changeEventListenerSemaphore = Semaphore(0)
+        val waitFor = AtomicInteger(3)
+        stream.addChangeEventListener { documentId, event ->
+            System.out.println("TKERR: HEHO")
+            if (waitFor.decrementAndGet() == 0) {
+                changeEventListenerSemaphore.release()
+            }
+        }
+
+        try {
+            Tasks.await(coll.insertOne(rawDoc2))
+            assertEquals(2, Tasks.await(coll.count()))
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field"))))
+        } finally {
+            stream.close()
+        }
+        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
     }
 
     private fun withoutIds(documents: Collection<Document>): Collection<Document> {

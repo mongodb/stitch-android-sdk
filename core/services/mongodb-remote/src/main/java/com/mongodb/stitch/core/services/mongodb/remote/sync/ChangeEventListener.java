@@ -32,5 +32,5 @@ public interface ChangeEventListener<DocumentT>
    * @param documentId the _id of the document related to the event.
    * @param event the change event.
    */
-  void onEvent(final BsonValue documentId, final ChangeEvent event);
+  void onEvent(final BsonValue documentId, final ChangeEvent<DocumentT> event);
 }

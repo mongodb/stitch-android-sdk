@@ -39,7 +39,7 @@ public abstract class ChangeStream<EventT> implements Closeable {
 
   private final Stream<? extends BaseChangeEvent> internalStream;
   private ExceptionListener exceptionListener = null;
-  ConcurrentHashMap<BaseChangeEventListener, Boolean> listeners;
+  private final ConcurrentHashMap<BaseChangeEventListener, Boolean> listeners;
   Thread workerThread;
 
   protected ChangeStream(final Stream<? extends BaseChangeEvent> stream) {
@@ -47,7 +47,7 @@ public abstract class ChangeStream<EventT> implements Closeable {
       throw new IllegalArgumentException("null stream passed to change stream");
     }
     this.internalStream = stream;
-    listeners.clear();
+    listeners = new ConcurrentHashMap<>();
   }
 
   /**
@@ -76,10 +76,6 @@ public abstract class ChangeStream<EventT> implements Closeable {
    */
   public void addChangeEventListener(BaseChangeEventListener listener) {
     listeners.putIfAbsent(listener, true);
-
-    if workerThread == null {
-      workerThread = new Thread()
-    }
   }
 
   /**
