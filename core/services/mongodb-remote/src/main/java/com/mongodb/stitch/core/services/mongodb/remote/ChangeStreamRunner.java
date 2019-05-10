@@ -23,7 +23,7 @@ import java.lang.ref.WeakReference;
 import java.util.Enumeration;
 
 /**
- * This runner gets the next event from a stream and executes all listeners
+ * This runner gets the next event from a stream and executes all listeners.
  */
 class ChangeStreamRunner implements Runnable, Closeable {
   private final WeakReference<ChangeStream> streamRef;
@@ -48,7 +48,7 @@ class ChangeStreamRunner implements Runnable, Closeable {
           continue;
         }
 
-        Enumeration<BaseChangeEventListener> listeners = stream.getChangeEventListeners();
+        final Enumeration<BaseChangeEventListener> listeners = stream.getChangeEventListeners();
         boolean hasListeners = false;
         while (listeners.hasMoreElements()) {
           listeners.nextElement().onEvent(nextEvent.getDocumentKey(), nextEvent);
@@ -58,12 +58,11 @@ class ChangeStreamRunner implements Runnable, Closeable {
         if (!hasListeners) {
           Thread.currentThread().interrupt();
         }
-      } catch (Exception e){
+      } catch (Exception e) {
         // TODO: What to do here
-        System.out.println("TKERR: ChangeStreamRunner ERROR: " + e.getLocalizedMessage() );
         Thread.currentThread().interrupt();
       }
-    } while(!Thread.currentThread().isInterrupted());
+    } while (!Thread.currentThread().isInterrupted());
   }
 
   @Override

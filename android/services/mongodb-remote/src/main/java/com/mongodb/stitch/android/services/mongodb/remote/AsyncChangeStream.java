@@ -58,7 +58,8 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    *
    * @param listener the ChangeEventListener
    */
-  public void addChangeEventListener(BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
+  public void addChangeEventListener(
+      final BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
     stream.addChangeEventListener(listener);
   }
 
@@ -67,7 +68,8 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    *
    * @param listener the ChangeEventListener
    */
-  public void removeChangeEventListener(BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
+  public void removeChangeEventListener(
+      final BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
     stream.removeChangeEventListener(listener);
   }
 
@@ -80,12 +82,12 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
   }
 
   /**
-   * Optionally adds a listener that is notified when an attempt to retrieve the next event
+   * Optionally adds a listener that is notified when an attempt to retrieve the next event.
    * fails.
    *
    * @param exceptionListener The exception listener.
    */
-  public void setExceptionListener(ExceptionListener exceptionListener) {
+  public void setExceptionListener(final ExceptionListener exceptionListener) {
     stream.setExceptionListener(exceptionListener);
   }
 
@@ -98,7 +100,7 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
   }
 
   /**
-   * Indicates whether or not any ChangeStreamListeners are currently running
+   * Indicates whether or not any ChangeStreamListeners are currently running.
    * @return True if the ChangeStreamListeners are running
    */
   public boolean listenersRunning() {

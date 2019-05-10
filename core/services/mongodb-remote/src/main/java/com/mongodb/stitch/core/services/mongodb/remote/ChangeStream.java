@@ -40,6 +40,11 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
   private final ConcurrentHashMap<BaseChangeEventListener, Boolean> listeners;
   Thread runnerThread;
 
+  /**
+   * Constucts a ChhangeStream from the underlying Stream.
+   *
+   * @param stream The underlying stream.
+   */
   public ChangeStream(final Stream<EventT> stream) {
     if (stream == null) {
       throw new IllegalArgumentException("null stream passed to change stream");
@@ -86,7 +91,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    *
    * @param listener the ChangeEventListener
    */
-  public void addChangeEventListener(BaseChangeEventListener listener) {
+  public void addChangeEventListener(final BaseChangeEventListener listener) {
     listeners.putIfAbsent(listener, true);
     if (!listenersRunning()) {
       runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
@@ -99,7 +104,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    *
    * @param listener the ChangeEventListener
    */
-  public void removeChangeEventListener(BaseChangeEventListener listener) {
+  public void removeChangeEventListener(final BaseChangeEventListener listener) {
     listeners.remove(listener);
   }
 
@@ -112,7 +117,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
   }
 
   /**
-   * Indicates whether or not any ChangeStreamListeners are currently running
+   * Indicates whether or not any ChangeStreamListeners are currently running.
    * @return True if the ChangeStreamListeners are running
    */
   public boolean listenersRunning() {
@@ -141,11 +146,11 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
   }
 
   protected void startListeners() {
-      if (runnerThread != null) {
-        return;
-      }
-      runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
-      runnerThread.start();
+    if (runnerThread != null) {
+      return;
+    }
+    runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
+    runnerThread.start();
   }
 
   protected Stream<EventT> getInternalStream() {

@@ -19,7 +19,6 @@ package com.mongodb.stitch.android.services.mongodb.remote;
 import com.google.android.gms.tasks.Task;
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
-import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult;
@@ -500,7 +499,8 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids unique object identifiers of the IDs to watch.
    * @return the stream of change events.
    */
-  Task<AsyncChangeStream<DocumentT, CompactChangeEvent<DocumentT>>> watchCompact(final ObjectId... ids);
+  Task<AsyncChangeStream<DocumentT, CompactChangeEvent<DocumentT>>> watchCompact(
+      final ObjectId... ids);
 
   /**
    * Watches specified IDs in a collection. This convenience overload supports the use case of
@@ -511,7 +511,8 @@ public interface RemoteMongoCollection<DocumentT> {
    * @param ids the ids to watch.
    * @return the stream of change events.
    */
-  Task<AsyncChangeStream<DocumentT, CompactChangeEvent<DocumentT>>> watchCompact(final BsonValue... ids);
+  Task<AsyncChangeStream<DocumentT, CompactChangeEvent<DocumentT>>> watchCompact(
+      final BsonValue... ids);
 
   /**
    * A set of synchronization related operations on this collection.

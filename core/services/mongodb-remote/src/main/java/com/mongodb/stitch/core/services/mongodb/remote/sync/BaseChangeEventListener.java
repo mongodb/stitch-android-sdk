@@ -24,7 +24,8 @@ import org.bson.BsonValue;
  * @param <DocumentT> the type of class represented by the document in the change event.
  * @param <ChangeEventT> the type of class represented by the change event.
  */
-public interface BaseChangeEventListener<DocumentT, ChangeEventT extends BaseChangeEvent<DocumentT>> {
+public interface BaseChangeEventListener<DocumentT, ChangeEventT
+    extends BaseChangeEvent<DocumentT>> {
 
   /**
    * Called when a change event happens for the given document id.
