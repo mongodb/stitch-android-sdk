@@ -41,9 +41,8 @@ import org.junit.After
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.Semaphore
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
@@ -1080,19 +1079,14 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         val stream = coll.watch(objectId1, objectId2)
 
-        var changeEventListenerSemaphore = Semaphore(0)
-        val waitFor = AtomicInteger(4)
+        val latch = CountDownLatch(4)
         stream.addChangeEventListener { _, event ->
             assertNotNull(event.fullDocument)
-            if (waitFor.decrementAndGet() == 0) {
-                changeEventListenerSemaphore.release()
-            }
+            latch.countDown()
         }
         stream.addChangeEventListener { documentId, event ->
             assertNotNull(event.fullDocument)
-            if (waitFor.decrementAndGet() == 0) {
-                changeEventListenerSemaphore.release()
-            }
+            latch.countDown()
         }
 
         try {
@@ -1101,7 +1095,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         } finally {
             stream.close()
         }
-        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        assert(latch.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1125,19 +1119,14 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         val stream = coll.watchCompact(objectId1, objectId2)
 
-        var changeEventListenerSemaphore = Semaphore(0)
-        val waitFor = AtomicInteger(4)
+        val latch = CountDownLatch(4)
         stream.addChangeEventListener { _, event ->
             assertNull(event.fullDocument)
-            if (waitFor.decrementAndGet() == 0) {
-                changeEventListenerSemaphore.release()
-            }
+            latch.countDown()
         }
         stream.addChangeEventListener { _, event ->
             assertNull(event.fullDocument)
-            if (waitFor.decrementAndGet() == 0) {
-                changeEventListenerSemaphore.release()
-            }
+            latch.countDown()
         }
 
         try {
@@ -1146,7 +1135,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         } finally {
             stream.close()
         }
-        assertTrue(changeEventListenerSemaphore.tryAcquire(10, TimeUnit.SECONDS))
+        assert(latch.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1170,22 +1159,16 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         val stream = coll.watch(objectId1, objectId2)
 
-        var changeEventListenerSemaphore1 = Semaphore(0)
-        val waitFor1 = AtomicInteger(4)
+        val latch1 = CountDownLatch(4)
         val listener1 = ChangeEventListener<Document> { _, event ->
             assertNotNull(event.fullDocument)
-            if (waitFor1.decrementAndGet() == 0) {
-                changeEventListenerSemaphore1.release()
-            }
+            latch1.countDown()
         }
 
-        var changeEventListenerSemaphore2 = Semaphore(0)
-        val waitFor2 = AtomicInteger(2)
+        val latch2 = CountDownLatch(2)
         val listener2 = ChangeEventListener<Document> { _, event ->
             assertNotNull(event.fullDocument)
-            if (waitFor2.decrementAndGet() == 0) {
-                changeEventListenerSemaphore2.release()
-            }
+            latch2.countDown()
         }
 
         stream.addChangeEventListener(listener1)
@@ -1195,9 +1178,8 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         try {
             coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field")))
-            assertTrue(changeEventListenerSemaphore2.tryAcquire(10, TimeUnit.SECONDS))
-            assertEquals(waitFor1.get(), 2)
-            assertEquals(waitFor2.get(), 0)
+            assert(latch2.await(10, TimeUnit.SECONDS))
+            assertEquals(latch1.count.toInt(), 2)
             stream.removeChangeEventListener(listener2)
 
             coll.updateMany(BsonDocument(),
@@ -1205,9 +1187,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         } finally {
             stream.close()
         }
-        assertTrue(changeEventListenerSemaphore1.tryAcquire(10, TimeUnit.SECONDS))
-        assertEquals(waitFor1.get(), 0)
-        assertEquals(waitFor2.get(), 0)
+        assert(latch1.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1231,22 +1211,16 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         val stream = coll.watchCompact(objectId1, objectId2)
 
-        var changeEventListenerSemaphore1 = Semaphore(0)
-        val waitFor1 = AtomicInteger(4)
+        val latch1 = CountDownLatch(4)
         val listener1 = CompactChangeEventListener<Document> { _, event ->
             assertNull(event.fullDocument)
-            if (waitFor1.decrementAndGet() == 0) {
-                changeEventListenerSemaphore1.release()
-            }
+            latch1.countDown()
         }
 
-        var changeEventListenerSemaphore2 = Semaphore(0)
-        val waitFor2 = AtomicInteger(2)
+        val latch2 = CountDownLatch(2)
         val listener2 = CompactChangeEventListener<Document> { _, event ->
             assertNull(event.fullDocument)
-            if (waitFor2.decrementAndGet() == 0) {
-                changeEventListenerSemaphore2.release()
-            }
+            latch2.countDown()
         }
 
         stream.addChangeEventListener(listener1)
@@ -1256,9 +1230,8 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         try {
             coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field")))
-            assertTrue(changeEventListenerSemaphore2.tryAcquire(10, TimeUnit.SECONDS))
-            assertEquals(waitFor1.get(), 2)
-            assertEquals(waitFor2.get(), 0)
+            assert(latch2.await(10, TimeUnit.SECONDS))
+            assertEquals(latch1.count.toInt(), 2)
             stream.removeChangeEventListener(listener2)
 
             coll.updateMany(BsonDocument(),
@@ -1266,9 +1239,8 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         } finally {
             stream.close()
         }
-        assertTrue(changeEventListenerSemaphore1.tryAcquire(10, TimeUnit.SECONDS))
-        assertEquals(waitFor1.get(), 0)
-        assertEquals(waitFor2.get(), 0)
+
+        assert(latch1.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1286,31 +1258,25 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         val stream = coll.watch(objectId1)
 
-        var changeEventListenerSemaphore1 = Semaphore(0)
-        var changeEventListenerSemaphore2 = Semaphore(0)
-        val waitFor1 = AtomicInteger(2)
+        val latch1 = CountDownLatch(1)
+        val latch2 = CountDownLatch(2)
         val listener1 = ChangeEventListener<Document> { _, event ->
             assertNotNull(event.fullDocument)
-            if (waitFor1.decrementAndGet() == 1) {
-                changeEventListenerSemaphore1.release()
-            }
-            if (waitFor1.decrementAndGet() == 0) {
-                changeEventListenerSemaphore2.release()
-            }
+            latch1.countDown()
+            latch2.countDown()
         }
         stream.addChangeEventListener(listener1)
 
         try {
             coll.updateMany(BsonDocument(), Document().append("\$set",
                 Document().append("new", "field")))
-            assertTrue(changeEventListenerSemaphore1.tryAcquire(10, TimeUnit.SECONDS))
+            assert(latch1.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
         coll.updateMany(BsonDocument(), Document().append("\$set",
             Document().append("new", "field2")))
-        assertFalse(changeEventListenerSemaphore1.tryAcquire(4, TimeUnit.SECONDS))
-        assertEquals(waitFor1.get(), 0)
+        assertFalse(latch2.await(10, TimeUnit.SECONDS))
     }
 
     @Test
