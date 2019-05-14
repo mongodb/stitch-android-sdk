@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.internal.net;
 
+import com.mongodb.stitch.core.StitchServiceException;
+
 import java.io.IOException;
 
 public interface Transport {
@@ -23,9 +25,32 @@ public interface Transport {
   // This number is equal to 17,825,792 or ~ 17Mb
   int MAX_REQUEST_SIZE = 17 * (1 << 20);
 
+  /**
+   * Performs an HTTP request using the given request object. If the request results in a Stitch
+   * service error, the caller is responsible for calling
+   * {@link com.mongodb.stitch.core.internal.common.StitchError#handleRequestError(Response)} to
+   * decode the exception, as this method will not throw the service exception.
+   *
+   * @param request The HTTP request to perform.
+   * @return The response to the request.
+   * @throws Exception if the request fails in transport for any reason. This will not be a
+   *         {@link StitchServiceException}, since those must be decoded by the caller.
+   */
   Response roundTrip(Request request) throws Exception;
 
-  EventStream stream(Request request) throws IOException;
+  /**
+   * Opens a Server-Sent Event (SSE) stream.
+   * See https://www.w3.org/TR/2009/WD-eventsource-20090421/ for specification details.
+   * If the underlying request to the Stitch server results in a service exception, this function
+   * will detect it and throw it, unlike the {@link Transport#roundTrip(Request)} method.
+   *
+   * @param request The request to open the stream.
+   * @return A raw {@link EventStream} representing the opened change stream.
+   * @throws IOException if the request fails to due to an I/O error
+   * @throws StitchServiceException if the request to the Stitch server was completed, but the
+   *         stream could not be opened due to a Stitch error (such as "InvalidSession").
+   */
+  EventStream stream(Request request) throws IOException, StitchServiceException;
 
   void close();
 }

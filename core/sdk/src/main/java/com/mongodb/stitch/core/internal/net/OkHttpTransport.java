@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.internal.net;
 
 import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
+import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.StitchError;
 
 import java.io.IOException;
@@ -118,7 +119,7 @@ public class OkHttpTransport implements Transport {
   }
 
   @Override
-  public EventStream stream(final Request request) throws IOException {
+  public EventStream stream(final Request request) throws IOException, StitchServiceException {
     request.getHeaders().put(
         com.mongodb.stitch.core.internal.net.Headers.CONTENT_TYPE,
         ContentTypes.TEXT_EVENT_STREAM);
