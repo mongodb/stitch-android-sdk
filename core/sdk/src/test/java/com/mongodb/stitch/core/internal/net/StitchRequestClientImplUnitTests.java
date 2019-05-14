@@ -300,4 +300,56 @@ public class StitchRequestClientImplUnitTests {
       assertEquals(ignored.getErrorCode(), StitchRequestErrorCode.TRANSPORT_ERROR);
     }
   }
+
+  @Test
+  public void testDoStreamRequestDoesntWrapServiceExceptions() throws Exception {
+    final String domain = "http://domain.com";
+    final Transport transport = Mockito.mock(Transport.class);
+    final StitchRequestClient stitchRequestClient =
+        new StitchRequestClientImpl(domain, transport, 1500L);
+
+    final StitchRequest.Builder builder = new StitchRequest.Builder()
+        .withPath("/path")
+        .withMethod(Method.GET);
+
+    // make sure StitchServiceExceptions are not wrapped in a TRANSPORT_ERROR.
+    doThrow(new StitchServiceException(StitchServiceErrorCode.INVALID_SESSION))
+        .when(transport)
+        .stream(any());
+
+    try {
+      stitchRequestClient.doStreamRequest(builder.build());
+      fail();
+    } catch (final Exception e) {
+      assertTrue(e instanceof StitchServiceException);
+    }
+  }
+
+  @Test
+  public void testDoStreamRequestWrapsNonServiceExceptionsAsTransportError() throws Exception {
+    final String domain = "http://domain.com";
+    final Transport transport = Mockito.mock(Transport.class);
+    final StitchRequestClient stitchRequestClient =
+        new StitchRequestClientImpl(domain, transport, 1500L);
+
+    final StitchRequest.Builder builder = new StitchRequest.Builder()
+        .withPath("/path")
+        .withMethod(Method.GET);
+
+    // make sure exceptions that aren't StitchServiceException are wrapped in a TRANSPORT_ERROR.
+    doThrow(new IllegalStateException("arbitrary error"))
+        .when(transport)
+        .stream(any());
+
+    try {
+      stitchRequestClient.doStreamRequest(builder.build());
+      fail();
+    } catch (final Exception e) {
+      assertTrue(e instanceof StitchRequestException);
+      final StitchRequestException sre = (StitchRequestException) e;
+
+      assertEquals(sre.getErrorCode(), StitchRequestErrorCode.TRANSPORT_ERROR);
+      assertTrue(sre.getMessage().contains("IllegalStateException: arbitrary error"));
+    }
+  }
 }

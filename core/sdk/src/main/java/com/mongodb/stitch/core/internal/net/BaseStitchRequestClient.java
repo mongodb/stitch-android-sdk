@@ -18,6 +18,7 @@ package com.mongodb.stitch.core.internal.net;
 
 import com.mongodb.stitch.core.StitchRequestErrorCode;
 import com.mongodb.stitch.core.StitchRequestException;
+import com.mongodb.stitch.core.StitchServiceException;
 import com.mongodb.stitch.core.internal.common.StitchError;
 
 public abstract class BaseStitchRequestClient implements StitchRequestClient {
@@ -57,7 +58,7 @@ public abstract class BaseStitchRequestClient implements StitchRequestClient {
     final Response response;
     try {
       response = transport.roundTrip(buildRequest(stitchReq, url));
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
     }
 
@@ -69,7 +70,9 @@ public abstract class BaseStitchRequestClient implements StitchRequestClient {
   EventStream doStreamRequestUrl(final StitchRequest stitchReq, final String url) {
     try {
       return transport.stream(buildRequest(stitchReq, url));
-    } catch (Exception e) {
+    } catch (final StitchServiceException e) {
+      throw e;
+    } catch (final Exception e) {
       throw new StitchRequestException(e, StitchRequestErrorCode.TRANSPORT_ERROR);
     }
   }
