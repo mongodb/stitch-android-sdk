@@ -16,6 +16,7 @@
 
 package com.mongodb.stitch.core.services.mongodb.remote;
 
+import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.BaseChangeEventListener;
 import java.io.Closeable;
 import java.io.IOException;
@@ -59,7 +60,8 @@ class ChangeStreamRunner implements Runnable, Closeable {
           Thread.currentThread().interrupt();
         }
       } catch (Exception e) {
-        // TODO: What to do here
+        Loggers.getLogger("ChangeStreamListener").error(
+            "Change Stream Listener will terminate due to exception: " + e.getLocalizedMessage());
         Thread.currentThread().interrupt();
       }
     } while (!Thread.currentThread().isInterrupted());
@@ -72,9 +74,6 @@ class ChangeStreamRunner implements Runnable, Closeable {
       return;
     }
 
-    // not sure actually if we should do this
     stream.removeAllChangeEventListeners();
-
-    stream.close();
   }
 }

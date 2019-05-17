@@ -145,14 +145,6 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
     return listeners.keys();
   }
 
-  protected void startListeners() {
-    if (runnerThread != null) {
-      return;
-    }
-    runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
-    runnerThread.start();
-  }
-
   protected Stream<EventT> getInternalStream() {
     return this.internalStream;
   }
