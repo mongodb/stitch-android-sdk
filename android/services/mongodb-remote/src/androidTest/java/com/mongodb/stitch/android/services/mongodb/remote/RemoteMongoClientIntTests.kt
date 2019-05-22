@@ -41,6 +41,7 @@ import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.lang.IllegalStateException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -1119,10 +1120,10 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         try {
             Tasks.await(coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field"))))
+            assert(latch.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-        assert(latch.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1160,10 +1161,10 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         try {
             Tasks.await(coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field"))))
+            assert(latch.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-        assert(latch.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1214,10 +1215,10 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             Tasks.await(coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field2"))))
+            assert(latch1.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-        assert(latch1.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1268,10 +1269,10 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
 
             Tasks.await(coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field2"))))
+            assert(latch1.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-        assert(latch1.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1308,7 +1309,7 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
         }
         Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
             Document().append("new", "field2"))))
-        assertFalse(latch2.await(10, TimeUnit.SECONDS))
+        assertFalse(latch2.await(5, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1334,8 +1335,11 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
 
         try {
             Tasks.await(stream.nextEvent())
-        } catch (_: Exception) {
+        } catch (ex: ExecutionException) {
+            assertTrue(ex.cause is IllegalStateException)
             return
+        } finally {
+            stream.close()
         }
         fail()
     }

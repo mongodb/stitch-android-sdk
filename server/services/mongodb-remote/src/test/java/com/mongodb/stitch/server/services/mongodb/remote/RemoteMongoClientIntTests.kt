@@ -41,6 +41,7 @@ import org.junit.After
 import org.junit.Assume
 import org.junit.Before
 import org.junit.Test
+import java.lang.IllegalStateException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -1092,10 +1093,10 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         try {
             coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field")))
+            assert(latch.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-        assert(latch.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1132,10 +1133,10 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         try {
             coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field")))
+            assert(latch.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-        assert(latch.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1184,10 +1185,10 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
             coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field2")))
+            assert(latch1.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-        assert(latch1.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1236,11 +1237,10 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
             coll.updateMany(BsonDocument(),
                 Document().append("\$set", Document().append("new", "field2")))
+            assert(latch1.await(10, TimeUnit.SECONDS))
         } finally {
             stream.close()
         }
-
-        assert(latch1.await(10, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1276,7 +1276,7 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
         }
         coll.updateMany(BsonDocument(), Document().append("\$set",
             Document().append("new", "field2")))
-        assertFalse(latch2.await(10, TimeUnit.SECONDS))
+        assertFalse(latch2.await(5, TimeUnit.SECONDS))
     }
 
     @Test
@@ -1301,8 +1301,12 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
         try {
             stream.nextEvent()
-        } catch (_: Exception) {
+        } catch (_: IllegalStateException) {
             return
+        } catch (_: Exception) {
+            fail()
+        } finally {
+            stream.close()
         }
         fail()
     }

@@ -44,7 +44,7 @@ class ChangeStreamRunner implements Runnable, Closeable {
 
     do {
       try {
-        final BaseChangeEvent nextEvent = stream.nextEvent();
+        final BaseChangeEvent nextEvent = stream.nextEventInternal();
         if (nextEvent == null) {
           continue;
         }
@@ -62,6 +62,7 @@ class ChangeStreamRunner implements Runnable, Closeable {
       } catch (Exception e) {
         Loggers.getLogger("ChangeStreamListener").error(
             "Change Stream Listener will terminate due to exception: " + e.getLocalizedMessage());
+        // not calling dispatchError() because nextEventInternal() will do so
         Thread.currentThread().interrupt();
       }
     } while (!Thread.currentThread().isInterrupted());

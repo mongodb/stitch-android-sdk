@@ -54,9 +54,11 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
   /**
    * Adds a ChangeEventListener to the ChangeStream that will run on every event on the stream.
    * Multiple ChangeEventListeners can be added to any given stream and they will be removed
-   * when the stream is closed or when the listener is removed.
+   * when the stream is closed or when the listener is removed. Calls to nextEvent() will fail
+   * while there exists any ChangeEventListener's on this stream. Additionally, any events that
+   * occur after the ChangeEventListener is opened will not be caught by the listener.
    *
-   * @param listener the ChangeEventListener
+   * @param listener the {@link BaseChangeEventListener}
    */
   public void addChangeEventListener(
       final BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
@@ -66,7 +68,7 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
   /**
    * Remove a ChangeEventListener from the ChangeStream.
    *
-   * @param listener the ChangeEventListener
+   * @param listener the {@link BaseChangeEventListener}
    */
   public void removeChangeEventListener(
       final BaseChangeEventListener<DocumentT, ChangeEventT> listener) {
@@ -85,7 +87,7 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    * Optionally adds a listener that is notified when an attempt to retrieve the next event.
    * fails.
    *
-   * @param exceptionListener The exception listener.
+   * @param exceptionListener The {@link ExceptionListener}.
    */
   public void setExceptionListener(final ExceptionListener exceptionListener) {
     stream.setExceptionListener(exceptionListener);
@@ -103,21 +105,18 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
    * Indicates whether or not any ChangeStreamListeners are currently running.
    * @return True if the ChangeStreamListeners are running
    */
-  public boolean listenersRunning() {
-    return stream.listenersRunning();
+  public boolean areListenersAttached() {
+    return stream.areListenersAttached();
   }
 
   /**
    * Returns a {@link Task} whose resolution gives the next event from the underlying stream.
    * @return task providing the next event
    * @throws IOException if the underlying stream throws an {@link IOException}
+   * @throws IllegalStateException if any ChangeEventListeners are running
    */
   @SuppressWarnings("unchecked")
-  public Task<ChangeEventT> nextEvent() throws IOException {
-    if (stream.listenersRunning()) {
-      throw new IllegalStateException("Cannot use nextEvent() while listeners are running");
-    }
-
+  public Task<ChangeEventT> nextEvent() throws IOException, IllegalStateException {
     return dispatcher.dispatchTask(new Callable<ChangeEventT>() {
       @Override
       public ChangeEventT call() throws Exception {

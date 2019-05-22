@@ -41,7 +41,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
   Thread runnerThread;
 
   /**
-   * Constucts a ChhangeStream from the underlying Stream.
+   * Constructs a ChangeStream from the underlying Stream.
    *
    * @param stream The underlying stream.
    */
@@ -68,8 +68,23 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    *
    * @return The next event.
    * @throws IOException If the underlying stream throws an {@link IOException}
+   * @throws IllegalStateException if called while a ChangeEventListener is attached
    */
-  public EventT nextEvent() throws IOException {
+  public EventT nextEvent() throws IOException, IllegalStateException {
+    if (areListenersAttached()) {
+      throw new IllegalStateException("Cannot use nextEvent() while listeners are attached");
+    }
+
+    return nextEventInternal();
+  }
+
+  /**
+   * Returns the next event available from the stream.
+   *
+   * @return The next event.
+   * @throws IOException If the underlying stream throws an {@link IOException}
+   */
+  EventT nextEventInternal() throws IOException {
     final StitchEvent<EventT> nextEvent = getInternalStream().nextEvent();
 
     if (nextEvent == null) {
@@ -93,7 +108,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    */
   public void addChangeEventListener(final BaseChangeEventListener listener) {
     listeners.putIfAbsent(listener, true);
-    if (!listenersRunning()) {
+    if (!areListenersAttached()) {
       runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
       runnerThread.start();
     }
@@ -120,11 +135,11 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    * Indicates whether or not any ChangeStreamListeners are currently running.
    * @return True if the ChangeStreamListeners are running
    */
-  public boolean listenersRunning() {
+  public boolean areListenersAttached() {
     if (runnerThread == null) {
       return false;
     }
-    return runnerThread.isAlive();
+    return runnerThread.isAlive() && !listeners.isEmpty();
   }
 
   /**
@@ -134,6 +149,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
   @Override
   public void close() throws IOException {
     internalStream.close();
+    runnerThread.interrupt();
     runnerThread = null;
   }
 
