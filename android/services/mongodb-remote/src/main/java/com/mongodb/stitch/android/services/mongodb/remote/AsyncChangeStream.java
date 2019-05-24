@@ -102,14 +102,6 @@ public class AsyncChangeStream<DocumentT, ChangeEventT extends BaseChangeEvent<D
   }
 
   /**
-   * Indicates whether or not any ChangeStreamListeners are currently running.
-   * @return True if the ChangeStreamListeners are running
-   */
-  public boolean areListenersAttached() {
-    return stream.areListenersAttached();
-  }
-
-  /**
    * Returns a {@link Task} whose resolution gives the next event from the underlying stream.
    * @return task providing the next event
    * @throws IOException if the underlying stream throws an {@link IOException}

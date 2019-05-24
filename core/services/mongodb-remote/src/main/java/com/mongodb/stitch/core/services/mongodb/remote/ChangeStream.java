@@ -71,7 +71,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    * @throws IllegalStateException if called while a ChangeEventListener is attached
    */
   public EventT nextEvent() throws IOException, IllegalStateException {
-    if (areListenersAttached()) {
+    if (isListenerThreadRunning()) {
       throw new IllegalStateException("Cannot use nextEvent() while listeners are attached");
     }
 
@@ -108,7 +108,7 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    */
   public void addChangeEventListener(final BaseChangeEventListener listener) {
     listeners.putIfAbsent(listener, true);
-    if (!areListenersAttached()) {
+    if (!isListenerThreadRunning()) {
       runnerThread = new Thread(new ChangeStreamRunner(new WeakReference<>(this)));
       runnerThread.start();
     }
@@ -121,6 +121,10 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    */
   public void removeChangeEventListener(final BaseChangeEventListener listener) {
     listeners.remove(listener);
+    if (listeners.isEmpty()) {
+      runnerThread.interrupt();
+      runnerThread = null;
+    }
   }
 
   /**
@@ -135,11 +139,11 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
    * Indicates whether or not any ChangeStreamListeners are currently running.
    * @return True if the ChangeStreamListeners are running
    */
-  public boolean areListenersAttached() {
+  public boolean isListenerThreadRunning() {
     if (runnerThread == null) {
       return false;
     }
-    return runnerThread.isAlive() && !listeners.isEmpty();
+    return runnerThread.isAlive();
   }
 
   /**
@@ -149,8 +153,10 @@ public class ChangeStream<EventT extends BaseChangeEvent> implements Closeable {
   @Override
   public void close() throws IOException {
     internalStream.close();
-    runnerThread.interrupt();
-    runnerThread = null;
+    if (runnerThread != null) {
+      runnerThread.interrupt();
+      runnerThread = null;
+    }
   }
 
   protected void removeAllChangeEventListeners() {
