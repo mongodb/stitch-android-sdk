@@ -19,7 +19,7 @@ package com.mongodb.stitch.core.services.mongodb.remote;
 import org.bson.BsonValue;
 
 /**
- * ExceptionListener receives non-network related errors that occur.
+ * ExceptionListener receives errors that occur on a stream.
  */
 public interface ExceptionListener {
 

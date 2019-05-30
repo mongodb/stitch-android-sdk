@@ -104,12 +104,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the number of documents in the collection
    */
   public Task<Long> count() {
-    return dispatcher.dispatchTask(new Callable<Long>() {
-      @Override
-      public Long call() {
-        return proxy.count();
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.count()
+    );
   }
 
   /**
@@ -119,12 +116,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the number of documents in the collection
    */
   public Task<Long> count(final Bson filter) {
-    return dispatcher.dispatchTask(new Callable<Long>() {
-      @Override
-      public Long call() {
-        return proxy.count(filter);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.count(filter)
+    );
   }
 
   /**
@@ -135,12 +129,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the number of documents in the collection
    */
   public Task<Long> count(final Bson filter, final RemoteCountOptions options) {
-    return dispatcher.dispatchTask(new Callable<Long>() {
-      @Override
-      public Long call() {
-        return proxy.count(filter, options);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.count(filter, options)
+    );
   }
 
 
@@ -150,12 +141,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return  a task containing the result of the find one operation
    */
   public Task<DocumentT> findOne() {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOne();
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOne()
+    );
   }
 
   /**
@@ -166,12 +154,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the find one operation
    */
   public <ResultT> Task<ResultT> findOne(final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOne(resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOne(resultClass)
+    );
   }
 
   /**
@@ -181,12 +166,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return  a task containing the result of the find one operation
    */
   public Task<DocumentT> findOne(final Bson filter) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOne(filter);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+      proxy.findOne(filter)
+    );
   }
 
   /**
@@ -198,12 +180,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return  a task containing the result of the find one operation
    */
   public <ResultT> Task<ResultT> findOne(final Bson filter, final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOne(filter, resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOne(filter, resultClass)
+    );
   }
 
   /**
@@ -235,12 +214,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
           final Bson filter,
           final RemoteFindOptions options,
           final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOne(filter, options, resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOne(filter, options, resultClass)
+    );
   }
 
 
@@ -322,12 +298,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the insert one operation
    */
   public Task<RemoteInsertOneResult> insertOne(final DocumentT document) {
-    return dispatcher.dispatchTask(new Callable<RemoteInsertOneResult>() {
-      @Override
-      public RemoteInsertOneResult call() {
-        return proxy.insertOne(document);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.insertOne(document)
+    );
   }
 
   /**
@@ -337,12 +310,8 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the insert many operation
    */
   public Task<RemoteInsertManyResult> insertMany(final List<? extends DocumentT> documents) {
-    return dispatcher.dispatchTask(new Callable<RemoteInsertManyResult>() {
-      @Override
-      public RemoteInsertManyResult call() {
-        return proxy.insertMany(documents);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.insertMany(documents));
   }
 
   /**
@@ -353,12 +322,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the remove one operation
    */
   public Task<RemoteDeleteResult> deleteOne(final Bson filter) {
-    return dispatcher.dispatchTask(new Callable<RemoteDeleteResult>() {
-      @Override
-      public RemoteDeleteResult call() {
-        return proxy.deleteOne(filter);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.deleteOne(filter)
+    );
   }
 
   /**
@@ -369,12 +335,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the remove many operation
    */
   public Task<RemoteDeleteResult> deleteMany(final Bson filter) {
-    return dispatcher.dispatchTask(new Callable<RemoteDeleteResult>() {
-      @Override
-      public RemoteDeleteResult call() {
-        return proxy.deleteMany(filter);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.deleteMany(filter)
+    );
   }
 
   /**
@@ -386,12 +349,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the update one operation
    */
   public Task<RemoteUpdateResult> updateOne(final Bson filter, final Bson update) {
-    return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
-      @Override
-      public RemoteUpdateResult call() {
-        return proxy.updateOne(filter, update);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.updateOne(filter, update)
+    );
   }
 
   /**
@@ -408,12 +368,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
       final Bson update,
       final RemoteUpdateOptions updateOptions
   ) {
-    return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
-      @Override
-      public RemoteUpdateResult call() {
-        return proxy.updateOne(filter, update, updateOptions);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.updateOne(filter, update, updateOptions)
+    );
   }
 
   /**
@@ -425,12 +382,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the result of the update many operation
    */
   public Task<RemoteUpdateResult> updateMany(final Bson filter, final Bson update) {
-    return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
-      @Override
-      public RemoteUpdateResult call() {
-        return proxy.updateMany(filter, update);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.updateMany(filter, update)
+    );
   }
 
   /**
@@ -447,12 +401,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
           final Bson update,
           final RemoteUpdateOptions updateOptions
   ) {
-    return dispatcher.dispatchTask(new Callable<RemoteUpdateResult>() {
-      @Override
-      public RemoteUpdateResult call() {
-        return proxy.updateMany(filter, update, updateOptions);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.updateMany(filter, update, updateOptions)
+    );
   }
 
   /**
@@ -463,12 +414,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the resulting document
    */
   public Task<DocumentT> findOneAndUpdate(final Bson filter, final Bson update) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOneAndUpdate(filter, update);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndUpdate(filter, update)
+    );
   }
 
   /**
@@ -483,12 +431,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   public <ResultT> Task<ResultT> findOneAndUpdate(final Bson filter,
                                                   final Bson update,
                                                   final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOneAndUpdate(filter, update, resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndUpdate(filter, update, resultClass)
+    );
   }
 
   /**
@@ -502,12 +447,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   public Task<DocumentT> findOneAndUpdate(final Bson filter,
                                           final Bson update,
                                           final RemoteFindOneAndModifyOptions options) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOneAndUpdate(filter, update, options);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndUpdate(filter, update, options)
+    );
   }
 
   /**
@@ -525,12 +467,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
           final Bson update,
           final RemoteFindOneAndModifyOptions options,
           final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOneAndUpdate(filter, update, options, resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndUpdate(filter, update, options, resultClass)
+    );
   }
 
   /**
@@ -541,12 +480,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the resulting document
    */
   public Task<DocumentT> findOneAndReplace(final Bson filter, final Bson replacement) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOneAndReplace(filter, replacement);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndReplace(filter, replacement)
+    );
   }
 
   /**
@@ -561,12 +497,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   public <ResultT> Task<ResultT> findOneAndReplace(final Bson filter,
                                                    final Bson replacement,
                                                    final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOneAndReplace(filter, replacement, resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndReplace(filter, replacement, resultClass)
+    );
   }
 
   /**
@@ -580,12 +513,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   public Task<DocumentT> findOneAndReplace(final Bson filter,
                                            final Bson replacement,
                                            final RemoteFindOneAndModifyOptions options) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOneAndReplace(filter, replacement, options);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndReplace(filter, replacement, options)
+    );
   }
 
   /**
@@ -603,12 +533,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
           final Bson replacement,
           final RemoteFindOneAndModifyOptions options,
           final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOneAndReplace(filter, replacement, options, resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndReplace(filter, replacement, options, resultClass)
+    );
   }
 
   /**
@@ -618,12 +545,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    * @return a task containing the resulting document
    */
   public Task<DocumentT> findOneAndDelete(final Bson filter) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOneAndDelete(filter);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndDelete(filter)
+    );
   }
 
   /**
@@ -636,12 +560,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    */
   public <ResultT> Task<ResultT> findOneAndDelete(final Bson filter,
                                                   final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOneAndDelete(filter, resultClass);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndDelete(filter, resultClass)
+    );
   }
 
   /**
@@ -653,12 +574,9 @@ public final class RemoteMongoCollectionImpl<DocumentT>
    */
   public Task<DocumentT> findOneAndDelete(final Bson filter,
                                           final RemoteFindOneAndModifyOptions options) {
-    return dispatcher.dispatchTask(new Callable<DocumentT>() {
-      @Override
-      public DocumentT call() {
-        return proxy.findOneAndDelete(filter, options);
-      }
-    });
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndDelete(filter, options)
+    );
   }
 
   /**
@@ -674,63 +592,40 @@ public final class RemoteMongoCollectionImpl<DocumentT>
           final Bson filter,
           final RemoteFindOneAndModifyOptions options,
           final Class<ResultT> resultClass) {
-    return dispatcher.dispatchTask(new Callable<ResultT>() {
-      @Override
-      public ResultT call() {
-        return proxy.findOneAndDelete(filter, options, resultClass);
-      }
-    });
-  }
-
-  @Override
-  public Task<ChangeStream<Task<ChangeEvent<DocumentT>>>> watch(final ObjectId... ids) {
-    return dispatcher.dispatchTask(
-        new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>>>() {
-        @Override
-        public ChangeStream<Task<ChangeEvent<DocumentT>>> call() throws Exception {
-          return new AsyncChangeStream<>(proxy.watch(ids), dispatcher);
-        }
-      }
+    return dispatcher.dispatchTask(() ->
+        proxy.findOneAndDelete(filter, options, resultClass)
     );
   }
 
   @Override
-  public Task<ChangeStream<Task<ChangeEvent<DocumentT>>>> watch(final BsonValue... ids) {
-    return dispatcher.dispatchTask(
-        new Callable<ChangeStream<Task<ChangeEvent<DocumentT>>>>() {
-          @Override
-          public ChangeStream<Task<ChangeEvent<DocumentT>>> call() throws Exception {
-            return new AsyncChangeStream<>(proxy.watch(ids), dispatcher);
-          }
-        }
+  public Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watch(final ObjectId... ids) {
+    return dispatcher.dispatchTask(() ->
+      new AsyncChangeStream<>(new ChangeStream<>(proxy.watch(ids)), dispatcher)
     );
   }
 
   @Override
-  public Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>>> watchCompact(
+  public Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watch(final BsonValue... ids) {
+    return dispatcher.dispatchTask(() ->
+        new AsyncChangeStream<>(new ChangeStream<>(proxy.watch(ids)), dispatcher)
+    );
+  }
+
+  @Override
+  public Task<AsyncChangeStream<DocumentT, CompactChangeEvent<DocumentT>>> watchCompact(
       final ObjectId... ids
   ) {
-    return dispatcher.dispatchTask(
-        new Callable<ChangeStream<Task<CompactChangeEvent<DocumentT>>>>() {
-          @Override
-          public ChangeStream<Task<CompactChangeEvent<DocumentT>>> call() throws Exception {
-            return new AsyncChangeStream<>(proxy.watchCompact(ids), dispatcher);
-          }
-        }
+    return dispatcher.dispatchTask(() ->
+        new AsyncChangeStream<>(new ChangeStream<>(proxy.watchCompact(ids)), dispatcher)
     );
   }
 
   @Override
-  public Task<ChangeStream<Task<CompactChangeEvent<DocumentT>>>> watchCompact(
+  public Task<AsyncChangeStream<DocumentT, CompactChangeEvent<DocumentT>>> watchCompact(
       final BsonValue... ids
   ) {
-    return dispatcher.dispatchTask(
-        new Callable<ChangeStream<Task<CompactChangeEvent<DocumentT>>>>() {
-          @Override
-          public ChangeStream<Task<CompactChangeEvent<DocumentT>>> call() throws Exception {
-            return new AsyncChangeStream<>(proxy.watchCompact(ids), dispatcher);
-          }
-        }
+    return dispatcher.dispatchTask(() ->
+        new AsyncChangeStream<>(new ChangeStream<>(proxy.watchCompact(ids)), dispatcher)
     );
   }
 

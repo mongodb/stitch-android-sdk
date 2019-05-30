@@ -29,7 +29,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertOneResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.internal.CoreRemoteMongoCollection;
-import com.mongodb.stitch.server.services.mongodb.remote.PassthroughChangeStream;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteAggregateIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteFindIterable;
 import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
@@ -527,24 +526,24 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   @Override
   public ChangeStream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
       throws InterruptedException, IOException {
-    return new PassthroughChangeStream<>(proxy.watch(ids));
+    return new ChangeStream<>(proxy.watch(ids));
   }
 
   @Override
   public ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
       throws InterruptedException, IOException {
-    return new PassthroughChangeStream<>(proxy.watch(ids));
+    return new ChangeStream<>(proxy.watch(ids));
   }
 
   @Override
   public ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final ObjectId... ids)
       throws InterruptedException, IOException {
-    return new PassthroughChangeStream<>(proxy.watchCompact(ids));
+    return new ChangeStream<>(proxy.watchCompact(ids));
   }
 
   @Override
   public ChangeStream<CompactChangeEvent<DocumentT>> watchCompact(final BsonValue... ids)
       throws InterruptedException, IOException {
-    return new PassthroughChangeStream<>(proxy.watchCompact(ids));
+    return new ChangeStream<>(proxy.watchCompact(ids));
   }
 }
