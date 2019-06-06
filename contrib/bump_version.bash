@@ -82,7 +82,7 @@ fi
 
 echo "Bumping $LAST_VERSION to $NEW_VERSION ($BUMP_TYPE)"
 
-read -p "Are you sure you want to push, publish, and upload docs? [yes/no]: " -r
+read -p "Are you sure you want to open a PR to bump the version of the SDK? [yes/no]: " -r
 if [[ ! $REPLY = "yes" ]]
 then
     exit 1
@@ -96,12 +96,6 @@ git checkout -b "Release-$NEW_VERSION"
 if [[ ! $NEW_VERSION_QUALIFIER = "SNAPSHOT" ]]
 then
 	git commit -m "Release $NEW_VERSION"
-    LAST_TAGGED_VERSION=`git describe --tags --abbrev=0 HEAD^`
-	BODY=$(git log --no-merges $LAST_TAGGED_VERSION..HEAD --pretty="format:%s (%h); %an")
-	BODY="Changelog since $LAST_TAGGED_VERSION:
-$BODY"
-
-    git tag -a "$NEW_VERSION" -m "$BODY"
 
     echo "creating pull request in github..."
     git push -u upstream "Release-$NEW_VERSION"
