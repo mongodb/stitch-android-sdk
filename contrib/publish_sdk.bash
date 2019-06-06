@@ -12,6 +12,9 @@ VERSION_MAJOR=$(echo $VERSION | cut -d. -f1)
 VERSION_MINOR=$(echo $VERSION | cut -d. -f2)
 VERSION_QUALIFIER=$(echo $VERSION | cut -d- -f2)
 
+git tag "$VERSION"
+git push upstream $VERSION
+
 echo "uploading to bintray..."
 ./gradlew bintrayUpload
 
