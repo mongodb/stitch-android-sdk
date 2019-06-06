@@ -10,7 +10,7 @@ buildscript {
 dependencies {
     implementation project(':core:stitch-core-sdk')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.8"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.9"
 
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     testImplementation project(':core:stitch-core-testutils')
