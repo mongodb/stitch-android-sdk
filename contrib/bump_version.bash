@@ -91,6 +91,11 @@ fi
 echo "Updating gradle.properties"
 sed -i "" "s/^VERSION=.*$/VERSION=$NEW_VERSION/" gradle.properties
 
+echo "Upading REAME"
+REGEX_SAFE_LAST_VERSION="$LAST_VERSION_MAJOR\.$LAST_VERSION_MINOR\.$LAST_VERSION_PATCH"
+PODSPEC_SED_REGEX="s/$REGEX_SAFE_LAST_VERSION/$NEW_VERSION/g"
+sed -i "" -E "$PODSPEC_SED_REGEX" README.md
+
 git add gradle.properties
 git checkout -b "Release-$NEW_VERSION"
 if [[ ! $NEW_VERSION_QUALIFIER = "SNAPSHOT" ]]
