@@ -692,25 +692,6 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   }
 
   /**
-   * Watches a collection. The provided BSON document will be used as a match expression filter on
-   * the change events coming from the stream.
-   *
-   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
-   * around how to define a match filter.
-   *
-   * Defining the match expression to filter ChangeEvents is similar to defining the match
-   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
-   *
-   * @param matchFilter the $match filter to apply to incoming change events
-   * @return the stream of change events.
-   */
-  public Stream<ChangeEvent<DocumentT>> watchWithFilter(final BsonDocument matchFilter)
-      throws InterruptedException, IOException {
-    return operations.watch(matchFilter, false, documentClass).execute(service);
-  }
-
-
-  /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
    * of non-{@link BsonValue} instances of {@link ObjectId} by wrapping them in
    * {@link BsonObjectId} instances for the user.
@@ -743,6 +724,24 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
         false,
         documentClass
     ).execute(service);
+  }
+
+  /**
+   * Watches a collection. The provided BSON document will be used as a match expression filter on
+   * the change events coming from the stream.
+   *
+   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
+   * around how to define a match filter.
+   *
+   * Defining the match expression to filter ChangeEvents is similar to defining the match
+   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
+   *
+   * @param matchFilter the $match filter to apply to incoming change events
+   * @return the stream of change events.
+   */
+  public Stream<ChangeEvent<DocumentT>> watchWithFilter(final BsonDocument matchFilter)
+      throws InterruptedException, IOException {
+    return operations.watch(matchFilter, false, documentClass).execute(service);
   }
 
   /**

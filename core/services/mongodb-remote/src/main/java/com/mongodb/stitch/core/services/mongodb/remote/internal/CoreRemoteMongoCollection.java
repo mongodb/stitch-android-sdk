@@ -458,21 +458,6 @@ public interface CoreRemoteMongoCollection<DocumentT> {
   Stream<ChangeEvent<DocumentT>> watch() throws InterruptedException, IOException;
 
   /**
-   * Watches a collection. The provided BSON document will be used as a match expression filter on
-   * the change events coming from the stream.
-   *
-   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
-   * around how to define a match filter.
-   *
-   * Defining the match expression to filter ChangeEvents is similar to defining the match
-   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
-   *
-   * @return the stream of change events.
-   */
-  Stream<ChangeEvent<DocumentT>> watchWithFilter(final BsonDocument matchFilter)
-      throws InterruptedException, IOException;
-
-  /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
    * of non-{@link BsonValue} instances of {@link ObjectId}.
    * @param ids unique object identifiers of the IDs to watch.
@@ -487,6 +472,21 @@ public interface CoreRemoteMongoCollection<DocumentT> {
    * @return the stream of change events.
    */
   Stream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+      throws InterruptedException, IOException;
+
+  /**
+   * Watches a collection. The provided BSON document will be used as a match expression filter on
+   * the change events coming from the stream.
+   *
+   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
+   * around how to define a match filter.
+   *
+   * Defining the match expression to filter ChangeEvents is similar to defining the match
+   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
+   *
+   * @return the stream of change events.
+   */
+  Stream<ChangeEvent<DocumentT>> watchWithFilter(final BsonDocument matchFilter)
       throws InterruptedException, IOException;
 
 

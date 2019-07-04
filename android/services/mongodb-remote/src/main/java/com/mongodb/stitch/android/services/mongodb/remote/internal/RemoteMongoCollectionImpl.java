@@ -608,6 +608,20 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
+  public Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watch(final ObjectId... ids) {
+    return dispatcher.dispatchTask(() ->
+      new AsyncChangeStream<>(new ChangeStream<>(proxy.watch(ids)), dispatcher)
+    );
+  }
+
+  @Override
+  public Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watch(final BsonValue... ids) {
+    return dispatcher.dispatchTask(() ->
+        new AsyncChangeStream<>(new ChangeStream<>(proxy.watch(ids)), dispatcher)
+    );
+  }
+
+  @Override
   public Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watchWithFilter(
       final Document matchFilter) {
     return this.watchWithFilter(
@@ -620,20 +634,6 @@ public final class RemoteMongoCollectionImpl<DocumentT>
       final BsonDocument matchFilter) {
     return dispatcher.dispatchTask(() ->
         new AsyncChangeStream<>(new ChangeStream<>(proxy.watchWithFilter(matchFilter)), dispatcher)
-    );
-  }
-
-  @Override
-  public Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watch(final ObjectId... ids) {
-    return dispatcher.dispatchTask(() ->
-      new AsyncChangeStream<>(new ChangeStream<>(proxy.watch(ids)), dispatcher)
-    );
-  }
-
-  @Override
-  public Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watch(final BsonValue... ids) {
-    return dispatcher.dispatchTask(() ->
-        new AsyncChangeStream<>(new ChangeStream<>(proxy.watch(ids)), dispatcher)
     );
   }
 

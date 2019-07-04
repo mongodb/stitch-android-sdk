@@ -457,41 +457,11 @@ public interface RemoteMongoCollection<DocumentT> {
    * that the active user is authorized to see based on the configured MongoDB rules.
    *
    * @return the stream of change events.
+   * @throws InterruptedException if the operation is interrupted.
+   * @throws IOException if the operation fails.
    */
   ChangeStream<ChangeEvent<DocumentT>> watch()
-      throws InterruptedException, IOException ;
-
-  /**
-   * Watches a collection. The provided BSON document will be used as a match expression filter on
-   * the change events coming from the stream.
-   *
-   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
-   * around how to define a match filter.
-   *
-   * Defining the match expression to filter ChangeEvents is similar to defining the match
-   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
-   *
-   * @param matchFilter the $match filter to apply to incoming change events
-   * @return the stream of change events.
-   */
-  ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(final BsonDocument matchFilter)
-      throws InterruptedException, IOException ;
-
-  /**
-   * Watches a collection. The provided BSON document will be used as a match expression filter on
-   * the change events coming from the stream.
-   *
-   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
-   * around how to define a match filter.
-   *
-   * Defining the match expression to filter ChangeEvents is similar to defining the match
-   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
-   *
-   * @param matchFilter the $match filter to apply to incoming change events
-   * @return the stream of change events.
-   */
-  ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(final Document matchFilter)
-      throws InterruptedException, IOException ;
+      throws InterruptedException, IOException;
 
   /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case
@@ -514,6 +484,38 @@ public interface RemoteMongoCollection<DocumentT> {
    * @throws IOException if the operation fails.
    */
   ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+      throws InterruptedException, IOException;
+
+  /**
+   * Watches a collection. The provided BSON document will be used as a match expression filter on
+   * the change events coming from the stream.
+   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
+   * around how to define a match filter. Defining the match expression to filter ChangeEvents is
+   * similar to defining the match expression for triggers:
+   * https://docs.mongodb.com/stitch/triggers/database-triggers/
+   *
+   * @param matchFilter the $match filter to apply to incoming change events
+   * @return the stream of change events.
+   * @throws InterruptedException if the operation is interrupted.
+   * @throws IOException if the operation fails.
+   */
+  ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(final BsonDocument matchFilter)
+      throws InterruptedException, IOException;
+
+  /**
+   * Watches a collection. The provided BSON document will be used as a match expression filter on
+   * the change events coming from the stream.
+   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
+   * around how to define a match filter. Defining the match expression to filter ChangeEvents is
+   * similar to defining the match expression for triggers:
+   * https://docs.mongodb.com/stitch/triggers/database-triggers/
+   *
+   * @param matchFilter the $match filter to apply to incoming change events
+   * @return the stream of change events.
+   * @throws InterruptedException if the operation is interrupted.
+   * @throws IOException if the operation fails.
+   */
+  ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(final Document matchFilter)
       throws InterruptedException, IOException;
 
   /**

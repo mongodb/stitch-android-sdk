@@ -532,6 +532,18 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
+  public ChangeStream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
+      throws InterruptedException, IOException {
+    return new ChangeStream<>(proxy.watch(ids));
+  }
+
+  @Override
+  public ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
+      throws InterruptedException, IOException {
+    return new ChangeStream<>(proxy.watch(ids));
+  }
+
+  @Override
   public ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(
       final Document matchFilter) throws InterruptedException, IOException {
     return this.watchWithFilter(
@@ -543,18 +555,6 @@ public final class RemoteMongoCollectionImpl<DocumentT>
   public ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(
       final BsonDocument matchFilter) throws InterruptedException, IOException {
     return new ChangeStream<>(proxy.watchWithFilter(matchFilter));
-  }
-
-  @Override
-  public ChangeStream<ChangeEvent<DocumentT>> watch(final ObjectId... ids)
-      throws InterruptedException, IOException {
-    return new ChangeStream<>(proxy.watch(ids));
-  }
-
-  @Override
-  public ChangeStream<ChangeEvent<DocumentT>> watch(final BsonValue... ids)
-      throws InterruptedException, IOException {
-    return new ChangeStream<>(proxy.watch(ids));
   }
 
   @Override
