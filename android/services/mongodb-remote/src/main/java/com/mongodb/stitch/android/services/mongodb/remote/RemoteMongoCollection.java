@@ -31,7 +31,9 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 
 import java.util.List;
 
+import org.bson.BsonDocument;
 import org.bson.BsonValue;
+import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -470,6 +472,46 @@ public interface RemoteMongoCollection<DocumentT> {
           final Bson filter,
           final RemoteFindOneAndModifyOptions options,
           final Class<ResultT> resultClass);
+
+  /**
+   * Watches a collection. The resulting stream will be notified of all events on this collection
+   * that the active user is authorized to see based on the configured MongoDB rules.
+   *
+   * @return the stream of change events.
+   */
+  Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watch();
+
+  /**
+   * Watches a collection. The provided BSON document will be used as a match expression filter on
+   * the change events coming from the stream.
+   *
+   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
+   * around how to define a match filter.
+   *
+   * Defining the match expression to filter ChangeEvents is similar to defining the match
+   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
+   *
+   * @param matchFilter the $match filter to apply to incoming change events
+   * @return the stream of change events.
+   */
+  Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watchWithFilter(
+      final BsonDocument matchFilter);
+
+  /**
+   * Watches a collection. The provided BSON document will be used as a match expression filter on
+   * the change events coming from the stream.
+   *
+   * See https://docs.mongodb.com/manual/reference/operator/aggregation/match/ for documentation
+   * around how to define a match filter.
+   *
+   * Defining the match expression to filter ChangeEvents is similar to defining the match
+   * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
+   *
+   * @param matchFilter the $match filter to apply to incoming change events
+   * @return the stream of change events.
+   */
+  Task<AsyncChangeStream<DocumentT, ChangeEvent<DocumentT>>> watchWithFilter(
+      final Document matchFilter);
 
   /**
    * Watches specified IDs in a collection.  This convenience overload supports the use case

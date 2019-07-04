@@ -17,6 +17,7 @@
 package com.mongodb.stitch.server.services.mongodb.remote.internal;
 
 import com.mongodb.MongoNamespace;
+import com.mongodb.stitch.core.internal.common.BsonUtils;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeEvent;
 import com.mongodb.stitch.core.services.mongodb.remote.ChangeStream;
 import com.mongodb.stitch.core.services.mongodb.remote.CompactChangeEvent;
@@ -36,7 +37,9 @@ import com.mongodb.stitch.server.services.mongodb.remote.RemoteMongoCollection;
 import java.io.IOException;
 import java.util.List;
 
+import org.bson.BsonDocument;
 import org.bson.BsonValue;
+import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -521,6 +524,25 @@ public final class RemoteMongoCollectionImpl<DocumentT>
           final RemoteFindOneAndModifyOptions options,
           final Class<ResultT> resultClass) {
     return proxy.findOneAndDelete(filter, options, resultClass);
+  }
+
+  @Override
+  public ChangeStream<ChangeEvent<DocumentT>> watch() throws InterruptedException, IOException {
+    return new ChangeStream<>(proxy.watch());
+  }
+
+  @Override
+  public ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(
+      final Document matchFilter) throws InterruptedException, IOException {
+    return this.watchWithFilter(
+        matchFilter.toBsonDocument(null, BsonUtils.DEFAULT_CODEC_REGISTRY)
+    );
+  }
+
+  @Override
+  public ChangeStream<ChangeEvent<DocumentT>> watchWithFilter(
+      final BsonDocument matchFilter) throws InterruptedException, IOException {
+    return new ChangeStream<>(proxy.watchWithFilter(matchFilter));
   }
 
   @Override

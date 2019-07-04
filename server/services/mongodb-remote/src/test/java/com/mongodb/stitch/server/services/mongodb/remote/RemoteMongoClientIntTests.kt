@@ -813,6 +813,145 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
     }
 
     @Test
+    fun testWatchFullCollection() {
+        val coll = getTestColl()
+        assertEquals(0, coll.count())
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        val stream = coll.watch()
+
+        try {
+            coll.insertOne(rawDoc1)
+            assertEquals(1, coll.count())
+
+            coll.insertOne(rawDoc2)
+            assertEquals(2, coll.count())
+            coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field")))
+
+            val insertEvent1 = stream.nextEvent()
+            assertEquals(OperationType.INSERT, insertEvent1.operationType)
+            assertEquals(rawDoc1, insertEvent1.fullDocument)
+            val insertEvent2 = stream.nextEvent()
+            assertEquals(OperationType.INSERT, insertEvent2.operationType)
+            assertEquals(rawDoc2, insertEvent2.fullDocument)
+            val updateEvent1 = stream.nextEvent()
+            val updateEvent2 = stream.nextEvent()
+
+            assertNotNull(updateEvent1)
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun testWatchWithBsonDocumentFilter() {
+        val coll = getTestColl()
+        assertEquals(0, coll.count())
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        val stream = coll.watchWithFilter(
+            BsonDocument("fullDocument.happy", BsonString("day"))
+        )
+
+        try {
+            coll.insertOne(rawDoc1)
+            assertEquals(1, coll.count())
+
+            coll.insertOne(rawDoc2)
+            assertEquals(2, coll.count())
+
+            coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field")))
+
+            // should be filtered
+            // val insertEvent1 = stream.nextEvent()
+
+            val insertEvent2 = stream.nextEvent()
+            assertEquals(OperationType.INSERT, insertEvent2.operationType)
+            assertEquals(rawDoc2, insertEvent2.fullDocument)
+
+            // should be filtered
+            // val updateEvent1 = stream.nextEvent()
+
+            val updateEvent2 = stream.nextEvent()
+
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun testWatchWithDocumentFilter() {
+        val coll = getTestColl()
+        assertEquals(0, coll.count())
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        val stream = coll.watchWithFilter(Document("fullDocument.happy", "day"))
+
+        try {
+            coll.insertOne(rawDoc1)
+            assertEquals(1, coll.count())
+
+            coll.insertOne(rawDoc2)
+            assertEquals(2, coll.count())
+
+            coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field")))
+
+            // should be filtered
+            // val insertEvent1 = stream.nextEvent()
+
+            val insertEvent2 = stream.nextEvent()
+            assertEquals(OperationType.INSERT, insertEvent2.operationType)
+            assertEquals(rawDoc2, insertEvent2.fullDocument)
+
+            // should be filtered
+            // val updateEvent1 = stream.nextEvent()
+
+            val updateEvent2 = stream.nextEvent()
+
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
     fun testWatchBsonValueIDs() {
         val coll = getTestColl()
         assertEquals(0, coll.count())

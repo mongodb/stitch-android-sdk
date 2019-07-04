@@ -701,6 +701,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
    * Defining the match expression to filter ChangeEvents is similar to defining the match
    * expression for triggers: https://docs.mongodb.com/stitch/triggers/database-triggers/
    *
+   * @param matchFilter the $match filter to apply to incoming change events
    * @return the stream of change events.
    */
   public Stream<ChangeEvent<DocumentT>> watchWithFilter(final BsonDocument matchFilter)

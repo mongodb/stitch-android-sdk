@@ -836,6 +836,148 @@ class RemoteMongoClientIntTests : BaseStitchAndroidIntTest() {
     }
 
     @Test
+    fun testWatchFullCollection() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        val streamTask = coll.watch()
+        val stream = Tasks.await(streamTask)
+
+        try {
+            Tasks.await(coll.insertOne(rawDoc1))
+            assertEquals(1, Tasks.await(coll.count()))
+
+            Tasks.await(coll.insertOne(rawDoc2))
+            assertEquals(2, Tasks.await(coll.count()))
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field"))))
+
+            val insertEvent1 = Tasks.await(stream.nextEvent())
+            assertEquals(OperationType.INSERT, insertEvent1.operationType)
+            assertEquals(rawDoc1, insertEvent1.fullDocument)
+            val insertEvent2 = Tasks.await(stream.nextEvent())
+            assertEquals(OperationType.INSERT, insertEvent2.operationType)
+            assertEquals(rawDoc2, insertEvent2.fullDocument)
+            val updateEvent1 = Tasks.await(stream.nextEvent())
+            val updateEvent2 = Tasks.await(stream.nextEvent())
+
+            assertNotNull(updateEvent1)
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent1.operationType)
+            assertEquals(rawDoc1.append("new", "field"), updateEvent1.fullDocument)
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun testWatchWithBsonDocumentFilter() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        val streamTask = coll.watchWithFilter(
+            BsonDocument("fullDocument.happy", BsonString("day"))
+        )
+        val stream = Tasks.await(streamTask)
+
+        try {
+            Tasks.await(coll.insertOne(rawDoc1))
+            assertEquals(1, Tasks.await(coll.count()))
+
+            Tasks.await(coll.insertOne(rawDoc2))
+            assertEquals(2, Tasks.await(coll.count()))
+
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field"))))
+
+            // should be filtered
+            // val insertEvent1 = Tasks.await(stream.nextEvent())
+
+            val insertEvent2 = Tasks.await(stream.nextEvent())
+            assertEquals(OperationType.INSERT, insertEvent2.operationType)
+            assertEquals(rawDoc2, insertEvent2.fullDocument)
+
+            // should be filtered
+            // val updateEvent1 = Tasks.await(stream.nextEvent())
+
+            val updateEvent2 = Tasks.await(stream.nextEvent())
+
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
+    fun testWatchWithDocumentFilter() {
+        val coll = getTestColl()
+        assertEquals(0, Tasks.await(coll.count()))
+
+        val rawDoc1 = Document()
+        rawDoc1["_id"] = 1
+        rawDoc1["hello"] = "world"
+
+        val rawDoc2 = Document()
+        rawDoc2["_id"] = "foo"
+        rawDoc2["happy"] = "day"
+
+        val streamTask = coll.watchWithFilter(Document("fullDocument.happy", "day"))
+        val stream = Tasks.await(streamTask)
+
+        try {
+            Tasks.await(coll.insertOne(rawDoc1))
+            assertEquals(1, Tasks.await(coll.count()))
+
+            Tasks.await(coll.insertOne(rawDoc2))
+            assertEquals(2, Tasks.await(coll.count()))
+
+            Tasks.await(coll.updateMany(BsonDocument(), Document().append("\$set",
+                Document().append("new", "field"))))
+
+            // should be filtered
+            // val insertEvent1 = Tasks.await(stream.nextEvent())
+
+            val insertEvent2 = Tasks.await(stream.nextEvent())
+            assertEquals(OperationType.INSERT, insertEvent2.operationType)
+            assertEquals(rawDoc2, insertEvent2.fullDocument)
+
+            // should be filtered
+            // val updateEvent1 = Tasks.await(stream.nextEvent())
+
+            val updateEvent2 = Tasks.await(stream.nextEvent())
+
+            assertNotNull(updateEvent2)
+
+            assertEquals(OperationType.UPDATE, updateEvent2.operationType)
+            assertEquals(rawDoc2.append("new", "field"), updateEvent2.fullDocument)
+        } finally {
+            stream.close()
+        }
+    }
+
+    @Test
     fun testWatchBsonValueIDs() {
         val coll = getTestColl()
         assertEquals(0, Tasks.await(coll.count()))
