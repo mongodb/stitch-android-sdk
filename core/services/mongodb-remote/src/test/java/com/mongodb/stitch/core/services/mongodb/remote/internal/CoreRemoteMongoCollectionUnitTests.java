@@ -1022,6 +1022,95 @@ public class CoreRemoteMongoCollectionUnitTests {
 
   @Test
   @SuppressWarnings("unchecked")
+  public void testWatchFullCollection() throws IOException, InterruptedException {
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
+    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(
+            service,
+            getClientInfo(),
+            ServerEmbeddedMongoClientFactory.getInstance());
+    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
+
+    final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
+
+    doReturn(mockStream).when(service).streamFunction(any(), any(), any(Decoder.class));
+
+    coll.watch();
+
+    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<Decoder<ChangeEvent>> decoderArgumentCaptor =
+        ArgumentCaptor.forClass(Decoder.class);
+    verify(service)
+        .streamFunction(
+            funcNameArg.capture(),
+            funcArgsArg.capture(),
+            decoderArgumentCaptor.capture());
+
+    assertEquals("watch", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    final Document expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("useCompactEvents", false);
+
+    for (final Map.Entry<String, Object> entry : expectedArgs.entrySet()) {
+      final Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
+      assertEquals(entry.getValue(), capturedValue);
+    }
+    assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
+        decoderArgumentCaptor.getValue());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testWatchWithFilter() throws IOException, InterruptedException {
+    final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
+    when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
+    final CoreRemoteMongoClient client =
+        CoreRemoteClientFactory.getClient(
+            service,
+            getClientInfo(),
+            ServerEmbeddedMongoClientFactory.getInstance());
+    final CoreRemoteMongoCollection<Document> coll = getCollection(client);
+
+    final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
+
+    doReturn(mockStream).when(service).streamFunction(any(), any(), any(Decoder.class));
+
+    final BsonDocument expectedFilter = new BsonDocument(
+        "fullDocument.field", new BsonString("someValue"));
+    coll.watchWithFilter(expectedFilter);
+
+    final ArgumentCaptor<String> funcNameArg = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<List> funcArgsArg = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<Decoder<ChangeEvent>> decoderArgumentCaptor =
+        ArgumentCaptor.forClass(Decoder.class);
+    verify(service)
+        .streamFunction(
+            funcNameArg.capture(),
+            funcArgsArg.capture(),
+            decoderArgumentCaptor.capture());
+
+    assertEquals("watch", funcNameArg.getValue());
+    assertEquals(1, funcArgsArg.getValue().size());
+    final Document expectedArgs = new Document();
+    expectedArgs.put("database", "dbName1");
+    expectedArgs.put("collection", "collName1");
+    expectedArgs.put("useCompactEvents", false);
+    expectedArgs.put("filter", expectedFilter);
+
+    for (final Map.Entry<String, Object> entry : expectedArgs.entrySet()) {
+      final Object capturedValue = ((Document)funcArgsArg.getValue().get(0)).get(entry.getKey());
+      assertEquals(entry.getValue(), capturedValue);
+    }
+    assertEquals(ResultDecoders.changeEventDecoder(new DocumentCodec()),
+        decoderArgumentCaptor.getValue());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
   public void testWatchBsonValueIDs() throws IOException, InterruptedException {
     final CoreStitchServiceClient service = Mockito.mock(CoreStitchServiceClient.class);
     when(service.getCodecRegistry()).thenReturn(BsonUtils.DEFAULT_CODEC_REGISTRY);
