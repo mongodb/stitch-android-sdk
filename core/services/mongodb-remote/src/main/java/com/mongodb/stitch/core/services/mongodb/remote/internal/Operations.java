@@ -223,12 +223,32 @@ public class Operations<DocumentT> {
               .returnNewDocument(options.isReturnNewDocument());
   }
 
-
+  <ResultT> WatchOperation<ResultT> watch(
+      final boolean useCompactEvents,
+      final Class<ResultT> resultClass) {
+    return new WatchOperation<>(
+        namespace,
+        useCompactEvents,
+        codecRegistry.get(resultClass)
+    );
+  }
 
   <ResultT> WatchOperation<ResultT> watch(
-                       final Set<BsonValue> ids,
-                       final boolean useCompactEvents,
-                       final Class<ResultT> resultClass) {
+      final BsonDocument matchFilter,
+      final boolean useCompactEvents,
+      final Class<ResultT> resultClass) {
+    return new WatchOperation<>(
+        namespace,
+        matchFilter,
+        useCompactEvents,
+        codecRegistry.get(resultClass)
+    );
+  }
+
+  <ResultT> WatchOperation<ResultT> watch(
+      final Set<BsonValue> ids,
+      final boolean useCompactEvents,
+      final Class<ResultT> resultClass) {
     return new WatchOperation<>(
         namespace,
         ids,
@@ -236,6 +256,7 @@ public class Operations<DocumentT> {
         codecRegistry.get(resultClass)
     );
   }
+
 
   private List<BsonDocument> toBsonDocumentList(final List<? extends Bson> bsonList) {
     if (bsonList == null) {

@@ -31,7 +31,7 @@ class DocumentVersionInfoUnitTests {
         val incrementedVersion =
                 DocumentVersionInfo.fromVersionDoc(nextVersion.getNextVersion())
         assertTrue(nextVersion.hasVersion())
-        assertNotNull(incrementedVersion .versionDoc)
+        assertNotNull(incrementedVersion.versionDoc)
         assertNull(incrementedVersion.filter)
 
         assertEquals(1, incrementedVersion.version.syncProtocolVersion)
