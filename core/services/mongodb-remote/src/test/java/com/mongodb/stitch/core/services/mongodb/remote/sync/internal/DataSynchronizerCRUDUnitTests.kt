@@ -8,7 +8,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteDeleteResult
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
@@ -85,7 +84,7 @@ class DataSynchronizerCRUDUnitTests {
     fun teardown() {
         harness.close()
         CoreRemoteClientFactory.close()
-        ServerEmbeddedMongoClientFactory.getInstance().close()
+        UnitTestEmbeddedMongoClientFactory.getInstance().close()
     }
 
     @Test

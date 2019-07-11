@@ -1,7 +1,6 @@
 package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 
 import com.mongodb.stitch.core.internal.net.Event
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonObjectId
 import org.bson.Document
 import org.junit.After
@@ -20,7 +19,7 @@ class NamespaceChangeStreamListenerUnitTests {
     @After
     fun teardown() {
         CoreRemoteClientFactory.close()
-        ServerEmbeddedMongoClientFactory.getInstance().close()
+        UnitTestEmbeddedMongoClientFactory.getInstance().close()
     }
 
     @Test

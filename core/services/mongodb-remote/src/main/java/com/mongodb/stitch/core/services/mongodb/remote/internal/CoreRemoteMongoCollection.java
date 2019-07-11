@@ -33,12 +33,15 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync;
 import java.io.IOException;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import org.bson.BsonDocument;
 import org.bson.BsonObjectId;
 import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+
 
 public interface CoreRemoteMongoCollection<DocumentT> {
 
@@ -521,5 +524,5 @@ public interface CoreRemoteMongoCollection<DocumentT> {
    *
    * @return set of sync operations for this collection
   */
-  CoreSync<DocumentT> sync();
+  @Nullable CoreSync<DocumentT> sync();
 }

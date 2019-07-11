@@ -24,7 +24,10 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchronizer;
 
+import javax.annotation.Nullable;
+
 import org.bson.Document;
+
 
 public class CoreRemoteMongoDatabaseImpl implements CoreRemoteMongoDatabase {
 
@@ -32,14 +35,14 @@ public class CoreRemoteMongoDatabaseImpl implements CoreRemoteMongoDatabase {
   private final CoreStitchServiceClient service;
 
   // Sync related fields
-  private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
+  @Nullable private final DataSynchronizer dataSynchronizer;
+  @Nullable private final NetworkMonitor networkMonitor;
 
   CoreRemoteMongoDatabaseImpl(
       final String name,
       final CoreStitchServiceClient service,
-      final DataSynchronizer dataSynchronizer,
-      final NetworkMonitor networkMonitor
+      @Nullable final DataSynchronizer dataSynchronizer,
+      @Nullable final NetworkMonitor networkMonitor
   ) {
     notNull("name", name);
     checkDatabaseNameValidity(name);

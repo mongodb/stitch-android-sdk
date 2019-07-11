@@ -5,7 +5,6 @@ import com.mongodb.MongoWriteException
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncCountOptions
 import com.mongodb.stitch.core.services.mongodb.remote.sync.SyncUpdateOptions
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonArray
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
@@ -76,7 +75,7 @@ class CoreSyncUnitTests {
     fun teardown() {
         harness.close()
         CoreRemoteClientFactory.close()
-        ServerEmbeddedMongoClientFactory.getInstance().close()
+        UnitTestEmbeddedMongoClientFactory.getInstance().close()
     }
 
     @Test

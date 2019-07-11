@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.mongodb.stitch.server.services.mongodb.local.internal;
+package com.mongodb.stitch.core.services.mongodb.remote.sync.internal;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.embedded.client.MongoClientSettings;
@@ -24,22 +24,21 @@ import com.mongodb.stitch.core.services.mongodb.local.internal.EmbeddedMongoClie
 
 import org.bson.codecs.configuration.CodecRegistry;
 
-public final class ServerEmbeddedMongoClientFactory extends EmbeddedMongoClientFactory {
+public final class UnitTestEmbeddedMongoClientFactory extends EmbeddedMongoClientFactory {
+  private static UnitTestEmbeddedMongoClientFactory factory;
 
-  private static ServerEmbeddedMongoClientFactory factory;
-
-  private ServerEmbeddedMongoClientFactory() {
+  private UnitTestEmbeddedMongoClientFactory() {
     super();
     MongoClients.init(MongoEmbeddedSettings.builder().build());
   }
 
-  public static ServerEmbeddedMongoClientFactory getInstance() {
-    synchronized (ServerEmbeddedMongoClientFactory.class) {
+  public static UnitTestEmbeddedMongoClientFactory getInstance() {
+    synchronized (UnitTestEmbeddedMongoClientFactory.class) {
       if (factory != null) {
         return factory;
       }
 
-      factory = new ServerEmbeddedMongoClientFactory();
+      factory = new UnitTestEmbeddedMongoClientFactory();
     }
     return factory;
   }

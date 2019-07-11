@@ -3,7 +3,6 @@ package com.mongodb.stitch.core.services.mongodb.remote.sync.internal
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.withoutSyncVersion
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
@@ -34,7 +33,7 @@ class DataSynchronizerUnitTests {
     fun teardown() {
         harness.close()
         CoreRemoteClientFactory.close()
-        ServerEmbeddedMongoClientFactory.getInstance().close()
+        UnitTestEmbeddedMongoClientFactory.getInstance().close()
     }
 
     @Test

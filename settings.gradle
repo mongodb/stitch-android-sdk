@@ -21,7 +21,6 @@ include ':core:sdk',
         ':server:services:aws-ses',
         ':server:services:fcm',
         ':server:services:http',
-        ':server:services:mongodb-local',
         ':server:services:mongodb-remote',
         ':server:services:twilio',
         ':server:testutils',
@@ -67,7 +66,6 @@ project(':server:services:aws-s3').name = 'stitch-server-services-aws-s3'
 project(':server:services:aws-ses').name = 'stitch-server-services-aws-ses'
 project(':server:services:fcm').name = 'stitch-server-services-fcm'
 project(':server:services:http').name = 'stitch-server-services-http'
-project(':server:services:mongodb-local').name = 'stitch-server-services-mongodb-local'
 project(':server:services:mongodb-remote').name = 'stitch-server-services-mongodb-remote'
 project(':server:services:twilio').name = 'stitch-server-services-twilio'
 project(':server:testutils').name = 'stitch-server-testutils'

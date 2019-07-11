@@ -26,80 +26,94 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.DataSynchro
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncMongoClientFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchServiceBinder {
 
   private final CoreStitchServiceClient service;
   private final StitchAppClientInfo appInfo;
-  private final EmbeddedMongoClientFactory clientFactory;
 
-  private DataSynchronizer dataSynchronizer;
+  // Sync related fields
+  private boolean hasSync;
+  @Nullable private final EmbeddedMongoClientFactory clientFactory;
+  @Nullable private DataSynchronizer dataSynchronizer;
   @Nonnull private String lastActiveUserId;
 
   public CoreRemoteMongoClientImpl(final CoreStitchServiceClient service,
                                    final String instanceKey,
                                    final StitchAppClientInfo appInfo,
-                                   final EmbeddedMongoClientFactory clientFactory) {
+                                   final @Nullable EmbeddedMongoClientFactory clientFactory) {
     this.service = service;
     this.appInfo = appInfo;
     this.clientFactory = clientFactory;
-    this.service.bind(this);
-    // set this to an empty string to avoid cumbersome null
-    // checks when comparing to the next activeUser
-    this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
-        ? appInfo.getAuthMonitor().getActiveUserId() : "";
 
-    this.dataSynchronizer = new DataSynchronizer(
-        instanceKey,
-        service,
-        SyncMongoClientFactory.getClient(
-            appInfo,
-            service.getName(),
-            clientFactory
-        ),
-        this,
-        appInfo.getNetworkMonitor(),
-        appInfo.getAuthMonitor(),
-        appInfo.getEventDispatcher()
-    );
+    if (clientFactory != null) {
+      this.hasSync = true;
+      this.dataSynchronizer = new DataSynchronizer(
+          instanceKey,
+          service,
+          SyncMongoClientFactory.getClient(
+              appInfo,
+              service.getName(),
+              clientFactory
+          ),
+          this,
+          appInfo.getNetworkMonitor(),
+          appInfo.getAuthMonitor(),
+          appInfo.getEventDispatcher()
+      );
+      // set this to an empty string to avoid cumbersome null
+      // checks when comparing to the next activeUser
+      this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
+          ? appInfo.getAuthMonitor().getActiveUserId() : "";
+    } else {
+      this.hasSync = false;
+      this.lastActiveUserId = "";
+    }
+
+    this.service.bind(this);
+
   }
 
   private void onAuthEvent(final AuthEvent authEvent) {
-    switch (authEvent.getAuthEventType()) {
-      case USER_REMOVED:
-        final String userId = ((AuthEvent.UserRemoved)authEvent).getRemovedUser().getId();
-        if (!SyncMongoClientFactory.deleteDatabase(
-            appInfo,
-            service.getName(),
-            clientFactory,
-            userId
-        )) {
-          System.err.println("Could not delete database for user id " + userId);
-        }
-        break;
-      case ACTIVE_USER_CHANGED:
-        if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
-          this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
-              ? appInfo.getAuthMonitor().getActiveUserId() : "";
-          if (authEvent instanceof AuthEvent.ActiveUserChanged
-              && ((AuthEvent.ActiveUserChanged)authEvent).getCurrentActiveUser() != null) {
-            // reinitialize the DataSynchronizer entirely.
-            // any auth event will trigger this.
-            this.dataSynchronizer.reinitialize(
-                SyncMongoClientFactory.getClient(
-                    appInfo,
-                    service.getName(),
-                    clientFactory
-                )
-            );
-          } else {
-            this.dataSynchronizer.stop();
+    // Only perform user rebinding if this client has mobile sync functionality.
+    if (hasSync) {
+      switch (authEvent.getAuthEventType()) {
+        case USER_REMOVED:
+          final String userId = ((AuthEvent.UserRemoved)authEvent).getRemovedUser().getId();
+          if (!SyncMongoClientFactory.deleteDatabase(
+              appInfo,
+              service.getName(),
+              clientFactory,
+              userId
+          )) {
+            System.err.println("Could not delete database for user id " + userId);
           }
-        }
-        break;
-      default:
-        // no-op
-        break;
+          break;
+        case ACTIVE_USER_CHANGED:
+          if (!lastActiveUserId.equals(appInfo.getAuthMonitor().getActiveUserId())) {
+            this.lastActiveUserId = appInfo.getAuthMonitor().getActiveUserId() != null
+                ? appInfo.getAuthMonitor().getActiveUserId() : "";
+            if (authEvent instanceof AuthEvent.ActiveUserChanged
+                && ((AuthEvent.ActiveUserChanged)authEvent).getCurrentActiveUser() != null) {
+              // reinitialize the DataSynchronizer entirely.
+              // any auth event will trigger this.
+              this.dataSynchronizer.reinitialize(
+                  SyncMongoClientFactory.getClient(
+                      appInfo,
+                      service.getName(),
+                      clientFactory
+                  )
+              );
+            } else {
+              this.dataSynchronizer.stop();
+            }
+          }
+          break;
+        default:
+          // no-op
+          break;
+      }
     }
   }
 
@@ -124,7 +138,7 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
     return new CoreRemoteMongoDatabaseImpl(
       databaseName,
       service,
-      dataSynchronizer,
+      (hasSync) ? dataSynchronizer : null,
       appInfo.getNetworkMonitor()
     );
   }
@@ -135,7 +149,9 @@ public class CoreRemoteMongoClientImpl implements CoreRemoteMongoClient, StitchS
 
   @Override
   public void close() {
-    this.dataSynchronizer.stop();
-    this.dataSynchronizer.close();
+    if (hasSync) {
+      this.dataSynchronizer.stop();
+      this.dataSynchronizer.close();
+    }
   }
 }

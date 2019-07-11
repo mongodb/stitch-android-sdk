@@ -12,7 +12,6 @@ import com.mongodb.stitch.core.internal.common.BsonUtils
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteCountOptions
 import com.mongodb.stitch.server.core.StitchAppClient
-import com.mongodb.stitch.server.services.mongodb.remote.internal.RemoteMongoClientImpl
 import com.mongodb.stitch.server.testutils.BaseStitchServerIntTest
 
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteFindOptions
@@ -95,7 +94,6 @@ class RemoteMongoClientIntTests : BaseStitchServerIntTest() {
 
     @After
     override fun teardown() {
-        (mongoClient as RemoteMongoClientImpl).dataSynchronizer.close()
         super.teardown()
     }
 

@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
 import org.bson.Document;
 import org.junit.After;
@@ -32,7 +31,6 @@ public class CoreRemoteMongoDatabaseUnitTests {
   @After
   public void teardown() {
     CoreRemoteClientFactory.close();
-    ServerEmbeddedMongoClientFactory.getInstance().close();
   }
 
   @Test

@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 public abstract class CoreRemoteClientFactory {
 
   private static final Map<String, CoreRemoteMongoClient> syncInstances = new HashMap<>();
@@ -33,7 +35,7 @@ public abstract class CoreRemoteClientFactory {
   public static synchronized CoreRemoteMongoClient getClient(
       final CoreStitchServiceClient service,
       final StitchAppClientInfo appInfo,
-      final EmbeddedMongoClientFactory clientFactory
+      final @Nullable EmbeddedMongoClientFactory clientFactory
   ) {
     final String instanceKey = String.format("%s-%s", appInfo.getClientAppId(), service.getName());
     if (syncInstances.containsKey(instanceKey)) {

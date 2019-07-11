@@ -9,7 +9,6 @@ import com.mongodb.stitch.core.internal.net.NetworkMonitor
 import com.mongodb.stitch.core.services.mongodb.remote.OperationType
 import com.mongodb.stitch.core.services.mongodb.remote.UpdateDescription
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.SyncUnitTestHarness.Companion.compareEvents
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonString
@@ -23,7 +22,7 @@ import org.junit.Test
 class CoreDocumentSynchronizationConfigUnitTests {
     @After
     fun teardown() {
-        ServerEmbeddedMongoClientFactory.getInstance().close()
+        UnitTestEmbeddedMongoClientFactory.getInstance().close()
     }
 
     private val namespace = MongoNamespace("foo", "bar")
@@ -65,7 +64,7 @@ class CoreDocumentSynchronizationConfigUnitTests {
                     ThreadDispatcher()
             ),
             "mongodblocal",
-            ServerEmbeddedMongoClientFactory.getInstance()
+            UnitTestEmbeddedMongoClientFactory.getInstance()
     )
     private val coll by lazy {
         localClient.getDatabase(namespace.databaseName)
