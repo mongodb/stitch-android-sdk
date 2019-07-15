@@ -42,12 +42,15 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import org.bson.BsonDocument;
 import org.bson.BsonObjectId;
 import org.bson.BsonValue;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+
 
 public class CoreRemoteMongoCollectionImpl<DocumentT>
     implements CoreRemoteMongoCollection<DocumentT> {
@@ -56,36 +59,42 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   private final Class<DocumentT> documentClass;
   private final CoreStitchServiceClient service;
   private final Operations<DocumentT> operations;
+
   // Sync related fields
-  private final CoreSync<DocumentT> coreSync;
-  private final DataSynchronizer dataSynchronizer;
-  private final NetworkMonitor networkMonitor;
+  @Nullable private final CoreSync<DocumentT> coreSync;
+  @Nullable private final DataSynchronizer dataSynchronizer;
+  @Nullable private final NetworkMonitor networkMonitor;
 
   CoreRemoteMongoCollectionImpl(final MongoNamespace namespace,
                                 final Class<DocumentT> documentClass,
                                 final CoreStitchServiceClient service,
-                                final DataSynchronizer dataSynchronizer,
-                                final NetworkMonitor networkMonitor) {
+                                @Nullable final DataSynchronizer dataSynchronizer,
+                                @Nullable final NetworkMonitor networkMonitor) {
     notNull("namespace", namespace);
     notNull("documentClass", documentClass);
     this.namespace = namespace;
     this.documentClass = documentClass;
     this.service = service;
     this.operations = new Operations<>(namespace, documentClass, service.getCodecRegistry());
+
     this.dataSynchronizer = dataSynchronizer;
     this.networkMonitor = networkMonitor;
 
-    this.coreSync = new CoreSyncImpl<>(
-      getNamespace(),
-      getDocumentClass(),
-      dataSynchronizer,
-      service,
-      new SyncOperations<>(
-        getNamespace(),
-        getDocumentClass(),
-        dataSynchronizer,
-        getCodecRegistry())
-    );
+    if (dataSynchronizer != null && this.networkMonitor != null) {
+      this.coreSync = new CoreSyncImpl<>(
+          getNamespace(),
+          getDocumentClass(),
+          dataSynchronizer,
+          service,
+          new SyncOperations<>(
+              getNamespace(),
+              getDocumentClass(),
+              dataSynchronizer,
+              getCodecRegistry())
+      );
+    } else {
+      this.coreSync = null;
+    }
   }
 
   /**
@@ -788,7 +797,7 @@ public class CoreRemoteMongoCollectionImpl<DocumentT>
   }
 
   @Override
-  public CoreSync<DocumentT> sync() {
+  public @Nullable CoreSync<DocumentT> sync() {
     return this.coreSync;
   }
 }

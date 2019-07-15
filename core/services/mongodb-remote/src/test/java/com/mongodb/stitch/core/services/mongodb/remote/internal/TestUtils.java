@@ -26,7 +26,6 @@ import com.mongodb.stitch.core.services.internal.CoreStitchServiceClient;
 import com.mongodb.stitch.core.services.internal.CoreStitchServiceClientImpl;
 import com.mongodb.stitch.core.services.internal.StitchServiceRoutes;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,7 +47,7 @@ public final class TestUtils {
     return CoreRemoteClientFactory.getClient(
         service,
         getClientInfo(),
-        ServerEmbeddedMongoClientFactory.getInstance());
+        null);
   }
 
   static CoreRemoteMongoDatabase getDatabase(final String name) {

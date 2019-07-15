@@ -23,7 +23,6 @@ test {
 dependencies {
     implementation project(':server:stitch-server-core')
     api project(':core:core-services:stitch-core-services-mongodb-remote')
-    api project(':server:server-services:stitch-server-services-mongodb-local')
 
     testImplementation project(':server:stitch-server-testutils')
     testImplementation 'junit:junit:4.12'

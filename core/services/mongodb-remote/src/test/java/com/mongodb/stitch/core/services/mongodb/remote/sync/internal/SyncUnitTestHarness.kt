@@ -32,7 +32,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.sync.ChangeEventListener
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictHandler
 import com.mongodb.stitch.core.services.mongodb.remote.sync.ConflictResolution
 import com.mongodb.stitch.core.services.mongodb.remote.sync.CoreSync
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonInt64
@@ -363,7 +362,7 @@ class SyncUnitTestHarness : Closeable {
                     ThreadDispatcher()
                 ),
                 "local",
-                ServerEmbeddedMongoClientFactory.getInstance()
+                UnitTestEmbeddedMongoClientFactory.getInstance()
             )
         }
 

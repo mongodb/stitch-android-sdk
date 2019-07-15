@@ -442,7 +442,6 @@ def serverPackages = ["com.mongodb.stitch.server.core",
                       "com.mongodb.stitch.server.services.aws.ses",
                       "com.mongodb.stitch.server.services.fcm",
                       "com.mongodb.stitch.server.services.http",
-                      "com.mongodb.stitch.server.services.mongodb.local",
                       "com.mongodb.stitch.server.services.mongodb.remote",
                       "com.mongodb.stitch.server.services.twilio"]
 

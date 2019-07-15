@@ -20,7 +20,6 @@ import static com.mongodb.stitch.core.services.mongodb.remote.internal.TestUtils
 import static org.junit.Assert.assertEquals;
 
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
 import org.junit.After;
 import org.junit.Test;
@@ -30,7 +29,6 @@ public class CoreRemoteMongoClientUnitTests {
   @After
   public void teardown() {
     CoreRemoteClientFactory.close();
-    ServerEmbeddedMongoClientFactory.getInstance().close();
   }
 
   @Test

@@ -46,7 +46,6 @@ import com.mongodb.stitch.core.services.mongodb.remote.RemoteInsertManyResult;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateOptions;
 import com.mongodb.stitch.core.services.mongodb.remote.RemoteUpdateResult;
 import com.mongodb.stitch.core.services.mongodb.remote.sync.internal.CoreRemoteClientFactory;
-import com.mongodb.stitch.server.services.mongodb.local.internal.ServerEmbeddedMongoClientFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -81,7 +80,6 @@ public class CoreRemoteMongoCollectionUnitTests {
   @After
   public void teardown() {
     CoreRemoteClientFactory.close();
-    ServerEmbeddedMongoClientFactory.getInstance().close();
   }
 
   @Test
@@ -132,7 +130,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(42L)
@@ -193,7 +191,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             CoreRemoteClientFactory.getClient(
                     service,
                     getClientInfo(),
-                    ServerEmbeddedMongoClientFactory.getInstance());
+                    null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -267,7 +265,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -346,7 +344,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -411,7 +409,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -468,7 +466,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(new RemoteDeleteResult(1))
@@ -514,7 +512,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     doReturn(new RemoteDeleteResult(1))
@@ -560,7 +558,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final BsonObjectId id = new BsonObjectId();
@@ -629,7 +627,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final BsonObjectId id = new BsonObjectId();
@@ -699,7 +697,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             CoreRemoteClientFactory.getClient(
                     service,
                     getClientInfo(),
-                    ServerEmbeddedMongoClientFactory.getInstance());
+                    null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -820,7 +818,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             CoreRemoteClientFactory.getClient(
                     service,
                     getClientInfo(),
-                    ServerEmbeddedMongoClientFactory.getInstance());
+                    null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -941,7 +939,7 @@ public class CoreRemoteMongoCollectionUnitTests {
             CoreRemoteClientFactory.getClient(
                     service,
                     getClientInfo(),
-                    ServerEmbeddedMongoClientFactory.getInstance());
+                    null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Document doc1 = new Document("one", 2);
@@ -1029,7 +1027,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
@@ -1072,7 +1070,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
@@ -1118,7 +1116,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
@@ -1161,7 +1159,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Stream<ChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
@@ -1207,7 +1205,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Stream<CompactChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
@@ -1250,7 +1248,7 @@ public class CoreRemoteMongoCollectionUnitTests {
         CoreRemoteClientFactory.getClient(
             service,
             getClientInfo(),
-            ServerEmbeddedMongoClientFactory.getInstance());
+            null);
     final CoreRemoteMongoCollection<Document> coll = getCollection(client);
 
     final Stream<CompactChangeEvent<Document>> mockStream = Mockito.mock(Stream.class);
