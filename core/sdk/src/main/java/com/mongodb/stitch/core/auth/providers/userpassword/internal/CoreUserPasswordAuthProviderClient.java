@@ -24,6 +24,8 @@ import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
 import org.bson.Document;
 
+import java.util.List;
+
 public class CoreUserPasswordAuthProviderClient
         extends CoreAuthProviderClient<StitchRequestClient> {
   private final Routes routes;
@@ -78,6 +80,18 @@ public class CoreUserPasswordAuthProviderClient
     getRequestClient().doRequest(reqBuilder.build());
   }
 
+  protected void callResetPasswordFunctionInternal(final String email,
+                                                   final String password,
+                                                   List<?> args) {
+    final StitchDocRequest.Builder reqBuilder = new StitchDocRequest.Builder();
+    reqBuilder.withMethod(Method.POST)
+        .withPath(routes.getCallResetPasswordFunctionRoute());
+    reqBuilder.withDocument(new Document(ActionFields.EMAIL, email)
+        .append(ActionFields.PASSWORD, password)
+        .append(ActionFields.ARGS, args));
+    getRequestClient().doRequest(reqBuilder.build());
+  }
+
   private static class Routes {
     private final String baseRoute;
 
@@ -108,6 +122,10 @@ public class CoreUserPasswordAuthProviderClient
     private String getSendResetPasswordEmailRoute() {
       return getExtensionRoute("reset/send");
     }
+
+    private String getCallResetPasswordFunctionRoute() {
+      return getExtensionRoute("reset/call");
+    }
   }
 
   private static class RegistrationFields {
@@ -120,5 +138,6 @@ public class CoreUserPasswordAuthProviderClient
     static final String PASSWORD = "password";
     static final String TOKEN = "token";
     static final String TOKEN_ID = "tokenId";
+    static final String ARGS = "arguments";
   }
 }

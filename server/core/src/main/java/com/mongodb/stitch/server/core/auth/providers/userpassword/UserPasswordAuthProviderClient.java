@@ -20,6 +20,8 @@ import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvi
 import com.mongodb.stitch.server.core.auth.providers.internal.AuthProviderClientFactory;
 import com.mongodb.stitch.server.core.auth.providers.userpassword.internal.UserPasswordAuthProviderClientImpl;
 
+import java.util.List;
+
 /**
  * The User/Password authentication provider client used to register users.
  */
@@ -65,6 +67,16 @@ public interface UserPasswordAuthProviderClient {
    * @param email the email of the user.
    */
   void sendResetPasswordEmail(final String email);
+
+  /**
+   * Call a reset password function configured to the provider.
+   * @param email the email of the user
+   * @param password the new password to set
+   * @param args arguments to be provided to the reset function
+   */
+  void callResetPasswordFunction(final String email,
+                                 final String password,
+                                 List<?> args);
 
   AuthProviderClientFactory<UserPasswordAuthProviderClient> factory =
       (authRequestClient, requestClient, routes) ->

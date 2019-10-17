@@ -25,6 +25,7 @@ import com.mongodb.stitch.core.auth.internal.StitchAuthRoutes;
 import com.mongodb.stitch.core.auth.providers.userpassword.internal.CoreUserPasswordAuthProviderClient;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -138,6 +139,18 @@ public final class UserPasswordAuthProviderClientImpl extends CoreUserPasswordAu
           @Override
           public Void call() {
             sendResetPasswordEmailInternal(email);
+            return null;
+          }
+        });
+  }
+
+  @Override
+  public Task<Void> callResetPasswordFunction(String email, String password, List<?> args) {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() {
+            callResetPasswordFunctionInternal(email, password, args);
             return null;
           }
         });

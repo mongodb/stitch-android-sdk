@@ -21,6 +21,8 @@ import com.mongodb.stitch.core.auth.providers.userpassword.internal.CoreUserPass
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 import com.mongodb.stitch.server.core.auth.providers.userpassword.UserPasswordAuthProviderClient;
 
+import java.util.List;
+
 /**
  * The implementation of the User/Password authentication provider client.
  */
@@ -90,5 +92,16 @@ public final class UserPasswordAuthProviderClientImpl extends CoreUserPasswordAu
    */
   public void sendResetPasswordEmail(final String email) {
     sendResetPasswordEmailInternal(email);
+  }
+
+  /**
+   * Sends a user a password reset email for the given email.
+   *
+   * @param email the email of the user.
+   */
+  public void callResetPasswordFunction(final String email,
+                                        final String password,
+                                        List<?> args) {
+    callResetPasswordInternal(email, password, args);
   }
 }
