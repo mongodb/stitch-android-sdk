@@ -1,15 +1,17 @@
 package com.mongodb.stitch.core.admin.functions
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.mongodb.stitch.core.admin.Apps
 
 // / For creating or updating a function of an application
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class FunctionCreator(
     @JsonProperty("name") val name: String,
     @JsonProperty("source") val source: String,
-    @JsonProperty("can_evaluate") val canEvaluate: String?,
-    @JsonProperty("private") val private: Boolean
+    @JsonProperty("can_evaluate") val canEvaluate: String? = null,
+    @JsonProperty("private") val private: Boolean? = null
 )
 
 // / View of a Function of an application

@@ -9,17 +9,21 @@ import com.mongodb.stitch.core.StitchRequestException
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.create
 import com.mongodb.stitch.core.admin.functions.FunctionCreator
+import com.mongodb.stitch.core.admin.functions.function
 import com.mongodb.stitch.core.admin.userRegistrations.sendConfirmation
 import com.mongodb.stitch.core.auth.UserType
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousAuthProvider
 import com.mongodb.stitch.core.auth.providers.anonymous.AnonymousCredential
 import com.mongodb.stitch.core.auth.providers.custom.CustomAuthProvider
 import com.mongodb.stitch.core.auth.providers.custom.CustomCredential
+import com.mongodb.stitch.core.auth.providers.function.FunctionAuthProvider
+import com.mongodb.stitch.core.auth.providers.function.FunctionCredential
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordAuthProvider
 import com.mongodb.stitch.core.auth.providers.userpassword.UserPasswordCredential
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import org.bson.Document
+import org.bson.types.ObjectId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -303,5 +307,40 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
                 StitchRequestErrorCode.TRANSPORT_ERROR
             )
         }
+    }
+
+    @Test
+    fun testCustomFunctionLogin() {
+        val app = createApp()
+
+        val function = app.second.functions.create(FunctionCreator(
+            name = "funkyAuth",
+            source = """
+            exports = function(payload) {
+                return "foo";
+            };
+            """.trimIndent(),
+            canEvaluate = null,
+            private = false
+        ))
+
+        addProvider(app.second, ProviderConfigs.Function(function.id, function.name))
+
+        val client = getAppClient(app.first)
+
+        val user = Tasks.await(
+            client.auth.loginWithCredential(
+                FunctionCredential(Document("id", "123abc"))))
+
+        assertNotNull(user)
+
+        assertTrue(user.id.isNotEmpty())
+        assertTrue(user.identities[0].id.isNotEmpty())
+        assertEquals("123abc", user.identities.first().id)
+        assertEquals(FunctionAuthProvider.DEFAULT_NAME, user.loggedInProviderName)
+        assertEquals(FunctionAuthProvider.TYPE, user.loggedInProviderType)
+        assertEquals(UserType.NORMAL, user.userType)
+        assertEquals(FunctionAuthProvider.TYPE, user.identities[0].providerType)
+        assertTrue(client.auth.isLoggedIn)
     }
 }
