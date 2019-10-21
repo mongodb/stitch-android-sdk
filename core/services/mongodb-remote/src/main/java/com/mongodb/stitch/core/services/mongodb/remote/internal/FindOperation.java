@@ -101,8 +101,12 @@ public class FindOperation<T> implements Operation<Collection<T>> {
     args.put("collection", namespace.getCollectionName());
     args.put("query", filter);
     args.put("limit", limit);
-    args.put("project", projection);
-    args.put("sort", sort);
+    if (projection != null) {
+      args.put("project", projection);
+    }
+    if (sort != null) {
+      args.put("sort", sort);
+    }
 
     return service.callFunction(
         "find",
