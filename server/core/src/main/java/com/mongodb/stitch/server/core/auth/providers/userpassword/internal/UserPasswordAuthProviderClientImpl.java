@@ -95,13 +95,14 @@ public final class UserPasswordAuthProviderClientImpl extends CoreUserPasswordAu
   }
 
   /**
-   * Sends a user a password reset email for the given email.
-   *
-   * @param email the email of the user.
+   * Call a reset password function configured to the provider.
+   * @param email the email of the user
+   * @param password the new password to set
+   * @param args arguments to be provided to the reset function
    */
   public void callResetPasswordFunction(final String email,
                                         final String password,
                                         List<?> args) {
-    callResetPasswordInternal(email, password, args);
+    callResetPasswordFunctionInternal(email, password, args);
   }
 }
