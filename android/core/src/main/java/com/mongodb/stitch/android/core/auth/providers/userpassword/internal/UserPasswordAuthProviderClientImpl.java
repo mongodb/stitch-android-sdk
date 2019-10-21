@@ -145,7 +145,9 @@ public final class UserPasswordAuthProviderClientImpl extends CoreUserPasswordAu
   }
 
   @Override
-  public Task<Void> callResetPasswordFunction(String email, String password, List<?> args) {
+  public Task<Void> callResetPasswordFunction(final String email,
+                                              final String password,
+                                              final List<?> args) {
     return dispatcher.dispatchTask(
         new Callable<Void>() {
           @Override

@@ -22,9 +22,9 @@ import com.mongodb.stitch.core.internal.net.Method;
 import com.mongodb.stitch.core.internal.net.StitchDocRequest;
 import com.mongodb.stitch.core.internal.net.StitchRequestClient;
 
-import org.bson.Document;
-
 import java.util.List;
+
+import org.bson.Document;
 
 public class CoreUserPasswordAuthProviderClient
         extends CoreAuthProviderClient<StitchRequestClient> {
@@ -82,7 +82,7 @@ public class CoreUserPasswordAuthProviderClient
 
   protected void callResetPasswordFunctionInternal(final String email,
                                                    final String password,
-                                                   List<?> args) {
+                                                   final List<?> args) {
     final StitchDocRequest.Builder reqBuilder = new StitchDocRequest.Builder();
     reqBuilder.withMethod(Method.POST)
         .withPath(routes.getCallResetPasswordFunctionRoute());

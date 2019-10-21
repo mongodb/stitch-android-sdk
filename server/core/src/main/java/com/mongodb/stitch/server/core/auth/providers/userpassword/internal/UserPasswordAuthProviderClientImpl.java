@@ -102,7 +102,7 @@ public final class UserPasswordAuthProviderClientImpl extends CoreUserPasswordAu
    */
   public void callResetPasswordFunction(final String email,
                                         final String password,
-                                        List<?> args) {
+                                        final List<?> args) {
     callResetPasswordFunctionInternal(email, password, args);
   }
 }

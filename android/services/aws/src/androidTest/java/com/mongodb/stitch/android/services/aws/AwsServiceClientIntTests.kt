@@ -131,5 +131,11 @@ class AwsServiceClientIntTests : BaseStitchAndroidIntTest() {
                 .withTimeout(60000L)
                 .build())
         assertEquals(body, readAllToString(httpResult.body))
+
+        Tasks.await(awsS3.execute(
+            AwsRequest.Builder()
+                .withService("s3")
+                .withAction("DeleteBucket")
+                .withArguments(args).build()))
     }
 }

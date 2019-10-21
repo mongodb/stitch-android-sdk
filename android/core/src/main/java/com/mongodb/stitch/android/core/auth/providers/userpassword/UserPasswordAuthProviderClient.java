@@ -86,6 +86,7 @@ public interface UserPasswordAuthProviderClient {
    * @param email the email of the user
    * @param password the new password to set
    * @param args arguments to be provided to the reset function
+   * @return A {@link Task} that completes when the reqest request completes/fails.
    */
   Task<Void> callResetPasswordFunction(final String email,
                                        final String password,
