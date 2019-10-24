@@ -695,7 +695,7 @@ buildvariants:
   expansions:
     mongodb_url: http://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-4.0.2.tgz
     transpiler_target: node8-macos
-    server_stitch_lib_url: 'https://s3.amazonaws.com/mciuploads/mongodb-mongo-master/stitch-support/osx-1010/80f9a13324fc36b2deb400e5a185968f6fa8f64a/stitch-support-4.1.7-319-g80f9a13324.tgz'
+    server_stitch_lib_url: 'https://s3.amazonaws.com/mciuploads/mongodb-mongo-master/stitch-support/macos/18ca0d551818d6c8274358b8e6444640bec93c88/stitch-support-4.3.0-120-g18ca0d5.tgz'
   tasks:
     - name: run_core_tests
     - name: run_android_tests

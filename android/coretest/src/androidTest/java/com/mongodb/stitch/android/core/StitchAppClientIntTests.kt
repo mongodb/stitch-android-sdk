@@ -304,4 +304,56 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
             )
         }
     }
+
+    @Test
+    fun testCallResetPasswordFunction() {
+        val app = createApp()
+
+        val function = app.second.functions.create(FunctionCreator(
+            "testResetPasswordFunction",
+            """
+            exports = function({email, password}, arg1, arg2) {
+                if (arg1 == 0 && arg2 == 1) {
+                    return { "status": "success" };
+                } else {
+                    return { "status": "fail" };
+                }
+            };
+            """.trimIndent(),
+            null,
+            false))
+
+        addProvider(app.second, config = ProviderConfigs.Userpass(
+            emailConfirmationUrl = "http://emailConfirmURL.com",
+            resetPasswordUrl = "http://resetPasswordURL.com",
+            confirmEmailSubject = "email subject",
+            resetPasswordSubject = "password subject",
+            runResetFunction = true,
+            resetFunctionId = function.id,
+            resetFunctionName = function.name))
+
+        val client = getAppClient(app.first)
+        val userPassClient = client.auth.getProviderClient(UserPasswordAuthProviderClient.factory)
+
+        val email = "user@10gen.com"
+        val password1 = "password1"
+        val password2 = "password2"
+        Tasks.await(userPassClient.registerWithEmail(email, password1))
+
+        val conf = app.second.userRegistrations.sendConfirmation(email)
+        Tasks.await(userPassClient.confirmUser(conf.token, conf.tokenId))
+
+        Tasks.await(client.auth.loginWithCredential(
+            UserPasswordCredential(email, password1)))
+
+        Tasks.await(
+            client.auth.getProviderClient(UserPasswordAuthProviderClient.factory)
+            .callResetPasswordFunction(email, password2, listOf(
+                0, 1
+            )))
+
+        Tasks.await(client.auth.logout())
+        Tasks.await(client.auth.loginWithCredential(
+            UserPasswordCredential(email, password2)))
+    }
 }
