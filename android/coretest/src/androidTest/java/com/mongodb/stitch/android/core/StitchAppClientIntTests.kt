@@ -334,7 +334,7 @@ class StitchAppClientIntTests : BaseStitchAndroidIntTest() {
 
         assertTrue(user.id.isNotEmpty())
         assertTrue(user.identities[0].id.isNotEmpty())
-        assertEquals("123abc", user.identities.first().id)
+        assertEquals("foo", user.identities.first().id)
         assertEquals(FunctionAuthProvider.DEFAULT_NAME, user.loggedInProviderName)
         assertEquals(FunctionAuthProvider.TYPE, user.loggedInProviderType)
         assertEquals(UserType.NORMAL, user.userType)

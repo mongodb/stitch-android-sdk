@@ -25,7 +25,8 @@ sealed class ProviderConfigs(@JsonIgnore val type: String) {
 
     data class Function(
         @JsonProperty("authFunctionId") val authFunctionId: String,
-        @JsonProperty("authFunctionName") val authFunctionName: String) : ProviderConfigs("custom-function")
+        @JsonProperty("authFunctionName") val authFunctionName: String
+    ) : ProviderConfigs("custom-function")
 
     data class Custom(@JsonProperty("signingKey") val signingKey: String) :
         ProviderConfigs("custom-token")
