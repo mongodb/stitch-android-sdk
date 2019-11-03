@@ -294,8 +294,6 @@ public class CoreRemoteMongoCollectionUnitTests {
     expectedArgs.put("collection", "collName1");
     expectedArgs.put("query", new BsonDocument());
     expectedArgs.put("limit", 0);
-    expectedArgs.put("project", null);
-    expectedArgs.put("sort", null);
     assertEquals(expectedArgs, funcArgsArg.getValue().get(0));
     assertEquals(CollectionDecoder.class, resultClassArg.getValue().getClass());
 

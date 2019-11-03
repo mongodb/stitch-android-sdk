@@ -93,7 +93,7 @@ subprojects {
         target_api = 28
         support_library_version = '28.0.0'
         google_play_services_version = '15.0.1'
-        kotlin_version = '1.3.21'
+        kotlin_version = '1.3.50'
         config_dir = configDir
     }
 

@@ -23,6 +23,11 @@ sealed class ProviderConfigs(@JsonIgnore val type: String) {
         val resetFunctionName: String? = null
     ) : ProviderConfigs("local-userpass")
 
+    data class Function(
+        @JsonProperty("authFunctionId") val authFunctionId: String,
+        @JsonProperty("authFunctionName") val authFunctionName: String
+    ) : ProviderConfigs("custom-function")
+
     data class Custom(@JsonProperty("signingKey") val signingKey: String) :
         ProviderConfigs("custom-token")
 }
