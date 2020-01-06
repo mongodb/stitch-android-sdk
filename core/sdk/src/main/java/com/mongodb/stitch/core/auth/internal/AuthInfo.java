@@ -76,7 +76,7 @@ public class AuthInfo {
     this.userProfile = userProfile;
     this.lastAuthActivity = lastAuthActivity == null ? null : new Date(lastAuthActivity.getTime());
 
-    if (decodedAccessToken == null) {
+    if (decodedAccessToken == null && accessToken != null) {
       try {
         this.decodedAccessToken = Jwt.fromEncoded(accessToken);
       } catch (IOException e) {
