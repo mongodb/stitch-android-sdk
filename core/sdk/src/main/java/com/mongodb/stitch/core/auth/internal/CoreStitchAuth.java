@@ -879,6 +879,9 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
   }
 
   private StitchUserT makeUserFromAuthInfo(final AuthInfo authInfo) {
+    final Document userData = authInfo.getDecodedAccessToken() == null ?
+        null : authInfo.getDecodedAccessToken().getUserData();
+
     return this.getUserFactory().makeUser(authInfo.getUserId(),
             authInfo.getDeviceId(),
             authInfo.getLoggedInProviderType(),
@@ -886,7 +889,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
             authInfo.getUserProfile(),
             authInfo.isLoggedIn(),
             authInfo.getLastAuthActivity(),
-            authInfo.getDecodedAccessToken().getUserData());
+            userData);
   }
 
   /**
