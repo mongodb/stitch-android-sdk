@@ -377,4 +377,17 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
       listener.onUserLinked(this, linkedUser);
     }
   }
+
+  @Override
+  public Task<Void> refreshCustomData() {
+    return dispatcher.dispatchTask(
+        new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            refreshAccessToken();
+            return null;
+          }
+        }
+    );
+  }
 }

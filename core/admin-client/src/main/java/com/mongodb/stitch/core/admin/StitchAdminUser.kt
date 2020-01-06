@@ -5,6 +5,7 @@ import com.mongodb.stitch.core.auth.StitchUserProfile
 import com.mongodb.stitch.core.auth.UserType
 import com.mongodb.stitch.core.auth.internal.CoreStitchUser
 import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl
+import org.bson.Document
 
 import java.util.Date
 
@@ -15,7 +16,8 @@ class StitchAdminUser(
     private val loggedInProviderName: String,
     private val profile: StitchUserProfileImpl?,
     private val isLoggedIn: Boolean,
-    private val lastAuthActivity: Date
+    private val lastAuthActivity: Date,
+    private val customData: Document?
 ) : CoreStitchUser {
 
     override fun getLoggedInProviderType(): String {
@@ -52,5 +54,9 @@ class StitchAdminUser(
 
     override fun getLastAuthActivity(): Date {
         return lastAuthActivity
+    }
+
+    override fun getCustomData(): Document {
+        return customData ?: Document()
     }
 }

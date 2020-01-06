@@ -590,7 +590,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
     }
   }
 
-  synchronized void refreshAccessToken() {
+  public synchronized void refreshAccessToken() {
     authLock.writeLock().lock();
     try {
       final StitchAuthRequest.Builder reqBuilder = new StitchAuthRequest.Builder();
@@ -604,6 +604,10 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
       try {
         final AuthInfo partialInfo = AuthInfo.readFromApi(response.getBody());
         activeUserAuthInfo = getAuthInfo().merge(partialInfo);
+        if (activeUser instanceof CoreStitchUserImpl) {
+          ((CoreStitchUserImpl)activeUser).customData =
+              activeUserAuthInfo.getDecodedAccessToken().getUserData();
+        }
       } catch (final IOException e) {
         throw new StitchRequestException(e, StitchRequestErrorCode.DECODING_ERROR);
       }
@@ -689,7 +693,7 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 newAuthInfo.getRefreshToken(),
                 credential.getProviderType(),
                 credential.getProviderName(),
-                null, null));
+                null, null, newAuthInfo.getDecodedAccessToken()));
 
     // Provisionally set so we can make a profile request
     activeUserAuthInfo = newAuthInfo;
@@ -701,7 +705,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                 credential.getProviderName(),
                 null,
                 activeUserAuthInfo.isLoggedIn(),
-                activeUserAuthInfo.getLastAuthActivity());
+                activeUserAuthInfo.getLastAuthActivity(),
+                activeUserAuthInfo.getDecodedAccessToken().getUserData());
 
     final StitchUserProfileImpl profile;
     try {
@@ -749,7 +754,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
                             newAuthInfo.getRefreshToken(),
                             credential.getProviderType(),
                             credential.getProviderName(),
-                            profile, new Date()));
+                            profile, new Date(),
+                        newAuthInfo.getDecodedAccessToken()));
 
     final boolean newUserAdded = !this.allUsersAuthInfo.containsKey(newAuthInfo.getUserId());
 
@@ -879,7 +885,8 @@ public abstract class CoreStitchAuth<StitchUserT extends CoreStitchUser>
             authInfo.getLoggedInProviderName(),
             authInfo.getUserProfile(),
             authInfo.isLoggedIn(),
-            authInfo.getLastAuthActivity());
+            authInfo.getLastAuthActivity(),
+            authInfo.getDecodedAccessToken().getUserData());
   }
 
   /**

@@ -289,4 +289,9 @@ public final class StitchAuthImpl extends CoreStitchAuth<StitchUser> implements 
 
     return info;
   }
+
+  @Override
+  public void refreshCustomData() {
+    this.refreshAccessToken();
+  }
 }
