@@ -859,9 +859,10 @@ public class CoreStitchAuthUnitTests {
               String loggedInProviderName,
               StitchUserProfileImpl userProfile,
               boolean isLoggedIn,
-              Date lastAuthActivity) ->
+              Date lastAuthActivity,
+              Document customData) ->
               new CoreStitchUserImpl(id, deviceId, loggedInProviderType,
-                      loggedInProviderName, userProfile, isLoggedIn, lastAuthActivity) {};
+                      loggedInProviderName, userProfile, isLoggedIn, lastAuthActivity, customData) {};
     }
 
     @Override
