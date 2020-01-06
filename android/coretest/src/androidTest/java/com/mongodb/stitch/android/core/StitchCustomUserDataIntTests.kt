@@ -6,7 +6,7 @@ import com.mongodb.stitch.android.testutils.BaseStitchAndroidIntTest
 import com.mongodb.stitch.core.admin.Apps
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigs
 import com.mongodb.stitch.core.admin.create
-import com.mongodb.stitch.core.admin.customUserData.CustomUserConfigData
+import com.mongodb.stitch.core.admin.customUserData.CustomUserDataConfig
 import com.mongodb.stitch.core.admin.functions.FunctionCreator
 import com.mongodb.stitch.core.admin.services.ServiceConfigs
 import com.mongodb.stitch.core.admin.services.rules.RuleCreator
@@ -42,7 +42,6 @@ class StitchCustomUserDataIntTests : BaseStitchAndroidIntTest() {
             "mongodb",
             "mongodb1",
             ServiceConfigs.Mongo(
-//                "mongodb1",
                 mongodbUri))
 
         this.svcId = svc.first.id
@@ -72,7 +71,7 @@ class StitchCustomUserDataIntTests : BaseStitchAndroidIntTest() {
         prepareService()
 
         this.app!!.customUserData.create(
-            data = CustomUserConfigData(mongoServiceId = svcId!!,
+            data = CustomUserDataConfig(mongoServiceId = svcId!!,
                 databaseName = dbName,
                 collectionName = collName,
                 userIdField = "recoome",
@@ -95,7 +94,6 @@ class StitchCustomUserDataIntTests : BaseStitchAndroidIntTest() {
                 canEvaluate = null))
 
         registerAndLoginWithUserPass(app!!, client!!, email, pass)
-
 
         assertEquals(client!!.auth.user!!.customData, Document())
 

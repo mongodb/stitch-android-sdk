@@ -7,7 +7,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.authProviders.AuthProvidersResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigWrapper
-import com.mongodb.stitch.core.admin.customUserData.CustomUserConfigData
+import com.mongodb.stitch.core.admin.customUserData.CustomUserDataConfig
 import com.mongodb.stitch.core.admin.functions.FunctionCreator
 import com.mongodb.stitch.core.admin.functions.FunctionResponse
 import com.mongodb.stitch.core.admin.services.ServiceConfigWrapper
@@ -160,9 +160,9 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
                     Disablable
         }
 
-        /// Resource for adding customer user data to an application
+        // / Resource for adding customer user data to an application
         class CustomUserData(adminAuth: StitchAdminAuth, url: String) :
-            BasicResource(adminAuth, url), Creatable<CustomUserConfigData, Void>
+            BasicResource(adminAuth, url), Creatable<CustomUserDataConfig, Void>
 
         // / Resource for user registrations of an application
         class UserRegistrations(adminAuth: StitchAdminAuth, url: String) :
