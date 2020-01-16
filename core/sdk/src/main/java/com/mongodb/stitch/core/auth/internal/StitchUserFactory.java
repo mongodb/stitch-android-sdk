@@ -16,6 +16,8 @@
 
 package com.mongodb.stitch.core.auth.internal;
 
+import org.bson.Document;
+
 import java.util.Date;
 
 public interface StitchUserFactory<StitchUserT extends CoreStitchUser> {
@@ -26,5 +28,6 @@ public interface StitchUserFactory<StitchUserT extends CoreStitchUser> {
       String loggedInProviderName,
       StitchUserProfileImpl userProfile,
       boolean isLoggedIn,
-      Date lastAuthActivity);
+      Date lastAuthActivity,
+      Document customData);
 }

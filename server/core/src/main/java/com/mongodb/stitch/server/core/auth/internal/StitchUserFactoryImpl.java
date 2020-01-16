@@ -20,6 +20,8 @@ import com.mongodb.stitch.core.auth.internal.StitchUserFactory;
 import com.mongodb.stitch.core.auth.internal.StitchUserProfileImpl;
 import com.mongodb.stitch.server.core.auth.StitchUser;
 
+import org.bson.Document;
+
 import java.util.Date;
 
 public final class StitchUserFactoryImpl implements StitchUserFactory<StitchUser> {
@@ -38,8 +40,9 @@ public final class StitchUserFactoryImpl implements StitchUserFactory<StitchUser
       final String loggedInProviderName,
       final StitchUserProfileImpl userProfile,
       final boolean isLoggedIn,
-      final Date lastAuthActivity) {
+      final Date lastAuthActivity,
+      final Document customData) {
     return new StitchUserImpl(id, deviceId, loggedInProviderType, loggedInProviderName,
-            userProfile, auth, isLoggedIn, lastAuthActivity);
+            userProfile, auth, isLoggedIn, lastAuthActivity, customData);
   }
 }

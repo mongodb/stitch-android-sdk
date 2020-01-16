@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.mongodb.stitch.core.admin.apps.AppResponse
 import com.mongodb.stitch.core.admin.authProviders.AuthProvidersResponse
 import com.mongodb.stitch.core.admin.authProviders.ProviderConfigWrapper
+import com.mongodb.stitch.core.admin.customUserData.CustomUserDataConfig
 import com.mongodb.stitch.core.admin.functions.FunctionCreator
 import com.mongodb.stitch.core.admin.functions.FunctionResponse
 import com.mongodb.stitch.core.admin.services.ServiceConfigWrapper
@@ -84,10 +85,13 @@ fun Removable.remove() {
 // / Adds an endpoint method that POSTs new data
 interface Creatable<Creator, T> : Resource
 
-inline fun <Creator, reified T> Creatable<Creator, T>.create(data: Creator): T {
+inline fun <Creator, reified T> Creatable<Creator, T>.create(
+    data: Creator,
+    method: Method = Method.POST
+): T {
     val reqBuilder = StitchAuthRequest.Builder()
     reqBuilder
-            .withMethod(Method.POST)
+            .withMethod(method)
             .withPath(url)
             .withBody(writer.writeValueAsString(data).toByteArray())
 
@@ -156,6 +160,10 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
                     Disablable
         }
 
+        // / Resource for adding customer user data to an application
+        class CustomUserData(adminAuth: StitchAdminAuth, url: String) :
+            BasicResource(adminAuth, url), Creatable<CustomUserDataConfig, Void>
+
         // / Resource for user registrations of an application
         class UserRegistrations(adminAuth: StitchAdminAuth, url: String) :
                 BasicResource(adminAuth, url)
@@ -209,6 +217,7 @@ class Apps(adminAuth: StitchAdminAuth, url: String) :
         }
 
         val authProviders by lazy { AuthProviders(this.adminAuth, "$url/auth_providers") }
+        val customUserData by lazy { CustomUserData(this.adminAuth, "$url/custom_user_data") }
         val functions by lazy { Functions(this.adminAuth, "$url/functions") }
         val services by lazy { Services(this.adminAuth, "$url/services") }
         val users by lazy { Users(this.adminAuth, "$url/users") }

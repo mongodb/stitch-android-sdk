@@ -31,7 +31,8 @@ class StitchAdminAuth(
                                    loggedInProviderName,
                                    userProfile,
                                    isLoggedIn,
-                                   lastAuthActivity ->
+                                   lastAuthActivity,
+                                   customData ->
             StitchAdminUser(
                     id,
                     deviceId,
@@ -39,7 +40,8 @@ class StitchAdminAuth(
                     loggedInProviderName,
                     userProfile,
                     isLoggedIn,
-                    lastAuthActivity
+                    lastAuthActivity,
+                    customData
             )
         }
     }

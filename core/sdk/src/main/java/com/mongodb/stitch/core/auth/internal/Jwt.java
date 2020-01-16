@@ -20,19 +20,24 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mongodb.stitch.core.internal.common.StitchObjectMapper;
 import java.io.IOException;
+
+import org.bson.Document;
 import org.bson.internal.Base64;
 
 final class Jwt {
 
   private final Long expires;
   private final Long issuedAt;
+  private final Document userData;
 
   @JsonCreator
   private Jwt(
       @JsonProperty(Fields.EXPIRES) final Long expires,
-      @JsonProperty(Fields.ISSUED_AT) final Long issuedAt) {
+      @JsonProperty(Fields.ISSUED_AT) final Long issuedAt,
+      @JsonProperty(Fields.USER_DATA) final Document userData) {
     this.expires = expires;
     this.issuedAt = issuedAt;
+    this.userData = userData;
   }
 
   static Jwt fromEncoded(final String encodedJwt) throws IOException {
@@ -58,8 +63,13 @@ final class Jwt {
     return issuedAt;
   }
 
+  Document getUserData() {
+    return userData;
+  }
+
   private static class Fields {
     private static final String EXPIRES = "exp";
     private static final String ISSUED_AT = "iat";
+    private static final String USER_DATA = "user_data";
   }
 }

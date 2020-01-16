@@ -136,4 +136,15 @@ public interface StitchAuth {
    * @param listener the listener to remove.
    */
   void removeAuthListener(final StitchAuthListener listener);
+
+  /**
+   * You can store arbitrary data about your application users
+   * in a MongoDB collection and configure Stitch to automatically
+   * expose each user’s data in a field of their user object.
+   * For example, you might store a user’s preferred language,
+   * date of birth, or their local timezone.
+
+   * If this functionality has not been configured, this is a no-op.
+   */
+  void refreshCustomData();
 }

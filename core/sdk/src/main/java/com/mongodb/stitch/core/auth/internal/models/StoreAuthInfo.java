@@ -63,7 +63,8 @@ public final class StoreAuthInfo extends AuthInfo {
         loggedInProviderType,
         loggedInProviderName,
         userProfile,
-        lastAuthActivity);
+        lastAuthActivity,
+        null);
   }
 
   /**
@@ -95,7 +96,8 @@ public final class StoreAuthInfo extends AuthInfo {
         loggedInProviderType,
         loggedInProviderName,
         userProfile,
-        lastAuthActivity);
+        lastAuthActivity,
+        null);
   }
 
   @JsonProperty(Fields.USER_ID)

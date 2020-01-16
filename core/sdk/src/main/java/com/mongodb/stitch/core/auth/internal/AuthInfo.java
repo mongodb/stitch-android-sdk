@@ -42,6 +42,7 @@ public class AuthInfo {
   private final String loggedInProviderName;
   private final StitchUserProfileImpl userProfile;
   private final Date lastAuthActivity;
+  private Jwt decodedAccessToken;
 
   /**
    * Constructs a new AuthInfo that's fully specified.
@@ -64,7 +65,8 @@ public class AuthInfo {
       final String loggedInProviderType,
       final String loggedInProviderName,
       final StitchUserProfileImpl userProfile,
-      final Date lastAuthActivity) {
+      final Date lastAuthActivity,
+      final Jwt decodedAccessToken) {
     this.userId = userId;
     this.deviceId = deviceId;
     this.accessToken = accessToken;
@@ -73,10 +75,20 @@ public class AuthInfo {
     this.loggedInProviderName = loggedInProviderName;
     this.userProfile = userProfile;
     this.lastAuthActivity = lastAuthActivity == null ? null : new Date(lastAuthActivity.getTime());
+
+    if (decodedAccessToken == null && accessToken != null) {
+      try {
+        this.decodedAccessToken = Jwt.fromEncoded(accessToken);
+      } catch (IOException e) {
+        // Swallow exception
+      }
+    } else {
+      this.decodedAccessToken = decodedAccessToken;
+    }
   }
 
   static AuthInfo empty() {
-    return new AuthInfo(null, null, null, null, null, null, null, null);
+    return new AuthInfo(null, null, null, null, null, null, null, null, null);
   }
 
   static AuthInfo readFromApi(final InputStream is) throws IOException {
@@ -147,18 +159,18 @@ public class AuthInfo {
   AuthInfo loggedOut() {
     return new AuthInfo(
         userId, deviceId, null, null, loggedInProviderType,
-            loggedInProviderName, userProfile, new Date());
+            loggedInProviderName, userProfile, new Date(), null);
   }
 
   AuthInfo withNewAuthActivityTime() {
     return new AuthInfo(
             userId, deviceId, accessToken, refreshToken, loggedInProviderType,
-            loggedInProviderName, userProfile, new Date());
+            loggedInProviderName, userProfile, new Date(), decodedAccessToken);
   }
 
   AuthInfo withClearedUser() {
     return new AuthInfo(
-        null, deviceId, null, null, null, null, null, null);
+        null, deviceId, null, null, null, null, null, null, null);
   }
 
   AuthInfo withAuthProvider(
@@ -166,7 +178,7 @@ public class AuthInfo {
       final String providerName
   ) {
     return new AuthInfo(userId, deviceId, accessToken, refreshToken, providerType,
-            providerName, userProfile, new Date());
+            providerName, userProfile, new Date(), decodedAccessToken);
   }
 
   AuthInfo merge(final AuthInfo newInfo) {
@@ -178,7 +190,8 @@ public class AuthInfo {
         newInfo.loggedInProviderType == null ? loggedInProviderType : newInfo.loggedInProviderType,
         newInfo.loggedInProviderName == null ? loggedInProviderName : newInfo.loggedInProviderName,
         newInfo.userProfile == null ? userProfile : newInfo.userProfile,
-        new Date());
+        new Date(),
+        newInfo.decodedAccessToken == null ? decodedAccessToken : newInfo.decodedAccessToken);
   }
 
   public String getUserId() {
@@ -207,6 +220,10 @@ public class AuthInfo {
 
   public StitchUserProfileImpl getUserProfile() {
     return userProfile;
+  }
+
+  public Jwt getDecodedAccessToken() {
+    return decodedAccessToken;
   }
 
   public Date getLastAuthActivity() {

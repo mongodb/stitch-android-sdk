@@ -54,7 +54,7 @@ public class AccessTokenRefreshUnitTests {
                 SignatureAlgorithm.HS256,
                 "abcdefghijklmnopqrstuvwxyz1234567890".getBytes(StandardCharsets.UTF_8))
             .compact();
-    final AuthInfo freshAuthInfo = new AuthInfo("", "", freshJwt, freshJwt, "", "", null, null);
+    final AuthInfo freshAuthInfo = new AuthInfo("", "", freshJwt, freshJwt, "", "", null, null, null);
     doReturn(true).when(auth).isLoggedIn();
     doReturn(freshAuthInfo).when(auth).getAuthInfo();
     verify(auth, times(0)).refreshAccessToken();
@@ -76,7 +76,7 @@ public class AccessTokenRefreshUnitTests {
             .compact();
 
     final AuthInfo expiredAuthInfo = new AuthInfo("", "", expiredJwt, expiredJwt, "",
-            "", null, null);
+            "", null, null, null);
     doReturn(expiredAuthInfo).when(auth).getAuthInfo();
 
     assertTrue(accessTokenRefresher.checkRefresh());
