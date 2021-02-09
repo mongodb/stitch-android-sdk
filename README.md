@@ -1,5 +1,9 @@
 [![Join the chat at https://gitter.im/mongodb/stitch](https://badges.gitter.im/mongodb/stitch.svg)](https://gitter.im/mongodb/stitch?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+# Stitch SDK Deprecation Notice
+
+Stitch SDK functionality has been moved into the Realm SDKs. Applications using a Stitch SDK can be migrated to the corresponding Realm SDK by using one of the [Stitch SDK Migration Guides](https://docs.mongodb.com/realm/migrate). **Support for the Stitch SDKs will fully end on November 1, 2021.**
+
 # MongoDB Stitch Android/Java SDK 
 
 The official [MongoDB Stitch](https://stitch.mongodb.com/) SDK for Android/Java.
